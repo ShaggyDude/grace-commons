@@ -134,15 +134,19 @@ The shared "Logic" prefix communicates one discipline at two levels. The role na
 
 ## Today vs. Trajectory
 
-The deliverable today is a specification that is dramatically more durable than code, captures intent in a form that survives at least one technology migration, and represents a fundamentally better artifact than what customers currently have.
-
-The deliverable in 3–5 years, if the architecture holds, is specifications that survive multiple migrations because the spec layer has stabilized and round-trip tooling has matured.
-
-The deliverable in 10+ years, if everything breaks right, is specifications as *the* artifact, with code genuinely a build product nobody maintains.
-
 Honest messaging keeps these separate. Describe the deliverable in present tense. Describe the architecture in trajectory terms. Describe the destination in vision terms. Never let the three blur. *Ending the modernization cycle* is the destination and a defensible statement of purpose. The mechanism — a durable, language-independent specification — is what's deliverable now.
 
 The current bottleneck is spec-to-code generation, not spec authoring. Authoring is mature. Generation is improving with each model release and is tractable for well-factored pure functions. The strategic move is to sell the authoring side first; let generation mature in parallel; treat generation success as proof of spec quality (when generation works on a spec, that's evidence the spec is complete; when it fails, that's evidence of gaps). The architecture's value does not depend on generation being production-quality today.
+
+**Years 0–3.** Grace Commons foundation established. MUSe methodology defined and documented. First pattern library covering the high-frequency cross-domain patterns. First real systems run through the methodology. One or two credible names associated with the work. Volunteer contributors from formal methods, requirements engineering, and domain modeling communities.
+
+**Years 3–6.** Tooling matures. Generation becomes reliable for well-factored specs. First regulated industry adoption — healthcare or finance, where the IP boundary story and the compliance pattern library have the most immediate value. Open standard proposal submitted. The methodology is teachable and being taught.
+
+**Years 6–9.** Canonical artifact status in at least one domain. Code genuinely becomes a build product in early adopter organizations. The spec layer has surviving examples — systems that have been through at least one technology migration without rewriting the spec. The category is named and has more than one player.
+
+**Years 9–12.** Either the status quo is still being dismantled — which means the resistance was stronger than expected but the direction is unchanged — or the architecture has crossed the threshold into default practice and the work becomes consolidation, standardization, and depth. Both are valid. The destination is the same either way.
+
+The resistance will be real. Entire career identities are built on the layers that compress. That slows adoption; it does not stop it. The value is too obvious once someone sees a working example.
 
 ## The Category
 
