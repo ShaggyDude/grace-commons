@@ -43,3 +43,5 @@ If you work in a domain with well-specified standards — healthcare, finance, l
 ---
 
 *Grace Commons is the open foundation. The patterns that belong to everyone should live somewhere everyone can see them.*
+
+.
