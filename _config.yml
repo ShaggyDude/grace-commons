@@ -1,0 +1,9 @@
+title: Grace Commons
+description: A shared library of business logic patterns expressed as structured natural language specifications.
+theme: minima
+
+author: Scott Romack
+
+show_excerpts: false
+
+markdown: kramdown
