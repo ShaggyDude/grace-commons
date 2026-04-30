@@ -26,6 +26,8 @@ The Spec Layer does not invent specification. It inherits it. The novel move is 
 
 ## The Architecture
 
+**Verbosity is a feature when it preserves meaning.** Complex systems should be described in the plainest language possible, even when that takes more words, because plain language keeps domain experts, designers, engineers, and stakeholders in the same conversation. The goal is not fewer words; the goal is shared understanding that can be inspected, challenged, and improved. The same principle applies to generated code and tests — they may be more explicit, repetitive, and boring than highly compressed expert-written code, but that is intentional. The Spec Layer optimizes first for preserved meaning, inspectable behavior, reliable validation, and regeneration. Compression is welcome only after the truth is clear.
+
 **English is the source of truth.** Not constrained English, not Gherkin, not pseudo-code with English-looking syntax. Plain natural language, with the AI handling the rigor. The logical scaffolding of English (*if, when, unless, all, some, none, before, after, must, may*) has been stable for centuries and is not going to drift. Domain vocabulary drifts; the logical layer does not.
 
 English here means *structured* natural language — organized into definitions, rules, scenarios, invariants, exceptions, states, and open decisions. Not unstructured prose. The structure is what makes the spec machine-normalizable while keeping it human-readable. The AI's role includes maintaining that structure as authors write naturally; humans don't have to learn the structure, but the artifact has it.
