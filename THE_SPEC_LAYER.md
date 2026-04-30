@@ -26,9 +26,9 @@ The Spec Layer does not invent specification. It inherits it. The novel move is 
 
 ## The Architecture
 
-**Verbosity is a feature when it preserves meaning.** Complex systems should be described in the plainest language possible, even when that takes more words, because plain language keeps domain experts, designers, engineers, and stakeholders in the same conversation. The goal is not fewer words; the goal is shared understanding that can be inspected, challenged, and improved. The same principle applies to generated code and tests — they may be more explicit, repetitive, and boring than highly compressed expert-written code, but that is intentional. The Spec Layer optimizes first for preserved meaning, inspectable behavior, reliable validation, and regeneration. Compression is welcome only after the truth is clear.
+**Verbosity is a feature when it preserves meaning.** Complex systems should be described in the plainest language possible, even when that takes more words, because plain language keeps domain experts, designers, engineers, and stakeholders in the same conversation. The goal is not fewer words; the goal is shared understanding that can be inspected, challenged, and improved. The same principle applies to generated code and tests — they may be more explicit, repetitive, and boring than highly compressed expert-written code, but that is intentional. The Spec Layer optimizes first for preserved meaning, inspectable behavior, reliable validation, and regeneration. Compression is welcome only after the truth is clear. In the near term, generated code should remain readable because humans still need to inspect and trust it. Over time, the Spec Layer becomes the primary artifact humans read, while code becomes a validated execution form of that intent.
 
-**English is the source of truth.** Not constrained English, not Gherkin, not pseudo-code with English-looking syntax. Plain natural language, with the AI handling the rigor. The logical scaffolding of English (*if, when, unless, all, some, none, before, after, must, may*) has been stable for centuries and is not going to drift. Domain vocabulary drifts; the logical layer does not.
+**Structured natural language is the human-facing source of truth.** Not constrained English, not Gherkin, not pseudo-code with English-looking syntax. Plain natural language, with the AI handling the rigor. The logical scaffolding of English (*if, when, unless, all, some, none, before, after, must, may*) has been stable for centuries and is not going to drift. Domain vocabulary drifts; the logical layer does not.
 
 English here means *structured* natural language — organized into definitions, rules, scenarios, invariants, exceptions, states, and open decisions. Not unstructured prose. The structure is what makes the spec machine-normalizable while keeping it human-readable. The AI's role includes maintaining that structure as authors write naturally; humans don't have to learn the structure, but the artifact has it.
 
@@ -44,9 +44,9 @@ English here means *structured* natural language — organized into definitions,
 
 If code remains the source of truth, modernization is just a more expensive way to restart the same decay cycle. Each generation rewrites the previous generation's code into the current generation's language, loses fidelity in the translation, and becomes the next generation's legacy. The cost compounds because the systems grow larger and the original engineers are further removed each cycle. Every twenty years, the same intent is reconstructed at enormous human and compute expense. The architecture's value is not faster modernization. It is breaking the cycle.
 
-A single source of truth does not drift from itself. The remaining problem is not synchronization. It is completeness.
+The spec does not eliminate drift. It relocates drift. Instead of documents silently diverging from each other, reality drifts away from the spec — and that drift can be detected, named, and resolved. Production behavior, policy changes, user behavior, and integrations can all be compared back to the canonical artifact. Drift becomes visible.
 
-What collapses when the spec is canonical: separate requirements documents, UI/UX spec as a disconnected artifact, the frontend/backend discipline divide, APIs as internal plumbing rather than trust boundaries, microservices as organizational workarounds, parallel test suites, documentation maintained separately from behavior, compliance translation layers, and the modernization cycle itself. These are not lost — they are subsumed by the spec, generated as derivatives, or revealed as accidental complexity that should have been eliminated anyway.
+What compresses, converges, or becomes derivative when the spec is canonical: separate requirements documents, UI/UX spec as a disconnected artifact, the frontend/backend discipline divide, APIs as internal plumbing rather than trust boundaries, microservices as organizational workarounds, parallel test suites, documentation maintained separately from behavior, compliance translation layers, and the modernization cycle itself. These are not lost — they are subsumed by the spec, generated as derivatives, or revealed as accidental complexity that should have been eliminated anyway.
 
 **This is how probabilistic becomes deterministic.** AI generation is probabilistic because the solution space is unconstrained. A complete, consistent, unambiguous spec constrains the space. The tighter the spec, the narrower the generation target, the more deterministic the output. The mechanism is not better models — it is better specifications. Pure specs are the precondition for reliable generation. This is also the proper training signal for AI code generation: be as creative as you like with the implementation, as long as it satisfies every contract.
 
@@ -61,6 +61,8 @@ The division of labor is **humans spitball, AIs arrange.** The human provides in
 The AI's adversarial completeness role is not "smarter than humans" — it is *unembarrassed*. Pointing out that your boss's stated requirement contradicts itself is a career-limiting move for a human. Asking the same clarifying question seventeen times until the business person actually decides what they mean is socially expensive. The AI does not get tired, does not get political, does not lose status by asking the dumb question that exposes the unresolved decision.
 
 What current AI does reliably: surface inconsistency detection, missing case enumeration, definition disambiguation, deviation from precedent. What it does not yet do: deep logical reasoning about non-obvious consequences, verification against external constraints not in the spec, discovery of fundamental modeling errors. The gap is real and is closing. The architecture is valuable today and gets more powerful as the gap closes.
+
+The vocabulary problem alone justifies the AI's role. Furnas et al. (1987) found that when two people are asked to name the same familiar object, they choose the same word roughly one time in eight. "We'll just use natural language" is not a strategy — unaided natural language gives you a one-in-eight chance that any two stakeholders are using the same term to mean the same thing. The AI's term disambiguation work is not a convenience. It is the engineering response to an empirically documented failure rate.
 
 ## Validation
 
@@ -77,7 +79,7 @@ Each pass catches different failure modes — incompleteness, ambiguity, contrad
 
 Validation effort is calibrated by complexity rather than applied uniformly. Specs vary along multiple dimensions — logical complexity, interaction complexity, domain complexity, consequence complexity, temporal complexity — and the AI rates each spec along these dimensions automatically. The ratings drive systematic decisions: how many examples a rule requires, how aggressively the AI checks for contradictions, which generation model handles the work, what level of human review the spec needs before deployment. Uniform validation is either expensive on simple cases or insufficient on complex ones; calibrated validation matches effort to risk.
 
-The economic implication is the entire game. Current development spends enormous time on late-cycle validation — testing, debugging, hotfixes, post-release patches. Each represents catching a problem after expensive work was done on the wrong thing. Moving validation earlier compresses total cost dramatically. The roughly 2× speedup is not from coding faster; it is from *less work being thrown away*. Every spec-time catch is rework that didn't happen. The math compounds across every feature, every bug fix, every modification, over the entire system lifetime.
+The economic implication is the entire game. Current development spends enormous time on late-cycle validation — testing, debugging, hotfixes, post-release patches. Each represents catching a problem after expensive work was done on the wrong thing. Moving validation earlier compresses total cost dramatically. The speedup is not from coding faster; it is from *less work being thrown away*. Every spec-time catch is rework that didn't happen. The math compounds across every feature, every bug fix, every modification, over the entire system lifetime.
 
 ## Essential vs. Accidental
 
@@ -107,9 +109,9 @@ Term disambiguation is a related discipline and operationally critical. Industry
 
 ## Roles
 
-Most current software roles exist because of translation costs between adjacent layers. Remove the translation costs, the roles collapse.
+Most current software roles exist because of translation costs between adjacent layers. Reduce the translation costs, and the work compresses, specializes, or moves upward.
 
-**Disappear or compress dramatically:**
+**The work changes before the job titles disappear:**
 - Pure manual QA. The spec-implementation gap closes by construction.
 - Most requirements analysts and business analysts as currently practiced.
 - Project managers whose primary work is coordinating handoffs.
@@ -184,11 +186,13 @@ The novel contributions, against this inherited background, are bounded and spec
 
 ## Why This Will Happen
 
-The constraints that produced current software development practice are gone. Computers can parse natural language. Code is no longer the only precise artifact available. Specifications can be mechanically validated. Testing no longer requires humans to perform the bulk of systematic enumeration. Every decision that produced the current organization of software work was made under constraints that no longer hold.
+Many of the constraints that shaped current software development practice are weakening. Computers can parse natural language. Code is no longer the only precise artifact available. Specifications can be mechanically validated. Testing no longer requires humans to perform the bulk of systematic enumeration. Every decision that produced the current organization of software work was made under constraints that no longer hold.
 
 When constraints lift, the structures they produced do not change automatically. They change through new architectures that demonstrate the constraints are gone, attract early adopters, prove the new structure works, and gradually displace the old as the calendar turns. This is a 20-year process from first credible demonstration to industry-wide adoption. Most of the value is captured by whoever owns the architecture during the middle years.
 
-The first credible demonstrations are happening now. The category is real. The question is who builds it, not whether it gets built.
+The first credible demonstrations are happening now. The category is becoming legible. The open question is who proves it first.
+
+The first reliable targets are bounded business rules, workflows, contracts, tests, and well-factored pure functions — not arbitrary software systems all at once.
 
 The current AI industry is overwhelmingly optimizing the existing machine: bigger models, more compute, better fine-tuning, vertical integration of infrastructure. This is the steam engine in 1880. The internal combustion engine — the idea that intent is the source of truth and code is a disposable compilation artifact — has shipped, but almost no one is building toward it because the entire investment infrastructure is pointed at scaling transformers. The people asking whether the architecture is wrong in the 1880s were considered eccentric. Most were wrong. Some were not.
 
@@ -198,4 +202,4 @@ The way to find out which kind of bet this is, is to build something that works 
 
 ---
 
-*This document is a working architectural philosophy, not a finished theory. The pieces fit together cleanly enough to commit to. The implementation details, the governance structures, the precise role definitions, the open-source release strategy — these are downstream and tractable once the philosophy is settled. The philosophy is settled.*
+*This document is a working architectural philosophy, not a finished theory. The pieces fit together cleanly enough to commit to. The implementation details, the governance structures, the precise role definitions, the open-source release strategy — these are downstream and tractable once the philosophy is settled. The architectural commitment is settled.*
