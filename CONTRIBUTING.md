@@ -14,7 +14,21 @@ Grace Commons is early and foundational. The pattern library is being built. Thi
 
 ---
 
-## What a pattern contribution looks like
+## Atoms vs. applications
+
+Grace Commons distinguishes **atomic patterns** from **applications** (compositions of patterns).
+
+The test: does the contribution's specification name another pattern? If no, it's an atom — file it under `patterns/<category>/`. If yes, it's an application — file it under `applications/`.
+
+Atoms are freestanding: state, actions, and operational principles independent of every other pattern. Personal Todo, Duplicate Prevention, Event Log.
+
+Applications are compositions: at least one constituent atom, stitched together with composition logic. Audit Trail (Event Log + retention + tamper-evidence + actor identity), Shared Todo (Personal Todo + Permissions + Assignment), Reservation Lifecycle (Reservation + Hold Window + Capacity).
+
+If you are not sure which side your contribution falls on, open an issue. The overhead of a conversation is lower than the overhead of placing it in the wrong folder.
+
+---
+
+## What an atomic pattern looks like
 
 A pattern spec lives in the appropriate `patterns/` subdirectory. It is a structured natural language document, not code. At minimum it should define:
 
@@ -25,7 +39,22 @@ A pattern spec lives in the appropriate `patterns/` subdirectory. It is a struct
 - **Edge cases** — what the pattern does not cover, or where it breaks down
 - **Standards references** — where relevant, anchors to ISO, IEEE, domain standards
 
-Patterns do not need to be complete to be submitted. An incomplete pattern with honest gaps marked as open decisions is more useful than a polished pattern with hidden assumptions.
+Atoms do not need to be complete to be submitted. An incomplete atom with honest gaps marked as open decisions is more useful than a polished one with hidden assumptions.
+
+---
+
+## What an application looks like
+
+An application spec lives directly in `applications/` (no subdirectories). It declares the atoms it composes and the logic that wires them together. At minimum it should define:
+
+- **Name** — describes the composed result
+- **Composes** — the atoms it brings together, by name and link
+- **Composition logic** — how the atoms are wired: which actions in one trigger which in another, what policy parameters each atom is configured with, how cross-atom invariants are maintained
+- **Application-level invariants** — invariants that emerge from composition and don't belong to any single constituent
+- **Examples** — concrete scenarios showing the composition in action
+- **Edge cases** — failure modes that arise from composition, including conflicts between constituent atoms
+
+Applications are where the architecture is exercised. A reader should be able to verify, from the file alone, that the named atoms could plausibly compose to produce the claimed behavior.
 
 ---
 

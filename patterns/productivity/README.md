@@ -8,9 +8,9 @@ Productivity patterns are smaller and more atomic than the business workflows el
 
 ## Patterns in this category
 
-- Todo — tasks with pending / done / removed states
+- Personal Todo — single-user task tracking with pending / done / removed states and edit. Composes with [Duplicate Prevention](../temporal/duplicate-prevention.md) for recency-based duplicate rejection.
+- Shared Todo — multi-actor task tracking with assignment — *(forthcoming)*
 - Priority and ordering — *(forthcoming)*
-- Assignment and ownership — *(forthcoming)*
 - Task dependencies — *(forthcoming)*
 - Recurring tasks — *(forthcoming)*
 - Reopen and revision — *(forthcoming)*

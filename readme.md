@@ -26,6 +26,25 @@ It is a specification library — patterns expressed as intent, independent of a
 
 ---
 
+## How it's organized
+
+Grace Commons distinguishes **atomic patterns** from **applications** (compositions of patterns).
+
+An atomic pattern is freestanding — its specification can be stated without naming any other pattern. Personal Todo, Duplicate Prevention, and Event Log are atoms. Each is a complete concept whose state, actions, and operational principles are independent of every other concept.
+
+An application is a composition — its specification depends on at least one other pattern. Audit Trail composes Event Log with retention, tamper-evidence, and actor identity. Shared Todo composes Personal Todo with Permissions and Assignment. Applications are where atoms come together to do real work.
+
+The directory layout reflects the split:
+
+- `patterns/` holds atoms, organized by category — `productivity/`, `temporal/`, `compliance/`, `resource-lifecycle/`.
+- `applications/` holds compositions. Each file declares which atoms it composes and the logic that wires them together.
+
+The test for which folder a contribution belongs in: **does its specification name another pattern?** If no, it's an atom — file under `patterns/`. If yes, it's an application — file under `applications/`.
+
+This mirrors [concept-catalog](https://github.com/dpapathanasiou/concept-catalog)'s split between `concepts/` and `applications/`. The reason is the same in both libraries: composition is a different kind of work from atom definition, and the directory layout should make that visible without forcing a reader to infer it.
+
+---
+
 ## Status
 
 Early and foundational. The architectural philosophy is in [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md). The pattern library is being built.

@@ -6,10 +6,11 @@ Time is a source of accidental complexity in most systems — batch windows, hol
 
 ## Patterns in this category
 
-- Hold window with expiry
-- Enrollment and eligibility periods
-- Deadline enforcement and grace periods
-- Scheduled state transitions
-- Temporal idempotency
+- [Duplicate Prevention](./duplicate-prevention.md) — temporally-bounded recency guard against duplicate adds (also: temporal idempotency, cooldown, recency guard). Composes with Personal Todo, comment posting, form submission, payment idempotency, and others.
+- [Event Log](./event-log.md) — append-only sequence of immutable, time-ordered events. The substrate every audit, history, replay, and event-sourcing application composes on top of.
+- Hold window with expiry — *(forthcoming)*
+- Enrollment and eligibility periods — *(forthcoming)*
+- Deadline enforcement and grace periods — *(forthcoming)*
+- Scheduled state transitions — *(forthcoming)*
 
 *This category is under active development. Pattern proposals welcome.*
