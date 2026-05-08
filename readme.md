@@ -6,7 +6,7 @@ permalink: /
 
 # Grace Commons
 
-A shared library of business logic patterns expressed as structured natural language specifications.
+Atomic patterns (concepts) and applications, expressed as structured natural language. Code is derived; intent is canonical.
 
 Named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
 
