@@ -104,6 +104,12 @@ Grace Commons is a specification library. The implementations come later, elsewh
 
 ---
 
+## Contribution lifecycle
+
+A pattern moves through four states: **Proposal** (an issue describing the recurring pattern) → **Draft** (a first spec, almost certainly `unresolved` or `partially resolved`) → **Pressure-tested** (three passes run, gaps fixed or deferred) → **Grounded** (all three passes clean, Lineage notes recorded). The lifecycle is iterative; a `grounded` pattern can return to `partially resolved` if LIVE evidence later contradicts an invariant.
+
+---
+
 ## How to contribute
 
 Open an issue or submit a pull request. If you are unsure whether something belongs, open an issue first and describe what you have in mind. The overhead of a conversation is lower than the overhead of a rejected PR.
