@@ -11,7 +11,7 @@ plugins:
 # Just the Docs theme settings
 search_enabled: true
 heading_anchors: true
-color_scheme: light
+color_scheme: dark
 
 # Aux nav (top right)
 aux_links:
