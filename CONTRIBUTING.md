@@ -58,6 +58,20 @@ Applications are where the architecture is exercised. A reader should be able to
 
 ---
 
+## The quality bar
+
+A pattern — atomic or application — is `grounded` only after surviving three pressure-testing passes:
+
+- **Pass 1 — Structural completeness (GRID).** Are all nine GRID nodes resolved with their references intact?
+- **Pass 2 — Conceptual independence (EOS).** Does the spec absorb any concern that belongs to a separate freestanding atom?
+- **Pass 3 — Adversarial scrutiny (Linus mode).** Are there muddled identities, sloppy invariants, happy-path-only examples, or hidden load-bearing decisions?
+
+Each pass catches a different class of gap. None substitutes for the others. See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the full methodology and [`patterns/productivity/personal-todo.md`](./patterns/productivity/personal-todo.md) for a worked example whose Lineage notes record the arc.
+
+A pattern that has only survived one or two passes is *in process* — and that is a respectable state, provided the actual state is declared honestly per MUSE's completeness states (`unresolved`, `partially resolved`, `grounded`).
+
+---
+
 ## What we are not looking for right now
 
 - Code implementations

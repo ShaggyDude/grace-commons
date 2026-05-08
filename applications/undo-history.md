@@ -17,7 +17,7 @@ The application is event-sourced. Personal Todo state at any moment is defined a
 ## Composes
 
 - **[Personal Todo](../patterns/productivity/personal-todo.md)** — provides the substrate state machine, transition rules, and invariants I1–I8. The application maintains a Personal Todo–shaped state derived from the Event Log.
-- **[Event Log](../patterns/temporal/event-log.md)** — provides the durable, append-only record of every action. The application owns one Event Log instance per Personal Todo session.
+- **[Event Log](../patterns/temporal/event-log.md)** — provides the durable, append-only record of every action. The application owns one Event Log instance for each Personal Todo it operates on.
 
 ---
 
@@ -113,7 +113,8 @@ What this application does not cover:
 - **Branching history.** No support for "go back in time and take a different action." The log is linear; alternate timelines are out of scope.
 - **Selective undo.** `undo` always targets the most recent non-undone forward event. Undoing a specific earlier action while preserving more recent actions ("undo my edit from twenty minutes ago, keep everything since") is not supported — it would require event-dependency analysis and is a separate pattern.
 - **Undo of undo.** Forward events can be undone; undo events cannot. Reversing an undo is the redo operation, out of scope.
-- **Cross-session persistence.** The application assumes the Event Log is durable across sessions (a deployment property of the Event Log instance). If the log is volatile, the undo history resets at session start, which most users will not expect.
+- **Persistence across restarts.** The application assumes the Event Log is durable across application restarts (a deployment property of the Event Log instance). If the log is volatile, the undo history resets at restart, which most users will not expect.
+- **Initialization from an existing log.** The application assumes its Event Log instance is either fresh (no events) at start, or an existing log whose events represent the prior history of the same Personal Todo. Inheriting an Event Log from a different application or substrate, or merging logs across substrates, is out of scope — that is an Import or Migration pattern.
 - **Concurrent actors.** Single-actor only, inherited from Personal Todo. Multi-actor undo (one user undoes another user's action) requires composing Shared Todo + Event Log + a Concurrency Resolution pattern.
 - **Long-history performance.** Replay from the beginning of the log is O(n) in log size. For systems with millions of events, compose with a Snapshot pattern (forthcoming) that periodically captures the derived state and lets replay start from the most recent snapshot.
 - **User expectation of undo scope.** The application's rule — *"most recent forward event not already undone"* — is unambiguous, but in long sequences with multiple undos the rule may not match user intuition (which often imagines undo as walking back through *visible* history rather than *unredacted* history). The mapping between this rule and the surface UX is a presentation-layer concern, not a spec concern.
@@ -138,3 +139,22 @@ The two atoms it composes carry their own standards inheritance — Personal Tod
 ## Status
 
 `grounded` — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `applications/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
+
+---
+
+## Lineage notes
+
+This application survived all three pressure-testing passes (see [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md)) on its first revision.
+
+**Pass 1 — Structural completeness (GRID).** Clean. The user-level Flow is captured in the Walkthrough example rather than as a dedicated Flow subsection — acceptable for an application, where the per-action wiring in Composition logic is the substantive structure and a separate flow would duplicate it.
+
+**Pass 2 — Conceptual independence (EOS).** Clean. The application is properly scoped: it composes Personal Todo + Event Log without absorbing concerns that belong to additional atoms. Redo, branching history, snapshots, concurrency resolution, import/migration are all named as future composing patterns rather than folded into Undo History.
+
+**Pass 3 — Adversarial scrutiny (Linus mode).** Two findings, both fixed:
+
+- *"Session" undefined.* The first draft said "the application owns one Event Log instance per Personal Todo session" without defining what a session is. Fixed: replaced with "instance" throughout, removing the under-specified term. Composes section now reads "one Event Log instance for each Personal Todo it operates on"; the corresponding Edge cases entry was renamed "Persistence across restarts" with cleaner language.
+- *Initialization from an existing log not addressed.* The first draft assumed the log starts empty. Fixed: Edge cases now names log initialization explicitly as a deployment-shaped concern — fresh or existing logs are both supported, but cross-substrate import or merge is out of scope and belongs to an Import or Migration pattern.
+
+The composition's most architecturally interesting result — **U6, identity preservation across delete/undo** — survived all three passes unchanged. It remains the showcase emergent property: neither Personal Todo nor Event Log carries it alone, and it falls out of the wiring rather than being designed in.
+
+The application is `grounded` after one round.

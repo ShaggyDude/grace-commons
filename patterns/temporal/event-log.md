@@ -52,7 +52,7 @@ The log is a totally ordered sequence of events. Each event has:
 The log itself has:
 
 - **`name`** — identifies the log instance among co-existing logs.
-- **`next_sequence_number`** — the sequence number that the next appended event will receive. Begins at 1 and increments by 1 on each append.
+- **`next_sequence_number`** — the sequence number that the next appended event will receive. Begins at 1 for a fresh log instance and increments by 1 on each append. Part of the log instance's persistent state — durable implementations must preserve it across restarts to maintain L4 (sequence-number monotonicity). Volatile implementations that reset to 1 on restart violate L4 across the lifetime of the log instance.
 
 There is no `delete` or `edit` surface. Once recorded, events remain; the log only grows.
 
@@ -186,3 +186,21 @@ It inherits from:
 ## Status
 
 `grounded` — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
+
+---
+
+## Lineage notes
+
+This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md)) on its first revision.
+
+**Pass 1 — Structural completeness (GRID).** Clean. All nine nodes addressed; the Edge cases section enumerates eleven explicit out-of-scope concerns, each pointing at a composing pattern that handles it (Retention Window, Tamper Evidence, Actor Identity, Reverse Index, Consensus, Schema Evolution, Snapshot, Observer, Transaction, durability, Erasure Tombstone).
+
+**Pass 2 — Conceptual independence (EOS).** Clean. Event Log is itself a foundational primitive that other concepts compose on top of. The concerns most often candidates for extraction (retention, tamper-evidence, actor identity, indexing) are already correctly named as composing patterns rather than absorbed into the atom.
+
+**Pass 3 — Adversarial scrutiny (Linus mode).** Three findings, one fixed in-pattern, two already adequately addressed:
+
+- *`next_sequence_number` behavior across restarts.* The first draft said "begins at 1 and increments by 1 on each append" without addressing what happens if the log instance is durable and survives a restart. Fixed: the State section now specifies the counter is part of the log instance's persistent state and that durable implementations must preserve it across restarts to maintain L4.
+- *Query DSL ambiguity.* Already named explicitly as implementation policy. The atom guarantees only that any well-formed query returns events in `sequence_number` order; the predicate language is intentionally deferred to composing patterns and implementations.
+- *Append/read concurrency.* Already addressed under Decision points (appends serialized by the underlying implementation) and under durability in Edge cases.
+
+The pattern is `grounded` after one round.

@@ -23,7 +23,7 @@ This is a freestanding concept in the EOS sense. It has its own state, its own a
 - An identity value to track.
 - A window duration, supplied by the containing pattern.
 - An identity-matching rule, supplied by the containing pattern (string equality, case-insensitive, normalized, hashed).
-- Action: `record(identity)` — invoked when an item with this identity has been observed and removed.
+- Action: `record(identity) → ok` — invoked when an item with this identity has been observed and removed. The action is total: it never rejects.
 - Action: `check(identity) → seen | not-seen` — invoked before the containing system accepts a new identity.
 - An implicit clock providing wall-time.
 
@@ -155,3 +155,21 @@ Current and forthcoming compositions:
 - Comment Posting *(forthcoming)* — short window with normalized-text matching.
 - Form Submission *(forthcoming)* — short window with idempotency-key matching.
 - Payment Processing *(forthcoming)* — medium window with explicit idempotency-key contract.
+
+---
+
+## Lineage notes
+
+This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md)) on its first revision. Findings were modest.
+
+**Pass 1 — Structural completeness (GRID).** Clean. All nine nodes are addressed; Friction is captured in Edge cases per the standard atom template.
+
+**Pass 2 — Conceptual independence (EOS).** Clean. The concept is intrinsically primitive — recording recently-seen identities with a window — and does not absorb any concern that recurs as its own atomic concept. The window itself is not extracted as a separate atom because windows of this shape are inherent to recency-bounded memory; pulling them apart would split too thin.
+
+**Pass 3 — Adversarial scrutiny (Linus mode).** Three findings, one fixed in-pattern, the other two already adequately addressed:
+
+- *`record` return value unspecified.* Fixed: action signature now reads `record(identity) → ok` to make the contract explicit. The action is total — it never rejects — and the return marks success.
+- *Clock semantics not addressed.* Already implicit under "wall-time" framing throughout; the underlying mechanism assumes a non-adversarial clock. Composing patterns that need monotonic guarantees should compose with a Logical Clock pattern (forthcoming) rather than expect this concept to provide it.
+- *Concurrent calls between `record` and `check` from different callers.* Already named under distributed coordination as out-of-scope. Serialization is the implementation's responsibility; the spec assumes serialized access within one instance.
+
+The pattern is `grounded` after one round.
