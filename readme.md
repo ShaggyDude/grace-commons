@@ -14,7 +14,7 @@ Named for Grace Hopper, who first argued that business logic should be readable 
 
 ## What this is
 
-Most software systems are 80–90% patterns that have been implemented thousands of times: resource reservation, billing cycles, auth flows, audit trails, compliance rules, notification logic. None of this is novel. All of it gets reinvented, inconsistently, in every new system.
+Most software systems are 80% patterns that have been implemented thousands of times: resource reservation, billing cycles, auth flows, audit trails, compliance rules, notification logic. None of this is novel. All of it gets reinvented, inconsistently, in every new system.
 
 Grace Commons is the attempt to specify these patterns once — clearly, completely, in structured natural language — so they can be referenced, validated against, and eventually generated from rather than reimplemented.
 
