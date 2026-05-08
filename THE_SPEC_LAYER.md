@@ -1,6 +1,6 @@
 # The Spec Layer
 
-*An architectural philosophy for software, where intent is canonical and code is generated.*
+> *This architecture shifts the canonical unit of software from code to structured intent — single semantic source, everything else derived — because every reader, human or machine, can reason at that level comfortably in their own native language.*
 
 ---
 
