@@ -44,7 +44,7 @@ Identities enter `recorded` via `record(identity)`. They expire and leave automa
 
 The concept has no user-driven flow of its own; it is invoked by a containing pattern.
 
-1. **Containing pattern removes an item.** It calls `record(identity)`. If the identity is not already in `recorded`, it enters with `recorded_at = now`. If the identity is already in `recorded`, the original `recorded_at` is preserved (D2).
+1. **Containing pattern removes an item.** It calls `record(identity)`. If the identity is not already in `recorded`, it enters with `recorded_at = now`. If the identity is already in `recorded`, the original `recorded_at` is preserved (single-recording invariant).
 2. **Time passes.** While `now − recorded_at < window`, the identity remains under guard.
 3. **Containing pattern receives a new add request.** Before accepting, it calls `check(identity)`. The concept returns `seen` if the identity is in `recorded` and within the window; otherwise `not-seen`.
 4. **Window elapses.** The identity is removed from `recorded`. Subsequent `check(identity)` calls return `not-seen`.
@@ -72,10 +72,10 @@ The `recorded` set is queryable for diagnostic purposes (debugging, observabilit
 
 ### Invariants
 
-- **D1 — Window monotonicity.** For any identity in `recorded`, `now − recorded_at < window`.
-- **D2 — Single-recording.** `record(identity)` does not extend the window for an already-recorded identity. The original `recorded_at` is preserved.
-- **D3 — Idempotency of check.** `check(identity)` does not modify state; repeated calls return the same result for the same `now`.
-- **D4 — Eventual expiry.** For any identity, after `window` time has elapsed since `recorded_at`, the identity is no longer in `recorded`.
+- **Invariant 1 — Window monotonicity.** For any identity in `recorded`, `now − recorded_at < window`.
+- **Invariant 2 — Single-recording.** `record(identity)` does not extend the window for an already-recorded identity. The original `recorded_at` is preserved.
+- **Invariant 3 — Idempotency of check.** `check(identity)` does not modify state; repeated calls return the same result for the same `now`.
+- **Invariant 4 — Eventual expiry.** For any identity, after `window` time has elapsed since `recorded_at`, the identity is no longer in `recorded`.
 
 ---
 
@@ -110,7 +110,7 @@ What this pattern does not cover:
 - **Distributed coordination.** If multiple instances of the concept exist (one per server in a cluster), keeping them consistent is the job of a separate Coordination or Replication pattern.
 - **Long-term retention for analytics or audit.** The concept retains identities only for the window. Long-term audit belongs to a History or Audit pattern.
 - **Identity normalization.** The matching rule is supplied by the containing pattern. The concept does not opine on how identities are compared.
-- **Window extension on repeated record (sliding-window semantics).** D2 explicitly forbids this. Patterns that need a window that resets on every observation are a separate concept (Sliding Window).
+- **Window extension on repeated record (sliding-window semantics).** The single-recording invariant explicitly forbids this. Patterns that need a window that resets on every observation are a separate concept (Sliding Window).
 - **Calendar-day boundaries.** "Same day" semantics are not the same as "within 24 hours" — they are timezone-and-DST-sensitive. A separate Calendar Day pattern handles day-boundary semantics; this concept is wall-time based.
 
 Where the pattern breaks down: when "recent" is defined by something other than wall-time elapsed. Number-of-intervening-events, calendar-day-boundary, and business-day-boundary semantics each take a separate concept.
@@ -129,7 +129,7 @@ It inherits from:
 
 - **Daniel Jackson, *The Essence of Software*** — the conception of a freestanding concept with state, actions, and operational principles, designed for composition rather than absorption.
 - **Distributed-systems idempotency literature** — the underlying mechanic appears as "idempotency window" or "exactly-once-within-window semantics" in message-queue and payment-processor designs.
-- **Linear temporal logic** — invariant D4 (eventual expiry) expressed as a temporal property.
+- **Linear temporal logic** — the eventual-expiry invariant expressed as a temporal property.
 
 ---
 

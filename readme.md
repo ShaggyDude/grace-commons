@@ -41,6 +41,24 @@ The directory layout reflects the split:
 
 The test for which folder a contribution belongs in: **does its specification name another pattern?** If no, it's an atom — file under `patterns/`. If yes, it's an application — file under `applications/`.
 
+### Current contents
+
+```text
+patterns/
+├── productivity/
+│   └── personal-todo            — single-user task tracking
+└── temporal/
+    ├── duplicate-prevention     — temporally-bounded recency guard
+    └── event-log                — append-only sequence of immutable events
+
+applications/
+└── undo-history                 — Personal Todo + Event Log
+                                   ↳ emergent invariant:
+                                     identity preservation across delete/undo
+```
+
+Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **applications** (the compositions), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant is the first such — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. Each pattern also carries **Lineage notes** recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
+
 This mirrors [concept-catalog](https://github.com/dpapathanasiou/concept-catalog)'s split between `concepts/` and `applications/`. The reason is the same in both libraries: composition is a different kind of work from atom definition, and the directory layout should make that visible without forcing a reader to infer it.
 
 ---

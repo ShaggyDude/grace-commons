@@ -16,7 +16,7 @@ The application is event-sourced. Personal Todo state at any moment is defined a
 
 ## Composes
 
-- **[Personal Todo](../patterns/productivity/personal-todo.md)** — provides the substrate state machine, transition rules, and invariants I1–I8. The application maintains a Personal Todo–shaped state derived from the Event Log.
+- **[Personal Todo](../patterns/productivity/personal-todo.md)** — provides the substrate state machine, transition rules, and its eight invariants. The application maintains a Personal Todo–shaped state derived from the Event Log.
 - **[Event Log](../patterns/temporal/event-log.md)** — provides the durable, append-only record of every action. The application owns one Event Log instance for each Personal Todo it operates on.
 
 ---
@@ -35,7 +35,7 @@ The application writes five event types into its Event Log instance:
 {type: "undo",     event_id, recorded_at, undone_event_id, undone_event_type}
 ```
 
-`event_id` and `recorded_at` are supplied by Event Log's `append` (per L2). `id` is the Personal Todo unit identifier (per Personal Todo's identity model). `snapshot` for delete events captures the unit's full state — `description`, current state (Pending or Done), and all defined timestamps — sufficient for replay to reconstruct the unit faithfully.
+`event_id` and `recorded_at` are supplied by Event Log's `append` (per its event-immutability invariant). `id` is the Personal Todo unit identifier (per Personal Todo's identity model). `snapshot` for delete events captures the unit's full state — `description`, current state (Pending or Done), and all defined timestamps — sufficient for replay to reconstruct the unit faithfully.
 
 ### Action wiring
 
@@ -71,13 +71,13 @@ Replay assumes events were recorded only on successful actions, which guarantees
 
 These invariants emerge from the composition. None of them belong to a single constituent atom; each requires both atoms working together to hold.
 
-- **U1 — Log faithfulness.** Every successful user action (forward or undo) appends exactly one event to the Event Log. No event appears in the log without a corresponding user action; no user action goes unrecorded.
-- **U2 — State equivalence.** At any time, the application's exposed Personal Todo state equals the result of replaying the Event Log's non-undone events from the beginning under the replay semantics above. The state is not stored separately; it is *defined* by the log.
-- **U3 — Undo targets the most recent forward event.** Each `undo` event's `undone_event_id` references the most recent forward event whose `event_id` was not already in the undone set at the time the undo was issued.
-- **U4 — Personal Todo's invariants are preserved.** I1–I8 from Personal Todo hold over the derived state at every moment. Replay never produces an invalid Personal Todo state, because every recorded forward event was a successful action against a then-valid state.
-- **U5 — Event Log's invariants are preserved.** L1–L7 from Event Log hold. The application never deletes or rewrites events; undo is implemented via compensating appends, not via mutation.
-- **U6 — Identity preservation across delete/undo.** Undoing a `delete` restores the unit at its original `id` with its original `added_at`, `last_edited_at` (if any), and prior state (Pending or Done). The original `add` event remains in the log; replay skipping the `delete` reconstructs the unit faithfully. Personal Todo on its own cannot do this — its `delete` is terminal and a fresh `add` produces a new id. The composition with Event Log buys back identity preservation as an emergent property.
-- **U7 — Reachability of prior states.** From any point in the user's history, the user can return to any prior application-visible state via a finite sequence of `undo` calls — provided no further forward actions intervene. After any forward action following undos, the previously-undone events remain in the log but cannot be reached via `undo` (that would require a separate Redo pattern).
+- **Invariant 1 — Log faithfulness.** Every successful user action (forward or undo) appends exactly one event to the Event Log. No event appears in the log without a corresponding user action; no user action goes unrecorded.
+- **Invariant 2 — State equivalence.** At any time, the application's exposed Personal Todo state equals the result of replaying the Event Log's non-undone events from the beginning under the replay semantics above. The state is not stored separately; it is *defined* by the log.
+- **Invariant 3 — Undo targets the most recent forward event.** Each `undo` event's `undone_event_id` references the most recent forward event whose `event_id` was not already in the undone set at the time the undo was issued.
+- **Invariant 4 — Personal Todo's invariants are preserved.** All eight invariants from Personal Todo hold over the derived state at every moment. Replay never produces an invalid Personal Todo state, because every recorded forward event was a successful action against a then-valid state.
+- **Invariant 5 — Event Log's invariants are preserved.** All seven invariants from Event Log hold. The application never deletes or rewrites events; undo is implemented via compensating appends, not via mutation.
+- **Invariant 6 — Identity preservation across delete/undo.** Undoing a `delete` restores the unit at its original `id` with its original `added_at`, `last_edited_at` (if any), and prior state (Pending or Done). The original `add` event remains in the log; replay skipping the `delete` reconstructs the unit faithfully. Personal Todo on its own cannot do this — its `delete` is terminal and a fresh `add` produces a new id. The composition with Event Log buys back identity preservation as an emergent property.
+- **Invariant 7 — Reachability of prior states.** From any point in the user's history, the user can return to any prior application-visible state via a finite sequence of `undo` calls — provided no further forward actions intervene. After any forward action following undos, the previously-undone events remain in the log but cannot be reached via `undo` (that would require a separate Redo pattern).
 
 ---
 
@@ -155,6 +155,6 @@ This application survived all three pressure-testing passes (see [`PRESSURE_TEST
 - *"Session" undefined.* The first draft said "the application owns one Event Log instance per Personal Todo session" without defining what a session is. Fixed: replaced with "instance" throughout, removing the under-specified term. Composes section now reads "one Event Log instance for each Personal Todo it operates on"; the corresponding Edge cases entry was renamed "Persistence across restarts" with cleaner language.
 - *Initialization from an existing log not addressed.* The first draft assumed the log starts empty. Fixed: Edge cases now names log initialization explicitly as a deployment-shaped concern — fresh or existing logs are both supported, but cross-substrate import or merge is out of scope and belongs to an Import or Migration pattern.
 
-The composition's most architecturally interesting result — **U6, identity preservation across delete/undo** — survived all three passes unchanged. It remains the showcase emergent property: neither Personal Todo nor Event Log carries it alone, and it falls out of the wiring rather than being designed in.
+The composition's most architecturally interesting result — **identity preservation across delete/undo** (Invariant 6) — survived all three passes unchanged. It remains the showcase emergent property: neither Personal Todo nor Event Log carries it alone, and it falls out of the wiring rather than being designed in.
 
 The application is `grounded` after one round.

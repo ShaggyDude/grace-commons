@@ -25,18 +25,18 @@ Every unit known to the system has an **`id`** — an opaque, immutable, system-
 - Ids are not reused after a unit is deleted.
 - The implementation chooses the id scheme (UUID, ULID, autoincrementing integer, opaque string). The spec requires only uniqueness within the system's lifetime and stability across sessions.
 
-This model differs from the Alloy `todo.als` concept: that version uses fully opaque atoms with no description at all (`var sig Task {}`); this pattern carries a user-visible description as a mutable property under uniqueness constraint I6. See Lineage notes for the honest framing of how the two concepts relate.
+This model differs from the Alloy `todo.als` concept: that version uses fully opaque atoms with no description at all (`var sig Task {}`); this pattern carries a user-visible description as a mutable property under an active-set uniqueness constraint. See Lineage notes for the honest framing of how the two concepts relate.
 
 ### Description policy
 
-Every description provided to `add` or `edit` is normalized before it enters state and before any I6 comparison:
+Every description provided to `add` or `edit` is normalized before it enters state and before any active-set uniqueness comparison:
 
 - **Trim** leading and trailing whitespace.
 - **NFC-normalize** Unicode codepoints.
 - **Reject** if the result is empty (rejection reason: `invalid-description`).
 - **Reject** if the result exceeds the maximum length (default: 1024 codepoints; configurable per implementation; rejection reason: `invalid-description`).
 
-Internal whitespace is preserved verbatim. Comparison for I6 is case-sensitive on the normalized form. Case-insensitive matching is policy and belongs to a wrapping pattern.
+Internal whitespace is preserved verbatim. Comparison for active-set uniqueness is case-sensitive on the normalized form. Case-insensitive matching is policy and belongs to a wrapping pattern.
 
 The user-facing display preserves the normalized form (post-trim, post-NFC) — what the user typed, modulo trimming and Unicode canonicalization.
 
@@ -107,7 +107,7 @@ Observed behavior, derived from how single-user task systems are actually used:
 - The user does not expect units to move backward from Done to Pending. Reopening belongs to a separate pattern.
 - The user expects timestamps to be visible and uses them to reason about staleness.
 - The user occasionally re-adds a unit with the same description as one previously deleted. Personal Todo on its own accepts this — there is no temporal memory of deleted units, and a new id is issued. Containing systems that need recency-based duplicate prevention compose this pattern with [Duplicate Prevention](../temporal/duplicate-prevention.md); see Composition notes.
-- The user pastes descriptions from external sources. Different sources produce different Unicode normal forms (NFC vs. NFD). The pattern's NFC normalization ensures that *"café"* typed and *"café"* pasted from a different source compare equal under I6.
+- The user pastes descriptions from external sources. Different sources produce different Unicode normal forms (NFC vs. NFD). The pattern's NFC normalization ensures that *"café"* typed and *"café"* pasted from a different source compare equal under the active-set uniqueness check.
 
 ### Feedback
 
@@ -126,19 +126,19 @@ The Pending and Done sets are queryable — the user can list, filter, and count
 
 The following hold across all valid sequences of actions and constitute the verification surface of the pattern:
 
-- **I1 — Membership exclusivity.** For every unit `t` known to the system, `t` is in exactly one of {Pending, Done}, never both, never neither.
-- **I2 — Add → Pending persistence.** After a successful `add(description)`, the resulting unit is in Pending and remains so until `complete` or `delete` is invoked.
-- **I3 — Complete → Done persistence.** After a successful `complete(id)`, the unit at `id` is in Done and remains so until `delete(id)` is invoked.
-- **I4 — Delete is terminal.** After a successful `delete(id)`, no unit with that `id` is in Pending or Done. The id is not reused.
-- **I5 — Edit preserves state.** After a successful non-no-op `edit(id, newDescription)`, the unit at `id` remains in Pending; only its `description` and `last_edited_at` change.
-- **I6 — Active-set description uniqueness.** At any time, no two distinct units in Pending ∪ Done share a normalized description. Description is a property under uniqueness constraint, not the unit's identity (which is `id`).
-- **I7 — Timestamp monotonicity.** For any unit:
+- **Invariant 1 — Membership exclusivity.** For every unit `t` known to the system, `t` is in exactly one of {Pending, Done}, never both, never neither.
+- **Invariant 2 — Add-then-Pending persistence.** After a successful `add(description)`, the resulting unit is in Pending and remains so until `complete` or `delete` is invoked.
+- **Invariant 3 — Complete-then-Done persistence.** After a successful `complete(id)`, the unit at `id` is in Done and remains so until `delete(id)` is invoked.
+- **Invariant 4 — Delete is terminal.** After a successful `delete(id)`, no unit with that `id` is in Pending or Done. The id is not reused.
+- **Invariant 5 — Edit preserves state.** After a successful non-no-op `edit(id, newDescription)`, the unit at `id` remains in Pending; only its `description` and `last_edited_at` change.
+- **Invariant 6 — Active-set description uniqueness.** At any time, no two distinct units in Pending ∪ Done share a normalized description. Description is a property under uniqueness constraint, not the unit's identity (which is `id`).
+- **Invariant 7 — Timestamp monotonicity.** For any unit:
   - if `last_edited_at` is defined, `added_at ≤ last_edited_at`.
   - if `completed_at` is defined, `added_at ≤ completed_at`.
   - if both `last_edited_at` and `completed_at` are defined, `last_edited_at ≤ completed_at`.
-- **I8 — Id stability.** A unit's `id` is set on `add` and never changes. Edits to `description` do not change `id`.
+- **Invariant 8 — Id stability.** A unit's `id` is set on `add` and never changes. Edits to `description` do not change `id`.
 
-I2 and I3 correspond to the linear-temporal-logic `until` assertions in the Alloy `todo.als` specification. I5–I8 are extensions specific to this pattern; the Alloy version does not carry description, mutability, timestamps, or an explicit identity model.
+Add-then-Pending persistence and Complete-then-Done persistence correspond to the linear-temporal-logic `until` assertions in the Alloy `todo.als` specification. The remaining four (edit preserves state, active-set description uniqueness, timestamp monotonicity, id stability) are extensions specific to this pattern; the Alloy version does not carry description, mutability, timestamps, or an explicit identity model.
 
 ---
 
@@ -163,8 +163,8 @@ A user adds *"call mom this week"* on Monday (id `g1`), completes `g1` Friday, d
 The same user, exercising the rejection surface in one short sequence:
 
 - Adds *"buy milk"* — accepted, id `r1`.
-- Tries to add *"buy milk"* again immediately while `r1` is still in Pending — rejected as `duplicate-active` (I6 protects active-set uniqueness).
-- Marks `r1` done. Tries to add *"buy milk"* once more while `r1` is in Done — rejected as `duplicate-active` (Done counts toward I6).
+- Tries to add *"buy milk"* again immediately while `r1` is still in Pending — rejected as `duplicate-active` (active-set uniqueness protects this case).
+- Marks `r1` done. Tries to add *"buy milk"* once more while `r1` is in Done — rejected as `duplicate-active` (Done counts toward active-set uniqueness).
 - Tries to edit `r1` (currently in Done) — rejected as `not-editable`.
 - Tries to add *"   "* (whitespace-only) — rejected as `invalid-description` (empty after trim).
 - Tries to add a 5,000-codepoint description — rejected as `invalid-description` (exceeds default 1,024 limit).
@@ -189,11 +189,11 @@ What this pattern does not cover:
 - **Priority, ordering, dependencies, due dates.** Each is a distinct pattern that composes with Personal Todo.
 - **Description versioning / edit history.** Only `last_edited_at` is retained; prior descriptions are not. Versioning belongs to a separate History pattern.
 - **Concurrent action sequences.** The pattern assumes a linear sequence of actions from a single actor. Multiple concurrent clients (two browser tabs, mobile + desktop) producing simultaneous actions on the same unit fall outside this concept; coordination belongs to a Concurrency-Resolution pattern that composes.
-- **Atomicity and crash semantics.** State transitions are specified as atomic. A crash mid-transition that leaves a unit in neither Pending nor Done violates I1; the implementor is responsible for the transactional boundary that makes I1 hold. The spec does not define recovery semantics.
-- **Clock semantics.** Timestamps are wall-time from the implicit clock. Clock skew, monotonicity, and timezone handling are deployment concerns the spec does not address. I7's monotonicity invariant assumes a non-decreasing clock; if the underlying clock can move backward, I7 is best-effort, not guaranteed.
+- **Atomicity and crash semantics.** State transitions are specified as atomic. A crash mid-transition that leaves a unit in neither Pending nor Done violates membership exclusivity; the implementor is responsible for the transactional boundary that makes it hold. The spec does not define recovery semantics.
+- **Clock semantics.** Timestamps are wall-time from the implicit clock. Clock skew, monotonicity, and timezone handling are deployment concerns the spec does not address. Timestamp monotonicity assumes a non-decreasing clock; if the underlying clock can move backward, the invariant is best-effort, not guaranteed.
 - **Case-insensitive matching, fuzzy matching, locale-aware comparison.** The description policy specifies NFC + trim + case-sensitive. Variants belong to wrapping patterns.
 
-Where the pattern breaks down: in any system with multiple actors, where "completion" is not a binary state, where description is not a sufficient property under uniqueness constraint, or where the host environment cannot supply the atomic state transitions I1 depends on. Each takes a different pattern.
+Where the pattern breaks down: in any system with multiple actors, where "completion" is not a binary state, where description is not a sufficient property under uniqueness constraint, or where the host environment cannot supply the atomic state transitions membership exclusivity depends on. Each takes a different pattern.
 
 ---
 
@@ -217,7 +217,7 @@ Personal Todo is a primitive, not a regulated business pattern. It has no direct
 
 - **Daniel Jackson, *The Essence of Software*** — the conception of a "concept" as a composable, behavioral, freestanding unit of software design. The discipline of *not* absorbing concerns that belong to other concepts.
 - **Eiffel's design-by-contract** — preconditions on `add`, `edit`, `complete`, `delete`.
-- **Linear temporal logic** — invariants I2 and I3 expressed as `until` properties.
+- **Linear temporal logic** — Add-then-Pending and Complete-then-Done expressed as `until` properties.
 - **Unicode Standard Annex #15** — NFC normalization for the description policy.
 
 A formal-methods version of a similar concept exists in [concept-catalog](https://github.com/dpapathanasiou/concept-catalog/blob/main/concepts/todo.als), expressed in Alloy 6. The Alloy version uses fully opaque Task atoms (`var sig Task {}`) with no description, no identity-by-content, no edit, and no duplicate prevention; its operational principles cover `add`, `complete`, and `delete` over those atoms. Personal Todo is *informed by* that structure but is a distinct concept: it adds an `id`-as-identity model with description as a mutable property under uniqueness constraint, an `edit` action, timestamps, normalized comparison rules, and explicit Behavior / Feedback / Examples coverage. Recency-based duplicate prevention, initially absorbed into the spec on the first iteration, was extracted to a separate freestanding concept ([Duplicate Prevention](../temporal/duplicate-prevention.md)).
@@ -246,10 +246,10 @@ The first four gaps closed in-pattern. The fifth was the most instructive: the s
 
 **Second pass** — adversarial pressure-test in the Linus Torvalds mode surfaced five further gaps in the simplified version:
 
-- *Identity model muddled.* I6 implied description = identity, but `add(description)` returning what-exactly was unspecified, and `edit` would have changed identity if so. Resolved: explicit `id` model. Description is a property under uniqueness constraint I6, not identity. New invariant I8 asserts id stability.
+- *Identity model muddled.* The active-set uniqueness invariant implied description = identity, but `add(description)` returning what-exactly was unspecified, and `edit` would have changed identity if so. Resolved: explicit `id` model. Description is a property under active-set uniqueness, not identity. A new invariant (id stability) asserts that ids never change once assigned.
 - *`add` return value unspecified.* Resolved: `add(description) → id | rejected(reason)`. All other actions take an `id`.
 - *Description rules unspecified.* Empty? Whitespace? Unicode normalization? Length? Resolved: explicit Description policy subsection (NFC + trim + non-empty + max-length, configurable, case-sensitive comparison).
-- *I7 malformed.* The chain inequality assumed all terms were defined. Resolved: I7 expressed as three conditional inequalities.
+- *Timestamp monotonicity malformed.* The chain inequality assumed all terms were defined. Resolved: expressed as three conditional inequalities.
 - *Examples were happy-path only.* Resolved: added a fourth Examples entry (Rejection paths) that exercises all five rejection reasons in a single sequence.
 
 Three of the original Linus-pass gaps were marked explicit out-of-scope rather than fixed in-pattern: concurrent action sequences, atomicity / crash semantics, and clock semantics. Each is a deferred concern with a forthcoming composing pattern named in Edge cases and Composition notes.

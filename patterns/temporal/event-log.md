@@ -52,7 +52,7 @@ The log is a totally ordered sequence of events. Each event has:
 The log itself has:
 
 - **`name`** — identifies the log instance among co-existing logs.
-- **`next_sequence_number`** — the sequence number that the next appended event will receive. Begins at 1 for a fresh log instance and increments by 1 on each append. Part of the log instance's persistent state — durable implementations must preserve it across restarts to maintain L4 (sequence-number monotonicity). Volatile implementations that reset to 1 on restart violate L4 across the lifetime of the log instance.
+- **`next_sequence_number`** — the sequence number that the next appended event will receive. Begins at 1 for a fresh log instance and increments by 1 on each append. Part of the log instance's persistent state — durable implementations must preserve it across restarts to maintain sequence-number monotonicity. Volatile implementations that reset to 1 on restart violate this invariant across the lifetime of the log instance.
 
 There is no `delete` or `edit` surface. Once recorded, events remain; the log only grows.
 
@@ -89,15 +89,15 @@ Each rejected action produces an observable refusal naming the failed preconditi
 
 ### Invariants
 
-- **L1 — Append-only.** Once an event is in the log, it remains in the log for the lifetime of the log instance. No action removes events.
-- **L2 — Event immutability.** After a successful `append`, the event's `event_id`, `sequence_number`, `recorded_at`, and `data` never change.
-- **L3 — Total order.** For any two distinct events `e1` and `e2`, exactly one of `e1.sequence_number < e2.sequence_number` or `e1.sequence_number > e2.sequence_number` holds.
-- **L4 — Sequence-number monotonicity.** If `e1` was appended before `e2`, then `e1.sequence_number < e2.sequence_number`.
-- **L5 — Read consistency.** A `read` issued at time `t` returns every event with `sequence_number ≤ next_sequence_number − 1` whose data matches the query, ordered by `sequence_number` ascending.
-- **L6 — No id reuse.** No two events in the log share an `event_id`.
-- **L7 — Wall-time best-effort monotonicity.** Under a non-decreasing clock, `recorded_at` is non-decreasing in append order. Under an unreliable clock, this is best-effort and `sequence_number` is the authoritative order.
+- **Invariant 1 — Append-only.** Once an event is in the log, it remains in the log for the lifetime of the log instance. No action removes events.
+- **Invariant 2 — Event immutability.** After a successful `append`, the event's `event_id`, `sequence_number`, `recorded_at`, and `data` never change.
+- **Invariant 3 — Total order.** For any two distinct events `e1` and `e2`, exactly one of `e1.sequence_number < e2.sequence_number` or `e1.sequence_number > e2.sequence_number` holds.
+- **Invariant 4 — Sequence-number monotonicity.** If `e1` was appended before `e2`, then `e1.sequence_number < e2.sequence_number`.
+- **Invariant 5 — Read consistency.** A `read` issued at time `t` returns every event with `sequence_number ≤ next_sequence_number − 1` whose data matches the query, ordered by `sequence_number` ascending.
+- **Invariant 6 — No id reuse.** No two events in the log share an `event_id`.
+- **Invariant 7 — Wall-time best-effort monotonicity.** Under a non-decreasing clock, `recorded_at` is non-decreasing in append order. Under an unreliable clock, this is best-effort and `sequence_number` is the authoritative order.
 
-L1 and L2 together give the *immutable journal* property — the property that distinguishes an Event Log from a mutable record set. L3 and L4 give the *replay* property. L5 gives the *durable visibility* property. L6 prevents identity collisions across time.
+Append-only and event immutability together give the *immutable journal* property — the property that distinguishes an Event Log from a mutable record set. Total order and sequence-number monotonicity give the *replay* property. Read consistency gives the *durable visibility* property. No id reuse prevents identity collisions across time.
 
 ---
 
@@ -138,7 +138,7 @@ What this pattern does not cover:
 - **Compaction and snapshots.** Some event-sourced systems collapse event sequences into snapshots. The bare Event Log does not; Snapshot is a composing pattern.
 - **Subscriptions / change feeds.** A pull-only `read` API. Push-based notification of new events belongs to an Observer or Change Feed pattern.
 - **Multi-event atomicity.** Each `append` is atomic. Multi-event transactions ("append A and B together or neither") belong to a Transaction pattern.
-- **Durability across crashes.** The atom specifies in-memory semantics. Persistence across process restarts is a deployment concern; durable implementations must provide write-ahead logging or equivalent. L1 (append-only) and L2 (immutability) are best-effort across crashes unless the implementation supplies durability.
+- **Durability across crashes.** The atom specifies in-memory semantics. Persistence across process restarts is a deployment concern; durable implementations must provide write-ahead logging or equivalent. Append-only and event immutability are best-effort across crashes unless the implementation supplies durability.
 - **Right-to-be-forgotten erasure.** Where law mandates true deletion of recorded events (GDPR Article 17, certain healthcare contexts), the architectural answer *append corrections, never edit history* breaks down. A composing pattern (Erasure Tombstone, Cryptographic Shredding) must be designed alongside legal counsel.
 
 Where the pattern breaks down: when the host environment cannot supply atomic, serialized appends (most adversarially-distributed settings); when events must be edited or deleted in place; when ordering must be derived from something other than append order.
@@ -179,7 +179,7 @@ It inherits from:
 
 - **Daniel Jackson, *The Essence of Software*** — the conception of a freestanding concept with state, actions, and operational principles.
 - **Eiffel's design-by-contract** — preconditions on `append` and `read`.
-- **Linear temporal logic** — invariants L1, L2, L4 expressed as temporal properties (`always`, `until`).
+- **Linear temporal logic** — append-only, event immutability, and sequence-number monotonicity expressed as temporal properties (`always`, `until`).
 
 ---
 
@@ -199,7 +199,7 @@ This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.
 
 **Pass 3 — Adversarial scrutiny (Linus mode).** Three findings, one fixed in-pattern, two already adequately addressed:
 
-- *`next_sequence_number` behavior across restarts.* The first draft said "begins at 1 and increments by 1 on each append" without addressing what happens if the log instance is durable and survives a restart. Fixed: the State section now specifies the counter is part of the log instance's persistent state and that durable implementations must preserve it across restarts to maintain L4.
+- *`next_sequence_number` behavior across restarts.* The first draft said "begins at 1 and increments by 1 on each append" without addressing what happens if the log instance is durable and survives a restart. Fixed: the State section now specifies the counter is part of the log instance's persistent state and that durable implementations must preserve it across restarts to maintain sequence-number monotonicity.
 - *Query DSL ambiguity.* Already named explicitly as implementation policy. The atom guarantees only that any well-formed query returns events in `sequence_number` order; the predicate language is intentionally deferred to composing patterns and implementations.
 - *Append/read concurrency.* Already addressed under Decision points (appends serialized by the underlying implementation) and under durability in Edge cases.
 
