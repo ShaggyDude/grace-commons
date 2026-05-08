@@ -1,3 +1,11 @@
+---
+title: Productivity
+parent: Patterns
+has_children: true
+nav_order: 1
+permalink: /patterns/productivity/
+---
+
 # Productivity Patterns
 
 Patterns for recording, tracking, ordering, and completing units of work.

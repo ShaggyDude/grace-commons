@@ -1,3 +1,9 @@
+---
+title: Undo History
+parent: Applications
+nav_order: 1
+---
+
 # Undo History
 
 > An application: every Personal Todo action is reversible. Composes Personal Todo with Event Log to give the user a familiar Cmd+Z experience without modifying either constituent atom.

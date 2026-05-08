@@ -1,9 +1,24 @@
 title: Grace Commons
 description: A shared library of business logic patterns expressed as structured natural language specifications.
-theme: minima
+
+remote_theme: just-the-docs/just-the-docs
 
 author: Scott Romack
 
-show_excerpts: false
+plugins:
+  - jekyll-remote-theme
+
+# Just the Docs theme settings
+search_enabled: true
+heading_anchors: true
+color_scheme: light
+
+# Aux nav (top right)
+aux_links:
+  "GitHub":
+    - "https://github.com/ShaggyDude/grace-commons"
+
+# Footer
+footer_content: 'Grace Commons — open foundation for business logic patterns.'
 
 markdown: kramdown

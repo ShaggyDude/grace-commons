@@ -1,3 +1,10 @@
+---
+title: Compliance
+parent: Patterns
+nav_order: 3
+permalink: /patterns/compliance/
+---
+
 # Compliance Patterns
 
 Patterns governing audit trails, regulatory holds, reporting obligations, and compliance lifecycle management.

@@ -1,3 +1,10 @@
+---
+title: Resource Lifecycle
+parent: Patterns
+nav_order: 4
+permalink: /patterns/resource-lifecycle/
+---
+
 # Resource Lifecycle Patterns
 
 Patterns governing how resources are reserved, allocated, held, committed, and released.

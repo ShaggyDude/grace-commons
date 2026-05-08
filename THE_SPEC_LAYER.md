@@ -1,3 +1,8 @@
+---
+title: The Spec Layer
+nav_order: 2
+---
+
 # The Spec Layer
 
 > *This architecture shifts the canonical unit of software from code to structured intent — single semantic source, everything else derived — because every reader, human or machine, can reason at that level comfortably in their own native language.*

@@ -1,3 +1,10 @@
+---
+title: Personal Todo
+parent: Productivity
+grand_parent: Patterns
+nav_order: 1
+---
+
 # Personal Todo
 
 > A productivity primitive: single-user task tracking with pending / done / removed states, edit-while-pending, and timestamps. Each unit has an opaque immutable id; description is a mutable property under explicit normalization rules.

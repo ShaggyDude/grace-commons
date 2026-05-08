@@ -1,3 +1,10 @@
+---
+title: Applications
+nav_order: 6
+has_children: true
+permalink: /applications/
+---
+
 # Applications
 
 This folder holds **applications** — compositions of atomic patterns from `patterns/`.

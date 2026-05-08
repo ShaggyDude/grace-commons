@@ -1,3 +1,8 @@
+---
+title: Contributing
+nav_order: 4
+---
+
 # Contributing to Grace Commons
 
 Grace Commons is early and foundational. The pattern library is being built. This is the right time to help establish the structure — before conventions calcify and before the easy decisions get made by default.

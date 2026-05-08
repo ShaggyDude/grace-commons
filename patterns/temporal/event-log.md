@@ -1,3 +1,10 @@
+---
+title: Event Log
+parent: Temporal
+grand_parent: Patterns
+nav_order: 2
+---
+
 # Event Log
 
 > A temporal primitive: an append-only sequence of immutable, time-ordered events. The substrate every audit, history, replay, and event-sourcing pattern composes on top of.

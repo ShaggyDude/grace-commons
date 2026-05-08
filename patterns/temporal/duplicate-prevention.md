@@ -1,3 +1,10 @@
+---
+title: Duplicate Prevention
+parent: Temporal
+grand_parent: Patterns
+nav_order: 1
+---
+
 # Duplicate Prevention
 
 > A composable temporal concept: a temporally-bounded record of recently-seen identities, used by containing patterns to reject re-additions within a configurable window.

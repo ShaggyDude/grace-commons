@@ -1,3 +1,11 @@
+---
+title: Temporal
+parent: Patterns
+has_children: true
+nav_order: 2
+permalink: /patterns/temporal/
+---
+
 # Temporal Patterns
 
 Patterns governing scheduling, deadlines, expiry, windows, and time-dependent state transitions.

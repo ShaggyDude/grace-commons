@@ -1,3 +1,9 @@
+---
+title: Home
+nav_order: 1
+permalink: /
+---
+
 # Grace Commons
 
 A shared library of business logic patterns expressed as structured natural language specifications.
