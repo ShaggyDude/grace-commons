@@ -6,6 +6,8 @@
 
 ## The Problem
 
+**The diagnosis.** All semantic fragmentation in software is the consequence of representing intent in multiple inconsistent forms — across roles, tools, and time. The translation chain, the eight competing artifacts, the accumulated cost: every line item below traces back to this one fact.
+
 Software has always run on a translation chain: user → PM → designer → engineer → code → tests → bug → engineer. Each step is lossy. By the time bits run, the user's actual need has been approximated four or five times, and the gap between need and behavior is the accumulated approximation error.
 
 The current truth about any non-trivial system is distributed across at least eight artifacts: code, tests, documentation, requirements documents, runbooks, contracts, tribal knowledge, and the meeting notes that capture none of it cleanly. None is authoritative. All partially contradict. Every change touches some subset and silently invalidates the others. This is the *normal operating state* of enterprise software, and the cost is enormous and hidden because no one has a line item for "we shipped the wrong thing because the spec disagreed with the contract."
@@ -23,6 +25,8 @@ The reason this hasn't been built is not that no one thought of it. Variants —
 LLMs are the first technology that can accept genuinely unconstrained natural language and do useful structural work with it. The vision was waiting on a specific capability that didn't exist until about three years ago.
 
 The Spec Layer does not invent specification. It inherits it. The novel move is making structured natural language the canonical artifact, using AI to maintain rigor, and treating code as a generated derivative.
+
+The Spec Layer is three things at once. It is a **representation format** — the canonical artifact from which downstream artifacts derive. It is a **reasoning layer** — the surface where invariants are stated, completeness is checked, and contradictions surface before they become defects. And it is a **coordination protocol** — the place where roles that previously communicated through translation (PM → engineer → tester → user, then back around) instead communicate through one shared canonical text in their own native language. The third role is what makes the architecture survivable inside real organizations: it eliminates not just the technical translation chain but the organizational one.
 
 ## The Architecture
 
