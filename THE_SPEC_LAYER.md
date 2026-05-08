@@ -202,7 +202,34 @@ The architecture inherits from:
 
 None gets adopted wholesale. Each contributes a pattern. The architecture is the synthesis of sixty years of formal-methods and specification work, expressed in the one representation — natural language with adversarial AI completeness checking — that previous attempts couldn't reach because the compiler didn't exist yet. This is not invention. It is curation: connecting dots from brilliant but unfinished work across decades, synthesizing what was always pointing in the same direction.
 
+The architectural commitment to plain English is *additive*, not *replacement*. We inherit anything good from any tradition that has it: requirements-engineering identifiers, ISO and IEEE standards, formal-methods notation, BDD scenarios, decision tables, design-by-contract assertions, ADR templates, compliance control frameworks, ontology hierarchies. Every formal source is welcome as input; the output form is consistent. Plain English is the target representation because it is the only form that excludes no audience. Business stakeholders who cannot read Alloy can read a structured English specification. Auditors who cannot read code can read it. Junior engineers who have not yet learned the formal traditions can read it. Senior practitioners can scan it faster than they could parse formal notation. AI systems can validate it for completeness. The constraint that disciplines specification quality is *whoever might catch the next defect* — and that whoever is broadest when the specification is in plain English. Including machines: structured natural language is no less machine-readable than Alloy, just validated by a different mechanism — AI completeness checking rather than model checking.
+
 The novel contributions, against this inherited background, are bounded and specific: the architectural commitment that structured natural language is the canonical artifact and code is generated; the human–AI division of labor that makes specification authoring tractable for non-specialists; the taxonomy of business patterns extracted from production systems with explicit open-versus-proprietary tier separation; and complexity ratings that drive systematic decisions about validation effort, generation routing, and refactoring. Each builds on inheritance rather than replacing it.
+
+## Principles
+
+This architecture is software engineering done one level up. The principles that discipline good code also discipline good intent — but in two different ways, depending on the principle.
+
+**The information-management triad** is the architecture's specific contribution. These three principles produce most of the Spec Layer's shape when applied at the intent level rather than the code level:
+
+- **DRY** (Don't Repeat Yourself) → *Don't Repeat Intent.* Every concept is defined once and referenced, not duplicated. The atom-and-application split makes this structural rather than aspirational: an atom is freestanding intent named in one place; an application names the atoms it composes by reference, never by re-stating them.
+- **SSOT** (Single Source of Truth) → *One Canonical Intent Layer.* The spec is canonical; code, tests, documentation, contracts, runbooks are derived. Competing sources of truth disappear by construction — there is one place where the system's intent lives, and everything else regenerates from it.
+- **Explicit over Implicit** → *No Hidden Semantics Across Boundaries.* The load-bearing decisions — identity, normalization, atomicity, clock semantics, what an action returns, what gets rejected and why — are stated, not inferred. Decisions deferred dressed up as ambiguity are a defect that pressure-testing catches.
+
+These three together solve the multi-artifact-truth-distribution problem the Spec Layer exists to solve. They are what makes this architecture different from existing requirements engineering, BDD, design-by-contract, and the other traditions the Inheritance section names. Each of those touches one or two of the three; only the synthesis applies all three simultaneously.
+
+**The design-quality principles** are inherited rather than reinvented. They apply at every abstraction level — code, design, architecture, intent — without needing a special intent-level reframing:
+
+- **Separation of Concerns** → freestanding concepts. Enforced by Pass 2 of the pressure-test.
+- **Composition over Inheritance** → atom plus application, never atom-extending-atom.
+- **YAGNI** → edge cases as explicit out-of-scope rather than over-specified.
+- **Encapsulation** → internals are implementation policy; the atom exposes only its contract.
+- **Fail Fast** → every action either succeeds or rejects with a named reason. No silent degradation.
+- **KISS** → the atom is as small as possible while remaining freestanding.
+
+These show up in well-formed patterns automatically, the same way they show up in well-formed code, because good design is good design at any level. They are not the architecture's contribution; they are the substrate the architecture sits on.
+
+The honest framing: the information-management triad is what we are claiming as novel. The design-quality principles are what we are inheriting. Both matter; only the first is the contribution.
 
 ## Why This Will Happen
 

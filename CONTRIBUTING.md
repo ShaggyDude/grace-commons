@@ -30,7 +30,7 @@ If you are not sure which side your contribution falls on, open an issue. The ov
 
 ## What an atomic pattern looks like
 
-A pattern spec lives in the appropriate `patterns/` subdirectory. It is a structured natural language document, not code. At minimum it should define:
+A pattern spec lives in the appropriate `patterns/` subdirectory. It is a structured natural language document, not code — because plain English is the form that includes every reader at once: business stakeholders, auditors, engineers, AI systems, future contributors. Inherit anything good from any source (formal-methods notation, ISO/IEEE standards, BDD, decision tables, design-by-contract, ADR templates, requirements-engineering identifiers); the output form is consistent. At minimum the spec should define:
 
 - **Name** — clear, domain-neutral where possible
 - **Intent** — what business need does this pattern address
