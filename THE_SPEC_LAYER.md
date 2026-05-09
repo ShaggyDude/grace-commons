@@ -45,6 +45,8 @@ English here means *structured* natural language — organized into definitions,
 
 **Structured English is the contract layer. Formal systems are import/export formats.** OWL, BPMN, JSON Schema, Gherkin, SQL, and code are all valid targets — downstream exports from the spec, or upstream imports from standards sources. None lives in the middle where humans work. The working layer is plain enough to review, structured enough to compile. Formal notation is available to those who need it; it is never required of those who don't.
 
+**Round-trip is load-bearing.** The canonical layer is canonical only if every formal target round-trips back. Grace Commons → Alloy → Grace Commons should yield an equivalent spec; Grace Commons → OpenAPI → Grace Commons should yield the same. One-way translation makes the spec a label on a code artifact; bidirectional translation makes the spec the source. *Symmetric* round-trips (between canonical English and formal notation) are ideally lossless, with any deliberate loss documented. *Asymmetric* round-trips (legacy code → spec → fresh code) are lossy on the inbound leg because intent is never fully in the code; both halves are still meaningful on their own. Both flavors are essential for the architecture to mean what it claims.
+
 **Every visual representation has a plain text source. The text is canonical. The visual is a view.** Diagrams, models, entity maps, flow charts — all are generated from the spec, not maintained alongside it. A diagram that exists independently of its plain text source is an artifact waiting to drift. The failure mode is familiar: a Lucidchart box-and-arrow drawing becomes the de facto spec, nobody knows if the system still matches it, and the drawing is too far from the code to verify. In the Spec Layer, diagrams are rendered from text the same way code is compiled from spec — on demand, from the canonical source, never hand-maintained in parallel.
 
 Exploration can be multimodal. Truth must be textual. Sketch in anything. Canonize in text.
@@ -204,9 +206,10 @@ The architecture inherits from:
 - **BDD and Gherkin** for the insight that examples in structured English are powerful specification, with the maintenance problem solved because there is now only one artifact.
 - **Domain-Driven Design** for bounded contexts and ubiquitous language as the business-architecture vocabulary.
 - **Eiffel's design-by-contract** for pre/post conditions and invariants.
+- **Angular's services** for the architectural insight that freestanding, injectable units of behavior with explicit contracts are the right unit of composition. The framework stumbled; the abstraction was sound. The same pattern recurs in NestJS providers, Spring beans, and dependency-injected service layers across most modern application frameworks.
 - **Decision tables (DMN)** for the bits where logic genuinely compresses to tables.
 - **DITA and structured authoring** for the discipline of separating content structure from presentation.
-- **Linnaeus** for the taxonomic discipline of choosing classifying axes.
+- **Linnaeus, library science, and ontology engineering** for the taxonomic backbone — classifying axes (Linnaeus), controlled vocabularies and authority control (library science: Dewey, Cutter, Ranganathan), and formal class hierarchies with machine reasoning (ontology engineering: OWL, RDF, knowledge graphs). Two centuries of discipline refining how knowledge is organized so it can be found, cited, and composed; we inherit the modern synthesis.
 - **Hopper's COBOL** for the original ambition that business stakeholders should be able to read what the system does.
 
 None gets adopted wholesale. Each contributes a pattern. The architecture is the synthesis of sixty years of formal-methods and specification work, expressed in the one representation — natural language with adversarial AI completeness checking — that previous attempts couldn't reach because the compiler didn't exist yet. This is not invention. It is curation: connecting dots from brilliant but unfinished work across decades, synthesizing what was always pointing in the same direction.
