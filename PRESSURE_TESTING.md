@@ -84,6 +84,34 @@ Then check the reference graph: every Friction links to a Flow step; every Decis
 
 ---
 
+## Defending each claim in-line
+
+The three passes are review tools — they catch gaps. Authoring well in the first place reduces what the passes find. The strongest writing discipline for architectural specs: **every claim is defended in-line by the same paragraph that introduces it.**
+
+**The four-step rubric:**
+
+1. **State the principle.** The architectural claim, expressed cleanly.
+2. **Name the likely objection or barrier.** What would a senior reviewer push back on? What historical concern attaches to this claim?
+3. **Show the mechanism that resolves it.** What specifically defuses the objection — a counter-argument, an architectural choice, a tooling capability?
+4. **Land the result.** The principle stands, and the reader's likely concern has been addressed without them needing to raise it.
+
+Readers bring objections; in-line answers are more persuasive than principles that let objections surface unanswered. A claim that survives this discipline rarely needs Pass 3's adversarial review to defend it — the defense is built in.
+
+**Worked example** (from THE_SPEC_LAYER.md):
+
+> *Verbosity is the architecture of the bridge. Compress the language and one side loses access; preserve it and both sides — humans and machines — traverse the same canonical artifact. AI removes the historical barrier of too-long-to-read: the canonical text stays long because it must be verifiable; AI-generated summaries stay short because they only need to orient; diagrams support summaries without replacing the canonical text underneath. Readers choose the detail level appropriate to the task; the canonical layer keeps all levels consistent with each other.*
+
+Tracing the rubric through it:
+
+- *Principle:* verbosity is structural, not stylistic.
+- *Objection:* "long specs go unread."
+- *Mechanism:* AI summarizes on demand; diagrams orient; canonical text stays verifiable.
+- *Result:* readers choose detail level; consistency preserved.
+
+**Apply to every architectural claim.** Atomic-pattern specs, application specs, methodology documents, and outreach material all benefit from this discipline. Where an architectural claim does not yet have a defended-in-line form, that is a writing gap to fix in the next revision — not a structural gap that needs a pass.
+
+---
+
 ## Order and iteration
 
 **Recommended order: 1 → 2 → 3.** Pass 1 is mechanical and produces a list of structural gaps. Pass 2 looks at the in-pattern resolutions and asks whether they belong elsewhere. Pass 3 attacks what survives.
