@@ -1,6 +1,7 @@
 ---
 title: Resource Lifecycle
 parent: Patterns
+has_children: true
 nav_order: 4
 permalink: /patterns/resource-lifecycle/
 ---
@@ -13,9 +14,9 @@ The same pattern appears across domains: a seat hold at an airline, an inventory
 
 ## Patterns in this category
 
-- Provisional commitment (hold → confirm | release)
-- Resource allocation with expiry
-- Idempotent reservation
-- Capacity constraint enforcement
+- [Provisional Commitment](./provisional-commitment.md) — a resource is held for a requester for a bounded window, then resolves into Confirmed, Released, or Expired. The lifecycle pattern behind credit-limit holds, bed assignments, inventory reservations, room bookings, and seat holds.
+- Resource allocation with expiry — *(forthcoming)*
+- Idempotent reservation — *(forthcoming)*
+- Capacity constraint enforcement — *(forthcoming)*
 
 *This category is under active development. Pattern proposals welcome.*
