@@ -1,7 +1,7 @@
 ---
 title: Actor Identity
 parent: Compliance
-grand_parent: Patterns
+grand_parent: Atoms
 nav_order: 1
 ---
 
@@ -231,7 +231,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded` — all required structural elements resolved; identity model explicit; attest and verify preconditions explicit; rejection and verification-outcome reasons enumerated; five cross-domain examples spanning banking, healthcare, payments, legal, and source control; regulated adversarial scenarios cover regulator audit, disputed transaction, and compromised credential; deferred concerns (actor lifecycle, authentication, authorization, credential management, multi-actor attestation, retroactive revocation, tamper-evidence on the store, time veracity, content immutability, identity federation, anonymous credentials, verification caching) named as out-of-scope with composing patterns where applicable. First entry in `patterns/compliance/`. Ready for composition with Provisional Commitment, Event Log, and the forthcoming audit-stack atoms.
+`grounded` — all required structural elements resolved; identity model explicit; attest and verify preconditions explicit; rejection and verification-outcome reasons enumerated; five cross-domain examples spanning banking, healthcare, payments, legal, and source control; regulated adversarial scenarios cover regulator audit, disputed transaction, and compromised credential; deferred concerns (actor lifecycle, authentication, authorization, credential management, multi-actor attestation, retroactive revocation, tamper-evidence on the store, time veracity, content immutability, identity federation, anonymous credentials, verification caching) named as out-of-scope with composing patterns where applicable. First entry in `atoms/compliance/`. Ready for composition with Provisional Commitment, Event Log, and the forthcoming audit-stack atoms.
 
 ---
 

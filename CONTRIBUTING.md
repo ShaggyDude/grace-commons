@@ -19,23 +19,23 @@ Grace Commons is early and foundational. The pattern library is being built. Thi
 
 ---
 
-## Atoms vs. applications
+## Atoms vs. compositions
 
-Grace Commons distinguishes **atomic patterns** from **compositions** (combinations of two or more patterns).
+Grace Commons distinguishes **atoms** from **compositions**.
 
-The test: does the contribution's specification name another pattern? If no, it's an atom — file it under `patterns/<category>/`. If yes, it's a composition — file it under `compositions/`.
+The test: does the contribution's specification name another atom? If no, it's an atom — file it under `atoms/<category>/`. If yes, it's a composition — file it under `compositions/`.
 
-Atoms are freestanding: state, actions, and operational principles independent of every other pattern. Personal Todo, Duplicate Prevention, Event Log.
+Atoms are freestanding: state, actions, and operational principles independent of every other atom. Personal Todo, Duplicate Prevention, Event Log.
 
-Applications are compositions: at least one constituent atom, stitched together with composition logic. Audit Trail (Event Log + retention + tamper-evidence + actor identity), Shared Todo (Personal Todo + Permissions + Assignment), Reservation Lifecycle (Reservation + Hold Window + Capacity).
+Compositions wire two or more atoms together with composition logic. Audit Trail (Event Log + retention + tamper-evidence + actor identity), Shared Todo (Personal Todo + Permissions + Assignment), Reservation Lifecycle (Reservation + Hold Window + Capacity).
 
 If you are not sure which side your contribution falls on, open an issue. The overhead of a conversation is lower than the overhead of placing it in the wrong folder.
 
 ---
 
-## What an atomic pattern looks like
+## What an atom looks like
 
-A pattern spec lives in the appropriate `patterns/` subdirectory. It is a structured natural language document, not code — because plain English is the form that includes every reader at once: business stakeholders, auditors, engineers, AI systems, future contributors. Inherit anything good from any source (formal-methods notation, ISO/IEEE standards, BDD, decision tables, design-by-contract, ADR templates, requirements-engineering identifiers); the output form is consistent. At minimum the spec should define:
+A pattern spec lives in the appropriate `atoms/` subdirectory. It is a structured natural language document, not code — because plain English is the form that includes every reader at once: business stakeholders, auditors, engineers, AI systems, future contributors. Inherit anything good from any source (formal-methods notation, ISO/IEEE standards, BDD, decision tables, design-by-contract, ADR templates, requirements-engineering identifiers); the output form is consistent. At minimum the spec should define:
 
 - **Name** — clear, domain-neutral where possible
 - **Intent** — what business need does this pattern address
@@ -48,10 +48,10 @@ Atoms do not need to be complete to be submitted. An incomplete atom with honest
 
 ### Additional sections for regulated atoms
 
-Atoms operating in regulated domains carry two further sections beyond the base shape. Both emerged as Pass 3 findings on the first regulated atom in the library ([Provisional Commitment](./patterns/resource-lifecycle/provisional-commitment.md)) and have since stabilized as required conventions for any atom — or composing application — whose acceptance bar is set by an external evaluator rather than an internal user.
+Atoms operating in regulated domains carry two further sections beyond the base shape. Both emerged as Pass 3 findings on the first regulated atom in the library ([Provisional Commitment](./atoms/resource-lifecycle/provisional-commitment.md)) and have since stabilized as required conventions for any atom — or composing application — whose acceptance bar is set by an external evaluator rather than an internal user.
 
-- **Regulated adversarial scenarios** — an `Examples` subsection walking what auditors, data subjects, and incident responders actually ask. Happy-path examples cover what users do; rejection-path examples cover what the system refuses; *adversarial* scenarios cover what external evaluators check. Worked examples: the *Regulator audit / Data subject request / Breach investigation* triad in Provisional Commitment; the *Regulator audit / Disputed transaction / Compromised credential* triad in [Actor Identity](./patterns/compliance/actor-identity.md). **Required** for atoms in `patterns/compliance/` and for atoms in other categories whose examples invoke regulated domains.
-- **Generation acceptance** — a standalone section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks: reconstruct lifecycles, verify each invariant, distinguish rejection outcomes, identify composing patterns in use. The bar is the regulator's question — *"can you prove no commitment was confirmed after its declared window?"*, *"can you prove no duplicate state change occurred?"* — not the developer's intuition. **Required** for any atom or application whose acceptance bar is set by an external evaluator (regulators, auditors, integration partners) rather than by the system's internal users alone. In practice: required for atoms in `patterns/compliance/`, for atoms in other categories whose examples invoke regulated domains, and for applications composing any of the above. Optional for productivity primitives whose Generation acceptance bar reduces to *the invariants hold and rejections surface*.
+- **Regulated adversarial scenarios** — an `Examples` subsection walking what auditors, data subjects, and incident responders actually ask. Happy-path examples cover what users do; rejection-path examples cover what the system refuses; *adversarial* scenarios cover what external evaluators check. Worked examples: the *Regulator audit / Data subject request / Breach investigation* triad in Provisional Commitment; the *Regulator audit / Disputed transaction / Compromised credential* triad in [Actor Identity](./atoms/compliance/actor-identity.md). **Required** for atoms in `atoms/compliance/` and for atoms in other categories whose examples invoke regulated domains.
+- **Generation acceptance** — a standalone section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks: reconstruct lifecycles, verify each invariant, distinguish rejection outcomes, identify composing patterns in use. The bar is the regulator's question — *"can you prove no commitment was confirmed after its declared window?"*, *"can you prove no duplicate state change occurred?"* — not the developer's intuition. **Required** for any atom or application whose acceptance bar is set by an external evaluator (regulators, auditors, integration partners) rather than by the system's internal users alone. In practice: required for atoms in `atoms/compliance/`, for atoms in other categories whose examples invoke regulated domains, and for applications composing any of the above. Optional for productivity primitives whose Generation acceptance bar reduces to *the invariants hold and rejections surface*.
 
 Both conventions also apply to applications that compose regulated atoms. [Idempotent Reservation](./compositions/idempotent-reservation.md) is the worked application example carrying both.
 
@@ -100,7 +100,7 @@ A pattern — atomic or application — is `grounded` only after surviving three
 - **Pass 2 — Conceptual independence (EOS).** Does the spec absorb any concern that belongs to a separate freestanding atom?
 - **Pass 3 — Adversarial scrutiny (Linus mode).** Are there muddled identities, sloppy invariants, happy-path-only examples, or hidden load-bearing decisions?
 
-Each pass catches a different class of gap. None substitutes for the others. See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the full methodology and [`patterns/productivity/personal-todo.md`](./patterns/productivity/personal-todo.md) for a worked example whose Lineage notes record the arc.
+Each pass catches a different class of gap. None substitutes for the others. See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the full methodology and [`atoms/productivity/personal-todo.md`](./atoms/productivity/personal-todo.md) for a worked example whose Lineage notes record the arc.
 
 A pattern that has only survived one or two passes is *in process* — and that is a respectable state, provided the actual state is declared honestly per MUSE's completeness states (`unresolved`, `partially resolved`, `grounded`).
 

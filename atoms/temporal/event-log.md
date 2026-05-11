@@ -1,7 +1,7 @@
 ---
 title: Event Log
 parent: Temporal
-grand_parent: Patterns
+grand_parent: Atoms
 nav_order: 2
 ---
 

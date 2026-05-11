@@ -34,23 +34,23 @@ It is a specification library — patterns expressed as intent, independent of a
 
 ## How it's organized
 
-Grace Commons distinguishes **atomic patterns** from **applications** (compositions of patterns).
+Grace Commons distinguishes **atoms** from **compositions**.
 
-An atomic pattern is freestanding — its specification can be stated without naming any other pattern. Personal Todo, Duplicate Prevention, and Event Log are atoms. Each is a complete concept whose state, actions, and operational principles are independent of every other concept.
+An atom is freestanding — its specification can be stated without naming any other atom. Personal Todo, Duplicate Prevention, and Event Log are atoms. Each is a complete concept whose state, actions, and operational principles are independent of every other concept.
 
-An application is a composition — its specification depends on at least one other pattern. Audit Trail composes Event Log with retention, tamper-evidence, and actor identity. Shared Todo composes Personal Todo with Permissions and Assignment. Applications are where atoms come together to do real work.
+A composition depends on at least one other atom. Audit Trail composes Event Log with retention, tamper-evidence, and actor identity. Shared Todo composes Personal Todo with Permissions and Assignment. Compositions are where atoms come together to do real work.
 
 The directory layout reflects the split:
 
-- `patterns/` holds atoms, organized by category — `productivity/`, `temporal/`, `compliance/`, `resource-lifecycle/`.
+- `atoms/` holds atoms, organized by category — `productivity/`, `temporal/`, `compliance/`, `resource-lifecycle/`.
 - `compositions/` holds compositions. Each file declares which atoms it composes and the logic that wires them together.
 
-The test for which folder a contribution belongs in: **does its specification name another pattern?** If no, it's an atom — file under `patterns/`. If yes, it's a composition — file under `compositions/`.
+The test for which folder a contribution belongs in: **does its specification name another pattern?** If no, it's an atom — file under `atoms/`. If yes, it's a composition — file under `compositions/`.
 
 ### Current contents
 
 ```text
-patterns/
+atoms/
 ├── productivity/
 │   └── personal-todo            — single-user task tracking
 ├── temporal/
@@ -78,7 +78,7 @@ compositions/
 
 Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Each pattern also carries **Lineage notes** recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
 
-The `patterns/` + `compositions/` split mirrors the structural logic of [concept-catalog](https://github.com/dpapathanasiou/concept-catalog)'s `concepts/` + `applications/` — composition is a different kind of work from atom definition, and the directory layout makes that visible without forcing a reader to infer it. Grace Commons uses `compositions/` because these artifacts are structurally compositions — formal combinations of independently valid patterns — not deployable products.
+The `atoms/` + `compositions/` split mirrors the structural logic of [concept-catalog](https://github.com/dpapathanasiou/concept-catalog)'s `concepts/` + `applications/` — composition is a different kind of work from atom definition, and the directory layout makes that visible without forcing a reader to infer it. Grace Commons uses `compositions/` because these artifacts are structurally compositions — formal combinations of independently valid patterns — not deployable products.
 
 ---
 

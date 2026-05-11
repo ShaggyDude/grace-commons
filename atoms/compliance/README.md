@@ -1,9 +1,9 @@
 ---
 title: Compliance
-parent: Patterns
+parent: Atoms
 has_children: true
 nav_order: 3
-permalink: /patterns/compliance/
+permalink: /atoms/compliance/
 ---
 
 # Compliance Patterns

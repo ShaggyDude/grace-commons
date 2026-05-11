@@ -1,7 +1,7 @@
 ---
 title: Provisional Commitment
 parent: Resource Lifecycle
-grand_parent: Patterns
+grand_parent: Atoms
 nav_order: 1
 ---
 

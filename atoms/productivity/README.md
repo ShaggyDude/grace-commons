@@ -1,9 +1,9 @@
 ---
 title: Productivity
-parent: Patterns
+parent: Atoms
 has_children: true
 nav_order: 1
-permalink: /patterns/productivity/
+permalink: /atoms/productivity/
 ---
 
 # Productivity Patterns

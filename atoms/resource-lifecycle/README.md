@@ -1,9 +1,9 @@
 ---
 title: Resource Lifecycle
-parent: Patterns
+parent: Atoms
 has_children: true
 nav_order: 4
-permalink: /patterns/resource-lifecycle/
+permalink: /atoms/resource-lifecycle/
 ---
 
 # Resource Lifecycle Patterns

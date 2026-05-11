@@ -1,7 +1,7 @@
 ---
 title: Personal Todo
 parent: Productivity
-grand_parent: Patterns
+grand_parent: Atoms
 nav_order: 1
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: Retention Window
 parent: Compliance
-grand_parent: Patterns
+grand_parent: Atoms
 nav_order: 2
 ---
 
@@ -236,7 +236,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded` — all required structural elements resolved; identity model explicit; transition preconditions explicit; rejection paths enumerated; five cross-domain examples covering banking (SOX), healthcare (HIPAA + state law), payments (PCI DSS), communications (SEC / FINRA), and legal (statute-of-limitations); regulated adversarial scenarios cover regulator audit (no-early-purge), data-minimization audit (overshoot), and litigation discovery (lawful destruction); deferred concerns (storage tier, legal hold, cryptographic shredding, right-to-erasure, policy registry, retention extension, recursive retention, concurrency, clock semantics, purge mechanism, non-repudiation of purge) named as out-of-scope with composing patterns where applicable. Second entry in `patterns/compliance/`. Third of the four atoms the Audit Trail application requires (after Event Log and Actor Identity; before Tamper Evidence).
+`grounded` — all required structural elements resolved; identity model explicit; transition preconditions explicit; rejection paths enumerated; five cross-domain examples covering banking (SOX), healthcare (HIPAA + state law), payments (PCI DSS), communications (SEC / FINRA), and legal (statute-of-limitations); regulated adversarial scenarios cover regulator audit (no-early-purge), data-minimization audit (overshoot), and litigation discovery (lawful destruction); deferred concerns (storage tier, legal hold, cryptographic shredding, right-to-erasure, policy registry, retention extension, recursive retention, concurrency, clock semantics, purge mechanism, non-repudiation of purge) named as out-of-scope with composing patterns where applicable. Second entry in `atoms/compliance/`. Third of the four atoms the Audit Trail application requires (after Event Log and Actor Identity; before Tamper Evidence).
 
 ---
 

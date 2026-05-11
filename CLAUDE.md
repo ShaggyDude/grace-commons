@@ -6,7 +6,7 @@
 
 ## What Grace Commons is
 
-Grace Commons is a public library of **atomic patterns** and **applications** (compositions of atoms) expressed as structured natural language. The thesis: software's canonical unit should shift from code to structured intent — a single semantic source from which code, tests, diagrams, and contracts are all derived. Code is a build artifact; the spec is canonical.
+Grace Commons is a public library of **atoms** and **compositions** expressed as structured natural language. The thesis: software's canonical unit should shift from code to structured intent — a single semantic source from which code, tests, diagrams, and contracts are all derived. Code is a build artifact; the spec is canonical.
 
 This is the open-foundation track of a broader architecture (the **Spec Layer**) that synthesizes formal-methods, requirements engineering, BDD, design-by-contract, and Daniel Jackson's *Essence of Software* (EOS) into one canonical English-as-truth representation. The Alloy / concept-catalog track is the formal-methods parallel; Grace Commons is the structured-natural-language parallel. Both extend the same EOS-conceptual core; neither displaces the other.
 
@@ -22,7 +22,7 @@ If you have no prior context, read in this order:
 2. **[`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md)** — the manifesto. The *Principles* section (information-management triad + design-quality inheritances) and *Bridges* section (load-bearing humans↔machines bridge, *does this build a bridge, or build a wall?* litmus test) anchor the framing.
 3. **[`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md)** — the three-pass methodology (GRID structural, EOS conceptual independence, Linus adversarial), the four-step authoring rubric, and the **Regulated-pattern conventions** section that canonicalizes *Regulated adversarial scenarios* and *Generation acceptance*.
 4. **[`CONTRIBUTING.md`](./CONTRIBUTING.md)** — contribution shape, the three perspectives (rigor / clarity / implementability), the quality bar, and the contribution lifecycle.
-5. **An example atom.** [`patterns/productivity/personal-todo.md`](./patterns/productivity/personal-todo.md) for the simplest atom shape with a two-iteration Lineage record. [`patterns/compliance/actor-identity.md`](./patterns/compliance/actor-identity.md) for the regulated-atom shape (carries both regulated-pattern conventions).
+5. **An example atom.** [`atoms/productivity/personal-todo.md`](./atoms/productivity/personal-todo.md) for the simplest atom shape with a two-iteration Lineage record. [`atoms/compliance/actor-identity.md`](./atoms/compliance/actor-identity.md) for the regulated-atom shape (carries both regulated-pattern conventions).
 6. **An example application.** [`compositions/idempotent-reservation.md`](./compositions/idempotent-reservation.md) for a two-atom composition. [`compositions/audit-trail.md`](./compositions/audit-trail.md) for the four-atom canonical regulated-audit composition.
 
 When drafting a new pattern, additionally read the most structurally adjacent existing pattern — mirror its shape.
@@ -33,11 +33,11 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 
 | Term | Meaning |
 |------|---------|
-| **Atom** (or *atomic pattern*) | A freestanding concept with its own state, actions, invariants. Specification does not name another pattern. Files in `patterns/<category>/`. |
+| **Atom** | A freestanding concept with its own state, actions, invariants. Specification does not name another atom. Files in `atoms/<category>/`. |
 | **Application** | A composition of two or more atoms. Specification names the atoms it composes. Files in `compositions/`. |
 | **Freestanding** | EOS-sense: the concept can be specified without naming any other concept. Pass 2 enforces this. |
 | **Emergent invariant** | A property that appears only at composition time and belongs to no single constituent atom. Applications surface these explicitly under *Application-level invariants*. |
-| **Regulated atom** | An atom in `patterns/compliance/`, or one whose acceptance bar is set by an external evaluator (regulator, auditor). Carries two extra sections: *Regulated adversarial scenarios* and *Generation acceptance*. |
+| **Regulated atom** | An atom in `atoms/compliance/`, or one whose acceptance bar is set by an external evaluator (regulator, auditor). Carries two extra sections: *Regulated adversarial scenarios* and *Generation acceptance*. |
 | **Lineage notes** | The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Recursive: the notes themselves can be pressure-tested. |
 | **GRID** | The nine-node MUSE v1.1 completeness framework (Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof). Pass 1's checklist. |
 | **The canonical regulated-audit stack** | Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail. All four atoms grounded; the four-atom application landed. The library's worked example of multi-atom composition under regulated load. |
@@ -74,7 +74,7 @@ Each pass catches a different class of gap. Skipping is not an option. A pattern
 
 ## Regulated-pattern conventions
 
-Two structural sections are **required** for atoms in `patterns/compliance/`, atoms in other categories whose examples invoke regulated domains, and applications composing any of the above:
+Two structural sections are **required** for atoms in `atoms/compliance/`, atoms in other categories whose examples invoke regulated domains, and applications composing any of the above:
 
 - **Regulated adversarial scenarios** — an *Examples* subsection walking three canonical adversarial reads: *regulator audit* (a query against records that must return the expected result by virtue of an invariant), *disputed transaction or data-subject request* (an external party challenges the system's claim and the records must answer), *breach or incident investigation* (an investigator queries during or after an anomaly).
 - **Generation acceptance** — a standalone section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks.
@@ -85,7 +85,7 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 
 ## Current state of the library
 
-**Atoms (`patterns/`):**
+**Atoms (`atoms/`):**
 
 - `productivity/` — Personal Todo (`grounded`)
 - `temporal/` — Duplicate Prevention, Event Log (both `grounded`)
@@ -109,7 +109,7 @@ The canonical regulated-audit stack — Event Log + Actor Identity + Retention W
 3. **Draft.** For regulated atoms or applications composing regulated atoms, bake in *Regulated adversarial scenarios* and *Generation acceptance* from the first draft. Identity model and action signatures explicit. Invariants named descriptively then numbered.
 4. **Run all three passes.** GRID first, EOS second, Linus third. Iterate until clean. Lineage notes record what each pass found and how it was resolved.
 5. **Resolve forthcoming-links.** Any existing atom whose Composition notes name the new pattern as `*(forthcoming)*` gets the marker removed and the reference linked.
-6. **Update catalog files.** The category README (`patterns/<category>/README.md`), the top-level snapshot in `readme.md`, and — for applications — `compositions/README.md`. Add the new pattern with a one-line description and the standards it anchors.
+6. **Update catalog files.** The category README (`atoms/<category>/README.md`), the top-level snapshot in `readme.md`, and — for applications — `compositions/README.md`. Add the new pattern with a one-line description and the standards it anchors.
 
 ---
 
@@ -128,7 +128,7 @@ When a session has a strong case for resolving one of these, the move is to (a) 
 - [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md) — the architectural manifesto.
 - [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) — three-pass methodology, regulated-pattern conventions.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution shape, three perspectives, four-step authoring rubric, lifecycle.
-- `patterns/<category>/README.md` — per-category catalogs.
+- `atoms/<category>/README.md` — per-category catalogs.
 - [`compositions/README.md`](./compositions/README.md) — compositions catalog, vocabulary note.
 
 ---

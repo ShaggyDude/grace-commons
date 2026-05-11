@@ -22,8 +22,8 @@ The application is event-sourced. Personal Todo state at any moment is defined a
 
 ## Composes
 
-- **[Personal Todo](../patterns/productivity/personal-todo.md)** — provides the substrate state machine, transition rules, and its eight invariants. The application maintains a Personal Todo–shaped state derived from the Event Log.
-- **[Event Log](../patterns/temporal/event-log.md)** — provides the durable, append-only record of every action. The application owns one Event Log instance for each Personal Todo it operates on.
+- **[Personal Todo](../atoms/productivity/personal-todo.md)** — provides the substrate state machine, transition rules, and its eight invariants. The application maintains a Personal Todo–shaped state derived from the Event Log.
+- **[Event Log](../atoms/temporal/event-log.md)** — provides the durable, append-only record of every action. The application owns one Event Log instance for each Personal Todo it operates on.
 
 ---
 

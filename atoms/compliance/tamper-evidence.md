@@ -1,7 +1,7 @@
 ---
 title: Tamper Evidence
 parent: Compliance
-grand_parent: Patterns
+grand_parent: Atoms
 nav_order: 3
 ---
 
@@ -231,7 +231,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded` — all required structural elements resolved; identity model explicit; seal and verify preconditions explicit; rejection and verification-outcome reasons enumerated; five cross-domain examples spanning finance (SOX), healthcare (HIPAA + 21 CFR Part 11), source control (Git), legal (RFC 3161), and payments (PCI DSS); regulated adversarial scenarios cover regulator integrity audit, breach forensics, and false-tamper-claim disproof; deferred concerns (tamper-prevention, asynchronous external anchoring, mechanism details, non-repudiation of the seal, time veracity, retention coupling, record-set definition, concurrent seals, concurrency and atomicity, durability of the proof store, verification caching) named as out-of-scope with composing patterns where applicable. Third entry in `patterns/compliance/`. Fourth regulated atom in the library. Final constituent of the canonical regulated-audit stack; with this atom landed, the [Audit Trail](../../compositions/audit-trail.md) application is unblocked and now lands as the four-constituent composition.
+`grounded` — all required structural elements resolved; identity model explicit; seal and verify preconditions explicit; rejection and verification-outcome reasons enumerated; five cross-domain examples spanning finance (SOX), healthcare (HIPAA + 21 CFR Part 11), source control (Git), legal (RFC 3161), and payments (PCI DSS); regulated adversarial scenarios cover regulator integrity audit, breach forensics, and false-tamper-claim disproof; deferred concerns (tamper-prevention, asynchronous external anchoring, mechanism details, non-repudiation of the seal, time veracity, retention coupling, record-set definition, concurrent seals, concurrency and atomicity, durability of the proof store, verification caching) named as out-of-scope with composing patterns where applicable. Third entry in `atoms/compliance/`. Fourth regulated atom in the library. Final constituent of the canonical regulated-audit stack; with this atom landed, the [Audit Trail](../../compositions/audit-trail.md) application is unblocked and now lands as the four-constituent composition.
 
 ---
 

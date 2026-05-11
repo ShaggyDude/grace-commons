@@ -1,7 +1,7 @@
 ---
 title: Permissions
 parent: Compliance
-grand_parent: Patterns
+grand_parent: Atoms
 nav_order: 4
 ---
 
@@ -249,7 +249,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded` — all required structural elements resolved; identity model explicit; grant and revoke preconditions explicit; `permitted` query with two first-class outcomes; five cross-domain examples spanning banking, healthcare, payments, legal, and source control; regulated adversarial scenarios cover regulator audit, disputed access, and privilege escalation; deferred concerns (role management, ABAC, scope hierarchy, explicit deny, delegation, grantor attribution, access-attempt logging, actor lifecycle, authentication, concurrent grant proliferation, cross-system portability, mass revocation, clock semantics) named as out-of-scope with composing patterns where applicable. Fourth entry in `patterns/compliance/`. First atom drafted toward the Shared Todo composition.
+`grounded` — all required structural elements resolved; identity model explicit; grant and revoke preconditions explicit; `permitted` query with two first-class outcomes; five cross-domain examples spanning banking, healthcare, payments, legal, and source control; regulated adversarial scenarios cover regulator audit, disputed access, and privilege escalation; deferred concerns (role management, ABAC, scope hierarchy, explicit deny, delegation, grantor attribution, access-attempt logging, actor lifecycle, authentication, concurrent grant proliferation, cross-system portability, mass revocation, clock semantics) named as out-of-scope with composing patterns where applicable. Fourth entry in `atoms/compliance/`. First atom drafted toward the Shared Todo composition.
 
 ---
 

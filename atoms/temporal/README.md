@@ -1,9 +1,9 @@
 ---
 title: Temporal
-parent: Patterns
+parent: Atoms
 has_children: true
 nav_order: 2
-permalink: /patterns/temporal/
+permalink: /atoms/temporal/
 ---
 
 # Temporal Patterns

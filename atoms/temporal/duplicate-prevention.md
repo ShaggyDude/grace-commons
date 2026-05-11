@@ -1,7 +1,7 @@
 ---
 title: Duplicate Prevention
 parent: Temporal
-grand_parent: Patterns
+grand_parent: Atoms
 nav_order: 1
 ---
 
