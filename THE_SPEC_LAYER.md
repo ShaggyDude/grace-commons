@@ -207,13 +207,16 @@ The architecture inherits from:
 
 - **ISO/IEC/IEEE 29148** for the formal criteria that define a well-formed requirement: necessary, unambiguous, verifiable, consistent, complete, singular, feasible, traceable. These map directly onto the spec layer's structured representation and provide an international-standards-grounded validation checklist.
 - **TLA+, Coq, Z, B-Method, and Alloy** for the formal verification tradition, made accessible through natural language as the authoring layer rather than formal notation.
+- **Daniel Jackson's *Essence of Software*** (EOS) for the *concept* as a freestanding, composable, behavioral unit of design — the architectural posture our atoms inherit, and the freestanding-concepts principle Pass 2 of pressure-testing enforces. Concept-catalog's Alloy formalization is one valid track; the structured-natural-language track Grace Commons builds is the parallel one.
 - **BDD and Gherkin** for the insight that examples in structured English are powerful specification, with the maintenance problem solved because there is now only one artifact.
 - **Domain-Driven Design** for bounded contexts and ubiquitous language as the business-architecture vocabulary.
 - **Eiffel's design-by-contract** for pre/post conditions and invariants.
 - **Angular's services** for the architectural insight that freestanding, injectable units of behavior with explicit contracts are the right unit of composition. The framework stumbled; the abstraction was sound. The same pattern recurs in NestJS providers, Spring beans, and dependency-injected service layers across most modern application frameworks.
+- **Robert C. Martin's "signs of a rotting design"** (rigidity, fragility, immobility, viscosity) for the diagnostic vocabulary that applies one level up — the same failure modes that decay code architecture also decay the canonical layer above it. The same vigilance prevents both: atomization counters rigidity, conceptual independence counters fragility, implementation neutrality counters immobility, and the four-step authoring rubric makes the principled path faster than the viscous one. That the framework translates cleanly is itself evidence the spec layer is genuinely architectural.
 - **Decision tables (DMN)** for the bits where logic genuinely compresses to tables.
 - **DITA and structured authoring** for the discipline of separating content structure from presentation.
 - **Linnaeus, library science, and ontology engineering** for the taxonomic backbone — classifying axes (Linnaeus), controlled vocabularies and authority control (library science: Dewey, Cutter, Ranganathan), and formal class hierarchies with machine reasoning (ontology engineering: OWL, RDF, knowledge graphs). Two centuries of discipline refining how knowledge is organized so it can be found, cited, and composed; we inherit the modern synthesis.
+- **Knuth's literate programming** for the original ambition that code and prose should be authored together as one coherent artifact, and for naming the failure mode (formalism-as-barrier) that AI-driven structural normalization now resolves.
 - **Hopper's COBOL** for the original ambition that business stakeholders should be able to read what the system does.
 
 None gets adopted wholesale. Each contributes a pattern. The architecture is the synthesis of sixty years of formal-methods and specification work, expressed in the one representation — natural language with adversarial AI completeness checking — that previous attempts couldn't reach because the compiler didn't exist yet. This is not invention. It is curation: connecting dots from brilliant but unfinished work across decades, synthesizing what was always pointing in the same direction.
@@ -246,6 +249,22 @@ These three together solve the multi-artifact-truth-distribution problem the Spe
 These show up in well-formed patterns automatically, the same way they show up in well-formed code, because good design is good design at any level. They are not the architecture's contribution; they are the substrate the architecture sits on.
 
 The honest framing: the information-management triad is what we are claiming as novel. The design-quality principles are what we are inheriting. Both matter; only the first is the contribution.
+
+## Bridges
+
+Grace Commons is, structurally, a bridge-building exercise. Every architectural decision is calibrated to *connect* rather than displace — appropriate technology used to bridge audiences, eras, disciplines, and abstraction layers that have historically been walled off.
+
+The bridges, in order of architectural significance:
+
+- **Between humans and machines.** The canonical artifact is read by both. Humans author intent; AI checks completeness; both reason over the same structured-English source. This is the *load-bearing* bridge — every other bridge follows from it. Without AI-driven structural validation, structured English cannot be canonical; without humans reading the same text the AI checks, the architecture has lost its author.
+- **Between past and future.** Legacy code lifts into spec via extraction; fresh code regenerates from the same spec. Decades of accumulated software debt flow through one canonical layer into modern systems. The asymmetric round-trip (lossy on inbound from code, regenerable on outbound to code) makes legacy modernization continuous rather than catastrophic.
+- **Between specification and implementation.** Conformance, not subjective interpretation. *Does the implementation still conform to the specification?* is a tractable question that replaces the unanswerable *does the code still match the docs?*
+- **Between formal and informal.** Mathematical rigor expressed in plain English. Formal methods without the priesthood barrier. Verification possible without notation training.
+- **Between disciplines.** Formal methods, requirements engineering, library science, ontology engineering, design, software architecture, professional practice — all inherited, all synthesized in the spec layer. No tradition owns the architecture; every tradition gets a seat.
+- **Between roles within organizations.** Engineers, designers, auditors, business stakeholders, regulators read the same canonical artifact. Silos that previously translated through lossy handoffs now share one canonical text.
+- **Between solo and enterprise.** Same library, same patterns, same vocabulary. A solo developer and a Fortune 500 use the canonical artifact identically; only the composition count differs.
+
+**The litmus test for every future addition:** *Does this build a bridge, or does it build a wall?* Walls exclude an audience to optimize for another. Bridges accommodate both. The architecture optimizes for bridges by default — that is what *appropriate technology* means in this context.
 
 ## Why This Will Happen
 
