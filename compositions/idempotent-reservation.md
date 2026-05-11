@@ -1,6 +1,6 @@
 ---
 title: Idempotent Reservation
-parent: Applications
+parent: Compositions
 nav_order: 2
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Undo History
-parent: Applications
+parent: Compositions
 nav_order: 1
 ---
 
