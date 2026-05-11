@@ -184,10 +184,10 @@ Actor Identity is freestanding and is the non-repudiation contract that several 
 - **Authorization / RBAC** *(forthcoming)* — combines what an actor *can* do with what they *did do*. Attestation answers the second; authorization answers the first.
 - **Compromise Disclosure** *(forthcoming)* — handles retroactive credential invalidation by producing reinterpretation records, never by mutating the attestation store.
 - **Witness / Co-signature** *(forthcoming)* — multi-actor attestations (m-of-n approval, dual control, qualified witness signatures).
-- **Tamper Evidence** *(forthcoming)* — cryptographic chaining of the attestation store.
+- **[Tamper Evidence](./tamper-evidence.md)** — cryptographic chaining (or Merkle-tree commitment, or external anchoring) of the attestation store, so that any rewrite of recorded attestations is detectable from the records alone.
 - **Trusted Timestamping** *(forthcoming, per RFC 3161)* — verifiable time-anchor for `attested_at`.
 
-The canonical regulated-audit stack composes [Event Log](../temporal/event-log.md) + Actor Identity + [Retention Window](./retention-window.md) + Tamper Evidence as four freestanding atoms; the **Audit Trail** application *(forthcoming, in `applications/`)* is the wiring. Three of the four constituents are now grounded; Tamper Evidence is the remaining atom.
+The canonical regulated-audit stack composes [Event Log](../temporal/event-log.md) + Actor Identity + [Retention Window](./retention-window.md) + [Tamper Evidence](./tamper-evidence.md) as four freestanding atoms; the **Audit Trail** application *(forthcoming, in `applications/`)* is the wiring. With Tamper Evidence landed, all four constituents are now grounded and the Audit Trail composition is unblocked.
 
 ---
 

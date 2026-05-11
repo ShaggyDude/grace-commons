@@ -137,7 +137,7 @@ The mechanic is identical across all four. What differs: payload schema, query p
 What this pattern does not cover:
 
 - **Retention and archival.** The bare Event Log keeps everything forever. Compose with [Retention Window](../compliance/retention-window.md) for time-based pruning under regulatory obligation, and a Storage Tier pattern for active-versus-cold archival (orthogonal axis).
-- **Tamper-evidence.** Events are immutable by spec, but nothing in the bare atom prevents an adversary with write access from rewriting the log. Cryptographic hash chains, signed events, and Merkle trees belong to a Tamper Evidence pattern that composes on top.
+- **Tamper-evidence.** Events are immutable by spec, but nothing in the bare atom prevents an adversary with write access from rewriting the log. Cryptographic hash chains, signed events, and Merkle trees belong to a [Tamper Evidence](../compliance/tamper-evidence.md) pattern that composes on top.
 - **Actor identity.** The Event Log records what was appended; the composing pattern decides whether the payload includes a `who`. [Actor Identity](../compliance/actor-identity.md) standardizes that addition with a verifiable non-repudiation binding.
 - **Reverse lookup / indexing.** The Event Log supports forward iteration and queries by sequence-number or time range. Lookup by payload field (find all events of type X, find all events touching id Y) is the job of a separate Reverse Index pattern.
 - **Distributed consistency.** A single Event Log instance is a single ordered sequence on one host. Multi-host ordering across instances (causal order, vector clocks, Lamport timestamps) belongs to a Consensus or Causal Ordering pattern.
