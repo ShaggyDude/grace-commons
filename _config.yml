@@ -24,3 +24,6 @@ aux_links:
 footer_content: 'Grace Commons — open foundation for business logic patterns.'
 
 markdown: kramdown
+
+exclude:
+  - CLAUDE.md
