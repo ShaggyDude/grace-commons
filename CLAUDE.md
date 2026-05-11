@@ -85,20 +85,20 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 
 ## Current state of the library
 
-**Atoms (`patterns/`)** — all `grounded`:
+**Atoms (`patterns/`):**
 
-- `productivity/` — Personal Todo
-- `temporal/` — Duplicate Prevention, Event Log
-- `resource-lifecycle/` — Provisional Commitment
-- `compliance/` — Actor Identity, Retention Window, Tamper Evidence
+- `productivity/` — Personal Todo (`grounded`)
+- `temporal/` — Duplicate Prevention, Event Log (both `grounded`)
+- `resource-lifecycle/` — Provisional Commitment (`grounded`)
+- `compliance/` — Actor Identity, Retention Window, Tamper Evidence (all `grounded`); Permissions (`draft` — pressure-testing passes pending)
 
-**Applications (`compositions/`)** — all `grounded`:
+**Compositions (`compositions/`)** — all `grounded`:
 
 - Undo History (Personal Todo + Event Log)
 - Idempotent Reservation (Provisional Commitment + Duplicate Prevention)
 - Audit Trail (Event Log + Actor Identity + Retention Window + Tamper Evidence)
 
-The canonical regulated-audit stack — Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail — is complete. The first four-atom application is grounded. Subsequent regulated work composes against this base rather than re-deriving it.
+The canonical regulated-audit stack — Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail — is complete. Permissions is the first atom drafted toward the Shared Todo composition (Personal Todo + Permissions + Assignment); Assignment remains forthcoming.
 
 ---
 
