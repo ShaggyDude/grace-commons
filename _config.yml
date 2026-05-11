@@ -1,10 +1,7 @@
 title: Grace Commons
 description: Atomic patterns (concepts) and applications, expressed as structured natural language. Code is derived; intent is canonical.
 
-image:
-  path: /OG.png
-  width: 1200
-  height: 630
+image: /OG.png
 
 remote_theme: just-the-docs/just-the-docs
 
