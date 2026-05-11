@@ -158,10 +158,10 @@ Window and identity-matching rule are configured per containing pattern, not glo
 Current and forthcoming compositions:
 
 - [Personal Todo](../productivity/personal-todo.md) — 24-hour window, string-equality matching.
+- [Idempotent Reservation](../../applications/idempotent-reservation.md) — minutes-to-hours window, opaque-token matching. The general-purpose retry-safety wrapper around Provisional Commitment; subsumes the payment-processing idempotency pattern (Stripe Idempotency-Key, ISO 20022 BizMsgIdr, etc.).
 - Shared Todo *(forthcoming)* — same shape, possibly with longer windows for high-stakes domains.
 - Comment Posting *(forthcoming)* — short window with normalized-text matching.
 - Form Submission *(forthcoming)* — short window with idempotency-key matching.
-- Payment Processing *(forthcoming)* — medium window with explicit idempotency-key contract.
 
 ---
 

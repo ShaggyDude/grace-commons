@@ -32,12 +32,13 @@ See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the full contribution shape.
 ## Applications in this library
 
 - [Undo History](./undo-history.md) — Personal Todo + Event Log. Every Personal Todo action is reversible; the user gets a familiar Cmd+Z experience without modifying either constituent atom.
+- [Idempotent Reservation](./idempotent-reservation.md) — Provisional Commitment + Duplicate Prevention. Every state-changing call is safely retryable: same idempotency token, same result, regardless of retry count. The composition formalizes what every production payment processor and reservation system implements today.
 
 Forthcoming:
 
 - **Audit Trail** — Event Log + Retention Window + Tamper Evidence + Actor Identity
 - **Shared Todo** — Personal Todo + Permissions + Assignment
-- **Reservation Lifecycle** — Reservation + Hold Window + Capacity Constraint
+- **Reservation Lifecycle** — Provisional Commitment + Capacity Constraint Enforcement + Actor Identity
 
 ---
 
