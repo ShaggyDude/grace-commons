@@ -107,7 +107,7 @@ A user adds *"buy milk"* (id `m1`), completes `m1`, deletes `m1`. The Event Log 
 
 ### Audit-as-side-effect
 
-A user later asks *"what did I do this week?"* The application calls `read_history({recorded_at: last_7_days})` and returns the full sequence including undos. Same Event Log instance, no additional atoms required. If the user later wants the history protected for compliance, composing this application's Event Log with an Audit Trail (forthcoming) adds retention and tamper-evidence without changing the composition above.
+A user later asks *"what did I do this week?"* The application calls `read_history({recorded_at: last_7_days})` and returns the full sequence including undos. Same Event Log instance, no additional atoms required. If the user later wants the history protected for compliance, composing this application's Event Log with [Audit Trail](./audit-trail.md) adds attribution, retention, and tamper-evidence without changing the composition above.
 
 ---
 

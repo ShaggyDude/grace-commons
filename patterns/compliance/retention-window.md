@@ -191,7 +191,7 @@ Retention Window is freestanding and is the lifetime-management contract every r
 - **Policy Registry** *(forthcoming)* — manages the definition, versioning, and attestation of retention policies. Supplies the `policy_ref` this atom consumes opaquely.
 - **Trusted Timestamping** *(forthcoming, per RFC 3161)* — verifiable time-anchor for retention deadlines.
 
-The canonical regulated-audit stack composes [Event Log](../temporal/event-log.md) + [Actor Identity](./actor-identity.md) + Retention Window + [Tamper Evidence](./tamper-evidence.md) as four freestanding atoms; the **Audit Trail** application *(forthcoming, in `applications/`)* is the wiring. With Tamper Evidence landed, all four constituents are now grounded and the Audit Trail composition is unblocked.
+The canonical regulated-audit stack composes [Event Log](../temporal/event-log.md) + [Actor Identity](./actor-identity.md) + Retention Window + [Tamper Evidence](./tamper-evidence.md) as four freestanding atoms; the **[Audit Trail](../../applications/audit-trail.md)** application is the wiring.
 
 ---
 

@@ -33,10 +33,10 @@ See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the full contribution shape.
 
 - [Undo History](./undo-history.md) — Personal Todo + Event Log. Every Personal Todo action is reversible; the user gets a familiar Cmd+Z experience without modifying either constituent atom.
 - [Idempotent Reservation](./idempotent-reservation.md) — Provisional Commitment + Duplicate Prevention. Every state-changing call is safely retryable: same idempotency token, same result, regardless of retry count. The composition formalizes what every production payment processor and reservation system implements today.
+- [Audit Trail](./audit-trail.md) — Event Log + Actor Identity + Retention Window + Tamper Evidence. Every action of consequence is recorded, attributed to a verifiable actor, retained for its regulatory lifetime, and protected against after-the-fact rewriting. The canonical four-atom composition behind SOX §404, HIPAA §164.312(b), PCI DSS Requirement 10, 21 CFR Part 11, SEC Rule 17a-4, and ISO/IEC 27001 §A.12.4.
 
 Forthcoming:
 
-- **Audit Trail** — Event Log + Retention Window + Tamper Evidence + Actor Identity
 - **Shared Todo** — Personal Todo + Permissions + Assignment
 - **Reservation Lifecycle** — Provisional Commitment + Capacity Constraint Enforcement + Actor Identity
 

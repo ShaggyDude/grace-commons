@@ -118,7 +118,7 @@ A composing system wraps each Personal Todo action as an event: `{type: "add", i
 
 ### Compliance audit log
 
-A regulated system records every state-changing action: `{type: "patient_record_accessed", patient_id: "p123", actor: "dr_smith", reason: "treatment", at: "2026-05-07T14:32:11Z"}`. The log is append-only by definition. A separate Audit Trail composing pattern adds retention rules, tamper-evidence (hash chain), and actor-identity verification. The Event Log itself doesn't know what compliance means; it preserves the sequence faithfully and lets compliance be layered on.
+A regulated system records every state-changing action: `{type: "patient_record_accessed", patient_id: "p123", actor: "dr_smith", reason: "treatment", at: "2026-05-07T14:32:11Z"}`. The log is append-only by definition. The [Audit Trail](../../applications/audit-trail.md) application composes this atom with [Retention Window](../compliance/retention-window.md), [Tamper Evidence](../compliance/tamper-evidence.md), and [Actor Identity](../compliance/actor-identity.md) to add policy-bounded retention, integrity proof, and verifiable attribution. The Event Log itself doesn't know what compliance means; it preserves the sequence faithfully and lets compliance be layered on.
 
 ### Patient medical record (clinical history)
 
@@ -162,7 +162,7 @@ Patterns compose with Event Log through one of two contracts, often both:
 Forthcoming compositions in `applications/`:
 
 - **Undo History** — Event Log + Reverse Index + Restore action.
-- **Audit Trail** — Event Log + Retention + Tamper Evidence + Actor Identity.
+- **[Audit Trail](../../applications/audit-trail.md)** — Event Log + Actor Identity + Retention Window + Tamper Evidence. The canonical regulated-audit primitive; landed.
 - **Activity Feed** — Event Log + Subscriber pattern + Filter.
 - **Event-Sourced Reservation** — Event Log + Snapshot + Reservation atom.
 
