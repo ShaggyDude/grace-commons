@@ -90,7 +90,7 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 - `productivity/` — Personal Todo (`grounded`)
 - `temporal/` — Duplicate Prevention, Event Log (both `grounded`)
 - `resource-lifecycle/` — Provisional Commitment (`grounded`)
-- `compliance/` — Actor Identity, Retention Window, Tamper Evidence (all `grounded`); Permissions (`draft` — pressure-testing passes pending)
+- `compliance/` — Actor Identity, Retention Window, Tamper Evidence, Permissions (all `grounded`)
 
 **Compositions (`compositions/`)** — all `grounded`:
 
