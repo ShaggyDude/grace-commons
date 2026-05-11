@@ -13,6 +13,8 @@ An application is a specification whose definition names at least one other patt
 
 Each file in this folder declares the atoms it composes and the logic that wires them together.
 
+*Terminology note.* The folder name *applications* is inherited from [concept-catalog](https://github.com/dpapathanasiou/concept-catalog)'s split between `concepts/` and `applications/` — the formal-methods track Grace Commons runs parallel to. *Compositions* would be semantically more precise — a composed pattern is, structurally, a composition rather than a product — and the rename is under consideration. It is deferred while the vocabulary inheritance from EOS literature is load-bearing.
+
 ---
 
 ## Format
