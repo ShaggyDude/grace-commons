@@ -46,6 +46,17 @@ A pattern spec lives in the appropriate `patterns/` subdirectory. It is a struct
 
 Atoms do not need to be complete to be submitted. An incomplete atom with honest gaps marked as open decisions is more useful than a polished one with hidden assumptions.
 
+### Additional sections for regulated atoms
+
+Atoms operating in regulated domains carry two further sections beyond the base shape. Both emerged as Pass 3 findings on the first regulated atom in the library ([Provisional Commitment](./patterns/resource-lifecycle/provisional-commitment.md)) and have since stabilized as required conventions for any atom — or composing application — whose acceptance bar is set by an external evaluator rather than an internal user.
+
+- **Regulated adversarial scenarios** — an `Examples` subsection walking what auditors, data subjects, and incident responders actually ask. Happy-path examples cover what users do; rejection-path examples cover what the system refuses; *adversarial* scenarios cover what external evaluators check. Worked examples: the *Regulator audit / Data subject request / Breach investigation* triad in Provisional Commitment; the *Regulator audit / Disputed transaction / Compromised credential* triad in [Actor Identity](./patterns/compliance/actor-identity.md). **Required** for atoms in `patterns/compliance/` and for atoms in other categories whose examples invoke regulated domains.
+- **Generation acceptance** — a standalone section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks: reconstruct lifecycles, verify each invariant, distinguish rejection outcomes, identify composing patterns in use. The bar is the regulator's question — *"can you prove no commitment was confirmed after its declared window?"*, *"can you prove no duplicate state change occurred?"* — not the developer's intuition. **Required** for any atom or application whose Status would be unverifiable without it (most regulated atoms; the productivity primitives can skip it).
+
+Both conventions also apply to applications that compose regulated atoms. [Idempotent Reservation](./applications/idempotent-reservation.md) is the worked application example carrying both.
+
+For non-regulated primitives (Personal Todo, Event Log, Duplicate Prevention), these sections are optional and often over-specification — Personal Todo's adversarial scenarios would be contrived, and its Generation acceptance bar reduces to *"the invariants hold and rejections surface."* Use judgment; the test is whether an external evaluator with no developer access would have a meaningfully different verification surface from the atom's existing structure.
+
 ---
 
 ## What an application looks like
@@ -60,6 +71,8 @@ An application spec lives directly in `applications/` (no subdirectories). It de
 - **Edge cases** — failure modes that arise from composition, including conflicts between constituent atoms
 
 Applications are where the architecture is exercised. A reader should be able to verify, from the file alone, that the named atoms could plausibly compose to produce the claimed behavior.
+
+Applications that compose regulated atoms follow the same *Regulated adversarial scenarios* and *Generation acceptance* conventions as their constituent atoms. The application's adversarial scenarios exercise the *emergent* invariants — what the composition guarantees that no single constituent does — and the application's Generation acceptance bar adds checks that span the constituents (e.g., the token-to-commitment mapping in Idempotent Reservation). See [Idempotent Reservation](./applications/idempotent-reservation.md) for the worked example.
 
 ---
 

@@ -112,6 +112,36 @@ Tracing the rubric through it:
 
 ---
 
+## Regulated-pattern conventions
+
+Two structural conventions emerged as Pass 3 findings on the first regulated atom in the library and have stabilized as required sections for any pattern with external acceptance bars. Both are *structural fixes* to recurring Pass 3 gaps — not optional polish.
+
+### Regulated adversarial scenarios
+
+**The Pass 3 gap.** Early-draft examples are almost always happy-path biased: they walk what users *do*, not what auditors *check*. Pass 3 catches this routinely. The historical fix was to add rejection-path examples — what the system *refuses*. That helps, but it still misses a third class: what external evaluators *ask*. A regulator querying "show me every commitment confirmed after its declared window" is exercising the invariant from the outside, in the language they use, against the records they can see.
+
+**The structural fix.** A dedicated `Examples` subsection — *Regulated adversarial scenarios* — walking three canonical adversarial reads: **regulator audit** (a query against the records that must return the expected result by virtue of an invariant), **disputed transaction or data-subject request** (an external party challenges the system's claim and the records must answer), and **breach or incident investigation** (an investigator queries during or after an anomaly). The three classes exercise different invariant surfaces: audit checks structural guarantees, dispute exercises the contract under hostile interpretation, breach exercises forensic queryability.
+
+**Worked examples.** [Provisional Commitment's adversarial scenarios](patterns/resource-lifecycle/provisional-commitment.md#regulated-adversarial-scenarios) walk regulator-audit-of-confirmation-window, GDPR-erasure-on-personal-data, and breach-window-forensics. [Actor Identity's](patterns/compliance/actor-identity.md#regulated-adversarial-scenarios) walk regulator-audit-of-attribution, disputed-transaction-by-actor, and compromised-credential-discovery. [Idempotent Reservation's](applications/idempotent-reservation.md#regulated-adversarial-scenarios) walk regulator-audit-for-double-charges, disputed-double-charge, and replay-attack — exercising the *emergent* invariants of the composition rather than the constituents' invariants.
+
+### Generation acceptance
+
+**The Pass 3 gap.** Success criteria for derived implementations are almost always implicit — the *"the invariants hold and rejections surface"* assumption. For regulated atoms, that assumption fails to specify what an external auditor reading the records must be able to *do*. The MUSE Proof node requires success criteria be "measurable and defined before development begins," but the bar is rarely written down; it lives in the architect's head.
+
+**The structural fix.** A standalone `Generation acceptance` section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks: reconstruct lifecycles from records, verify every invariant from records, observe every rejection-outcome class, identify composing patterns in use, trace ids across boundaries. The framing is *"any code generated from this atom must produce records and a runtime surface that pass the following checks"* — the generator's contract.
+
+**Worked examples.** [Provisional Commitment's Generation acceptance](patterns/resource-lifecycle/provisional-commitment.md#generation-acceptance) names four checks an external auditor performs against the commitment record set plus the composed Event Log. [Actor Identity's](patterns/compliance/actor-identity.md#generation-acceptance) names five checks against the attestation store plus the actor registry's public material. [Idempotent Reservation's](applications/idempotent-reservation.md#generation-acceptance) names five checks that span the composition — including the token-to-commitment tracing that neither constituent atom owns alone.
+
+### When the conventions apply
+
+Both conventions are **required** for patterns in `patterns/compliance/`, patterns elsewhere whose examples invoke regulated domains (banking, healthcare, payments, hospitality with personal data, airline reservations), and applications that compose any of the above.
+
+Both are **optional** for non-regulated primitives — Personal Todo's adversarial scenarios would be contrived, Event Log's Generation acceptance is implicit in its invariants. Use judgment; the test is whether an external evaluator with no developer access would have a meaningfully different verification surface from the atom's existing structure. If yes, the conventions earn their keep. If no, they are over-specification.
+
+The conventions are **inherited rather than reinvented** in each new pattern. Each new regulated atom or application that lands lists "*conventions inherited from prior work*" in its Lineage notes and either points back to this section or to the worked examples it most closely follows.
+
+---
+
 ## Order and iteration
 
 **Recommended order: 1 → 2 → 3.** Pass 1 is mechanical and produces a list of structural gaps. Pass 2 looks at the in-pattern resolutions and asks whether they belong elsewhere. Pass 3 attacks what survives.
