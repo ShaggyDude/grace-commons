@@ -103,7 +103,7 @@ Observed behavior, derived from how regulated systems use provisional commitment
 - The hold window is a contract with two faces: a commitment to the requester (the resource is theirs to confirm within the window) and a constraint on the requester (decide within the window or lose the hold). Both faces are load-bearing — auditors check both.
 - Expiry is a state transition, not a passive absence. A commitment whose wall-time has passed `expires_at` is still in Held until `expire(id)` is invoked. Implementations may invoke `expire` eagerly (a scheduled sweep) or lazily (at next observation of the commitment). The audit-trail consequences differ; see Edge cases.
 - Concurrent `place_hold` calls for the same resource resolve serially under the host environment's serialization guarantees. Whichever call wins the race produces a Held commitment; the loser receives `resource-unavailable`.
-- The commitment record persists in its terminal state indefinitely from the atom's perspective. Retention, archival, and purge are composing concerns.
+- The commitment record persists in its terminal state indefinitely from the atom's perspective. Retention, archival, and purge are composing concerns; the regulated-deployment composition is with [Retention Window](../compliance/retention-window.md).
 - Audit trails read the commitment record directly. Every state transition has a timestamp; every commitment names a requester and a resource. This is the minimum surface a regulator expects.
 
 ### Feedback

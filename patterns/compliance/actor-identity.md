@@ -187,7 +187,7 @@ Actor Identity is freestanding and is the non-repudiation contract that several 
 - **Tamper Evidence** *(forthcoming)* — cryptographic chaining of the attestation store.
 - **Trusted Timestamping** *(forthcoming, per RFC 3161)* — verifiable time-anchor for `attested_at`.
 
-The canonical regulated-audit stack composes Event Log + Actor Identity + Retention Window + Tamper Evidence as four freestanding atoms; the **Audit Trail** application *(forthcoming, in `applications/`)* is the wiring.
+The canonical regulated-audit stack composes [Event Log](../temporal/event-log.md) + Actor Identity + [Retention Window](./retention-window.md) + Tamper Evidence as four freestanding atoms; the **Audit Trail** application *(forthcoming, in `applications/`)* is the wiring. Three of the four constituents are now grounded; Tamper Evidence is the remaining atom.
 
 ---
 
