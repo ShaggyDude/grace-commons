@@ -1,25 +1,25 @@
 ---
-title: Applications
+title: Compositions
 nav_order: 6
 has_children: true
-permalink: /applications/
+permalink: /compositions/
 ---
 
-# Applications
+# Compositions
 
-This folder holds **applications** — compositions of atomic patterns from `patterns/`.
+This folder holds **compositions** — specifications that wire two or more atomic patterns from `patterns/` into a single coherent artifact.
 
-An application is a specification whose definition names at least one other pattern. Where atoms describe self-contained concepts (Personal Todo, Duplicate Prevention, Event Log), applications describe how those concepts come together to do real work — Audit Trail composing Event Log with retention and tamper-evidence; Shared Todo composing Personal Todo with Permissions and Assignment; Reservation Lifecycle composing Reservation with Hold Window and Capacity.
+A composition names at least one other pattern in its specification. Where atoms describe self-contained concepts (Personal Todo, Duplicate Prevention, Event Log), compositions describe how those concepts come together to do real work — Audit Trail composing Event Log with retention and tamper-evidence; Shared Todo composing Personal Todo with Permissions and Assignment; Reservation Lifecycle composing Reservation with Hold Window and Capacity.
 
 Each file in this folder declares the atoms it composes and the logic that wires them together.
 
-*Terminology note.* The folder name *applications* is inherited from [concept-catalog](https://github.com/dpapathanasiou/concept-catalog)'s split between `concepts/` and `applications/` — the formal-methods track Grace Commons runs parallel to. *Compositions* would be semantically more precise — a composed pattern is, structurally, a composition rather than a product — and the rename is under consideration. It is deferred while the vocabulary inheritance from EOS literature is load-bearing.
+*Vocabulary note.* EOS literature and [concept-catalog](https://github.com/dpapathanasiou/concept-catalog) use *applications* for the same artifact. Grace Commons uses *compositions* because these files are structurally compositions — formal combinations of independently valid patterns — not deployable products. The underlying mechanism is identical; only the label differs.
 
 ---
 
 ## Format
 
-An application spec at minimum names:
+A composition spec at minimum names:
 
 - **Composes** — which atoms it brings together (linked).
 - **Composition logic** — how the atoms are wired: which actions in one trigger which in another, what policy parameters each atom is configured with, how cross-atom invariants are maintained.
@@ -31,7 +31,7 @@ See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the full contribution shape.
 
 ---
 
-## Applications in this library
+## Compositions in this library
 
 - [Undo History](./undo-history.md) — Personal Todo + Event Log. Every Personal Todo action is reversible; the user gets a familiar Cmd+Z experience without modifying either constituent atom.
 - [Idempotent Reservation](./idempotent-reservation.md) — Provisional Commitment + Duplicate Prevention. Every state-changing call is safely retryable: same idempotency token, same result, regardless of retry count. The composition formalizes what every production payment processor and reservation system implements today.
@@ -44,4 +44,4 @@ Forthcoming:
 
 ---
 
-*Atoms describe what; applications describe what happens when atoms meet.*
+*Atoms describe what; compositions describe what happens when atoms meet.*

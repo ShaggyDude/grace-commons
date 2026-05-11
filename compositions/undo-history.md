@@ -144,7 +144,7 @@ The two atoms it composes carry their own standards inheritance — Personal Tod
 
 ## Status
 
-`grounded` — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `applications/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
+`grounded` — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
 
 ---
 

@@ -7,7 +7,7 @@ nav_order: 3
 
 > The three-pass review every Grace Commons pattern survives before being considered grounded.
 
-A pattern's spec is incomplete in three different ways at once. Each of the three passes below catches a different class of incompleteness. None substitutes for the others. Together they constitute the quality bar for atomic patterns (in `patterns/`) and applications (in `applications/`).
+A pattern's spec is incomplete in three different ways at once. Each of the three passes below catches a different class of incompleteness. None substitutes for the others. Together they constitute the quality bar for atomic patterns (in `patterns/`) and applications (in `compositions/`).
 
 The three passes are recursive in a useful way: applying them to a pattern produces a Lineage notes section, and the Lineage notes themselves can be pressure-tested by re-running the same three passes. Each fresh application becomes evidence the architecture is doing real work.
 
@@ -122,7 +122,7 @@ Two structural conventions emerged as Pass 3 findings on the first regulated ato
 
 **The structural fix.** A dedicated `Examples` subsection — *Regulated adversarial scenarios* — walking three canonical adversarial reads: **regulator audit** (a query against the records that must return the expected result by virtue of an invariant), **disputed transaction or data-subject request** (an external party challenges the system's claim and the records must answer), and **breach or incident investigation** (an investigator queries during or after an anomaly). The three classes exercise different invariant surfaces: audit checks structural guarantees, dispute exercises the contract under hostile interpretation, breach exercises forensic queryability.
 
-**Worked examples.** [Provisional Commitment's adversarial scenarios](patterns/resource-lifecycle/provisional-commitment.md#regulated-adversarial-scenarios) walk regulator-audit-of-confirmation-window, GDPR-erasure-on-personal-data, and breach-window-forensics. [Actor Identity's](patterns/compliance/actor-identity.md#regulated-adversarial-scenarios) walk regulator-audit-of-attribution, disputed-transaction-by-actor, and compromised-credential-discovery. [Idempotent Reservation's](applications/idempotent-reservation.md#regulated-adversarial-scenarios) walk regulator-audit-for-double-charges, disputed-double-charge, and replay-attack — exercising the *emergent* invariants of the composition rather than the constituents' invariants.
+**Worked examples.** [Provisional Commitment's adversarial scenarios](patterns/resource-lifecycle/provisional-commitment.md#regulated-adversarial-scenarios) walk regulator-audit-of-confirmation-window, GDPR-erasure-on-personal-data, and breach-window-forensics. [Actor Identity's](patterns/compliance/actor-identity.md#regulated-adversarial-scenarios) walk regulator-audit-of-attribution, disputed-transaction-by-actor, and compromised-credential-discovery. [Idempotent Reservation's](compositions/idempotent-reservation.md#regulated-adversarial-scenarios) walk regulator-audit-for-double-charges, disputed-double-charge, and replay-attack — exercising the *emergent* invariants of the composition rather than the constituents' invariants.
 
 ### Generation acceptance
 
@@ -130,7 +130,7 @@ Two structural conventions emerged as Pass 3 findings on the first regulated ato
 
 **The structural fix.** A standalone `Generation acceptance` section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks: reconstruct lifecycles from records, verify every invariant from records, observe every rejection-outcome class, identify composing patterns in use, trace ids across boundaries. The framing is *"any code generated from this atom must produce records and a runtime surface that pass the following checks"* — the generator's contract.
 
-**Worked examples.** [Provisional Commitment's Generation acceptance](patterns/resource-lifecycle/provisional-commitment.md#generation-acceptance) names four checks an external auditor performs against the commitment record set plus the composed Event Log. [Actor Identity's](patterns/compliance/actor-identity.md#generation-acceptance) names five checks against the attestation store plus the actor registry's public material. [Idempotent Reservation's](applications/idempotent-reservation.md#generation-acceptance) names five checks that span the composition — including the token-to-commitment tracing that neither constituent atom owns alone.
+**Worked examples.** [Provisional Commitment's Generation acceptance](patterns/resource-lifecycle/provisional-commitment.md#generation-acceptance) names four checks an external auditor performs against the commitment record set plus the composed Event Log. [Actor Identity's](patterns/compliance/actor-identity.md#generation-acceptance) names five checks against the attestation store plus the actor registry's public material. [Idempotent Reservation's](compositions/idempotent-reservation.md#generation-acceptance) names five checks that span the composition — including the token-to-commitment tracing that neither constituent atom owns alone.
 
 ### When the conventions apply
 

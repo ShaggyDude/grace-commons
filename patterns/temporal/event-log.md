@@ -118,7 +118,7 @@ A composing system wraps each Personal Todo action as an event: `{type: "add", i
 
 ### Compliance audit log
 
-A regulated system records every state-changing action: `{type: "patient_record_accessed", patient_id: "p123", actor: "dr_smith", reason: "treatment", at: "2026-05-07T14:32:11Z"}`. The log is append-only by definition. The [Audit Trail](../../applications/audit-trail.md) application composes this atom with [Retention Window](../compliance/retention-window.md), [Tamper Evidence](../compliance/tamper-evidence.md), and [Actor Identity](../compliance/actor-identity.md) to add policy-bounded retention, integrity proof, and verifiable attribution. The Event Log itself doesn't know what compliance means; it preserves the sequence faithfully and lets compliance be layered on.
+A regulated system records every state-changing action: `{type: "patient_record_accessed", patient_id: "p123", actor: "dr_smith", reason: "treatment", at: "2026-05-07T14:32:11Z"}`. The log is append-only by definition. The [Audit Trail](../../compositions/audit-trail.md) application composes this atom with [Retention Window](../compliance/retention-window.md), [Tamper Evidence](../compliance/tamper-evidence.md), and [Actor Identity](../compliance/actor-identity.md) to add policy-bounded retention, integrity proof, and verifiable attribution. The Event Log itself doesn't know what compliance means; it preserves the sequence faithfully and lets compliance be layered on.
 
 ### Patient medical record (clinical history)
 
@@ -159,10 +159,10 @@ Patterns compose with Event Log through one of two contracts, often both:
 1. **Append on every state change.** The composing pattern emits an event to the log on every state transition. Personal Todo's `add` / `edit` / `complete` / `delete` would each produce events. The Event Log is the durable record from which the composing pattern's history can be reconstructed.
 2. **Replay to derive state.** The composing pattern derives its current state by reading the log from the beginning (or from the most recent snapshot). This is the *event-sourcing* style — the log is the source of truth, current state is a projection.
 
-Forthcoming compositions in `applications/`:
+Forthcoming compositions in `compositions/`:
 
 - **Undo History** — Event Log + Reverse Index + Restore action.
-- **[Audit Trail](../../applications/audit-trail.md)** — Event Log + Actor Identity + Retention Window + Tamper Evidence. The canonical regulated-audit primitive; landed.
+- **[Audit Trail](../../compositions/audit-trail.md)** — Event Log + Actor Identity + Retention Window + Tamper Evidence. The canonical regulated-audit primitive; landed.
 - **Activity Feed** — Event Log + Subscriber pattern + Filter.
 - **Event-Sourced Reservation** — Event Log + Snapshot + Reservation atom.
 

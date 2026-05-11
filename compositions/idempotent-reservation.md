@@ -173,7 +173,7 @@ This is the generator's contract: any code generated from this application must 
 
 ## Status
 
-`grounded` — composition logic specified; emergent state (`token_results`) named; action wiring covers all four state-changing surfaces; eight application-level invariants stated and justified; walkthrough plus four cross-domain examples (banking, healthcare, retail, airline) and three adversarial scenarios; edge cases enumerate the deployment-shaped concerns (cross-instance coordination, durability ordering, token entropy, window-size selection); Generation acceptance bar explicit. Second entry in `applications/`. First regulated application in the library. Demonstrates that two existing atoms compose into the *exactly-once-within-window* contract that every production reservation and payment system implements today.
+`grounded` — composition logic specified; emergent state (`token_results`) named; action wiring covers all four state-changing surfaces; eight application-level invariants stated and justified; walkthrough plus four cross-domain examples (banking, healthcare, retail, airline) and three adversarial scenarios; edge cases enumerate the deployment-shaped concerns (cross-instance coordination, durability ordering, token entropy, window-size selection); Generation acceptance bar explicit. Second entry in `compositions/`. First regulated application in the library. Demonstrates that two existing atoms compose into the *exactly-once-within-window* contract that every production reservation and payment system implements today.
 
 ---
 

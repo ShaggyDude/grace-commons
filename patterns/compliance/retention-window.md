@@ -91,7 +91,7 @@ Observed behavior, derived from how regulated systems use retention:
 - A retention is not a promise of immediate destruction at `retention_until`. The regulator expects purge to occur between `retention_until` and `purge_deadline` — the *purge window*. The atom enforces that purge cannot run before `retention_until`; it observes (but does not enforce) the upper bound. This is the regulator's actual posture: too-early purge is a violation of retention obligation; too-late purge is a violation of data-minimization; the atom prevents the first and surfaces the second.
 - The retention policy is immutable for any given `retention_id`. Extending or shortening a retention requires releasing the current retention (impossible by design — terminal absorption) or placing a new retention under a different policy when the underlying record is in a state that allows it. Policy mutation through this atom is not supported; legal hold and similar dynamic encumbrances belong to composing patterns.
 - The retention record itself outlives the underlying data. After `purge(retention_id)` succeeds, the underlying record is destroyed, but the retention record (with `retained_at`, `purged_at`, `policy_ref`) remains — it is the audit evidence that retention was honored. What happens to that audit record (its own retention, archival, anonymization) is a recursive question composing patterns handle.
-- Concurrent purge invocations for the same `retention_id` resolve serially under the host environment's serialization guarantees. The first wins; the second receives `not-retained`. This is the same idempotency story Provisional Commitment names; an [Idempotent Reservation](../../applications/idempotent-reservation.md)-style composition supplies retry safety.
+- Concurrent purge invocations for the same `retention_id` resolve serially under the host environment's serialization guarantees. The first wins; the second receives `not-retained`. This is the same idempotency story Provisional Commitment names; an [Idempotent Reservation](../../compositions/idempotent-reservation.md)-style composition supplies retry safety.
 - Wall-time is best-effort. Clock skew, daylight saving, timezone handling are deployment concerns. Where retention deadlines have legal force (statute of limitations, regulatory clock), the implementation must source time from a trustworthy clock; a composed Trusted Timestamping pattern produces the verifiable time-anchor.
 
 ### Feedback
@@ -191,7 +191,7 @@ Retention Window is freestanding and is the lifetime-management contract every r
 - **Policy Registry** *(forthcoming)* — manages the definition, versioning, and attestation of retention policies. Supplies the `policy_ref` this atom consumes opaquely.
 - **Trusted Timestamping** *(forthcoming, per RFC 3161)* — verifiable time-anchor for retention deadlines.
 
-The canonical regulated-audit stack composes [Event Log](../temporal/event-log.md) + [Actor Identity](./actor-identity.md) + Retention Window + [Tamper Evidence](./tamper-evidence.md) as four freestanding atoms; the **[Audit Trail](../../applications/audit-trail.md)** application is the wiring.
+The canonical regulated-audit stack composes [Event Log](../temporal/event-log.md) + [Actor Identity](./actor-identity.md) + Retention Window + [Tamper Evidence](./tamper-evidence.md) as four freestanding atoms; the **[Audit Trail](../../compositions/audit-trail.md)** application is the wiring.
 
 ---
 

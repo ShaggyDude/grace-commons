@@ -9,7 +9,7 @@ permalink: /patterns/
 
 The freestanding concepts of Grace Commons. Each atomic pattern's specification can be stated without naming any other pattern. Atoms are organized by domain category.
 
-For compositions of atoms, see [Applications](../applications/).
+For compositions of atoms, see [Compositions](../compositions/).
 
 ## Categories
 

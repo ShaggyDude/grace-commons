@@ -43,9 +43,9 @@ An application is a composition — its specification depends on at least one ot
 The directory layout reflects the split:
 
 - `patterns/` holds atoms, organized by category — `productivity/`, `temporal/`, `compliance/`, `resource-lifecycle/`.
-- `applications/` holds compositions. Each file declares which atoms it composes and the logic that wires them together.
+- `compositions/` holds compositions. Each file declares which atoms it composes and the logic that wires them together.
 
-The test for which folder a contribution belongs in: **does its specification name another pattern?** If no, it's an atom — file under `patterns/`. If yes, it's an application — file under `applications/`.
+The test for which folder a contribution belongs in: **does its specification name another pattern?** If no, it's an atom — file under `patterns/`. If yes, it's a composition — file under `compositions/`.
 
 ### Current contents
 
@@ -63,7 +63,7 @@ patterns/
     ├── retention-window         — bounded record lifetime with no-early-purge
     └── tamper-evidence          — cryptographic detectability of record alteration
 
-applications/
+compositions/
 ├── undo-history                 — Personal Todo + Event Log
 │                                  ↳ emergent invariant:
 │                                    identity preservation across delete/undo
@@ -76,9 +76,9 @@ applications/
                                      cascade-on-purge, forensic completability
 ```
 
-Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **applications** (the compositions), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Each pattern also carries **Lineage notes** recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
+Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Each pattern also carries **Lineage notes** recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
 
-This mirrors [concept-catalog](https://github.com/dpapathanasiou/concept-catalog)'s split between `concepts/` and `applications/`. The reason is the same in both libraries: composition is a different kind of work from atom definition, and the directory layout should make that visible without forcing a reader to infer it.
+The `patterns/` + `compositions/` split mirrors the structural logic of [concept-catalog](https://github.com/dpapathanasiou/concept-catalog)'s `concepts/` + `applications/` — composition is a different kind of work from atom definition, and the directory layout makes that visible without forcing a reader to infer it. Grace Commons uses `compositions/` because these artifacts are structurally compositions — formal combinations of independently valid patterns — not deployable products.
 
 ---
 

@@ -21,9 +21,9 @@ Grace Commons is early and foundational. The pattern library is being built. Thi
 
 ## Atoms vs. applications
 
-Grace Commons distinguishes **atomic patterns** from **applications** (compositions of patterns).
+Grace Commons distinguishes **atomic patterns** from **compositions** (combinations of two or more patterns).
 
-The test: does the contribution's specification name another pattern? If no, it's an atom — file it under `patterns/<category>/`. If yes, it's an application — file it under `applications/`.
+The test: does the contribution's specification name another pattern? If no, it's an atom — file it under `patterns/<category>/`. If yes, it's a composition — file it under `compositions/`.
 
 Atoms are freestanding: state, actions, and operational principles independent of every other pattern. Personal Todo, Duplicate Prevention, Event Log.
 
@@ -53,7 +53,7 @@ Atoms operating in regulated domains carry two further sections beyond the base 
 - **Regulated adversarial scenarios** — an `Examples` subsection walking what auditors, data subjects, and incident responders actually ask. Happy-path examples cover what users do; rejection-path examples cover what the system refuses; *adversarial* scenarios cover what external evaluators check. Worked examples: the *Regulator audit / Data subject request / Breach investigation* triad in Provisional Commitment; the *Regulator audit / Disputed transaction / Compromised credential* triad in [Actor Identity](./patterns/compliance/actor-identity.md). **Required** for atoms in `patterns/compliance/` and for atoms in other categories whose examples invoke regulated domains.
 - **Generation acceptance** — a standalone section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks: reconstruct lifecycles, verify each invariant, distinguish rejection outcomes, identify composing patterns in use. The bar is the regulator's question — *"can you prove no commitment was confirmed after its declared window?"*, *"can you prove no duplicate state change occurred?"* — not the developer's intuition. **Required** for any atom or application whose acceptance bar is set by an external evaluator (regulators, auditors, integration partners) rather than by the system's internal users alone. In practice: required for atoms in `patterns/compliance/`, for atoms in other categories whose examples invoke regulated domains, and for applications composing any of the above. Optional for productivity primitives whose Generation acceptance bar reduces to *the invariants hold and rejections surface*.
 
-Both conventions also apply to applications that compose regulated atoms. [Idempotent Reservation](./applications/idempotent-reservation.md) is the worked application example carrying both.
+Both conventions also apply to applications that compose regulated atoms. [Idempotent Reservation](./compositions/idempotent-reservation.md) is the worked application example carrying both.
 
 For non-regulated primitives (Personal Todo, Event Log, Duplicate Prevention), these sections are optional and often over-specification — Personal Todo's adversarial scenarios would be contrived, and its Generation acceptance bar reduces to *"the invariants hold and rejections surface."* Use judgment; the test is whether an external evaluator with no developer access would have a meaningfully different verification surface from the atom's existing structure.
 
@@ -61,7 +61,7 @@ For non-regulated primitives (Personal Todo, Event Log, Duplicate Prevention), t
 
 ## What an application looks like
 
-An application spec lives directly in `applications/` (no subdirectories). It declares the atoms it composes and the logic that wires them together. At minimum it should define:
+An application spec lives directly in `compositions/` (no subdirectories). It declares the atoms it composes and the logic that wires them together. At minimum it should define:
 
 - **Name** — describes the composed result
 - **Composes** — the atoms it brings together, by name and link
@@ -72,7 +72,7 @@ An application spec lives directly in `applications/` (no subdirectories). It de
 
 Applications are where the architecture is exercised. A reader should be able to verify, from the file alone, that the named atoms could plausibly compose to produce the claimed behavior.
 
-Applications that compose regulated atoms follow the same *Regulated adversarial scenarios* and *Generation acceptance* conventions as their constituent atoms. The application's adversarial scenarios exercise the *emergent* invariants — what the composition guarantees that no single constituent does — and the application's Generation acceptance bar adds checks that span the constituents (e.g., the token-to-commitment mapping in Idempotent Reservation). See [Idempotent Reservation](./applications/idempotent-reservation.md) for the worked example.
+Applications that compose regulated atoms follow the same *Regulated adversarial scenarios* and *Generation acceptance* conventions as their constituent atoms. The application's adversarial scenarios exercise the *emergent* invariants — what the composition guarantees that no single constituent does — and the application's Generation acceptance bar adds checks that span the constituents (e.g., the token-to-commitment mapping in Idempotent Reservation). See [Idempotent Reservation](./compositions/idempotent-reservation.md) for the worked example.
 
 ---
 
