@@ -97,8 +97,9 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 - Undo History (Personal Todo + Event Log)
 - Idempotent Reservation (Provisional Commitment + Duplicate Prevention)
 - Audit Trail (Event Log + Actor Identity + Retention Window + Tamper Evidence)
+- Shared Todo (Personal Todo + Permissions + Assignment)
 
-The canonical regulated-audit stack — Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail — is complete. Permissions is the first atom drafted toward the Shared Todo composition (Personal Todo + Permissions + Assignment); Assignment remains forthcoming.
+The canonical regulated-audit stack — Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail — is complete. Shared Todo (Personal Todo + Permissions + Assignment) is the four-composition milestone; all three constituent atoms are grounded and the composition is landed.
 
 ---
 
