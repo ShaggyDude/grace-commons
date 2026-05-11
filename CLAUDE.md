@@ -87,7 +87,7 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 
 **Atoms (`atoms/`):**
 
-- `productivity/` — Personal Todo (`grounded`)
+- `productivity/` — Personal Todo, Assignment (both `grounded`)
 - `temporal/` — Duplicate Prevention, Event Log (both `grounded`)
 - `resource-lifecycle/` — Provisional Commitment (`grounded`)
 - `compliance/` — Actor Identity, Retention Window, Tamper Evidence, Permissions (all `grounded`)

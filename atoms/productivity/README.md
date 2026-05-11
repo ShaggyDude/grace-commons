@@ -14,9 +14,10 @@ The same primitives appear across domains: a personal task list, a developer's i
 
 Productivity patterns are smaller and more atomic than the business workflows elsewhere in the library — closer to building blocks than to full domain processes. They are included because productivity primitives are reimplemented constantly, inconsistently, in every system that has work in it. Specifying them once, well, makes the larger business patterns that compose with them simpler to express.
 
-## Patterns in this category
+## Atoms in this category
 
-- Personal Todo — single-user task tracking with pending / done / removed states and edit. Composes with [Duplicate Prevention](../temporal/duplicate-prevention.md) for recency-based duplicate rejection.
+- [Personal Todo](./personal-todo.md) — single-user task tracking with pending / done / removed states and edit. Composes with [Duplicate Prevention](../temporal/duplicate-prevention.md) for recency-based duplicate rejection.
+- [Assignment](./assignment.md) — binding of a unit of work to a responsible actor. Active until recalled or transferred; at most one Active assignment per task. Direct prerequisite for Shared Todo.
 - Shared Todo — multi-actor task tracking with assignment — *(forthcoming)*
 - Priority and ordering — *(forthcoming)*
 - Task dependencies — *(forthcoming)*
