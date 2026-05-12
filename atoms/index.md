@@ -17,5 +17,6 @@ For structured assemblies of atoms, see [Compositions](../compositions/).
 - **Temporal** — atoms governing windows, expiry, scheduling, and time-ordered logs.
 - **Compliance** — atoms for audit trails, regulatory holds, reporting, and consent.
 - **Resource Lifecycle** — atoms governing reservation, allocation, hold, commit, and release.
+- **Messaging** — atoms for recording interest in events and tracking delivery of information across actor boundaries.
 
 Each category README lists current and forthcoming atoms. The library is early; categories grow as atoms land.
