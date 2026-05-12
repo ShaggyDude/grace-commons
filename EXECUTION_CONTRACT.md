@@ -182,6 +182,22 @@ Derived queries (`responsible_actor`, `visible_tasks` in Shared Todo) are pure j
 
 ---
 
+### Boundary rules
+
+These are the hard limits where the composition model either holds or silently reintroduces hidden machinery. All four are variants of the same pressure: coordination complexity trying to migrate into the composition layer. The composition layer must not absorb it.
+
+**Fan-out is a decomposition boundary, not a transition.** No atom produces non-atomic fan-out side effects. An action that triggers delivery to N recipients is not a single transition — it is two concerns that belong to two atoms: recording the intent (one write, fully atomic, one atom) and executing per-recipient delivery (N independent state machines, one per recipient, each retryable independently). Fan-out that is modeled as a single transition with N side effects has introduced partial-write ambiguity — some recipients receive, others do not, and the atom's consistency domain is undefined. The correct decomposition: Intent atom records the trigger; Fanout composition creates N Delivery Task atoms from the intent; each Delivery Task atom owns its own state, retry, and failure. This is the Notification Fanout pattern in the roadmap.
+
+**Parallel composition carries no rollback guarantee.** If A succeeds and B fails in a parallel composition, A's write stands. The composition does not roll back A. If the system requires A to be undone when B fails — if atomicity across parallel branches is a correctness requirement — that is not a composition problem. It is a new atom: a compensating state machine that must be explicitly defined, with its own states (Pending, Compensated, Unrecoverable), its own guard logic, and its own invariants. The composition invokes it. If rollback is needed, you are defining a new atom, not composing.
+
+**Atoms may carry opaque references to entities they do not own.** An Approval Step carries a `target_id` for the thing awaiting approval; it does not own that thing's state machine. The invariant rule: an atom's correctness conditions may never depend on the continued existence of the referenced entity. A dangling reference — a `target_id` whose target has been deleted — must produce a typed guard failure (`target-not-found` or equivalent), not an invariant violation. The decision state machine remains in a valid state regardless of whether its target still exists. This separates the lifecycle of the decision from the lifecycle of the thing decided about, which is the correct boundary: Approval Step owns the state of a decision about a reference, not the state of the referenced thing.
+
+**Composition queries are best-effort projections over independent consistency domains.** No cross-atom transactional read guarantee exists or can be provided without reintroducing a hidden consistency layer. A join across two constituent Q surfaces is two sequential direct-effect reads; between those reads, another writer may commit a transition to either store. This is not a defect — it is the correct behavior of a system where each atom owns its own consistency boundary. If the system requires consistent cross-atom reads — a query surface that must reflect all in-flight writes atomically — that derived state becomes its own atom: its own store, its own state machine, its own invariants. A materialized projection atom is a first-class atom, not a cache. A cache's consistency depends on invalidation strategy; an atom's correctness holds by invariant.
+
+**The meta-rule.** Anything that requires coordination, consistency, fan-out, or lifecycle guarantees is not a composition concern. It is either an atom or a decomposition into multiple atoms. Composition is not a system of control. It is a system of invocation.
+
+---
+
 ### Three-way taxonomy
 
 The model has exactly three kinds of runtime entity. No fourth kind is permitted.
