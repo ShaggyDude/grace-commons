@@ -51,10 +51,10 @@ The user-facing display preserves the normalized form (post-trim, post-NFC) — 
 
 - A user-supplied description for each unit of work.
 - User-initiated actions:
-  - `add(description) → id | rejected(reason)`
-  - `edit(id, newDescription) → ok | rejected(reason)`
-  - `complete(id) → ok | rejected(reason)`
-  - `delete(id) → ok | rejected(reason)`
+  - `add(description) → id | rejected(invalid-description | duplicate-active | storage-failure)`
+  - `edit(id, newDescription) → ok | rejected(not-known | not-pending | not-editable | invalid-description | duplicate-active | storage-failure)`
+  - `complete(id) → ok | rejected(not-known | not-pending | storage-failure)`
+  - `delete(id) → ok | rejected(not-known | storage-failure)`
 - An implicit clock providing wall-time timestamps.
 
 ### Outputs
@@ -99,10 +99,10 @@ Transitions:
 
 Each action carries an explicit precondition. Violations are rejected, not silently absorbed.
 
-- **At `add(description)`** — `description` after normalization must satisfy the description policy (non-empty, within length); otherwise rejected as `invalid-description`. The normalized description must not match the normalized description of any unit currently in Pending or Done; otherwise rejected as `duplicate-active`.
-- **At `edit(id, newDescription)`** — `id` must reference a unit currently in Pending; otherwise rejected as `not-pending` or `not-known`. `newDescription` after normalization must satisfy the description policy and the same active-set uniqueness as `add`, excluding the unit at `id` itself; otherwise `invalid-description` or `duplicate-active`. Editing a Done unit is rejected as `not-editable`. A normalized `newDescription` equal to the unit's current normalized description is accepted as a no-op (state unchanged, `last_edited_at` unchanged).
-- **At `complete(id)`** — `id` must reference a unit currently in Pending. Completing a Done or unknown unit is rejected as `not-pending` or `not-known`.
-- **At `delete(id)`** — `id` must reference a unit in Pending or Done. Deleting an unknown unit is rejected as `not-known`.
+- **At `add(description)`** — `description` after normalization must satisfy the description policy (non-empty, within length); otherwise rejected as `invalid-description`. The normalized description must not match the normalized description of any unit currently in Pending or Done; otherwise rejected as `duplicate-active`. If the store write fails, the atom returns `rejected(storage-failure)`; no unit is created.
+- **At `edit(id, newDescription)`** — `id` must reference a known unit; otherwise `not-known`. The unit must be in Pending; otherwise `not-editable` (Done) or `not-pending` (not in Pending for any other reason). `newDescription` after normalization must satisfy the description policy and the same active-set uniqueness as `add`, excluding the unit at `id` itself; otherwise `invalid-description` or `duplicate-active`. A normalized `newDescription` equal to the unit's current normalized description is accepted as a no-op (state unchanged, `last_edited_at` unchanged; no write occurs and `storage-failure` cannot result). For non-no-op edits, if the store write fails, the atom returns `rejected(storage-failure)`; the unit is unchanged.
+- **At `complete(id)`** — `id` must reference a known unit; otherwise `not-known`. The unit must be in Pending; otherwise `not-pending`. If the store write fails, the atom returns `rejected(storage-failure)`; the unit remains in Pending.
+- **At `delete(id)`** — `id` must reference a known unit in Pending or Done; otherwise `not-known`. If the store write fails, the atom returns `rejected(storage-failure)`; the unit is unchanged.
 
 ### Behavior
 
@@ -125,7 +125,7 @@ Each successful action produces an observable, measurable change:
 - After `complete(id)` — the unit moves from Pending to Done with `completed_at`. Pending count decreases by one, Done count increases by one; total count unchanged.
 - After `delete(id)` — the unit is removed; the id is retired. Total count decreases by one.
 
-Each rejected action produces an observable refusal naming the failed precondition: `invalid-description`, `duplicate-active`, `not-pending`, `not-editable`, `not-known`.
+Each rejected action produces an observable refusal naming the failed precondition: `invalid-description`, `duplicate-active`, `not-pending`, `not-editable`, `not-known`, or `storage-failure`.
 
 The Pending and Done sets are queryable — the user can list, filter, and count them at any time. Per-unit fields (`id`, `description`, state, timestamps) are observable to the user.
 
@@ -262,3 +262,9 @@ The first four gaps closed in-pattern. The fifth was the most instructive: the s
 Three of the original Linus-pass gaps were marked explicit out-of-scope rather than fixed in-pattern: concurrent action sequences, atomicity / crash semantics, and clock semantics. Each is a deferred concern with a forthcoming composing pattern named in Edge cases and Composition notes.
 
 The two passes together exercise the architecture as designed: GRID's nine nodes catch completeness gaps; EOS's freestanding-concepts principle catches over-absorption gaps; adversarial pressure-testing catches the load-bearing decisions that hide beneath summary prose. The pattern is stronger because all three checks happened.
+
+**Refinement round 1.** Three findings, all closed in-pattern. Conventions inherited from the methodology directly.
+
+- *Action signatures used `rejected(reason)` placeholders; `storage-failure` absent from all four.* All four signatures named `rejected(reason)` with the reason taxonomy living only in Feedback and Decision points prose. Resolved: signatures expanded — `add` returns `rejected(invalid-description | duplicate-active | storage-failure)`, `edit` returns `rejected(not-known | not-pending | not-editable | invalid-description | duplicate-active | storage-failure)`, `complete` returns `rejected(not-known | not-pending | storage-failure)`, `delete` returns `rejected(not-known | storage-failure)`. Feedback updated to include `storage-failure`.
+- *`storage-failure` missing from Decision points.* All four actions write to state; none previously named the write-failure path. Resolved: each Decision point extended. `add` — no unit created on storage-failure. `edit` — unit unchanged; the no-op case (normalized new description equals current) produces no write and cannot storage-fail. `complete` — unit remains in Pending. `delete` — unit unchanged. Decision points for `edit`, `complete`, and `delete` also restructured to separate the `not-known` check as the first gate before state-specific checks.
+- *Cross-file consistency gap triggered by this refinement.* Undo History and Shared Todo both used `invalid-request` for Personal Todo's description-validation rejection during their earlier refinement rounds — the correct reason, confirmed here, is `invalid-description`. Undo History's `edit` signature also omitted `not-editable`. Resolved: both files corrected retroactively in the same pass.

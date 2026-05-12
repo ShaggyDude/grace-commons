@@ -61,13 +61,13 @@ The vocabulary is deployment-configurable. A deployment that distinguishes "edit
 
 Every action follows the same two-step shape: Permissions check first, atom call second. A `denied` result from Permissions short-circuits the action and surfaces `permission-denied` to the caller; the constituent atoms are not invoked.
 
-- **`add_task(actor_ref, description) → task_id | rejected(permission-denied | invalid-request | duplicate-active | storage-failure)`**
+- **`add_task(actor_ref, description) → task_id | rejected(permission-denied | invalid-description | duplicate-active | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:add)` → if `denied`, return `permission-denied`.
-  2. `PersonalTodo.add(description)` → `task_id | rejected(invalid-request | duplicate-active | storage-failure)`. Return the result.
+  2. `PersonalTodo.add(description)` → `task_id | rejected(invalid-description | duplicate-active | storage-failure)`. Return the result.
 
-- **`edit_task(actor_ref, task_id, new_description) → ok | rejected(permission-denied | not-known | not-pending | invalid-request | storage-failure)`**
+- **`edit_task(actor_ref, task_id, new_description) → ok | rejected(permission-denied | not-known | not-pending | not-editable | invalid-description | duplicate-active | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:edit)` → if `denied`, return `permission-denied`.
-  2. `PersonalTodo.edit(task_id, new_description)` → `ok | rejected(not-known | not-pending | invalid-request | storage-failure)`. Return the result.
+  2. `PersonalTodo.edit(task_id, new_description)` → `ok | rejected(not-known | not-pending | not-editable | invalid-description | duplicate-active | storage-failure)`. Return the result.
 
 - **`complete_task(actor_ref, task_id) → ok | rejected(permission-denied | not-known | not-pending | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:complete)` → if `denied`, return `permission-denied`.
