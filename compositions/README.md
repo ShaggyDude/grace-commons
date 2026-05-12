@@ -40,6 +40,7 @@ See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the full contribution shape.
 
 Forthcoming:
 
+- **Notification Fanout** — Subscription + Notification. When an event fires, every Active subscriber for the event scope receives a Notification record. The composition is the first in the library to produce a variable number of effects from a single trigger; fan-out is decomposed as an intent-then-per-recipient model per the boundary rules in the Execution Contract.
 - **Reservation Lifecycle** — Provisional Commitment + Capacity Constraint Enforcement + Actor Identity
 
 ---

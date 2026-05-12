@@ -52,16 +52,21 @@ The test for which folder a contribution belongs in: **does its specification na
 ```text
 atoms/
 ├── productivity/
-│   └── personal-todo            — single-user task tracking
+│   ├── personal-todo            — single-user task tracking
+│   └── assignment               — single-actor responsibility binding per task
 ├── temporal/
 │   ├── duplicate-prevention     — temporally-bounded recency guard
 │   └── event-log                — append-only sequence of immutable events
 ├── resource-lifecycle/
 │   └── provisional-commitment   — Held → Confirmed | Released | Expired
-└── compliance/
-    ├── actor-identity           — verifiable action-to-actor binding
-    ├── retention-window         — bounded record lifetime with no-early-purge
-    └── tamper-evidence          — cryptographic detectability of record alteration
+├── compliance/
+│   ├── actor-identity           — verifiable action-to-actor binding
+│   ├── retention-window         — bounded record lifetime with no-early-purge
+│   ├── tamper-evidence          — cryptographic detectability of record alteration
+│   └── permissions              — grant-based access control with explicit revocation
+└── messaging/
+    ├── subscription             — durable record of actor interest in an event scope
+    └── notification             — delivery record for a single notification to a single recipient
 
 compositions/
 ├── undo-history                 — Personal Todo + Event Log
@@ -70,10 +75,14 @@ compositions/
 ├── idempotent-reservation       — Provisional Commitment + Duplicate Prevention
 │                                  ↳ emergent invariant:
 │                                    exactly-once effect within window
-└── audit-trail                  — Event Log + Actor Identity + Retention Window + Tamper Evidence
+├── audit-trail                  — Event Log + Actor Identity + Retention Window + Tamper Evidence
+│                                  ↳ emergent invariants:
+│                                    attribution coverage, retention coverage,
+│                                    cascade-on-purge, forensic completability
+└── shared-todo                  — Personal Todo + Permissions + Assignment
                                    ↳ emergent invariants:
-                                     attribution coverage, retention coverage,
-                                     cascade-on-purge, forensic completability
+                                     permission-gated mutations,
+                                     no dangling assignment on delete
 ```
 
 Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Each pattern also carries **Lineage notes** recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
