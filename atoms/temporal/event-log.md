@@ -37,8 +37,8 @@ Each Event Log is itself a named instance. Multiple instances coexist in real sy
 
 ### Actions
 
-- `append(data) → event_id | rejected(reason)` — record a new event at the tail.
-- `read(query) → ordered_sequence_of_events` — return events matching the query, ordered by `sequence_number` ascending.
+- `append(data) → event_id | rejected(invalid-payload | storage-failure)` — record a new event at the tail.
+- `read(query) → ordered_sequence_of_events | rejected(invalid-query)` — return events matching the query, ordered by `sequence_number` ascending.
 
 A `query` may name a sequence-number range, a wall-time range, a payload predicate, or a combination. The exact query shape is implementation policy; the atom requires only that any valid query returns events in `sequence_number` order.
 
@@ -74,7 +74,7 @@ The Event Log has no user-driven flow of its own; it is invoked by composing pat
 
 ### Decision points
 
-- **At `append(data)`** — `data` must satisfy the configured payload constraints (default: max 64 KB, opaque bytes; configurable per instance). Otherwise rejected as `invalid-payload`. There are no other preconditions; appends never fail for ordering or contention reasons — the underlying implementation must serialize them.
+- **At `append(data)`** — `data` must satisfy the configured payload constraints (default: max 64 KB, opaque bytes; configurable per instance). Otherwise rejected as `invalid-payload`. There are no other preconditions; appends never fail for ordering or contention reasons — the underlying implementation must serialize them. If the store write fails after all preconditions are satisfied, the atom returns `rejected(storage-failure)`. The `event_id` is not returned; the caller must treat `storage-failure` as definitive — the event did not land. A sequence number may have been allocated and consumed; see Edge cases.
 - **At `read(query)`** — `query` parameters must be well-formed (sequence-number range valid, time range valid, predicate parseable). Otherwise rejected as `invalid-query`. A well-formed query that matches no events returns an empty sequence, not a rejection.
 
 ### Behavior
@@ -92,7 +92,7 @@ How the concept appears to composing patterns:
 - After `append(data)` — a new event exists in the log with a fresh `event_id`, `sequence_number = previous_next`, `recorded_at = now`. `next_sequence_number` increments by 1. The event is immediately visible to subsequent reads.
 - After `read(query)` — a sequence of matching events in ascending `sequence_number` order. The state of the log is unchanged.
 
-Each rejected action produces an observable refusal naming the failed precondition (`invalid-payload`, `invalid-query`).
+Each rejected action produces an observable refusal naming the failed precondition (`invalid-payload`, `invalid-query`, or `storage-failure`).
 
 ### Invariants
 
@@ -147,6 +147,7 @@ What this pattern does not cover:
 - **Multi-event atomicity.** Each `append` is atomic. Multi-event transactions ("append A and B together or neither") belong to a Transaction pattern.
 - **Durability across crashes.** The atom specifies in-memory semantics. Persistence across process restarts is a deployment concern; durable implementations must provide write-ahead logging or equivalent. Append-only and event immutability are best-effort across crashes unless the implementation supplies durability.
 - **Right-to-be-forgotten erasure.** Where law mandates true deletion of recorded events (GDPR Article 17, certain healthcare contexts), the architectural answer *append corrections, never edit history* breaks down. A composing pattern (Erasure Tombstone, Cryptographic Shredding) must be designed alongside legal counsel.
+- **Sequence-number gaps on storage failure.** If an implementation allocates a sequence number before attempting the write, a `storage-failure` consumes that sequence number. The next successful append receives a strictly higher sequence number, creating a gap in the sequence. Sequence-number monotonicity (Invariant 4) is not violated — the invariant holds over successfully appended events only — but consumers who assume a dense sequence may misinterpret the gap as missing events. Implementations that want to avoid gaps must allocate sequence numbers only after the write succeeds, or use a rollback mechanism that returns the allocated number to the pool on write failure.
 
 Where the pattern breaks down: when the host environment cannot supply atomic, serialized appends (most adversarially-distributed settings); when events must be edited or deleted in place; when ordering must be derived from something other than append order.
 
@@ -211,3 +212,11 @@ This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.
 - *Append/read concurrency.* Already addressed under Decision points (appends serialized by the underlying implementation) and under durability in Edge cases.
 
 The pattern is `grounded` after one round.
+
+**Refinement round 1.** Five findings, all closed in-pattern. Conventions inherited from the methodology directly.
+
+- *`append` signature used `rejected(reason)` placeholder.* The actual reason was `invalid-payload`; `storage-failure` was absent entirely. Resolved: signature expanded to `rejected(invalid-payload | storage-failure)`. Decision points updated — if the store write fails after all preconditions pass, the atom returns `rejected(storage-failure)`; the `event_id` is not returned; the caller must treat the rejection as definitive. The Behavior section's "append is durable on success" guarantee has a converse: if the caller receives `storage-failure`, the event did not land.
+- *`read` signature omitted its rejection form entirely.* The signature showed only `ordered_sequence_of_events`; Decision points and Feedback both named `invalid-query` as a rejection but it was absent from the signature. Resolved: signature updated to `read(query) → ordered_sequence_of_events | rejected(invalid-query)`.
+- *Feedback section missing `storage-failure`.* The enumeration of rejection reasons listed `invalid-payload` and `invalid-query` only. Resolved: `storage-failure` added to the enumeration.
+- *Storage-failure not addressed in Decision points.* Resolved: `append` Decision point extended — storage-failure path, the consequence (event did not land), and the sequence-number allocation note added.
+- *Sequence-number gap on storage failure not addressed.* Implementations that allocate a sequence number before the write attempt may consume that number on `storage-failure`, creating a gap in the sequence. Invariant 4 is not violated (it holds over successfully appended events only), but consumers expecting a dense sequence may misinterpret the gap. Resolved: new Edge case — *Sequence-number gaps on storage failure* — added with guidance for gap-free implementations.
