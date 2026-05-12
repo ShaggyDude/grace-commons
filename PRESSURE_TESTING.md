@@ -5,9 +5,11 @@ nav_order: 3
 
 # Pressure Testing
 
-> The three-pass review every Grace Commons pattern survives before being considered grounded.
+> The foundation review every Grace Commons pattern survives before being considered grounded — three mandatory initial passes followed by as many refinement passes as the pattern requires.
 
-A pattern's spec is incomplete in three different ways at once. Each of the three passes below catches a different class of incompleteness. None substitutes for the others. Together they constitute the quality bar for atoms (in `atoms/`) and compositions (in `compositions/`).
+A pattern's spec is incomplete in three different ways at once. Each of the three passes below catches a different class of incompleteness. None substitutes for the others. Together they constitute the mandatory foundation for atoms (in `atoms/`) and compositions (in `compositions/`).
+
+The foundation passes are not a single-shot quality bar. Fixing a Pass 1 gap changes the document, and the changed document has new surface area for Pass 3 to find. A spec that passes all three cleanly on the first attempt has either been authored with extraordinary care or has not been reviewed adversarially enough. Refinement passes — re-running the same three passes after each round of fixes — are expected, not exceptional. There is no fixed number of refinement passes; the loop runs until a complete pass surfaces no new findings.
 
 The three passes are recursive in a useful way: applying them to a pattern produces a Lineage notes section, and the Lineage notes themselves can be pressure-tested by re-running the same three passes. Each fresh application becomes evidence the architecture is doing real work.
 
@@ -144,11 +146,11 @@ The conventions are **inherited rather than reinvented** in each new pattern. Ea
 
 ## Order and iteration
 
-**Recommended order: 1 → 2 → 3.** Pass 1 is mechanical and produces a list of structural gaps. Pass 2 looks at the in-pattern resolutions and asks whether they belong elsewhere. Pass 3 attacks what survives.
+**Phase 1 — Foundation: runs 1 → 2 → 3, once each.** Pass 1 is mechanical and produces a list of structural gaps. Pass 2 looks at the in-pattern resolutions and asks whether they belong elsewhere. Pass 3 attacks what survives. All three must run before any refinement begins; the foundation is not optional and cannot be skipped.
 
-**Iterate.** Pass 2's extractions can re-introduce Pass 1 gaps (the simplified pattern needs its remaining nodes re-checked). Pass 3 fixes can re-introduce Pass 2 over-absorptions if a deferred concern is later absorbed back into the pattern. Re-run passes until all three pass cleanly with no new findings.
+**Phase 2 — Refinement: re-run 1 → 2 → 3 as many times as needed.** Each round of fixes changes the document and can surface new findings in any of the three passes. Pass 2's extractions can re-introduce Pass 1 gaps. Pass 3 fixes can expose gaps that Pass 1 should have caught. The refinement loop has no fixed count — it runs until a complete pass across all three surfaces no new findings. This is expected: a complex atom with a novel structure may require two or three refinement rounds; a simpler atom closely following a prior pattern may need none. Both outcomes are normal.
 
-**Skipping is not an option.** Each pass catches a different class of gap. A pattern that has only survived Pass 1 is structurally complete but probably absorbs concerns it shouldn't and contains hidden decisions. A pattern that has only survived Pass 3 is precise but may be missing entire GRID nodes. Either is incomplete.
+**Skipping is not an option.** Each pass catches a different class of gap. A pattern that has only survived Pass 1 is structurally complete but probably absorbs concerns it shouldn't and contains hidden decisions. A pattern that has only survived Pass 3 is precise but may be missing entire GRID nodes. Either is incomplete. Refinement passes do not substitute for the foundation — they extend it.
 
 ---
 
@@ -196,4 +198,4 @@ A pattern is `grounded` when all three columns are clean. Until then, the patter
 
 ---
 
-*The shortest path to a grounded pattern is to run all three passes early and iterate. The longest path is to declare `grounded` after Pass 1 and discover Pass 2 and Pass 3 findings later, at which point the spec, the implementations that depend on it, and the contributors who reviewed it must all be revisited together.*
+*The shortest path to a grounded pattern is to run all three passes early and iterate through as many refinement rounds as the pattern needs. The longest path is to declare `grounded` prematurely — whether after one pass or after three passes that were not adversarial enough. Premature grounding means the spec, the implementations that depend on it, and the contributors who reviewed it must all be revisited together when the gaps surface later. Refinement passes are cheaper before `grounded` than after.*

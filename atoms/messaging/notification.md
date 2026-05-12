@@ -42,7 +42,7 @@ Ids are not reused after a notification reaches a terminal state.
   - `deliver(notification_id) → ok | rejected(reason)`
   - `fail(notification_id) → ok | rejected(reason)`
   - `expire(notification_id) → ok | rejected(reason)`
-  - `status_of(notification_id) → {notification_id, recipient_ref, payload, created_at, status, [terminal_timestamp]} | not-known`
+  - `status_of(notification_id) → {notification_id, recipient_ref, payload, created_at, status, delivered_at?, failed_at?, expired_at?} | not-known`
   - `pending_for(recipient_ref) → [notification_id, ...]`
 - An implicit clock providing wall-time timestamps.
 
@@ -87,11 +87,11 @@ Transitions:
 ### Flow
 
 1. **An event fires; the composing pattern creates a notification.** The Notification Fanout pattern (or equivalent) calls `create(recipient_ref, payload)` — the atom records the notification in Pending and returns the id.
-2. **The delivery layer attempts to deliver.** The transport mechanism (webhook call, WebSocket push, email send) attempts to reach the recipient.
+2. **The delivery layer attempts to deliver (optional).** The transport mechanism (webhook call, WebSocket push, email send) attempts to reach the recipient. This step may be skipped entirely — a notification may be expired before any delivery attempt begins if the deadline passes first.
 3. **Delivery outcome is recorded.** Exactly one of three transitions applies:
    - 3a. Transport succeeds: `deliver(notification_id)` → Delivered, `delivered_at` set.
    - 3b. Transport fails: `fail(notification_id)` → Failed, `failed_at` set.
-   - 3c. Deadline passes without delivery or failure: `expire(notification_id)` → Expired, `expired_at` set.
+   - 3c. Deadline passes without a delivery attempt, or without a recorded outcome: `expire(notification_id)` → Expired, `expired_at` set. Step 2 need not have occurred.
 4. **Operators or retry logic consult notification state.** `pending_for(recipient_ref)` returns unresolved notifications; `status_of(notification_id)` returns the full record for any notification by id, including terminal ones.
 
 ### Decision points
@@ -100,8 +100,8 @@ Transitions:
 - **At `deliver(notification_id)`** — `notification_id` must reference a known notification; otherwise `not-known`. The notification must be in Pending; transitioning a non-Pending notification is rejected as `not-pending`.
 - **At `fail(notification_id)`** — same preconditions as `deliver`: `not-known` or `not-pending`.
 - **At `expire(notification_id)`** — same preconditions: `not-known` or `not-pending`.
-- **At `status_of(notification_id)`** — no precondition beyond id presence. Returns the full notification record or `not-known`. Both are first-class outcomes; `not-known` is not a rejection.
-- **At `pending_for(recipient_ref)`** — no precondition. Returns an empty list if no Pending notifications exist for the recipient. The query is read-only.
+- **At `status_of(notification_id)`** — no precondition. Empty or malformed `notification_id` returns `not-known` — no notification has an empty id, so the result is structurally `not-known`. Both `not-known` and the full record are first-class outcomes; neither is a rejection.
+- **At `pending_for(recipient_ref)`** — no precondition. Empty or malformed `recipient_ref` returns an empty list — no notification has an empty recipient, so the result is structurally empty. Returns an empty list if no Pending notifications exist for the recipient. The query is read-only.
 
 ### Behavior
 
@@ -117,6 +117,7 @@ Observed behavior, derived from how notification delivery systems are actually d
 - No notification is deleted. All terminal records — Delivered, Failed, Expired — remain in the store for audit and operational purposes. `pending_for` excludes them; `status_of(notification_id)` returns them.
 - A Failed notification does not automatically trigger a retry. If retry is desired, the composing system creates a new notification record for the retry attempt — a distinct record with a distinct id and its own outcome (see Edge cases).
 - Payload is stored and returned opaque. The atom does not parse, validate, or act on payload content. Whether the payload is a JSON object, a plain string, or a reference to another record is defined entirely by the composing system.
+- `status_of` is a read-only query with no side effects. It returns all stored fields — including the opaque payload — for any notification in any state: Pending, Delivered, Failed, or Expired. No notification becomes inaccessible via `status_of` after reaching a terminal state; the record is durable for the lifetime of the system.
 
 ### Feedback
 
@@ -137,7 +138,7 @@ The full notification set — Pending, Delivered, Failed, Expired — is queryab
 
 The following hold across all valid sequences of actions and constitute the verification surface of the pattern:
 
-- **Invariant 1 — Notification immutability.** Once recorded, a notification's `notification_id`, `recipient_ref`, `payload`, and `created_at` never change.
+- **Invariant 1 — Notification immutability.** Once recorded, a notification's `notification_id`, `recipient_ref`, `payload`, and `created_at` never change. Once set, `delivered_at`, `failed_at`, and `expired_at` never change. No field in the notification record is ever overwritten.
 - **Invariant 2 — Status monotonicity.** A notification's status transitions only from Pending to one terminal state: Delivered, Failed, or Expired. No notification returns from a terminal state to Pending or transitions between terminal states.
 - **Invariant 3 — Terminal states are exclusive.** At most one of `delivered_at`, `failed_at`, `expired_at` is present for any notification. A notification in Delivered has `delivered_at` and no other terminal timestamp; likewise for Failed and Expired. A Pending notification has none.
 - **Invariant 4 — Terminal timestamps match status.** `delivered_at` is present if and only if status is `delivered`. `failed_at` is present if and only if status is `failed`. `expired_at` is present if and only if status is `expired`.
@@ -146,7 +147,9 @@ The following hold across all valid sequences of actions and constitute the veri
 - **Invariant 7 — Pending query excludes terminals.** `pending_for(recipient_ref)` returns only notifications in Pending state for the queried recipient. Delivered, Failed, and Expired notifications are not included regardless of their `recipient_ref`.
 - **Invariant 8 — Timestamp ordering.** For any notification in Delivered state, `created_at ≤ delivered_at`. For any notification in Failed state, `created_at ≤ failed_at`. For any notification in Expired state, `created_at ≤ expired_at`. This invariant is best-effort under non-monotonic clocks; if the underlying clock moves backward between `create` and the terminal action, the inequality may be violated. The implementor is responsible for the clock discipline that makes each inequality hold; see Edge cases.
 
-Notification immutability and terminal-state exclusivity together give the *auditability* property — the full delivery history of every notification is recoverable from the notification store alone. Status monotonicity and timestamp ordering together give the *operational readability* property — `pending_for` is a deterministic snapshot of unresolved deliveries at query time.
+- **Invariant 9 — Notification durability.** Notifications are never deleted from the store. Once created, a notification record persists through all state transitions and remains queryable via `status_of` for the lifetime of the system. The total notification count is monotonically non-decreasing.
+
+Notification immutability and durability together give the *auditability* property — the full delivery history of every notification is recoverable from the notification store alone, with no gaps. Terminal-state exclusivity and timestamp matching (Invariants 3 and 4) give the *unambiguous record* property — for any notification, exactly one delivery outcome is recorded and its timestamp is stable. Status monotonicity and timestamp ordering together give the *operational readability* property — `pending_for` is a deterministic snapshot of unresolved deliveries at query time.
 
 ---
 
@@ -178,7 +181,7 @@ Three scenarios the notification store must survive in regulated contexts:
 
 - **Regulator audit — demonstrate all notifications for a compliance event.** A compliance auditor asks *"show all notifications created for the policy:updated event on 2025-03-14, and whether each was delivered."* The auditor queries the notification store for notifications where `created_at` falls on 2025-03-14 and the payload references the relevant policy. `status_of` for each returned id shows the delivery outcome — `delivered_at`, `failed_at`, or `expired_at`. The notification store answers from stored fields alone; Invariants 1 and 3-4 guarantee the delivery record is complete and unambiguous.
 - **Disputed delivery — actor claims they were not notified.** Officer_a claims they received no notification of policy update p7. The investigator queries the notification store for notifications where `recipient_ref = officer_a` and the payload references `policy_id: p7`. If a record exists with `delivered_at` set, Invariant 1 (notification immutability) is the structural answer: the notification was created with that recipient and delivery was confirmed at that time. If the record shows `failed_at` or `expired_at`, the store confirms delivery was not completed and documents why. The notification store is the single source of truth; no external corroboration is required.
-- **Breach investigation — identify Pending notifications that may have exposed payload data.** A security incident requires identifying all Pending notifications at the time of breach (2025-06-01T03:00Z) that carried sensitive payload data. The investigator queries for notifications where `created_at ≤ 2025-06-01T03:00Z` and `status = pending` at that time (i.e., no terminal timestamp before 2025-06-01T03:00Z). `status_of` for each candidate shows the terminal outcome (if any occurred after the breach window) and `created_at` confirms the exposure window. The notification store answers the exposure scope question from stored fields alone.
+- **Breach investigation — identify Pending notifications that may have exposed payload data.** A security incident requires identifying all notifications that were Pending at the time of breach (2025-06-01T03:00Z) and may have carried sensitive payload data. The investigator queries for notifications where `created_at ≤ 2025-06-01T03:00Z` and either `status = pending` (still unresolved now) or the applicable terminal timestamp falls after 2025-06-01T03:00Z (meaning the notification was Pending during the breach window but has since resolved). The reconstruction logic mirrors the Subscription pattern: `created_at ≤ T` and (`status = pending` or `delivered_at > T` or `failed_at > T` or `expired_at > T`). `status_of` for each candidate returns the current record; `created_at` confirms the exposure window. The notification store answers the exposure scope question from stored fields alone without recourse to logs or developer narration.
 
 ---
 
@@ -198,6 +201,7 @@ What this atom does not cover:
 - **Authorization to create.** The atom does not enforce who may call `create`. Any caller may create a notification for any recipient. Authorization to create belongs to the composing system.
 - **Bulk expiry.** There is no bulk-expire surface. Expiring all Pending notifications past a deadline requires querying `pending_for` for each recipient and calling `expire(notification_id)` for each eligible id.
 - **Atomicity and crash semantics.** Each terminal transition changes two fields simultaneously: `status` and one terminal timestamp. A crash mid-`deliver` that sets `delivered_at` without updating `status`, or vice versa, violates Invariant 4 (terminal timestamps match status). The implementor is responsible for the transactional boundary that makes both fields change together. The spec does not define recovery semantics for partial writes.
+- **Payload data retention.** The notification store retains payload data for every notification for the lifetime of the system (Invariant 9). If payloads contain sensitive data — PII, financial records, medical information — the composing system is responsible for the retention policy. Retention Window is the composing pattern that bounds how long records must be kept and when they may be purged. The bare atom does not implement payload expiry or redaction.
 - **Clock semantics.** `created_at`, `delivered_at`, `failed_at`, and `expired_at` are wall-time from the implicit clock. Clock skew, NTP adjustments, and timezone handling are deployment concerns. Invariant 8 is best-effort under non-monotonic clocks.
 
 ---
@@ -271,3 +275,13 @@ This atom is the second entry in the `messaging/` category, drafted alongside Su
 - *Concurrent terminal call race condition unnamed.* Two concurrent `deliver` and `expire` calls for the same notification_id are a real operational scenario; the first wins and the second gets `not-pending`. Not named. Fixed: Behavior now states serial resolution under host serialization guarantees.
 - *Atomicity and crash semantics absent.* Each terminal transition changes two fields (`status` and one terminal timestamp) that must change together. A partial write violates Invariant 4. Personal Todo names this explicitly. Fixed: Edge cases now carries the atomicity note.
 - *Regulated adversarial scenarios and generation acceptance missing.* The compliance system example (policy change broadcast, officer notification audit) invokes a regulated domain; library rules require both sections. Fixed: both sections added, with three adversarial scenarios covering regulator audit, disputed delivery, and breach investigation.
+
+**Second-pass review — seven additional findings, all closed.**
+
+- *`status_of` return signature used `[terminal_timestamp]` notation.* The bracket implied a single optional field called `terminal_timestamp`; the actual record has three distinct named optional fields (`delivered_at?`, `failed_at?`, `expired_at?`). An implementor reading only the Inputs section could produce one field instead of three, breaking the audit surface. Fixed: signature updated to `delivered_at?, failed_at?, expired_at?`.
+- *Flow step 2 assumed delivery is always attempted.* "The delivery layer attempts to deliver" was presented as a required step before the outcome branches, but a notification may be expired before any delivery attempt begins. Fixed: step 2 now marked optional; branch 3c explicitly notes that step 2 need not have occurred.
+- *`status_of` and `pending_for` with empty/malformed inputs unspecified.* Decision points said "no precondition beyond id presence" without defining the empty-input outcome. Fixed: both now explicitly state that empty inputs return `not-known` and `[]` respectively, by the same rationale as `subscribed`/`subscribers_for` in Subscription.
+- *`status_of` missing from Behavior section.* Every other action had behavioral observations; `status_of` was covered in Outputs and Decision points but not Behavior. Fixed: note added stating `status_of` is read-only, returns payload through all states including terminal, and no notification becomes inaccessible after resolution.
+- *Terminal timestamp immutability not an invariant.* Invariant 1 covered the four creation-time fields; the State section stated `delivered_at`, `failed_at`, `expired_at` "never change after set" informally but this was not elevated to an invariant. The Generation acceptance argument depends on it. Fixed: Invariant 1 extended to cover terminal timestamps explicitly.
+- *No notification durability invariant.* "No notification is deleted" appeared in Behavior and Generation acceptance but not as a formal invariant. Fixed: Invariant 9 added — notification records are durable; total count is monotonically non-decreasing.
+- *Breach adversarial scenario used incorrect historical-status language.* "Status = pending at that time" conflates current status with historical status. A notification Pending at breach time but since delivered shows `status = delivered` now; the reconstruction requires timestamp logic, not current-status filtering. Fixed: breach scenario now uses the correct reconstruction: `created_at ≤ T` and (`status = pending` or applicable terminal timestamp > T), mirroring the Subscription regulated scenarios.
