@@ -127,7 +127,7 @@ Atoms in `atoms/compliance/`, and any atom whose examples invoke regulated domai
 
 ## Composition model
 
-A composition is not a merged state machine. It is not a higher-order state machine with its own persistent state. It is an **action wiring layer** over constituent atom state machines — a function-level orchestration that sequences constituent SM transitions within the scope of a single action invocation.
+A composition is not a merged state machine. It is not a higher-order state machine with its own persistent state. It is a **stateless interpreter of a directed invocation graph over stateful atoms** — a function-level orchestration that sequences constituent SM transitions within the scope of a single action invocation. "Directed invocation graph" names what the composition structurally is: a graph of atom calls with explicit directed edges (sequential, conditional, or parallel — see Composition types below). The graph is a first-class compilation artifact, not prose description; the compiler reads the graph to emit the wiring code, not the other way around.
 
 The distinction is load-bearing. A formalization that gives the composition its own state set S introduces a state artifact that has no atom spec, no identity model, no durability contract, and no invariants. The question "where does the composition's orchestration state live?" has no answer within the model — and that is the model's fault, not the implementor's. Grace Commons eliminates the question by construction: **compositions have no persistent state of their own beyond their constituents' stores.** What looks like "orchestration state" — the intermediate result of a constituent call, the branch taken, the flag set mid-sequence — is ephemeral local state within a single action invocation. It lives on the call stack. When the action returns, it is gone.
 
@@ -179,6 +179,20 @@ The composition does not read the constituent atom's internal state directly. It
 A composition action that sequences two constituent SM transitions still executes the full four-step pipeline at the composition level — with Step 3 containing the sequenced constituent calls and the multi-write atomicity obligation applying across constituent store boundaries. The wiring layer is itself subject to the pipeline; it is not an exception to it.
 
 Derived queries (`responsible_actor`, `visible_tasks` in Shared Todo) are pure joins over constituent Q surfaces — direct effects (reads from constituent stores) followed by a pure join function. The composition does not own a separate record store; it derives.
+
+---
+
+### Three-way taxonomy
+
+The model has exactly three kinds of runtime entity. No fourth kind is permitted.
+
+| Entity | Kind | Owns state? | Owns history? |
+|---|---|---|---|
+| **Atom** | Persistent state machine | Yes — its own store | Only its own record set |
+| **Composition** | Stateless orchestration function | No — call-stack only | No |
+| **Event Log** | Atom (temporal) | Yes — its own store | Yes — the only legitimate history store |
+
+If a composition seems to need persistent state, the answer is not to give the composition a store — it is to compose Event Log. The composition's "memory" of what happened is the Event Log's record set, governed by Event Log's invariants and Q surface. The composition remains stateless; the history remains auditable and spec-governed.
 
 ---
 
