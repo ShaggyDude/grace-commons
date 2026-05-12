@@ -36,9 +36,9 @@ The opaque-id model is load-bearing. Identifying an assignment by `task_ref` wou
 - A task reference identifying the unit of work being assigned. Opaque — the atom does not know what a task is or how its lifecycle is managed.
 - An assignee reference identifying the actor being assigned responsibility. Opaque — the actor registry is a separate concern.
 - Actions:
-  - `assign(task_ref, assignee_ref) → assignment_id | rejected(reason)`
-  - `recall(assignment_id) → ok | rejected(reason)`
-  - `reassign(assignment_id, new_assignee_ref) → new_assignment_id | rejected(reason)`
+  - `assign(task_ref, assignee_ref) → assignment_id | rejected(invalid-request | already-assigned | storage-failure)`
+  - `recall(assignment_id) → ok | rejected(not-known | not-active | storage-failure)`
+  - `reassign(assignment_id, new_assignee_ref) → new_assignment_id | rejected(not-known | not-active | invalid-request | storage-failure)`
 - An implicit clock providing wall-time timestamps.
 
 ### Outputs
@@ -88,9 +88,9 @@ Transitions:
 
 ### Decision points
 
-- **At `assign(task_ref, assignee_ref)`** — `task_ref` and `assignee_ref` must be well-formed and non-empty; otherwise `invalid-request`. There must be no Active assignment for `task_ref` in the system; otherwise `already-assigned`. The atom enforces the at-most-one invariant at this boundary.
-- **At `recall(assignment_id)`** — `assignment_id` must reference a known assignment; otherwise `not-known`. The referenced assignment must be in Active; otherwise `not-active`.
-- **At `reassign(assignment_id, new_assignee_ref)`** — `assignment_id` must reference an Active assignment; otherwise `not-active` or `not-known`. `new_assignee_ref` must be well-formed and non-empty; otherwise `invalid-request`. The transition is atomic: both the Transferred state of the old assignment and the Active state of the new assignment are committed together. A partial failure (old marked Transferred but new not created) violates the at-most-one invariant and must be prevented by the host environment's transactional boundary.
+- **At `assign(task_ref, assignee_ref)`** — `task_ref` and `assignee_ref` must be well-formed and non-empty; otherwise `invalid-request`. There must be no Active assignment for `task_ref` in the system; otherwise `already-assigned`. The atom enforces the at-most-one invariant at this boundary. If the store write fails, the atom returns `rejected(storage-failure)`; no assignment is created.
+- **At `recall(assignment_id)`** — `assignment_id` must reference a known assignment; otherwise `not-known`. The referenced assignment must be in Active; otherwise `not-active`. If the store write fails, the atom returns `rejected(storage-failure)`; the assignment remains Active.
+- **At `reassign(assignment_id, new_assignee_ref)`** — `assignment_id` must reference a known assignment; otherwise `not-known`. The referenced assignment must be in Active; otherwise `not-active`. `new_assignee_ref` must be well-formed and non-empty; otherwise `invalid-request`. The transition is atomic: both the Transferred state of the old assignment and the Active state of the new assignment are committed together. If the transactional write fails at any point, the atom returns `rejected(storage-failure)` and both writes must be rolled back — the old assignment remains Active and no new assignment is created. A partial state where the old assignment is Transferred but no new Active assignment exists violates Invariant 7 and must not be observable.
 
 ### Behavior
 
@@ -111,7 +111,7 @@ Each successful action produces an observable, measurable change:
 - After `recall` — the assignment moves Active → Recalled with `recalled_at`. Active count decreases by one; Recalled count increases by one; total count unchanged.
 - After `reassign` — the old assignment moves Active → Transferred with `transferred_at`; a new assignment appears in Active with a fresh `assignment_id` and the new `assignee_ref`. Active count unchanged (one removed, one added); Transferred count increases by one; total count increases by one.
 
-Each rejected action produces an observable refusal naming the failed precondition: `invalid-request`, `already-assigned`, `not-known`, `not-active`.
+Each rejected action produces an observable refusal naming the failed precondition: `invalid-request`, `already-assigned`, `not-known`, `not-active`, or `storage-failure`.
 
 The Active assignment set is queryable. The full assignment store (Active, Recalled, Transferred) is queryable for audit. Per-assignment fields are observable to operators and — where appropriate — to the assignee and assigner.
 
@@ -128,8 +128,9 @@ The following hold across all valid sequences of actions and constitute the veri
 - **Invariant 7 — Reassign atomicity.** After a successful `reassign`, exactly one assignment is Active for the affected `task_ref` — the new one. The old assignment is in Transferred. There is no observable state in which both are Active, or in which neither is Active.
 - **Invariant 8 — Timestamp ordering.** For any assignment in Recalled state, `assigned_at ≤ recalled_at`. For any assignment in Transferred state, `assigned_at ≤ transferred_at`. Both are best-effort under non-monotonic clocks.
 - **Invariant 9 — Complete responsibility history.** For any `task_ref`, the set of all assignments where `assignment.task_ref = task_ref` records the complete chain of responsibility: every actor who held the assignment, when they received it, and when and how it ended.
+- **Invariant 10 — Assignment store durability.** Once recorded, an assignment is never deleted from the store. `recall` transitions an assignment from Active to Recalled; `reassign` transitions an assignment from Active to Transferred and creates a new Active assignment. Neither operation removes any record. The total assignment count is monotonically non-decreasing.
 
-At-most-one-Active-per-task and reassign atomicity together give the *unambiguous accountability* property — at any moment, the question "who is responsible for this task?" has exactly one answer or no answer, never two answers. Assignment immutability and complete responsibility history together give the *auditability* property — the full chain of responsibility for any task is recoverable from the assignment store alone.
+At-most-one-Active-per-task and reassign atomicity together give the *unambiguous accountability* property — at any moment, the question "who is responsible for this task?" has exactly one answer or no answer, never two answers. Assignment immutability, complete responsibility history, and assignment store durability together give the *auditability* property — the full chain of responsibility for any task is recoverable from the assignment store alone, and no record is ever silently removed.
 
 ---
 
@@ -180,6 +181,7 @@ What this atom does not cover:
 - **Completion handling.** When a task is completed (in Personal Todo or the host system), the assignment is not automatically recalled. The composing system decides whether to recall the assignment on completion. Both patterns — leaving it Active as a completion-attribution record, or recalling it to close the assignment lifecycle — are valid.
 - **Concurrent assign races.** Two simultaneous `assign` calls for the same `task_ref` resolve serially under the host environment's serialization guarantees. The first wins; the second receives `already-assigned`.
 - **Reassign atomicity and crash semantics.** `reassign` is specified as atomic. A crash between marking the old assignment Transferred and creating the new Active one would leave the task unassigned and Invariant 1 vacuously satisfied but Invariant 7 violated. The implementor is responsible for the transactional boundary that makes atomicity hold.
+- **Reassign storage failure.** A store-write failure during `reassign` is a two-write scenario: the old assignment must be marked Transferred and a new Active assignment must be created. If either write fails, the atom returns `rejected(storage-failure)` and both writes must be rolled back — the old assignment remains Active and no new assignment is created. A partial state where the old assignment is Transferred but no new Active assignment exists violates Invariant 7 (the task is unassigned after a `reassign` call that the caller may believe succeeded). Implementations that cannot provide full transactional rollback must detect and repair this partial state on recovery before accepting new requests.
 - **Clock semantics.** `assigned_at`, `recalled_at`, and `transferred_at` are wall-time from the implicit clock. Skew, monotonicity, and timezone handling are deployment concerns. Invariant 8 is best-effort under non-monotonic clocks.
 
 Where the atom breaks down: when responsibility is genuinely shared simultaneously (requiring group assignment); when assignment must be time-bounded without external revocation (requiring temporal grant); when the assigner must be authorized before assigning (requiring permissions composition); when the assignee must consent (requiring workflow composition).
@@ -250,3 +252,11 @@ The strongest temptation was absorbing accept/decline — many real systems trea
 - *Completion handling left implicit.* The draft was silent on what happens to an Active assignment when the task is completed in Personal Todo. This is a load-bearing operational decision. Resolved: Flow, Behavior, and Edge cases all name it explicitly — the atom makes no automatic transition on completion; the composing system decides whether to `recall` or leave the assignment Active as a completion-attribution record. Both are valid.
 - *Invariant 8 clock-safety.* Timestamp ordering (`assigned_at ≤ recalled_at`, `assigned_at ≤ transferred_at`) assumed a non-decreasing clock. Resolved: qualified as best-effort under non-monotonic clocks; clock semantics added to Edge cases.
 - *Rejection-path examples absent.* Initial examples covered only happy-path flows (assign, reassign, recall in smooth sequences). Resolved: fourth example added walking all four rejection reasons (`invalid-request`, `already-assigned`, `not-known`, `not-active`) in a single thread.
+
+**Refinement round 1.** Five findings, all closed in-pattern. Conventions inherited from the methodology directly, not re-derived from predecessor atoms.
+
+- *Action signatures used `rejected(reason)` placeholders.* All three signatures named `rejected(reason)` with the actual reason taxonomy living only in Feedback prose. Resolved: all three signatures expanded — `assign` returns `rejected(invalid-request | already-assigned | storage-failure)`, `recall` returns `rejected(not-known | not-active | storage-failure)`, `reassign` returns `rejected(not-known | not-active | invalid-request | storage-failure)`. Feedback updated to include `storage-failure` in the enumeration.
+- *`storage-failure` missing from all three actions.* All three actions write to the store; none named a store-write failure as a rejection reason. Resolved: `storage-failure` added to each signature and to Decision points, with the behavior specified for each: `assign` — no assignment created; `recall` — assignment remains Active; `reassign` — both writes rolled back.
+- *`reassign` Decision point ambiguous on `not-active` vs. `not-known`.* The phrasing "otherwise `not-active` or `not-known`" did not specify which condition produces which reason. Resolved: Decision point restructured as two sequential checks — `not-known` if the id is not in the store, `not-active` if it exists but is in a terminal state.
+- *No durability invariant.* Nine invariants; none stated that assignments are never deleted. Resolved: Invariant 10 — Assignment store durability — added: assignments are never deleted; `recall` transitions Active → Recalled; `reassign` transitions Active → Transferred and creates a new record; neither removes any record; total count monotonically non-decreasing. The auditability summary paragraph updated to name durability alongside immutability and complete history.
+- *Reassign partial-write scenario not framed under storage-failure in Edge cases.* The crash-semantics edge case named the transactional boundary but did not address the storage-failure path (where the atom returns a rejection rather than crashing). The two-write nature of `reassign` makes this the same structural situation as `revoke` in Permissions: a partial write leaves a Transferred assignment with no Active successor, violating Invariant 7. Resolved: new edge case — *Reassign storage failure* — added, requiring rollback of both writes on failure, with recovery guidance for implementations without full transactional support.
