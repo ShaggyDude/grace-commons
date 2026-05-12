@@ -99,8 +99,9 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 - Idempotent Reservation (Provisional Commitment + Duplicate Prevention)
 - Audit Trail (Event Log + Actor Identity + Retention Window + Tamper Evidence)
 - Shared Todo (Personal Todo + Permissions + Assignment)
+- Notification Fanout (Subscription + Notification)
 
-The canonical regulated-audit stack — Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail — is complete. Shared Todo (Personal Todo + Permissions + Assignment) is the four-composition milestone; all three constituent atoms are grounded and the composition is landed.
+The canonical regulated-audit stack — Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail — is complete. Notification Fanout is the fifth composition and the first to produce a variable number of effects from a single trigger; it completes the messaging atom pair (Subscription + Notification) and formalizes the fan-out boundary rule from the Execution Contract.
 
 ---
 

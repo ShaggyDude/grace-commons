@@ -39,17 +39,18 @@ If a system needs to record that a particular event triggered a particular fanou
 
 The composition exposes a single action:
 
-**`fanout(event_scope, payload) → {created: [notification_id, ...], failed: [subscriber_ref, ...]} | rejected(invalid-request | subscribers-unavailable)`**
+**`fanout(event_scope, payload) → {fanout_id, created: [notification_id, ...], failed: [subscriber_ref, ...]} | rejected(invalid-request | subscribers-unavailable)`**
 
-1. Validate inputs: `event_scope` must be non-empty; `payload` must be non-null. If either condition fails, return `rejected(invalid-request)`. No subscriber query is made; no notification records are created. This mirrors the constituent atoms' own validation: `Subscription.subscribe` rejects empty `event_scope`; `Notification.create` rejects null `payload`.
-2. Call `Subscription.subscribers_for(event_scope)`.
-   - If the subscription store is unavailable (infrastructure failure at the read step), return `rejected(subscribers-unavailable)`. No notification records are created.
-   - If the result is an empty list, return `{created: [], failed: []}`. The fanout is complete; no subscribers are currently Active for this scope.
-3. For each `subscriber_ref` in the returned list, call `Notification.create(subscriber_ref, payload)`.
+1. Validate inputs: `event_scope` must be non-empty; `payload` must be non-null. If either condition fails, return `rejected(invalid-request)`. No id is generated; no subscriber query is made; no notification records are created. This mirrors the constituent atoms' own validation: `Subscription.subscribe` rejects empty `event_scope`; `Notification.create` rejects null `payload`.
+2. Generate `fanout_id` — an opaque, system-generated, invocation-unique identifier (a direct effect: `entropy.generate()`). This id is the correlation handle for this invocation. When Event Log is composed in, the caller uses `fanout_id` as the log entry's reference, binding the invocation record to its subscriber list and created notification_ids. Without Event Log, `fanout_id` is ephemeral — returned to the caller for transient correlation but not persisted by the composition.
+3. Call `Subscription.subscribers_for(event_scope)`.
+   - If the subscription store is unavailable (infrastructure failure at the read step), return `rejected(subscribers-unavailable)`. No notification records are created. `fanout_id` is not returned on rejection — the invocation did not complete.
+   - If the result is an empty list, return `{fanout_id, created: [], failed: []}`. The fanout is complete; no subscribers are currently Active for this scope.
+4. For each `subscriber_ref` in the returned list, call `Notification.create(subscriber_ref, payload)`.
    - If `create` returns a `notification_id`, add it to the `created` list.
    - If `create` returns `rejected(storage-failure)`, add `subscriber_ref` to the `failed` list. Continue to the next subscriber; do not abort the fan-out.
    - If `create` returns `rejected(invalid-request)`, this indicates a structural inconsistency — `subscriber_ref` is non-empty (it was returned from the subscription store) and payload passed input validation in step 1. Treat as equivalent to `storage-failure` for that subscriber; add to `failed`. Continue.
-4. Return `{created: [notification_ids], failed: [subscriber_refs]}`.
+5. Return `{fanout_id, created: [notification_ids], failed: [subscriber_refs]}`.
 
 The order of `create` calls across subscribers is not guaranteed. Parallel execution is permitted provided the implementation guarantees each `Notification.create` call is independently committed — no shared transaction boundary across the N creates. The result's `created` and `failed` lists are unordered.
 
@@ -74,6 +75,7 @@ These invariants emerge from the composition. Neither constituent atom carries t
 - **Invariant 5 — Subscription store is read-only.** The composition never writes to the subscription store. `Subscription.subscribers_for` is the only call made against the Subscription atom. No subscription is created, modified, or cancelled by the fanout action.
 - **Invariant 6 — Notification atom invariants preserved.** All nine Notification invariants hold over each created record. The composition does not bypass Notification's preconditions or write to the notification store directly.
 - **Invariant 7 — Subscription atom invariants preserved.** All nine Subscription invariants hold. The composition reads the subscription store through the declared Q surface; it does not join the subscription table directly.
+- **Invariant 8 — Fanout invocation uniqueness.** Each `fanout` invocation that returns a result (not `rejected`) is assigned a unique `fanout_id`. No two invocations share a `fanout_id` across the lifetime of the system. `fanout_id` is generated before any constituent calls; it is present in every non-rejected result, including the empty-subscriber case. When Event Log is composed in, `fanout_id` is the durable invocation identity. Without Event Log, `fanout_id` is ephemeral — the caller receives it and may use it for transient correlation, but the composition does not persist it.
 
 Fanout coverage (Invariant 1) and at-most-one-per-subscriber (Invariant 4) together give the *delivery scope completeness* property — every currently-Active subscriber receives exactly one notification record per invocation, or the failure is named. Payload consistency (Invariant 2) and no cross-notification coupling (Invariant 3) give the *independent delivery record* property — each recipient's record is self-contained and its lifecycle is not affected by any other recipient's outcome.
 
@@ -87,15 +89,17 @@ A project management system uses Notification Fanout to notify subscribers when 
 
 1. **Three team members subscribe.** `Subscription.subscribe(dev_a, "task:assigned") → sub_a1`. Same for dev_b and dev_c.
 2. **A task is assigned; the fanout fires.** `fanout("task:assigned", {task_id: t7, assigned_by: manager_m})`:
+   - `fanout_id = fanout_f01` generated.
    - `Subscription.subscribers_for("task:assigned") → [dev_a, dev_b, dev_c]`
    - `Notification.create(dev_a, payload) → notif_41`
    - `Notification.create(dev_b, payload) → notif_42`
    - `Notification.create(dev_c, payload) → notif_43`
-   - Returns `{created: [notif_41, notif_42, notif_43], failed: []}`.
+   - Returns `{fanout_id: fanout_f01, created: [notif_41, notif_42, notif_43], failed: []}`.
 3. **dev_b cancels before the next event.** `Subscription.cancel(sub_b1) → ok`.
 4. **A second task is assigned.** `fanout("task:assigned", {task_id: t8, assigned_by: manager_m})`:
+   - `fanout_id = fanout_f02` generated.
    - `subscribers_for → [dev_a, dev_c]` — dev_b is now Cancelled; not returned.
-   - Returns `{created: [notif_51, notif_52], failed: []}`.
+   - Returns `{fanout_id: fanout_f02, created: [notif_51, notif_52], failed: []}`.
 5. **dev_b's earlier notifications are unaffected.** `Notification.status_of(notif_42)` returns the full record; the subscription cancellation does not delete prior notification records (Notification Invariant 9).
 
 ### Subscription store unavailable
@@ -109,11 +113,12 @@ The subscription store is down when the fanout fires.
 
 During a fanout, the notification store becomes temporarily unavailable after the first create succeeds.
 
+- `fanout_id = fanout_f03` generated.
 - `subscribers_for → [dev_a, dev_b, dev_c]`
 - `Notification.create(dev_a, payload) → notif_61` ✓
 - `Notification.create(dev_b, payload) → rejected(storage-failure)` ✗
 - `Notification.create(dev_c, payload) → notif_62` ✓ (fan-out continues)
-- Returns `{created: [notif_61, notif_62], failed: [dev_b]}`.
+- Returns `{fanout_id: fanout_f03, created: [notif_61, notif_62], failed: [dev_b]}`.
 
 The caller inspects the `failed` list and calls `Notification.create(dev_b, payload) → notif_63` directly. That new record enters Pending independently; dev_a's and dev_c's records are already in their own delivery lifecycles.
 
@@ -151,7 +156,7 @@ An auditor later asks: *was every subscribed compliance officer notified of poli
 
 A derived implementation of Notification Fanout is *acceptable* when an external auditor, given the subscription store and notification store, can do all of the following without recourse to source code, runbooks, or developer narration:
 
-- **Confirm fanout coverage for any recorded fanout.** Event Log composition is required for reliable fanout-coverage audits. The recommended Event Log entry shape — one entry per `fanout` invocation — is `{event_type: "fanout", event_scope, fanout_time, created_notification_ids: [...], failed_subscriber_refs: [...]}`. Given an Event Log entry of this shape, the auditor can: (a) read the entry's `event_scope` and `fanout_time`; (b) reconstruct the Active subscriber set at `fanout_time` using Subscription's historical-state filter (`subscribed_at ≤ fanout_time` AND (`status = active` OR `cancelled_at > fanout_time`)); (c) verify every reconstructed Active subscriber appears either in `created_notification_ids` (each id mapped via `Notification.status_of` to confirm the record exists with matching `recipient_ref`) or in `failed_subscriber_refs`; (d) confirm `|created_notification_ids| + |failed_subscriber_refs|` equals the size of the reconstructed Active set, satisfying Invariant 1 from records. Without a composed Event Log carrying these fields, fanout grouping by `created_at` clustering on the notification store is unreliable — concurrent creates across a measurable time span produce different timestamps, and concurrent unrelated fanouts on the same scope may produce overlapping ones.
+- **Confirm fanout coverage for any recorded fanout.** Event Log composition is required for reliable fanout-coverage audits. The recommended Event Log entry shape — one entry per `fanout` invocation — is `{fanout_id, event_scope, payload_digest, created: [notification_id, ...], failed: [subscriber_ref, ...], fired_at}`. `fanout_id` is the durable invocation identity when Event Log is composed in; the caller passes the `fanout_id` returned by the fanout action as the log entry's reference field, binding the invocation record to its complete subscriber list and created notification_ids. Given an Event Log entry of this shape, the auditor can: (a) read the entry's `event_scope` and `fired_at`; (b) reconstruct the Active subscriber set at `fired_at` using Subscription's historical-state filter (`subscribed_at ≤ fired_at` AND (`status = active` OR `cancelled_at > fired_at`)); (c) verify every reconstructed Active subscriber appears either in `created` (each `notification_id` mapped via `Notification.status_of` to confirm the record exists with matching `recipient_ref`) or in `failed`; (d) confirm `|created| + |failed|` equals the size of the reconstructed Active set, satisfying Invariant 1 from records. Without a composed Event Log carrying these fields, fanout grouping by `created_at` clustering on the notification store is unreliable — concurrent creates across a measurable time span produce different timestamps, and concurrent unrelated fanouts on the same scope produce overlapping ones; `fanout_id` alone is insufficient without the log because the composition does not persist it.
 - **Confirm payload consistency.** All Notification records produced by a single fanout carry the same payload. The auditor inspects the `payload` field of each record in the fanout group and confirms identity.
 - **Verify each Notification record independently.** Each record passes Notification's five Generation acceptance checks: full delivery history present, timeline reconstructable, terminal exclusivity confirmed, timestamp-status match confirmed, composing patterns identifiable.
 - **Confirm no cross-notification coupling.** A terminal state on one notification record in the fanout group does not correlate with the terminal state on another. Each record's delivery outcome is independent.
@@ -176,7 +181,7 @@ It inherits from:
 
 ## Status
 
-`partially resolved` — three foundation passes complete; Opus adversarial pass pending before declaring `grounded`.
+`grounded` — three foundation passes complete; Opus adversarial pass (26 findings, all resolved); architectural decisions applied (Event Log optional, fanout_id ephemeral correlation handle with Event Log as durable identity when composed, subscribers-unavailable treated as explicit error).
 
 ---
 
