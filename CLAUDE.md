@@ -128,8 +128,9 @@ When a session has a strong case for resolving one of these, the move is to (a) 
 
 - [`readme.md`](./readme.md) — home page, current contents snapshot, three-layers framing.
 - [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md) — the architectural manifesto.
-- [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) — three-pass methodology, regulated-pattern conventions.
+- [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) — three-pass methodology, regulated-pattern conventions, multi-file refinement order.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution shape, three perspectives, four-step authoring rubric, lifecycle.
+- [`ROADMAP.md`](./ROADMAP.md) — planned atoms and compositions in dependency order; what each unlocks; what each blocks on.
 - `atoms/<category>/README.md` — per-category catalogs.
 - [`compositions/README.md`](./compositions/README.md) — compositions catalog, vocabulary note.
 
