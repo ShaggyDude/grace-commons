@@ -37,10 +37,10 @@ The opaque-id model is load-bearing. Identifying a commitment by its `(resource,
 - A requester reference identifying who the hold is for.
 - A hold window duration, supplied at creation. The window opens at `placed_at` and closes at `expires_at = placed_at + duration`.
 - User- or system-initiated actions:
-  - `place_hold(resource, requester, duration) → id | rejected(reason)`
-  - `confirm(id) → ok | rejected(reason)`
-  - `release(id) → ok | rejected(reason)`
-  - `expire(id) → ok | rejected(reason)`
+  - `place_hold(resource, requester, duration) → id | rejected(invalid-request | resource-unavailable | storage-failure)`
+  - `confirm(id) → ok | rejected(not-known | not-held | window-elapsed | storage-failure)`
+  - `release(id) → ok | rejected(not-known | not-held | storage-failure)`
+  - `expire(id) → ok | rejected(not-known | not-held | window-not-elapsed | storage-failure)`
 - An implicit clock providing wall-time timestamps.
 
 ### Outputs
@@ -90,10 +90,10 @@ Transitions:
 
 Each action carries explicit preconditions. Violations are rejected, not silently absorbed.
 
-- **At `place_hold(resource, requester, duration)`** — `resource`, `requester`, and `duration` must be well-formed; otherwise `invalid-request`. `duration` must be positive and within implementation bounds; otherwise `invalid-request`. The resource must be available for holding under the registry's availability rules; otherwise `resource-unavailable`.
-- **At `confirm(id)`** — `id` must reference a commitment currently in Held; otherwise `not-held` (Confirmed / Released / Expired) or `not-known` (no such id). If `now ≥ expires_at` at the time of the call, confirmation is rejected as `window-elapsed`; the atom requires the explicit Held → Expired transition before the resource reopens.
-- **At `release(id)`** — `id` must reference a commitment currently in Held; otherwise `not-held` or `not-known`.
-- **At `expire(id)`** — `id` must reference a commitment currently in Held; otherwise `not-held` or `not-known`. `now ≥ expires_at` must hold; otherwise `window-not-elapsed`. The atom does not permit expiring a still-valid window.
+- **At `place_hold(resource, requester, duration)`** — `resource`, `requester`, and `duration` must be well-formed; otherwise `invalid-request`. `duration` must be positive and within implementation bounds; otherwise `invalid-request`. The resource must be available for holding under the registry's availability rules; otherwise `resource-unavailable`. If the store write fails, the atom returns `rejected(storage-failure)`; no commitment is created.
+- **At `confirm(id)`** — `id` must reference a known commitment; otherwise `not-known`. The referenced commitment must be in Held; otherwise `not-held` (Confirmed, Released, or Expired). If `now ≥ expires_at` at the time of the call, confirmation is rejected as `window-elapsed`; the atom requires the explicit Held → Expired transition before the resource reopens. If the store write fails, the atom returns `rejected(storage-failure)`; the commitment remains in Held.
+- **At `release(id)`** — `id` must reference a known commitment; otherwise `not-known`. The referenced commitment must be in Held; otherwise `not-held`. If the store write fails, the atom returns `rejected(storage-failure)`; the commitment remains in Held.
+- **At `expire(id)`** — `id` must reference a known commitment; otherwise `not-known`. The referenced commitment must be in Held; otherwise `not-held`. `now ≥ expires_at` must hold; otherwise `window-not-elapsed` — the atom does not permit expiring a still-valid window. If the store write fails, the atom returns `rejected(storage-failure)`; the commitment remains in Held.
 
 ### Behavior
 
@@ -115,7 +115,7 @@ Each successful action produces an observable, measurable change:
 - After `release(id)` — the commitment moves Held → Released with `released_at`. Held count decreases by one; Released count increases by one; total count unchanged.
 - After `expire(id)` — the commitment moves Held → Expired with `expired_at`. Held count decreases by one; Expired count increases by one; total count unchanged.
 
-Each rejected action produces an observable refusal naming the failed precondition: `invalid-request`, `resource-unavailable`, `not-held`, `not-known`, `window-elapsed`, `window-not-elapsed`.
+Each rejected action produces an observable refusal naming the failed precondition: `invalid-request`, `resource-unavailable`, `not-held`, `not-known`, `window-elapsed`, `window-not-elapsed`, or `storage-failure`.
 
 The Held, Confirmed, Released, and Expired sets are queryable — operators can list, filter, and count them at any time. Per-commitment fields are observable to operators and (where appropriate) to requesters.
 
@@ -132,8 +132,9 @@ The following hold across all valid sequences of actions and constitute the veri
 - **Invariant 7 — Confirmation within the window.** A commitment can transition to Confirmed only while `now < expires_at`. After the window elapses, confirmation is rejected; the only legal terminal transition from Held is `expire`.
 - **Invariant 8 — Transition timestamps strictly after placement.** For any commitment: if `confirmed_at` is defined, `placed_at ≤ confirmed_at`; if `released_at` is defined, `placed_at ≤ released_at`; if `expired_at` is defined, `expires_at ≤ expired_at` (expiry cannot run before its scheduled time).
 - **Invariant 9 — No id reuse.** No two distinct commitments share an `id`, across the lifetime of the system.
+- **Invariant 10 — Commitment store durability.** Once recorded, a commitment is never deleted from the store. `confirm`, `release`, and `expire` transition a commitment to a terminal state; they do not remove the record. The total commitment count is monotonically non-decreasing. Retention, archival, and purge are composing concerns ([Retention Window](../compliance/retention-window.md)).
 
-Membership exclusivity and terminal absorption together give the *audit-friendly* property — once a commitment settles, its record is a fact about the past, not a candidate for revision. Confirmation within the window gives the *honored-contract* property — auditors can verify that no commitment was confirmed after its declared window. Resource and requester immutability gives the *one-commitment-one-id* property that makes per-event audit reconstruction tractable.
+Membership exclusivity and terminal absorption together give the *audit-friendly* property — once a commitment settles, its record is a fact about the past, not a candidate for revision. Confirmation within the window gives the *honored-contract* property — auditors can verify that no commitment was confirmed after its declared window. Resource and requester immutability gives the *one-commitment-one-id* property that makes per-event audit reconstruction tractable. Commitment store durability gives the *irrevocable-record* property — the audit surface cannot be silently reduced by deletion.
 
 ---
 
@@ -238,7 +239,7 @@ It inherits from:
 A derived implementation of Provisional Commitment is *acceptable* — in the regulator-acceptance sense MUSE's Proof node requires — when an external auditor, given the commitment record set plus the composed Event Log instance, can do all of the following without recourse to source code, runbooks, or developer narration:
 
 - **Reconstruct the lifecycle of any commitment.** From `place_hold` to its terminal transition, with every timestamp, the resource and requester references, and the recorded state at each step.
-- **Verify all nine invariants hold over the record set.** Membership exclusivity, hold-then-Held persistence, terminal absorption, id stability, resource and requester immutability, hold-window monotonicity, confirmation within the window, transition timestamps strictly after placement, no id reuse. Each invariant is checkable by a query over the records.
+- **Verify all ten invariants hold over the record set.** Membership exclusivity, hold-then-Held persistence, terminal absorption, id stability, resource and requester immutability, hold-window monotonicity, confirmation within the window, transition timestamps strictly after placement, no id reuse, and commitment store durability. Each invariant is checkable by a query over the records.
 - **Observe every rejection reason at its action site.** The six named reasons (`invalid-request`, `resource-unavailable`, `not-held`, `not-known`, `window-elapsed`, `window-not-elapsed`) are surfaced on the action interface and visible in the audit trail when rejection events are logged.
 - **Identify the composing patterns active in this deployment.** Whether idempotency ([Duplicate Prevention](../temporal/duplicate-prevention.md)), full audit history ([Event Log](../temporal/event-log.md)), pool capacity (Capacity Constraint Enforcement), reversal of confirmed commitments (Reversal), and verifiable attribution ([Actor Identity](../compliance/actor-identity.md)) are wired in, and with what configuration.
 
@@ -291,3 +292,10 @@ The three passes together exercise the architecture as designed: GRID catches st
 The second iteration confirms the recursive property the methodology claims: Lineage notes themselves are pressure-testable, and a fresh adversarial pass surfaces additional gaps even after the three-pass authoring review reaches *grounded*. Each fresh application of the methodology adds evidence the architecture is doing real work.
 
 *Subsequent to this atom's publication, two of the second-iteration fixes — Regulated adversarial scenarios and Generation acceptance — were promoted to canonical status in [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md). This atom's second-iteration record is the historical origin; the methodology docs are now the canonical source.*
+
+**Refinement round 1.** Four findings, all closed in-pattern. Conventions inherited from the methodology directly.
+
+- *Action signatures used `rejected(reason)` placeholders; `storage-failure` absent from all four.* All four action signatures named `rejected(reason)` with the reason taxonomy living only in the Feedback and Decision points prose. Resolved: signatures expanded — `place_hold` returns `rejected(invalid-request | resource-unavailable | storage-failure)`, `confirm` returns `rejected(not-known | not-held | window-elapsed | storage-failure)`, `release` returns `rejected(not-known | not-held | storage-failure)`, `expire` returns `rejected(not-known | not-held | window-not-elapsed | storage-failure)`. Feedback updated to include `storage-failure`.
+- *`storage-failure` missing from Decision points.* All four actions write to the commitment store; none previously named the write-failure path. Resolved: each Decision point extended — if the store write fails, the atom returns `rejected(storage-failure)` and the commitment is unchanged (for `confirm`, `release`, `expire`) or not created (for `place_hold`). Decision points for `confirm`, `release`, and `expire` also restructured to separate the `not-known` check from the `not-held` check explicitly.
+- *No durability invariant.* Nine invariants existed; none stated that commitments are never deleted. The Behavior section said "The commitment record persists in its terminal state indefinitely from the atom's perspective" — correct as prose, but not an invariant. Resolved: Invariant 10 — Commitment store durability — added: `confirm`, `release`, and `expire` transition commitments to terminal states without removing records; total count is monotonically non-decreasing; retention and purge are composing concerns (Retention Window). The summary paragraph updated to name the *irrevocable-record* property this invariant gives.
+- *Generation acceptance referenced "nine invariants" — stale after Invariant 10.* Resolved: updated to "ten invariants"; durability added to the enumeration of checkable properties.
