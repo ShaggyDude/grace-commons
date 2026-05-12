@@ -39,16 +39,17 @@ If a system needs to record that a particular event triggered a particular fanou
 
 The composition exposes a single action:
 
-**`fanout(event_scope, payload) → {created: [notification_id, ...], failed: [subscriber_ref, ...]} | rejected(subscribers-unavailable)`**
+**`fanout(event_scope, payload) → {created: [notification_id, ...], failed: [subscriber_ref, ...]} | rejected(invalid-request | subscribers-unavailable)`**
 
-1. Call `Subscription.subscribers_for(event_scope)`.
+1. Validate inputs: `event_scope` must be non-empty; `payload` must be non-null. If either condition fails, return `rejected(invalid-request)`. No subscriber query is made; no notification records are created. This mirrors the constituent atoms' own validation: `Subscription.subscribe` rejects empty `event_scope`; `Notification.create` rejects null `payload`.
+2. Call `Subscription.subscribers_for(event_scope)`.
    - If the subscription store is unavailable (infrastructure failure at the read step), return `rejected(subscribers-unavailable)`. No notification records are created.
    - If the result is an empty list, return `{created: [], failed: []}`. The fanout is complete; no subscribers are currently Active for this scope.
-2. For each `subscriber_ref` in the returned list, call `Notification.create(subscriber_ref, payload)`.
+3. For each `subscriber_ref` in the returned list, call `Notification.create(subscriber_ref, payload)`.
    - If `create` returns a `notification_id`, add it to the `created` list.
    - If `create` returns `rejected(storage-failure)`, add `subscriber_ref` to the `failed` list. Continue to the next subscriber; do not abort the fan-out.
-   - If `create` returns `rejected(invalid-request)`, this indicates a structural inconsistency — `subscriber_ref` is non-empty (it was returned from the subscription store) and payload was supplied by the caller. Treat as equivalent to `storage-failure` for that subscriber; add to `failed`. Continue.
-3. Return `{created: [notification_ids], failed: [subscriber_refs]}`.
+   - If `create` returns `rejected(invalid-request)`, this indicates a structural inconsistency — `subscriber_ref` is non-empty (it was returned from the subscription store) and payload passed input validation in step 1. Treat as equivalent to `storage-failure` for that subscriber; add to `failed`. Continue.
+4. Return `{created: [notification_ids], failed: [subscriber_refs]}`.
 
 The order of `create` calls across subscribers is not guaranteed. Parallel execution is permitted provided the implementation guarantees each `Notification.create` call is independently committed — no shared transaction boundary across the N creates. The result's `created` and `failed` lists are unordered.
 
@@ -95,6 +96,13 @@ A project management system uses Notification Fanout to notify subscribers when 
    - Returns `{created: [notif_51, notif_52], failed: []}`.
 5. **dev_b's earlier notifications are unaffected.** `Notification.status_of(notif_42)` returns the full record; the subscription cancellation does not delete prior notification records (Notification Invariant 9).
 
+### Subscription store unavailable
+
+The subscription store is down when the fanout fires.
+
+- `fanout("task:assigned", {task_id: t9, assigned_by: manager_m})` → step 2: `Subscription.subscribers_for` fails with an infrastructure error.
+- Returns `rejected(subscribers-unavailable)`. No notification records are created; the caller receives a clean rejection and may retry when the store recovers.
+
 ### Partial failure
 
 During a fanout, the notification store becomes temporarily unavailable after the first create succeeds.
@@ -115,7 +123,7 @@ An auditor later asks: *was every subscribed compliance officer notified of poli
 
 ### Regulated adversarial scenarios
 
-- **Regulator audit — demonstrate all subscribers were notified of a compliance event.** An auditor asks: *show all notification records created by the policy:updated fanout on 2025-08-15 and whether each was delivered.* The auditor queries the notification store for records where `created_at` falls on 2025-08-15 and the payload references the relevant policy. For each returned record, `status_of` shows the delivery outcome. Cross-referencing against the Subscription store confirms no Active subscriber was omitted. Invariants 1 and 4 are the structural guarantees; the records answer without developer narration.
+- **Regulator audit — demonstrate all subscribers were notified of a compliance event.** An auditor asks: *show all notification records created by the policy:updated fanout on 2025-08-15 and whether each was delivered.* The auditor queries the notification store for records where `created_at` falls on 2025-08-15 and the payload references the relevant policy. For each returned record, `status_of` shows the delivery outcome. Invariants 1 and 4 are the structural guarantees. Note on completeness: the current Subscription store shows each subscriber's present status, not their status at fanout time. A subscriber Active during the fanout who has since cancelled appears as Cancelled now; the store alone cannot confirm they were in the fanout's subscriber set. Where this historical completeness question must be answered from records alone, a composed Event Log recording the fanout invocation and its subscriber list is required. Without it, the auditor must accept that the notification records identify who was notified, but cannot structurally verify from the subscription store that no Active subscriber was missed.
 - **Disputed notification — subscriber claims they were never notified.** An officer claims no notification of policy p12 arrived. The investigator queries the notification store for records where `recipient_ref = officer_ref` and `payload.policy_id = p12`. If a record exists in any state, the store confirms the delivery attempt and its outcome. If the record shows `failed_at` or `expired_at`, the store confirms delivery did not succeed; the `failed` list from the fanout result (logged via Event Log if composed) identifies this as a named failure, not a silent omission. If no record exists, either the officer had no Active subscription at fanout time (query the subscription store) or their create call returned `storage-failure` — again, a named failure, not a gap. The subscription and notification stores together answer the question.
 - **Breach investigation — identify all notifications that may have carried sensitive payload data.** A security incident requires identifying every notification created by fanouts referencing policy p12. The investigator queries the notification store for records where `payload.policy_id = p12` and applies the historical-status reconstruction logic from Notification's regulated adversarial scenarios (`created_at ≤ breach_time` and status was Pending during the window). The notification store answers the exposure scope from stored fields alone.
 
@@ -123,7 +131,7 @@ An auditor later asks: *was every subscribed compliance officer notified of poli
 
 ## Edge cases and explicit non-goals
 
-- **Fanout idempotency.** The bare composition provides no idempotency guarantee. If `fanout` is called twice for the same event, two rounds of `Notification.create` calls execute — two notification records per subscriber. Composing [Duplicate Prevention](../atoms/temporal/duplicate-prevention.md) to guard the `fanout` call provides at-most-once fanout within the deduplication window.
+- **Fanout idempotency and crash-mid-execution.** The bare composition provides no idempotency guarantee. Two distinct failure modes require attention. First: if `fanout` is called twice for the same event (network retry, double-click, replay), two full rounds of `Notification.create` execute — two notification records per subscriber. Second, and more dangerous: if the composition crashes mid-execution after some creates have succeeded, the `{created, failed}` result is never returned. The caller has no record of which subscribers received a notification record; a retry without idempotency creates duplicates for subscribers whose creates already succeeded. In both cases, composing [Duplicate Prevention](../atoms/temporal/duplicate-prevention.md) to guard the `fanout` call provides at-most-once fanout semantics within the deduplication window. Without it, the caller must treat any retry as a potential duplicate-creation event and handle the resulting multiple notification records at the delivery layer.
 - **Subscriber-set staleness between query and create.** `Subscription.subscribers_for` is called once at the start of the fanout. A subscriber who cancels after the query but before their `Notification.create` is called will still receive a notification record — their subscription was Active at query time. Whether the delivery should proceed is a deployment policy the composing system defines, not a correctness failure of the composition.
 - **New subscribers after query.** A subscriber who becomes Active after `subscribers_for` executes does not receive a notification for that fanout invocation. They will receive notifications from subsequent fanouts. This is correct: the composition delivers to the Active set at trigger time.
 - **Empty Active subscriber set.** `fanout` returns `{created: [], failed: []}`. No Notification records are created. This is a valid, non-error outcome. The composing system may log this via Event Log if observability of empty fanouts is required.
@@ -141,7 +149,7 @@ An auditor later asks: *was every subscribed compliance officer notified of poli
 
 A derived implementation of Notification Fanout is *acceptable* when an external auditor, given the subscription store and notification store, can do all of the following without recourse to source code, runbooks, or developer narration:
 
-- **Confirm fanout coverage for any recorded fanout.** For each fanout invocation (identifiable via a composed Event Log, or via the clustering of notification records by `created_at`), every subscriber Active in the subscription store at fanout time appears in the notification store as a Notification record with a matching `created_at`. No Active subscriber is missing a record without a corresponding `failed` entry surfaced by the composing system.
+- **Confirm fanout coverage for any recorded fanout.** For each fanout invocation identifiable via a composed Event Log — which records the invocation, the event scope, and the resulting `notification_id` set — every subscriber Active in the subscription store at fanout time appears in the notification store as a Notification record. No Active subscriber is missing a record without a corresponding `failed` entry surfaced by the composing system. Note: without a composed Event Log, fanout grouping by `created_at` clustering is unreliable — concurrent creates across a measurable time span produce different timestamps, and concurrent unrelated fanouts may produce overlapping ones. Event Log composition is required for reliable fanout-coverage audits.
 - **Confirm payload consistency.** All Notification records produced by a single fanout carry the same payload. The auditor inspects the `payload` field of each record in the fanout group and confirms identity.
 - **Verify each Notification record independently.** Each record passes Notification's five Generation acceptance checks: full delivery history present, timeline reconstructable, terminal exclusivity confirmed, timestamp-status match confirmed, composing patterns identifiable.
 - **Confirm no cross-notification coupling.** A terminal state on one notification record in the fanout group does not correlate with the terminal state on another. Each record's delivery outcome is independent.
@@ -182,10 +190,18 @@ The fan-out decomposition model was formalized in [`EXECUTION_CONTRACT.md`](../E
 
 **Pass 2 — Conceptual independence (EOS).** Clean. No concerns are absorbed that belong elsewhere. Idempotency (Duplicate Prevention), audit history (Event Log), delivery transport (deployment concern), scope hierarchy (composing pattern), and authorization (composing system) are all correctly named as out-of-scope. The `{created, failed}` return structure is a return value from a single action invocation, not persistent state — no hidden store exists or is implied.
 
-**Pass 3 — Adversarial scrutiny (Linus mode).** Clean in-pattern; one cross-file finding deferred.
+**Pass 3 — Adversarial scrutiny (Linus mode), first run.** Clean in-pattern; one cross-file finding deferred.
 
-*In-pattern resolutions:* Parallel execution constraint named explicitly — no shared transaction boundary across the N creates, which is the correctness requirement that distinguishes safe parallel fanout from one that could produce phantom atomicity. Retry targeting distinction made explicit — re-invoking `fanout` re-queries the subscriber set (may differ from original); calling `Notification.create` directly retries exactly the failed refs. Subscriber-set staleness committed to trigger-time semantics. The `invalid-request` edge case (structurally inconsistent because `subscriber_ref` came from the subscription store) named and handled consistently with `storage-failure`.
+*In-pattern resolutions:* Parallel execution constraint named explicitly — no shared transaction boundary across the N creates. Retry targeting distinction made explicit. Subscriber-set staleness committed to trigger-time semantics. The `invalid-request` edge case (structurally inconsistent) named and handled consistently with `storage-failure`.
 
-*Cross-file finding — deferred:* `Subscription.subscribers_for` does not name a store-unavailable outcome in its Decision points. The Subscription atom's Q surface covers "no precondition" but is silent on infrastructure failure at read time. This composition correctly handles that case as `rejected(subscribers-unavailable)`, translating the infrastructure failure into a named composition-level rejection. The gap belongs to the Subscription atom and should be addressed in its next refinement round — `subscribers_for` should explicitly state that a store read failure returns a named error rather than silently producing an empty list or throwing an unspecified exception.
+*Cross-file finding — deferred:* `Subscription.subscribers_for` does not name a store-unavailable outcome in its Decision points. This composition correctly handles it as `rejected(subscribers-unavailable)`. The gap belongs to the Subscription atom's next refinement round.
 
-**Opus adversarial pass — pending.** Scheduled before `grounded` declaration. The fan-out failure modes (partial creation, the invariant that `|created| + |failed| = |subscribers_for result|` under concurrent subscription cancellation, the implications of subscriber-set staleness for regulated delivery obligations) are the primary adversarial targets.
+**Pass 3, second run — five findings, all closed in-pattern.**
+
+- *Missing input preconditions on `fanout` (Pass 3).* The action wiring had no precondition check on `event_scope` or `payload`. A null payload would silently route every subscriber to `failed` via the constituent's `invalid-request` path rather than failing fast. An empty `event_scope` would return `{created: [], failed: []}` — masking a likely caller error. Resolved: `invalid-request` added to the signature; step 1 added to the action wiring with explicit precondition checks matching the constituent atoms' validation patterns.
+- *Missing rejection-path example (Pass 1/Pass 3).* No example showed the `rejected(subscribers-unavailable)` path. Resolved: "Subscription store unavailable" example added showing the clean abort case.
+- *Crash-mid-execution not named (Pass 3).* The fanout idempotency edge case covered double-call but not crash-after-partial-creates. The crash scenario is more dangerous — no `{created, failed}` result returned, caller has no visibility into which creates succeeded, retry creates duplicates. Resolved: fanout idempotency edge case extended to name both failure modes and the Duplicate Prevention mitigation for each.
+- *Generation acceptance check 1 unreliable without Event Log (Pass 3).* "`created_at` clustering" is not a reliable fanout-grouping mechanism. Resolved: check 1 rewritten to make Event Log composition a stated requirement for reliable fanout-coverage audits; unreliability of clustering noted explicitly.
+- *Regulated adversarial scenario 1 assumes historical subscription state (Pass 3).* "Cross-referencing against the Subscription store confirms no Active subscriber was omitted" was false — the Subscription store shows current status, not status at fanout time. A subscriber Active at fanout time who has since cancelled is invisible as such. Resolved: scenario 1 updated to acknowledge this limitation and name Event Log composition as the structural solution for historical completeness.
+
+**Opus adversarial pass — pending.** Scheduled before `grounded` declaration.
