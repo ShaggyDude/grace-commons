@@ -61,34 +61,34 @@ The vocabulary is deployment-configurable. A deployment that distinguishes "edit
 
 Every action follows the same two-step shape: Permissions check first, atom call second. A `denied` result from Permissions short-circuits the action and surfaces `permission-denied` to the caller; the constituent atoms are not invoked.
 
-- **`add_task(actor_ref, description) → task_id | rejected(reason)`**
+- **`add_task(actor_ref, description) → task_id | rejected(permission-denied | invalid-request | duplicate-active | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:add)` → if `denied`, return `permission-denied`.
-  2. `PersonalTodo.add(description)` → `task_id | rejected(reason)`. Return the result.
+  2. `PersonalTodo.add(description)` → `task_id | rejected(invalid-request | duplicate-active | storage-failure)`. Return the result.
 
-- **`edit_task(actor_ref, task_id, new_description) → ok | rejected(reason)`**
+- **`edit_task(actor_ref, task_id, new_description) → ok | rejected(permission-denied | not-known | not-pending | invalid-request | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:edit)` → if `denied`, return `permission-denied`.
-  2. `PersonalTodo.edit(task_id, new_description)` → `ok | rejected(reason)`. Return the result.
+  2. `PersonalTodo.edit(task_id, new_description)` → `ok | rejected(not-known | not-pending | invalid-request | storage-failure)`. Return the result.
 
-- **`complete_task(actor_ref, task_id) → ok | rejected(reason)`**
+- **`complete_task(actor_ref, task_id) → ok | rejected(permission-denied | not-known | not-pending | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:complete)` → if `denied`, return `permission-denied`.
-  2. `PersonalTodo.complete(task_id)` → `ok | rejected(reason)`. Return the result. The assignment for `task_id`, if Active, is not automatically recalled; see Edge cases.
+  2. `PersonalTodo.complete(task_id)` → `ok | rejected(not-known | not-pending | storage-failure)`. Return the result. The assignment for `task_id`, if Active, is not automatically recalled; see Edge cases.
 
-- **`delete_task(actor_ref, task_id) → ok | rejected(reason)`**
+- **`delete_task(actor_ref, task_id) → ok | rejected(permission-denied | not-known | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:delete)` → if `denied`, return `permission-denied`.
-  2. If `Assignment.active_for(task_id)` returns an active assignment, call `Assignment.recall(assignment_id)` — the cascade-on-delete rule; see Application-level invariants.
-  3. `PersonalTodo.delete(task_id)` → `ok | rejected(reason)`. Return the result.
+  2. If `Assignment.active_for(task_id)` returns an active assignment, call `Assignment.recall(assignment_id)` — the cascade-on-delete rule; see Application-level invariants. If this `recall` returns `rejected(storage-failure)`, return `storage-failure` immediately; do not proceed to step 3.
+  3. `PersonalTodo.delete(task_id)` → `ok | rejected(not-known | storage-failure)`. Return the result.
 
-- **`assign_task(actor_ref, task_id, assignee_ref) → assignment_id | rejected(reason)`**
+- **`assign_task(actor_ref, task_id, assignee_ref) → assignment_id | rejected(permission-denied | already-assigned | invalid-request | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:assign)` → if `denied`, return `permission-denied`.
-  2. `Assignment.assign(task_id, assignee_ref)` → `assignment_id | rejected(already-assigned | invalid-request)`. Return the result.
+  2. `Assignment.assign(task_id, assignee_ref)` → `assignment_id | rejected(invalid-request | already-assigned | storage-failure)`. Return the result.
 
-- **`reassign_task(actor_ref, assignment_id, new_assignee_ref) → new_assignment_id | rejected(reason)`**
+- **`reassign_task(actor_ref, assignment_id, new_assignee_ref) → new_assignment_id | rejected(permission-denied | not-known | not-active | invalid-request | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:assign)` → if `denied`, return `permission-denied`.
-  2. `Assignment.reassign(assignment_id, new_assignee_ref)` → `new_assignment_id | rejected(not-active | invalid-request)`. Return the result.
+  2. `Assignment.reassign(assignment_id, new_assignee_ref)` → `new_assignment_id | rejected(not-known | not-active | invalid-request | storage-failure)`. Return the result.
 
-- **`recall_assignment(actor_ref, assignment_id) → ok | rejected(reason)`**
+- **`recall_assignment(actor_ref, assignment_id) → ok | rejected(permission-denied | not-known | not-active | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:recall)` → if `denied`, return `permission-denied`.
-  2. `Assignment.recall(assignment_id)` → `ok | rejected(not-active | not-known)`. Return the result.
+  2. `Assignment.recall(assignment_id)` → `ok | rejected(not-known | not-active | storage-failure)`. Return the result.
 
 Read-only queries (`visible_tasks`, `responsible_actor`, task detail by id) check `tasks:view` before reading from Personal Todo or Assignment. A `denied` on `tasks:view` returns an empty result or `permission-denied`, depending on deployment policy.
 
@@ -108,8 +108,8 @@ These invariants emerge from the composition. None belong to a single constituen
 - **Invariant 4 — Responsibility queryability.** For any task in the Personal Todo store, the composition can answer *who is responsible right now* and *who has been responsible over time* from the Assignment store alone, without recourse to external records.
 - **Invariant 5 — Authorization history completeness.** For any actor and any scope, the full grant history (who was granted what, when, and whether it was revoked) is recoverable from the Permissions store alone. The grant record survives the task it governed.
 - **Invariant 6 — Personal Todo's invariants preserved.** All eight Personal Todo invariants hold over the underlying instance. The application never bypasses Personal Todo's preconditions; its rejections (`not-pending`, `not-known`, `duplicate-active`, etc.) flow through unchanged to the caller.
-- **Invariant 7 — Assignment's invariants preserved.** All nine Assignment invariants hold over the underlying instance. The at-most-one-Active constraint (Assignment's Invariant 1) and reassign atomicity (Assignment's Invariant 7) are enforced by the constituent.
-- **Invariant 8 — Permissions' invariants preserved.** All nine Permissions invariants hold. Evaluation self-containment (Permissions' Invariant 6) and denial by absence (Invariant 7) are enforced by the constituent.
+- **Invariant 7 — Assignment's invariants preserved.** All ten Assignment invariants hold over the underlying instance. The at-most-one-Active constraint (Assignment's Invariant 1), reassign atomicity (Assignment's Invariant 7), and assignment store durability (Assignment's Invariant 10) are enforced by the constituent.
+- **Invariant 8 — Permissions' invariants preserved.** All ten Permissions invariants hold. Evaluation self-containment (Permissions' Invariant 6), denial by absence (Invariant 7), and grant store durability (Permissions' Invariant 10) are enforced by the constituent.
 
 Permission enforcement and cascade-on-delete together give the *coherent multi-actor surface* property: no actor can act beyond their grants, and no assignment is left dangling against a deleted task. Responsibility queryability and authorization history completeness together give the *recoverable accountability* property: for any task and any actor, the full picture of what they were allowed to do and who was responsible is readable from the records alone.
 
@@ -205,3 +205,10 @@ Shared Todo is the composition that motivated the Permissions and Assignment ato
 - *Cascade-on-delete not specified.* Early draft was silent on what happens to an Active assignment when its task is deleted. A deleted task with a lingering Active assignment is a referential integrity gap — Assignment believes the task is active; Personal Todo says it doesn't exist. Resolved: cascade-on-delete rule specified in Composition logic and elevated to Invariant 3.
 - *Scope vocabulary undefined.* The Permissions atom requires the composition to define scope semantics. Early draft said "permission checks happen before atom calls" without naming the scopes. A reader could not implement the composition. Resolved: canonical seven-scope vocabulary defined explicitly; deployment-configurable variants named in Edge cases.
 - *Completion handling ambiguous.* Early draft implied completion should also trigger assignment recall. Surfaced as a hidden decision: whether the assignment for a completed task should be recalled depends on whether you want "who completed it" to be queryable from the assignment store. Both patterns are legitimate. Resolved: completion is explicitly left to deployment policy; the asymmetry with deletion is explained in Edge cases.
+
+**Refinement round 1.** Four findings, all closed in-pattern. Conventions inherited from the methodology directly.
+
+- *Composition-level action signatures used `rejected(reason)` placeholders.* All seven composition-level action signatures left rejection taxonomies as placeholders. Resolved: all seven expanded with named reason taxonomies. Personal Todo's rejection reasons sourced from Invariant 6's enumeration (`not-pending`, `not-known`, `duplicate-active`) plus `invalid-request` as the precondition failure; `storage-failure` added as the canonical store-write failure across all constituent atoms. The full Personal Todo rejection taxonomy will be confirmed against the Personal Todo atom's own refinement round.
+- *Inline constituent call rejection reasons stale relative to Assignment's refinement round 1.* The wiring steps for `assign_task`, `reassign_task`, and `recall_assignment` referenced Assignment's pre-refinement signatures — `storage-failure` was missing from all three; `not-known` was missing from `reassign_task`. Resolved: all three wiring steps updated to match Assignment's refined signatures.
+- *`delete_task` cascade-abort path not specified.* The cascade-on-delete step called `Assignment.recall` but did not state what happens if the recall returns `rejected(storage-failure)`. A cascade recall failure must abort the delete — proceeding to step 3 would delete the task while leaving its Active assignment dangling, violating Invariant 3. Resolved: wiring updated — if cascade recall returns `storage-failure`, `delete_task` returns `storage-failure` immediately without proceeding to `PersonalTodo.delete`.
+- *Invariant counts stale.* Invariant 7 referenced "nine Assignment invariants" (Assignment now has ten after refinement round 1 added Invariant 10 — assignment store durability); Invariant 8 referenced "nine Permissions invariants" (Permissions now has ten after refinement round 1 added Invariant 10 — grant store durability). Resolved: both counts updated; durability invariants named in each.
