@@ -29,9 +29,7 @@ This is a freestanding atom in the EOS sense. It has its own state (the subscrip
 
 Every subscription known to the system has a **`subscription_id`** — an opaque, immutable, system-generated identifier produced by `subscribe`. The id is the subscription's identity; the subscriber reference and event scope are immutable *properties* of the subscription, not its identity.
 
-Unlike Permissions, which allows multiple independent grants for the same (subject, scope) pair, Subscription enforces at most one Active subscription per (subscriber_ref, event_scope) pair. The constraint is structural: duplicate active subscriptions for the same pair produce duplicate notifications for every event that fires against that scope — almost never the subscriber's intent. A subscriber who cancels and re-subscribes gets a new `subscription_id`; the prior subscription remains in the record as Cancelled.
-
-Ids are not reused after a subscription is cancelled.
+Unlike Permissions, which allows multiple independent grants for the same (subject, scope) pair, Subscription enforces at most one Active subscription per (subscriber_ref, event_scope) pair. The constraint is structural: duplicate active subscriptions for the same pair produce duplicate notifications for every event that fires against that scope — almost never the subscriber's intent. A subscriber who cancels and re-subscribes gets a new `subscription_id`; the prior subscription remains in the record as Cancelled. The retired id is never reused.
 
 ### Inputs
 
@@ -50,8 +48,8 @@ Ids are not reused after a subscription is cancelled.
 - For each subscription: `subscription_id`, `subscriber_ref`, `event_scope`, `subscribed_at`, `status`, and `cancelled_at` (if cancelled).
 - `subscribe` returns the new `subscription_id` on success, or a rejection naming the failed precondition.
 - `cancel` returns `ok` on success, or a rejection naming the failed precondition.
-- `subscribed` returns `subscribed` or `not-subscribed`. It does not reject — both outcomes are first-class results.
-- `subscribers_for` returns the list of `subscriber_ref` values for all Active subscriptions covering the queried `event_scope`.
+- `subscribed` returns one of two first-class outcomes: `subscribed` or `not-subscribed`. Both are answers to the query, not success-failure pairs. No rejection reason is defined because no input is invalid — an empty or malformed query unambiguously returns `not-subscribed`.
+- `subscribers_for` returns the list of `subscriber_ref` values for all Active subscriptions covering the queried `event_scope`. The list is unordered. Composing systems that require delivery in a specific order must sort by `subscribed_at` or another field on the returned subscriber refs.
 
 ### State
 
@@ -72,9 +70,9 @@ Each subscription carries:
 Transitions:
 
 - `subscribe(subscriber_ref, event_scope)` → if no Active subscription exists for this (subscriber_ref, event_scope) pair, a new subscription is recorded in Active with a fresh `subscription_id`, the supplied `subscriber_ref` and `event_scope`, and `subscribed_at = now`. Returns `subscription_id`. If an Active subscription already exists for this pair, returns `rejected(already-subscribed)`.
-- `cancel(subscription_id)` → the subscription at `subscription_id` moves Active → Cancelled; `cancelled_at = now`. Returns `ok`.
+- `cancel(subscription_id)` → the subscription at `subscription_id` moves Active → Cancelled; `cancelled_at = now`. Returns `ok`. If `subscription_id` is not known, returns `rejected(not-known)`. If the subscription is already Cancelled, returns `rejected(not-active)`. State is unchanged on rejection.
 - `subscribed(subscriber_ref, event_scope)` → read-only query; no state change. Returns `subscribed` if any Active subscription exists where `subscription.subscriber_ref = subscriber_ref` and `subscription.event_scope = event_scope`; otherwise `not-subscribed`.
-- `subscribers_for(event_scope)` → read-only query; no state change. Returns the list of `subscriber_ref` values for all Active subscriptions where `subscription.event_scope = event_scope`.
+- `subscribers_for(event_scope)` → read-only query; no state change. Returns the list of `subscriber_ref` values for all Active subscriptions where `subscription.event_scope = event_scope`. Returns an empty list if no Active subscriptions exist for the scope — whether the scope has never been subscribed to or all subscriptions for it are Cancelled; the atom does not distinguish these cases (see Behavior).
 
 ### Flow
 
@@ -87,30 +85,32 @@ Transitions:
 
 - **At `subscribe(subscriber_ref, event_scope)`** — `subscriber_ref` and `event_scope` must be well-formed and non-empty; otherwise `invalid-request`. An Active subscription must not already exist for this (subscriber_ref, event_scope) pair; otherwise `already-subscribed`.
 - **At `cancel(subscription_id)`** — `subscription_id` must reference a known subscription; otherwise `not-known`. The referenced subscription must be in Active; cancelling an already-cancelled subscription is rejected as `not-active`.
-- **At `subscribed(subscriber_ref, event_scope)`** — no precondition; `subscribed` and `not-subscribed` are both first-class outcomes, not rejections. The query is read-only.
-- **At `subscribers_for(event_scope)`** — no precondition. Returns an empty list if no Active subscriptions exist for the scope. The query is read-only.
+- **At `subscribed(subscriber_ref, event_scope)`** — no precondition. `subscribed` and `not-subscribed` are both first-class outcomes, not rejections. Empty or malformed inputs return `not-subscribed` — an empty query matches no Active subscription by definition, so the answer is determinate without a precondition check. The asymmetry with `subscribe`'s `invalid-request` rejection is intentional: `subscribe` creates a record (so bad inputs would produce a bad record); `subscribed` only reads, so bad inputs produce a correct answer without side effects.
+- **At `subscribers_for(event_scope)`** — no precondition. Empty or malformed `event_scope` returns an empty list — no Active subscription has an empty scope value, so the result is structurally empty. The query is read-only.
 
 ### Behavior
 
 Observed behavior, derived from how event-subscription systems are actually deployed:
 
 - A `subscribers_for` query is answered entirely from the active subscription set. No Active subscription for a scope → empty list. The composing system is responsible for calling `subscribers_for` when an event fires; the atom does not know about events and does not invoke any action in response to them.
+- `subscribers_for` returns an empty list regardless of whether the scope has never been subscribed to or has only Cancelled subscriptions. The composing system cannot distinguish these cases from the query alone — that distinction, if operationally meaningful, requires querying the full subscription history for the scope. This is intentional: the atom answers *who should be notified now* without requiring the composing system to reason about historical subscription activity.
+- `subscribers_for` returns subscriber_refs rather than `(subscriber_ref, subscription_id)` pairs. The likely objection: "composing patterns need to associate the resulting notification with the subscription that triggered it, for audit and deduplication." The mechanism: Invariant 6 guarantees at most one Active subscription per (subscriber_ref, event_scope) pair, so the subscription_id is recoverable by the composing layer for any returned subscriber_ref. If a composing pattern requires per-subscription traceability, it queries the subscription_id before calling `subscribers_for` and includes it in the notification payload. Returning only subscriber_refs preserves the separation between the Subscription atom's internal identities and the Notification atom's recipient surface.
 - At most one Active subscription per (subscriber_ref, event_scope) pair. A second `subscribe` for a pair that already has an Active subscription is rejected as `already-subscribed`. This is the key structural distinction from Permissions, which permits multiple independent grants per (subject, scope). The likely objection: "sometimes a subscriber re-subscribes through a new channel or session and should get a fresh record." The mechanism: cancel the old subscription first, then subscribe — the new `subscription_id` represents the fresh registration. The result: the at-most-one invariant holds; the history of cancellation and re-subscription is recoverable; no duplicate notifications from a single logical subscription.
 - Cancellation is immediate and terminal. After a successful `cancel`, the subscription moves to Cancelled and subsequent `subscribers_for` queries for that scope no longer include the subscriber. The subscription record remains observable for audit purposes but no longer contributes to fanout.
 - Event scope is evaluated by exact match on the opaque scope value. The composing system defines the scope vocabulary. The atom makes no assumption about scope structure — hierarchy, wildcards, and pattern matching belong to the composing layer.
-- `subscribed` with empty or malformed inputs returns `not-subscribed` rather than rejecting. An empty `subscriber_ref` or `event_scope` matches no Active subscription by definition.
+- The atom does not enforce who may call `cancel` — any caller with the `subscription_id` can cancel the subscription. Authorization to cancel belongs to the composing system.
 - The atom does not record when events fired against a subscription, how many times a subscriber was notified, or whether delivery succeeded. Event firing history belongs to an Event Log composing pattern; delivery outcomes belong to the Notification atom.
 
 ### Feedback
 
 Each successful action produces an observable, measurable change:
 
-- After `subscribe` — a new subscription appears in Active with a fresh `subscription_id`, the supplied `subscriber_ref` and `event_scope`, and `subscribed_at`. Total subscription count increases by one. Active subscription count increases by one. The id is returned.
-- After `cancel` — the subscription at `subscription_id` moves to Cancelled with `cancelled_at`. Active count decreases by one; cancelled count increases by one; total count unchanged.
-- After `subscribed` — no state change. Returns `subscribed` or `not-subscribed`.
-- After `subscribers_for` — no state change. Returns the list of `subscriber_ref` values for all Active subscriptions covering the queried scope.
+- After `subscribe` — a new subscription appears in Active with a fresh `subscription_id`, the supplied `subscriber_ref` and `event_scope`, and `subscribed_at`. Total subscription count increases by one. Active subscription count increases by one. The id is returned. Falsifiable: after a successful `subscribe(a, s)`, `subscribed(a, s)` must return `subscribed` and `subscribers_for(s)` must include `a`.
+- After `cancel` — the subscription at `subscription_id` moves to Cancelled with `cancelled_at`. Active count decreases by one; cancelled count increases by one; total count unchanged. Falsifiable: after a successful `cancel` of subscription for (a, s), `subscribed(a, s)` must return `not-subscribed` and `subscribers_for(s)` must not include `a`.
+- After `subscribed` — no state change. Returns `subscribed` or `not-subscribed`. The return value is the complete observable signal.
+- After `subscribers_for` — no state change. Returns the list of `subscriber_ref` values for all Active subscriptions covering the queried scope. The return value is the complete observable signal.
 
-Each rejected `subscribe` or `cancel` action produces an observable refusal: `invalid-request`, `already-subscribed`, `not-known`, or `not-active`.
+`subscribe` rejections: `invalid-request`, `already-subscribed`. `cancel` rejections: `not-known`, `not-active`.
 
 The full subscription set — Active and Cancelled — is queryable. Per-subscription fields (id, subscriber_ref, event_scope, subscribed_at, status, cancelled_at) are observable.
 
@@ -121,7 +121,7 @@ The following hold across all valid sequences of actions and constitute the veri
 - **Invariant 1 — Subscription immutability.** Once recorded, a subscription's `subscription_id`, `subscriber_ref`, `event_scope`, and `subscribed_at` never change.
 - **Invariant 2 — Status monotonicity.** A subscription's status transitions only in one direction: Active → Cancelled. No subscription returns from Cancelled to Active.
 - **Invariant 3 — Cancellation is terminal.** Once a subscription is in Cancelled, no `cancel` call will succeed for that `subscription_id` (`not-active`), and no `subscribers_for` query will include it.
-- **Invariant 4 — Id stability.** A subscription's `subscription_id` is set on `subscribe` and never changes.
+- **Invariant 4 — New subscribe after cancel produces a new id.** Cancelling a subscription and calling `subscribe` again for the same (subscriber_ref, event_scope) produces a distinct, fresh `subscription_id`. The cancelled id is never reused. The two subscription records — one Cancelled, one Active — are independently queryable with their own `subscribed_at` timestamps.
 - **Invariant 5 — No id reuse.** No two subscriptions share a `subscription_id` across the lifetime of the system.
 - **Invariant 6 — At most one active subscription per (subscriber_ref, event_scope).** No two Active subscriptions may share the same (subscriber_ref, event_scope) pair. A `subscribe` call for a pair with an existing Active subscription is rejected as `already-subscribed`. This is the structural mechanism that prevents duplicate notifications from a single logical subscription.
 - **Invariant 7 — Evaluation self-containment.** `subscribers_for(event_scope)` and `subscribed(subscriber_ref, event_scope)` are determined entirely by the active subscription set at query time. No out-of-band data is consulted.
@@ -152,6 +152,14 @@ An administrator issues subscriptions for each compliance officer: `subscribe(of
 
 A developer attempts to subscribe twice to the same scope: `subscribe(dev_d, task:assigned:dev_d) → sub_42`. Then `subscribe(dev_d, task:assigned:dev_d)` → `rejected(already-subscribed)`. The second call does not create a second subscription. To refresh the subscription, the developer first calls `cancel(sub_42)`, then `subscribe(dev_d, task:assigned:dev_d) → sub_97`. The cancellation of sub_42 remains in the subscription store; sub_97 is the new active record.
 
+### Regulated adversarial scenarios
+
+Three scenarios the subscription store must survive in regulated contexts:
+
+- **Regulator audit — who was subscribed to a scope at a given time.** A compliance auditor asks *"which actors were subscribed to `policy:updated` at the time the policy was updated on 2025-03-14T10:00Z?"* The auditor queries the subscription store for subscriptions where `event_scope = policy:updated` and (`status = active` or `cancelled_at > 2025-03-14T10:00Z`) and `subscribed_at ≤ 2025-03-14T10:00Z`. The subscription store answers from stored fields alone — subscriber_ref, event_scope, subscribed_at, status, cancelled_at — with no recourse to developer narration. Invariants 1 and 9 make the timeline reconstruction exact.
+- **Disputed subscription — actor claims they were never subscribed.** Officer_a denies having subscribed to `escalation:queue-9`. The investigator queries the subscription store for subscriptions where `subscriber_ref = officer_a` and `event_scope = escalation:queue-9`. If a record exists with `subscribed_at` and the actor's reference, Invariant 1 (subscription immutability) is the structural answer: the record was created at that time with that subscriber_ref; it does not change. If no record exists, the store confirms the actor was never subscribed. The subscription store is the single source of truth; no external corroboration is required.
+- **Breach investigation — exposure scope assessment.** A security incident requires identifying all actors who were subscribed to `data:export` at the time of the breach (2025-06-01T03:00Z). The investigator queries subscriptions where `event_scope = data:export` and `subscribed_at ≤ 2025-06-01T03:00Z` and (`status = active` or `cancelled_at > 2025-06-01T03:00Z`). The result set is the exposure scope — every actor who would have received notifications fired against that scope during the breach window. Invariant 6 (at-most-one-active) confirms no actor appears more than once in the Active set at any point in time.
+
 ---
 
 ## Edge cases and explicit non-goals
@@ -164,10 +172,26 @@ What this atom does not cover:
 - **Delivery guarantees.** Whether the composing pattern guarantees at-least-once, at-most-once, or exactly-once delivery is a deployment concern.
 - **Subscription expiry.** Subscriptions do not expire automatically. A time-bounded subscription — one that cancels after a deadline — requires a Temporal Subscription composing pattern that calls `cancel` at expiry time.
 - **Subscriber registration and lifecycle.** `subscriber_ref` is opaque. Whether a subscriber exists, is active, or has been deprovisioned is an Actor Registry concern. Deprovisioning a subscriber should cascade cancellation of their subscriptions; that cascade belongs to the composing system.
-- **Subscription attribution.** The atom does not record who called `subscribe`. Attribution — *which administrator subscribed this actor?* — belongs to Actor Identity composing with the `subscribe` action.
+- **Subscription attribution.** The atom does not record who called `subscribe`. Attribution — *which administrator subscribed this actor?* — belongs to Actor Identity composing with the `subscribe` action. The `subscription_id` is the hook for composing attribution patterns: a composing Actor Identity pattern records `attest(subscription_id, subscribed_by_ref, credential)` at subscription time, binding the id to the actor who initiated the subscription. No field is added to the subscription record itself; the attribution lives in the Actor Identity store.
+- **Authorization to cancel.** The atom does not enforce who may call `cancel`. Any caller with the `subscription_id` can cancel the subscription. Authorization to cancel — ensuring only the subscriber or an authorized administrator can cancel — belongs to the composing system.
 - **Bulk cancellation.** There is no bulk-cancel surface. Cancelling all subscriptions for a departing actor requires enumerating their Active subscriptions and calling `cancel(subscription_id)` for each.
 - **Event firing history.** The atom does not record when events fired against subscriptions, how many times, or with what payload. That belongs to an Event Log composing pattern.
 - **Clock semantics.** `subscribed_at` and `cancelled_at` are wall-time from the implicit clock. Clock skew, NTP adjustments, and timezone handling are deployment concerns the spec does not address. Invariant 9 is best-effort under non-monotonic clocks.
+- **Atomicity and crash semantics.** State transitions are specified as atomic. `cancel` changes two fields simultaneously: `status` and `cancelled_at`. A crash mid-`cancel` that sets one without the other violates Invariant 2 (status monotonicity) or Invariant 9 (timestamp ordering). The implementor is responsible for the transactional boundary that makes both fields change together. The spec does not define recovery semantics for partial writes.
+
+---
+
+## Generation acceptance
+
+A derived implementation of Subscription is *acceptable* — in the regulator-acceptance sense — when an external auditor, given the subscription store, can do all of the following without recourse to source code, runbooks, or developer narration:
+
+- **Enumerate every subscription, active and cancelled, with its full history.** `subscription_id`, `subscriber_ref`, `event_scope`, `subscribed_at`, `status`, and `cancelled_at` (where applicable) are present and queryable for every subscription ever created. No subscription is missing from the store.
+- **Reconstruct the active subscriber set for any event scope at any past point in time.** Given a scope and a timestamp, the auditor can determine which subscriptions were Active at that moment by filtering on `subscribed_at ≤ t` and (`status = active` or `cancelled_at > t`). The timeline is exact (Invariants 1 and 9).
+- **Confirm at-most-one-active constraint.** For any (subscriber_ref, event_scope) pair, at most one subscription is in Active state at any point in time. The auditor can verify this directly from the subscription store (Invariant 6).
+- **Confirm cancellation is terminal and immediate.** For every Cancelled subscription, `cancelled_at` is present and `status = cancelled`. No `subscribers_for` query after `cancelled_at` returns that subscriber for that scope (Invariant 3).
+- **Identify composing patterns active in this deployment.** Whether subscription attribution (Actor Identity), event firing history (Event Log), retention (Retention Window), and tamper-evidence on the subscription store (Tamper Evidence) are wired in, and with what configuration.
+
+This is the generator's contract: any code generated from this atom must produce a subscription store and a query surface that pass the five checks above.
 
 ---
 
@@ -178,8 +202,9 @@ Subscription is freestanding and is designed to compose with:
 - **[Notification](./notification.md)** — the delivery record produced when a subscription fires. The composing Notification Fanout pattern wires `subscribers_for` to `Notification.create`: for each subscriber returned, a Notification is created.
 - **Notification Fanout** *(forthcoming)* — the composition that wires Subscription + Notification + an event source into an end-to-end delivery pipeline.
 - **[Event Log](../temporal/event-log.md)** — records when events fired against subscriptions. Each match between an event and a subscription scope can be appended as an event for auditing and replay.
-- **[Actor Identity](../compliance/actor-identity.md)** — records who subscribed (subscription attribution) when subscriber accountability is required.
+- **[Actor Identity](../compliance/actor-identity.md)** — records who subscribed (subscription attribution) when subscriber accountability is required. `subscription_id` is the hook: `attest(subscription_id, subscribed_by_ref, credential)` at subscribe time.
 - **[Retention Window](../compliance/retention-window.md)** — the subscription store and its history must be retained for whatever regulatory or operational lifetime the deployment requires.
+- **[Tamper Evidence](../compliance/tamper-evidence.md)** — in regulated contexts, the subscription store is a target for after-the-fact manipulation. Cryptographic commitment makes any rewrite detectable.
 
 ---
 
@@ -196,10 +221,29 @@ Subscription is freestanding and is designed to compose with:
 
 ## Status
 
-`draft` — structure and invariants specified; three cross-domain examples plus rejection path; edge cases enumerate the composing-pattern concerns (fanout, delivery, scope hierarchy, expiry, bulk cancellation, attribution). Awaiting full three-pass review.
+`grounded` — structure and invariants specified; four examples including rejection path and regulated adversarial scenarios; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. First entry in `atoms/messaging/`.
 
 ---
 
 ## Lineage notes
 
-*(To be populated after pressure-testing passes.)*
+This atom is the first entry in the `messaging/` category, drafted alongside Notification as the two-atom foundation for the forthcoming Notification Fanout composition.
+
+**Pass 1 — Structural completeness (GRID).** Three findings.
+
+- *Decision points for `subscribed` and `subscribers_for` asymmetry not defended.* The `subscribe` action rejects `invalid-request` for malformed inputs; the `subscribed` and `subscribers_for` queries accept malformed inputs and return determinate empty-result answers. This asymmetry was present but undefended. Fixed: Decision points now carry a four-step rubric explanation — `subscribe` creates a record (bad inputs produce bad records); queries only read, so bad inputs produce a correct answer without side effects.
+- *Feedback queries lacked falsifiable signals.* The Feedback section for `subscribed` and `subscribers_for` said "no state change; returns..." without specifying what observable property changes. Fixed: Feedback now names falsifiable post-conditions (after `subscribe(a, s)`, `subscribed(a, s)` must return `subscribed`; after cancel, must return `not-subscribed`).
+- *Feedback rejection paragraph mixed per-action reasons.* The single list `invalid-request`, `already-subscribed`, `not-known`, `not-active` did not indicate which reasons belong to which action. Fixed: restructured per-action (`subscribe` rejections; `cancel` rejections).
+
+**Pass 2 — Conceptual independence (EOS).** Two findings.
+
+- *`subscribers_for` return shape choice undefended.* Returning `[subscriber_ref, ...]` rather than `[(subscriber_ref, subscription_id), ...]` is a load-bearing design choice — it means composing patterns cannot directly trace which subscription triggered a notification from the query return alone. Fixed: Behavior now carries the four-step rubric defense: Invariant 6 guarantees at-most-one-active, so subscription_id is recoverable; the separation of Subscription and Notification internal identities is preserved.
+- *Subscription attribution interface point unspecified.* Edge cases named Actor Identity as the composing pattern for attribution but did not identify what field in the subscription record serves as the hook. Fixed: Edge cases now states `subscription_id` is the hook and names `attest(subscription_id, subscribed_by_ref, credential)` as the interface.
+
+**Pass 3 — Adversarial scrutiny (Linus mode).** Five findings.
+
+- *Invariant 1 and 4 redundant.* Invariant 1 stated all four fields (including subscription_id) are immutable; Invariant 4 said the id specifically never changes — identical claim. Fixed: Invariant 4 now carries distinct content: a new `subscribe` after `cancel` produces a new distinct id; the cancelled id is never reused. This content was not in Invariant 1 and fills the "id reuse" gap previously covered by the separate Invariant 5 (now merged into Invariant 4 as a corollary).
+- *`subscribers_for` empty-list cases not distinguished as intentional.* An empty result for a scope that has never been subscribed and one where all subscriptions are Cancelled are identical from the query surface — a hidden design choice. Fixed: Behavior explicitly names this as intentional and states the consequence for composing systems.
+- *Atomicity and crash semantics absent.* `cancel` changes two fields (`status` and `cancelled_at`) that must change together; a crash mid-transition violates Invariants 2 or 9. Personal Todo names this explicitly; Subscription did not. Fixed: Edge cases now carries the atomicity note.
+- *Regulated adversarial scenarios and generation acceptance missing.* The compliance system example (policy change broadcast, compliance officer subscriptions) invokes a regulated domain; library rules in PRESSURE_TESTING.md require both sections for any pattern whose examples invoke regulated contexts. Fixed: both sections added.
+- *Authorization to cancel unnamed.* Any caller with a `subscription_id` can cancel the subscription; the atom does not enforce who may do so. This is intentional but was invisible. Fixed: named explicitly in Behavior and Edge cases.
