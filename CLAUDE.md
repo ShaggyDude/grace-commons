@@ -131,6 +131,7 @@ When a session has a strong case for resolving one of these, the move is to (a) 
 - [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) — three-pass methodology, regulated-pattern conventions, multi-file refinement order.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution shape, three perspectives, four-step authoring rubric, lifecycle.
 - [`ROADMAP.md`](./ROADMAP.md) — planned atoms and compositions in dependency order; what each unlocks; what each blocks on.
+- [`EXECUTION_CONTRACT.md`](./EXECUTION_CONTRACT.md) — the deterministic compilation target: three primitives, four-step pipeline, atom-to-runtime mapping, conformance definition.
 - `atoms/<category>/README.md` — per-category catalogs.
 - [`compositions/README.md`](./compositions/README.md) — compositions catalog, vocabulary note.
 
