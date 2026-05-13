@@ -120,7 +120,7 @@ The canonical regulated-audit stack — Event Log + Actor Identity + Retention W
 
 These are deliberately deferred until content or evidence forces resolution; they are documented honestly rather than re-decided each session:
 
-- **Taxonomy axes.** Current pattern categories (`productivity`, `temporal`, `resource-lifecycle`, `compliance`) mix conceptual axes. The right axial split will be forced by content as the catalog grows past the size where preemptive cuts are reasonable; restructuring earlier would relocate the same confusion under different labels. See the *Open question on the current axes* paragraph in the Taxonomy section of [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md).
+- **Taxonomy axes.** Current pattern categories (`productivity`, `temporal`, `resource-lifecycle`, `compliance`, `messaging`, `workflow`) mix conceptual axes. The right axial split will be forced by content as the catalog grows past the size where preemptive cuts are reasonable; restructuring earlier would relocate the same confusion under different labels. The `workflow/` sub-question — whether one atom justified the category — is resolved: Workflow / State Machine (roadmap atom #9) is the second workflow atom, and the category stands. The broader axial split question remains open. See the *Open question on the current axes* paragraph in the Taxonomy section of [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md).
 When a session has a strong case for resolving one of these, the move is to (a) write the case down, (b) execute the resulting refactor as a discrete pass that updates every reference across the library, and (c) update this section.
 
 ---

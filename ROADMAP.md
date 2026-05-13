@@ -144,6 +144,54 @@ The seven atoms below are net-new to the library. They are sequenced by how many
 
 ---
 
+### 8. Capacity Constraint Enforcement
+
+**Category:** `atoms/resource-lifecycle/`
+
+**What it is.** A resource-lifecycle primitive: a named, bounded pool of a finite resource — seats, inventory units, time slots, bandwidth allocations, credit headroom — with actions that allocate from, release back to, and query against the pool. Capacity Constraint Enforcement does not know what is being constrained; it models the pool's arithmetic: declared capacity, currently allocated units, and available units at a point in time. It composes with Provisional Commitment (which issues a hold against a specific resource slot) and Duplicate Prevention (which guards against double-allocation under concurrent requests). States: Open (accepting allocations), Drained (at capacity — new allocations rejected), Suspended (no new allocations; existing allocations held intact), Closed (terminal; existing allocations may complete; pool is decommissioned).
+
+**Why it's eighth.** Reservation Lifecycle — the composition that models the full arc from resource hold through confirmed reservation through cancellation or expiry — is already named as Forthcoming in `compositions/README.md`. That composition is blocked entirely on this atom. Capacity Constraint Enforcement is the missing primitive: Provisional Commitment handles the per-reservation hold, Duplicate Prevention handles idempotency under concurrent demand, but neither enforces that the pool's total allocation never exceeds its stated capacity. That invariant belongs here.
+
+**Key invariants (anticipated).** Total allocated units never exceed pool capacity — an allocation that would exceed capacity is rejected with `over-capacity`. Released units are returned to available immediately; the pool does not retain per-allocation identity — it tracks aggregate counts only. Capacity adjustments (upward or downward) are recorded with the timestamp and the adjusting actor. A downward adjustment that would put current allocation over the new capacity is rejected — the atom enforces the constraint; the caller owns the resolution policy.
+
+**Standards anchored.** General resource management practice (no single regulatory standard owns capacity constraint enforcement; it appears as an implied obligation in ticketing, scheduling, inventory, and financial settlement systems). Composes naturally with SOX-scope financial controls when the constrained resource is a financial limit or credit line.
+
+**Unlocks.** Reservation Lifecycle (C9).
+
+---
+
+### 9. Workflow / State Machine
+
+**Category:** `atoms/workflow/`
+
+**What it is.** A workflow primitive: a named entity moving through a defined, finite set of states via explicitly declared transitions. The atom does not know what the entity is — it knows the entity's current state, the transitions that are valid from that state, and the history of how it got there. States and transitions are declared at instantiation; the atom enforces that only declared transitions are applied and that the full transition history is auditable. A Workflow instance has exactly one current state at all times; concurrent active states and fork-join constructs are composing concerns, not atom-level concerns.
+
+**Why it's ninth.** Approval Step (atom #4) opened the `workflow/` category but left it a single-entry category — noted as an open taxonomy question in CLAUDE.md. Workflow / State Machine is the general primitive that justifies the category: Approval Step is a specific kind of state machine (one designed for human approval decisions); Workflow / State Machine is the general case. The two atoms compose into Stateful Workflow Execution (C10), which produces multi-actor gated workflows with tamper-evident transition histories — a pattern that recurs in regulated manufacturing, financial operations, and HR processes. Two workflow atoms settle the taxonomy question.
+
+**Key invariants (anticipated).** Only declared transitions are valid — an undeclared transition is rejected with `invalid-transition`. The current state is always exactly one of the declared states. The full transition history — prior state, target state, triggering action, timestamp, actor — is auditable and append-only. A state declared as terminal at instantiation is absorbing — no further transitions are accepted. Transition guards are declared at instantiation; the atom enforces that a guard must be `satisfied` before a transition fires, but does not evaluate the guard — that is the caller's obligation.
+
+**Standards anchored.** FDA 21 CFR Part 11 (electronic records in regulated workflows — each state transition is a regulated event); ISO 9001 §8.5.1 (production workflow controls); BPMN 2.0 (the canonical notation for stateful workflow — this atom is the primitive behind a BPMN state diagram); HL7 FHIR Task resource (clinical workflow state machine — Task states map directly to this atom's state machine).
+
+**Unlocks.** Stateful Workflow Execution (C10). Also resolves the open taxonomy question on the `workflow/` category: two atoms justify the category's existence.
+
+---
+
+### 10. Preference / Personalization
+
+**Category:** `atoms/messaging/`
+
+**What it is.** A messaging primitive: a durable binding of a principal's delivery preferences — channel priority, frequency limits, quiet hours, format preferences, per-topic opt-downs — that governs *how* a notification reaches a recipient, independently of *whether* they are subscribed (Subscription) or *whether* processing is legally permitted (Consent). The three atoms are distinct: Subscription governs which topics a principal follows; Consent governs whether the system may process or communicate with the principal at all; Preference governs the delivery envelope when Subscription and Consent have both permitted the notification. States: Active, Suspended (preferences retained but delivery suppressed for the principal), Deleted.
+
+**Why it's tenth.** Subscription and Notification are grounded; Notification Fanout is grounded. The next natural question in the messaging surface is: *how does a subscriber control the shape of delivery?* Preference / Personalization is the atom that answers it. It sits cleanly in `atoms/messaging/` alongside Subscription and Notification — same category, complementary concern, no overlap with either. It composes with Notification Fanout to produce Preference-Aware Notification Fanout (C11), where the fanout step consults each subscriber's preferences before determining the delivery channel and rate. It is also distinct from the regulatory Consent & Preference Management (C2): C2 tracks regulatory consent; this atom tracks delivery ergonomics.
+
+**Key invariants (anticipated).** A principal has at most one active Preference record — preferences are not additive; a new preference set replaces the prior one (with the prior set retained in history). Preference updates are not retroactive — a notification already queued before an update is delivered under the prior preferences; the update governs future deliveries only. A Suspended Preference record suppresses delivery without removing subscriptions — the subscriber retains their topic bindings while suppressing notifications. Preference / Personalization does not define what channels exist or what format options are valid — those are deployment-specific enumerations declared at instantiation.
+
+**Standards anchored.** CAN-SPAM Act (opt-out and frequency controls for commercial email); TCPA (frequency and consent controls for SMS and phone marketing); GDPR Article 7(3) (preference changes must be as easy as the original grant — the Preference atom's update action is the mechanism).
+
+**Unlocks.** Preference-Aware Notification Fanout (C11).
+
+---
+
 ## New compositions — in draft order
 
 Compositions are listed after their atom prerequisites are noted as `grounded`. Each entry names its constituents, the emergent invariants anticipated, and the standards it anchors.
@@ -228,6 +276,36 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 ---
 
+### C9. Reservation Lifecycle
+
+**Prerequisites:** Capacity Constraint Enforcement *(new, atom #8)* + existing: Provisional Commitment, Duplicate Prevention, Event Log, Actor Identity.
+
+**What it adds.** The composition that models the full arc of a reservation: capacity query against the pool, provisional hold against a specific slot, idempotent confirmation under concurrent demand, and eventual resolution — confirmed, cancelled, or expired. The emergent invariants: confirmed reservations never exceed pool capacity (Capacity Constraint Enforcement enforces this at the pool level; Provisional Commitment holds the slot; Duplicate Prevention prevents double-confirmation under retry); a cancelled or expired reservation releases its slot back to the pool atomically from the perspective of the composition's records; no reservation transitions to Confirmed unless its provisional hold is still Active at confirmation time.
+
+**Standards anchored.** Booking and ticketing systems (seat inventory, appointment scheduling); financial settlement (credit limit enforcement — the pool is a credit line, the reservation is a limit check against available headroom); supply chain and inventory management (warehouse allocation — the pool is stock on hand, the reservation is a pick ticket against available units).
+
+---
+
+### C10. Stateful Workflow Execution
+
+**Prerequisites:** Workflow / State Machine *(new, atom #9)* + Approval Step *(new, atom #4)* + existing: Permissions, Assignment, Event Log, Actor Identity, Audit Trail.
+
+**What it adds.** The composition that makes a multi-actor gated workflow *auditably complete* — a workflow instance moves through declared states; each transition that requires human approval is enforced by an Approval Step instance; each assignment of work to an actor is enforced by Assignment; each actor's permission to trigger a transition is enforced by Permissions. The emergent invariants: no state transition proceeds without the required approval gate being cleared; no approval is granted by an actor lacking the required permission; the full workflow history — every state transition, every approval decision, every assignment — is tamper-evident and attribution-stamped. The composition does not define what the states mean or what triggers transitions — those are deployment-declared.
+
+**Standards anchored.** SOX §404 (workflow controls as audit evidence for financial reporting actions); FDA 21 CFR Part 11 (validated workflow with electronic signatures at each regulated transition — each Approval Step is a signature event); ISO 9001 §8.5.1 (controlled production and service provision workflow); BPMN 2.0 (the composition is the executable form of a BPMN process diagram with human task approval gates).
+
+---
+
+### C11. Preference-Aware Notification Fanout
+
+**Prerequisites:** Preference / Personalization *(new, atom #10)* + existing: Subscription, Notification (both `grounded`); Notification Fanout composition (`grounded`).
+
+**What it adds.** The composition that extends Notification Fanout with per-subscriber delivery shaping — before dispatching each notification, the fanout step consults the subscriber's Preference record and adjusts the delivery channel, format, and rate accordingly. The emergent invariants: a subscriber with a Suspended Preference record does not receive a notification even if their Subscription is Active (suppression is the Preference atom's signal; the composition enforces it at fanout time); a notification that would exceed a subscriber's declared frequency limit is held or dropped according to the caller's declared policy, not silently delivered; the `failed` list from the base Notification Fanout action is extended to include subscribers whose Preference record caused suppression, so the caller can distinguish delivery-attempted-and-failed from delivery-suppressed-by-preference.
+
+**Standards anchored.** CAN-SPAM (opt-out controls — a subscriber who has opted down a frequency tier does not receive notifications above that tier); TCPA (frequency caps for SMS — the Preference atom's frequency limit is the enforcement record); GDPR Article 7(3) (preference-based suppression respects the spirit of withdrawal even when Consent is not the delivery legal basis).
+
+---
+
 ## Summary table
 
 | # | Pattern | Type | New atoms needed | Existing atoms used | Status |
@@ -241,6 +319,9 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | 5 | Selective Disclosure | Atom | — | — | Not started |
 | 6 | Party Identity | Atom | — | — | Not started |
 | 7 | Provenance | Atom | — | — | Not started |
+| 8 | Capacity Constraint Enforcement | Atom | — | — | Not started |
+| 9 | Workflow / State Machine | Atom | — | — | Not started |
+| 10 | Preference / Personalization | Atom | — | — | Not started |
 | C1 | Regulated Record Retention & Defensible Deletion | Composition | Legal Hold | Audit Trail, Retention Window, Tamper Evidence, Event Log | Blocked on #1 |
 | C2 | Consent & Preference Management | Composition | Consent | Audit Trail, Retention Window, Permissions, Event Log | Blocked on #2 |
 | C3 | Forensic Recovery | Composition | Soft Delete | Event Log, Actor Identity, Audit Trail | Blocked on #3 |
@@ -249,7 +330,10 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | C6 | Immutable Transaction Ledger | Composition | Selective Disclosure | Event Log, Tamper Evidence, Actor Identity, Retention Window, Idempotent Reservation | Blocked on #5 |
 | C7 | Data Subject Rights Fulfillment | Composition | Legal Hold, Consent, Selective Disclosure | Audit Trail, Retention Window, Actor Identity, Event Log | Blocked on #1, #2, #5 |
 | C8 | KYC / Customer Onboarding | Composition | Party Identity, Consent | Audit Trail, Event Log, Idempotent Reservation, Retention Window, Actor Identity | Blocked on #2, #6 |
+| C9 | Reservation Lifecycle | Composition | Capacity Constraint Enforcement | Provisional Commitment, Duplicate Prevention, Event Log, Actor Identity | Blocked on #8 |
+| C10 | Stateful Workflow Execution | Composition | Workflow / State Machine, Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Blocked on #4, #9 |
+| C11 | Preference-Aware Notification Fanout | Composition | Preference / Personalization | Subscription, Notification (grounded); Notification Fanout (grounded) | Blocked on #10 |
 
 ---
 
-*The roadmap is a living document. Patterns are added as the library's content forces resolution of open questions, not on a fixed schedule. The open taxonomy question (whether `workflow/` is a justified category after one atom, or whether Approval Step sits temporarily in `resource-lifecycle/`) will be resolved when a second workflow-category atom is identified or when the case for the category is made without one. See the open architectural questions section of [`CLAUDE.md`](./CLAUDE.md).*
+*The roadmap is a living document. Patterns are added as the library's content forces resolution of open questions, not on a fixed schedule. The open taxonomy question on `workflow/` — whether one atom justified the category — is resolved: Workflow / State Machine (atom #9) is the second workflow-category atom, and the category stands on its own. The open taxonomy question that remains is the broader axial split across all categories (`productivity`, `temporal`, `resource-lifecycle`, `compliance`, `messaging`, `workflow`); see the open architectural questions section of [`CLAUDE.md`](./CLAUDE.md).*
