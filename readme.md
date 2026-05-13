@@ -73,7 +73,8 @@ atoms/
 │   ├── actor-identity           — verifiable action-to-actor binding
 │   ├── retention-window         — bounded record lifetime with no-early-purge
 │   ├── tamper-evidence          — cryptographic detectability of record alteration
-│   └── permissions              — grant-based access control with explicit revocation
+│   ├── permissions              — grant-based access control with explicit revocation
+│   └── legal-hold               — preservation obligation suspending purge (unresolved)
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
 │   └── notification             — delivery record for a single notification to a single recipient

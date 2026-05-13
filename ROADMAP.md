@@ -323,7 +323,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 |---|---------|------|-----------------|--------------------|----|
 | — | Subscription | Atom | — | — | Grounded |
 | — | Notification | Atom | — | — | Grounded |
-| 1 | Legal Hold | Atom | — | — | Not started |
+| 1 | Legal Hold | Atom | — | — | Unresolved (foundation round complete) |
 | 2 | Consent | Atom | — | — | Not started |
 | 3 | Soft Delete | Atom | — | — | Not started |
 | 4 | Approval Step | Atom | — | — | Not started |
@@ -337,7 +337,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | C2 | Consent & Preference Management | Composition | Consent | Audit Trail, Retention Window, Permissions, Event Log | Blocked on #2 |
 | C3 | Forensic Recovery | Composition | Soft Delete | Event Log, Actor Identity, Audit Trail | Blocked on #3 |
 | C4 | Multi-Party Approval | Composition | Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Blocked on #4 |
-| C5 | Notification Fanout | Composition | — | Subscription, Notification | Blocked on in-progress |
+| C5 | Notification Fanout | Composition | — | Subscription, Notification | Grounded |
 | C6 | Immutable Transaction Ledger | Composition | Selective Disclosure | Event Log, Tamper Evidence, Actor Identity, Retention Window, Idempotent Reservation | Blocked on #5 |
 | C7 | Data Subject Rights Fulfillment | Composition | Legal Hold, Consent, Selective Disclosure | Audit Trail, Retention Window, Actor Identity, Event Log | Blocked on #1, #2, #5 |
 | C8 | KYC / Customer Onboarding | Composition | Party Identity, Consent | Audit Trail, Event Log, Idempotent Reservation, Retention Window, Actor Identity | Blocked on #2, #6 |
