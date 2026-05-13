@@ -241,7 +241,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 ## Status
 
-`unresolved` — foundation round complete (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus). Human refinement rounds and AI adversarial round not yet completed.
+`unresolved` — foundation round and AI adversarial round complete (Sonnet, batched with Legal Hold and Consent). Human refinement round and single-atom Opus adversarial pass pending before `grounded`.
 
 ---
 

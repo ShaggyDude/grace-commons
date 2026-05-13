@@ -261,7 +261,7 @@ Legal Hold is the preservation primitive the library has held open since Retenti
 
 ## Status
 
-`unresolved` — foundation round and Refinement round 1 complete. AI adversarial round not yet completed.
+`unresolved` — foundation round, Refinement round 1, and AI adversarial round complete (Sonnet, batched with Consent and Soft Delete). Single-atom Opus adversarial pass pending before `grounded`.
 
 ---
 

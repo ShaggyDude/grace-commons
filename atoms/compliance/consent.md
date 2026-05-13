@@ -277,7 +277,7 @@ Consent is the data subject's authorization primitive — the complement to Perm
 
 ## Status
 
-`unresolved` — foundation round complete (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus). Human refinement rounds and AI adversarial round not yet completed.
+`unresolved` — foundation round and AI adversarial round complete (Sonnet, batched with Legal Hold and Soft Delete). Human refinement round and single-atom Opus adversarial pass pending before `grounded`.
 
 ---
 
