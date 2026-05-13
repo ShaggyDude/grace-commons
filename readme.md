@@ -77,12 +77,12 @@ atoms/
 │   ├── permissions              — grant-based access control with explicit revocation
 │   ├── legal-hold               — preservation obligation suspending purge (unresolved)
 │   ├── consent                  — data subject agreement to named processing purpose (unresolved)
-│   └── selective-disclosure     — append-only disclosure accountability record: recipient, scope, authority (partially resolved)
+│   └── selective-disclosure     — append-only disclosure accountability record: recipient, scope, authority (grounded)
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
 │   └── notification             — delivery record for a single notification to a single recipient
 ├── workflow/
-│   └── approval-step            — Pending → Approved | Rejected | Withdrawn; named-approver gate (partially resolved)
+│   └── approval-step            — Pending → Approved | Rejected | Withdrawn; named-approver gate (grounded)
 └── healthcare/
     ├── clinical-observation     — immutable clinical measurement with amendment/retraction trail (grounded)
     └── medication-order         — prescription lifecycle from order through terminal resolution (grounded)

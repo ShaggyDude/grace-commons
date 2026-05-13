@@ -24,7 +24,7 @@ Workflow logic is structurally similar across regulated industries — SOX appro
 
 ## Patterns in this category
 
-- [Approval Step](./approval-step.md) — a single binding of a required approval to a named approver, for a specified subject and scope, with a Pending → {Approved, Rejected, Withdrawn} lifecycle. The approval-gate primitive that Multi-Party Approval and Stateful Workflow Execution compose from. Anchors SOX §404, FDA 21 CFR Part 11, ICH E6 GCP, and ISO 9001 §8.5.1. `partially resolved` — foundation round complete; AI adversarial round pending.
+- [Approval Step](./approval-step.md) — a single binding of a required approval to a named approver, for a specified subject and scope, with a Pending → {Approved, Rejected, Withdrawn} lifecycle. The approval-gate primitive that Multi-Party Approval and Stateful Workflow Execution compose from. Anchors SOX §404, FDA 21 CFR Part 11, ICH E6 GCP, and ISO 9001 §8.5.1. `grounded` (last full rescan: 2026-05-13).
 - Workflow / State Machine — general-purpose state machine engine with deployment-declared states and transitions — *(forthcoming, atom #9)*
 
 *This category is under active development. Pattern proposals welcome.*
