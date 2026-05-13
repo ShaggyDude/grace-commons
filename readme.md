@@ -74,7 +74,8 @@ atoms/
 │   ├── retention-window         — bounded record lifetime with no-early-purge
 │   ├── tamper-evidence          — cryptographic detectability of record alteration
 │   ├── permissions              — grant-based access control with explicit revocation
-│   └── legal-hold               — preservation obligation suspending purge (unresolved)
+│   ├── legal-hold               — preservation obligation suspending purge (unresolved)
+│   └── consent                  — data subject agreement to named processing purpose (unresolved)
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
 │   └── notification             — delivery record for a single notification to a single recipient

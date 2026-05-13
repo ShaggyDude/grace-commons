@@ -324,7 +324,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | — | Subscription | Atom | — | — | Grounded |
 | — | Notification | Atom | — | — | Grounded |
 | 1 | Legal Hold | Atom | — | — | Unresolved (foundation round complete) |
-| 2 | Consent | Atom | — | — | Not started |
+| 2 | Consent | Atom | — | — | Unresolved (foundation round complete) |
 | 3 | Soft Delete | Atom | — | — | Not started |
 | 4 | Approval Step | Atom | — | — | Not started |
 | 5 | Selective Disclosure | Atom | — | — | Not started |
