@@ -241,7 +241,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 ### C4. Multi-Party Approval
 
-**Prerequisites:** Approval Step *(grounded; this composition is partially resolved — foundation round and Round 2 complete)* + existing: Permissions, Assignment, Event Log, Actor Identity, Audit Trail.
+**Prerequisites:** Approval Step *(grounded)* + existing: Permissions, Assignment, Event Log, Actor Identity, Audit Trail. *This composition is grounded.*
 
 **What it adds.** The composition that makes multi-actor authorization *auditably enforced* — no action proceeds until the required approval gates are cleared; the full approval chain (who approved, when, in what order, with what stated authority) is tamper-evident and attribution-stamped. The emergent invariants: a required approval gate cannot be bypassed; approvals are non-repudiable; the minimum quorum for an approval chain (one-of-N, all-of-N, threshold-of-N) is a deployment-configured property of the composition, not of the Approval Step atom.
 
@@ -336,7 +336,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | C1 | Regulated Record Retention & Defensible Deletion | Composition | Legal Hold | Audit Trail, Retention Window, Tamper Evidence, Event Log | Unblocked; not started |
 | C2 | Consent & Preference Management | Composition | Consent | Audit Trail, Retention Window, Permissions, Event Log | Unblocked; not started |
 | C3 | Forensic Recovery | Composition | Soft Delete | Event Log, Actor Identity, Audit Trail | Unblocked; not started |
-| C4 | Multi-Party Approval | Composition | Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Partially resolved — foundation round and Round 2 (human refinement) complete; AI adversarial round pending |
+| C4 | Multi-Party Approval | Composition | Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Grounded 26-05-13 |
 | C5 | Notification Fanout | Composition | — | Subscription, Notification | Grounded |
 | C6 | Immutable Transaction Ledger | Composition | Selective Disclosure | Event Log, Tamper Evidence, Actor Identity, Retention Window, Idempotent Reservation | Unblocked; not started |
 | C7 | Data Subject Rights Fulfillment | Composition | Legal Hold, Consent, Selective Disclosure | Audit Trail, Retention Window, Actor Identity, Event Log | Unblocked; not started |
