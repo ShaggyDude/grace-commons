@@ -64,9 +64,12 @@ atoms/
 │   ├── retention-window         — bounded record lifetime with no-early-purge
 │   ├── tamper-evidence          — cryptographic detectability of record alteration
 │   └── permissions              — grant-based access control with explicit revocation
-└── messaging/
-    ├── subscription             — durable record of actor interest in an event scope
-    └── notification             — delivery record for a single notification to a single recipient
+├── messaging/
+│   ├── subscription             — durable record of actor interest in an event scope
+│   └── notification             — delivery record for a single notification to a single recipient
+└── healthcare/
+    ├── clinical-observation     — immutable clinical measurement with amendment/retraction trail (grounded)
+    └── medication-order         — prescription lifecycle from order through terminal resolution (unresolved)
 
 compositions/
 ├── undo-history                 — Personal Todo + Event Log

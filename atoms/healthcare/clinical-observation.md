@@ -211,7 +211,8 @@ Clinical Observation composes naturally with the existing library:
 - **[Tamper Evidence](../compliance/tamper-evidence.md)** — seals the observation store against post-hoc modification, complementing the spec-level immutability guarantee with a cryptographic one.
 - **[Retention Window](../compliance/retention-window.md)** — governs the minimum and maximum retention period for observation records under HIPAA and applicable state law.
 - **[Audit Trail](../../compositions/audit-trail.md)** — the canonical composition for regulated record-keeping; Clinical Observation feeds it.
-- **Forthcoming:** Medication Order, Care Plan — compositions that consume Clinical Observation as evidence for clinical decision-making.
+- **[Medication Order](./medication-order.md)** — carries an optional `clinical_evidence_ref` field that holds an opaque reference to the Clinical Observation(s) that informed the prescribing decision. The relationship is advisory and unidirectional: Clinical Observation provides the upstream evidence substrate; Medication Order records the clinical response. Clinical Observation does not depend on Medication Order to be specified.
+- **Forthcoming:** Care Plan — a composition modeling a structured set of medication orders, clinical observations, and clinical goals; Clinical Observation is a constituent.
 
 ---
 
