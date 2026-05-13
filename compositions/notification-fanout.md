@@ -8,6 +8,14 @@ toc: true
 
 # Notification Fanout
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A composition: when an event fires against a named scope, every currently-Active subscriber for that scope receives a Notification record. Composes [Subscription](../atoms/messaging/subscription.md) with [Notification](../atoms/messaging/notification.md) to produce the end-to-end delivery pipeline — from the query *"who should receive this?"* through the per-recipient record *"a delivery attempt was made."*
 
 ---

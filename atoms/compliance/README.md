@@ -10,6 +10,14 @@ toc: true
 
 # Compliance Patterns
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 Patterns governing audit trails, regulatory holds, reporting obligations, and compliance lifecycle management.
 
 Compliance logic is domain-specific in vocabulary but structurally similar across regulated industries. The pattern of "action must be recorded, attributed, and retrievable" is the same in healthcare, finance, and government.

@@ -9,6 +9,14 @@ toc: true
 
 # Medication Order
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A healthcare primitive: an immutable prescription record binding a prescriber, a patient, a medication, and a dosing regimen — from initial order through verification, dispensing, administration, and terminal resolution. Amendments before dispensing create successor orders; orders stopped after dispensing become Discontinued; orders terminated before dispensing are Cancelled.
 
 ---

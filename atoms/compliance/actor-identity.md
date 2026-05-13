@@ -9,6 +9,14 @@ toc: true
 
 # Actor Identity
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A compliance primitive: a verifiable binding of an action to the actor who authorized it. Each binding is an *attestation* with an opaque immutable id; the action reference, actor reference, proof, and timestamp are immutable properties, set at attest time. Verification is a read-only query, not a state transition. The contract the atom enforces is **non-repudiation** — a verified attestation binds the named actor to the named action and the actor cannot plausibly deny it.
 
 ---

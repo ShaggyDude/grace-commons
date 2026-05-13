@@ -9,6 +9,14 @@ toc: true
 
 # Duplicate Prevention
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A composable temporal concept: a temporally-bounded record of recently-seen identities, used by containing patterns to reject re-additions within a configurable window.
 
 > Also known as: temporal idempotency, recency guard, cooldown window.

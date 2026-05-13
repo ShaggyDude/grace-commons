@@ -7,6 +7,14 @@ toc: true
 
 # Roadmap
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > What the library is building toward, in dependency order. Atoms before the compositions that name them. Each entry names what it unlocks.
 
 The library's current state is documented in [`readme.md`](./readme.md). This file records what comes next and why, at the granularity of individual patterns. Priority reflects dependency readiness first, regulatory coverage second — a composition that needs three new atoms is lower priority than one that needs one, regardless of business value, because the blocking atoms must land first.

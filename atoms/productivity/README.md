@@ -10,6 +10,14 @@ toc: true
 
 # Productivity Patterns
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 Patterns for recording, tracking, ordering, and completing units of work.
 
 The same primitives appear across domains: a personal task list, a developer's issue tracker, an IT service request queue, a compliance checklist, an editorial workflow, a clinical care plan. Different vocabulary, different stakes, one underlying mechanic.

@@ -9,6 +9,14 @@ toc: true
 
 # Subscription
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A messaging primitive: a named actor's active interest in a class of events. Each subscription has an opaque immutable id; the subscriber reference and event scope are immutable properties set at subscribe time. The atom records *who wants to know about what*. Delivery of the information — when events fire against the subscription — belongs to a composing pattern.
 
 ---

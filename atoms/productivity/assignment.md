@@ -9,6 +9,14 @@ toc: true
 
 # Assignment
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A productivity primitive: a binding of a unit of work to the actor responsible for completing it. Each assignment has an opaque immutable id; the task reference and assignee reference are immutable properties set at assignment time. An assignment is Active until recalled or transferred. At most one assignment is Active per task at any time.
 
 ---

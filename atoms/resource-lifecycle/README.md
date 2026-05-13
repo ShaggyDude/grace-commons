@@ -10,6 +10,14 @@ toc: true
 
 # Resource Lifecycle Patterns
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 Patterns governing how resources are reserved, allocated, held, committed, and released.
 
 The same pattern appears across domains: a seat hold at an airline, an inventory reservation at a retailer, a credit limit check at a bank, a bed assignment at a hospital. Different vocabulary, different stakes, one pattern.

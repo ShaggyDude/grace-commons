@@ -7,6 +7,14 @@ toc: true
 
 # The Spec Layer
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > *This architecture shifts the canonical unit of software from code to structured intent — single semantic source, everything else derived — because every reader, human or machine, can reason at that level comfortably in their own native language.*
 
 ---

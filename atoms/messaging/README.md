@@ -10,6 +10,14 @@ toc: true
 
 # Messaging atoms
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 Atoms in this category specify the primitives for communicating information across actor boundaries — recording interest, recording delivery, and tracking outcomes. Neither atom implements routing, transport, or scheduling; those belong to composing patterns.
 
 ---

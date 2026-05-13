@@ -8,6 +8,14 @@ toc: true
 
 # Idempotent Reservation
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > An application: every state-changing call against Provisional Commitment is safely retryable. Composes Provisional Commitment with Duplicate Prevention to give the caller *exactly-once-within-window* semantics — same idempotency token, same result, regardless of how many times the call is retried, regardless of which terminal state the commitment is currently in.
 
 ---

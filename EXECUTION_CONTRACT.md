@@ -7,6 +7,14 @@ toc: true
 
 # Execution Contract
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > The deterministic compilation target for Grace Commons atoms and compositions. Every atom is a state machine whose transitions execute via a fixed four-step pipeline over two effect channels and two pure-function boundaries. Nothing else is permitted at runtime.
 
 This document is the contract between the Grace Commons spec layer and any runtime that claims to implement it. It names the three primitives, defines the pipeline, specifies the mapping from atom spec sections to compilation targets, and defines what conformance means. A-stack — the reference implementation in Deno + PostgreSQL + JSX — is the worked instantiation of the contract, not the contract itself. Any runtime that satisfies the contract is a conforming implementation.

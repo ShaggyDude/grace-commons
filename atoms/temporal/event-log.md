@@ -9,6 +9,14 @@ toc: true
 
 # Event Log
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A temporal primitive: an append-only sequence of immutable, time-ordered events. The substrate every audit, history, replay, and event-sourcing pattern composes on top of.
 
 ---

@@ -9,6 +9,14 @@ toc: true
 
 # Healthcare atoms
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 Freestanding primitives for clinical and healthcare administrative systems. Each atom carries the regulated-pattern conventions required by HIPAA, HL7 FHIR, and 21 CFR Part 11.
 
 | Atom | Status | What it models |

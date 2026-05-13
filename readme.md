@@ -8,6 +8,14 @@ toc: true
 
 # Grace Commons
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 Atomic patterns (concepts) and applications, expressed as structured natural language. Code is derived; intent is canonical.
 
 Named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.

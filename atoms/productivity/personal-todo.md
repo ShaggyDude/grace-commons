@@ -9,6 +9,14 @@ toc: true
 
 # Personal Todo
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A productivity primitive: single-user task tracking with pending / done / removed states, edit-while-pending, and timestamps. Each unit has an opaque immutable id; description is a mutable property under explicit normalization rules.
 
 ---

@@ -8,6 +8,14 @@ toc: true
 
 # Shared Todo
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A multi-actor task composition: a shared list where actors see tasks according to their grants, act on tasks according to their grants, and hold responsibility for tasks according to their assignments. Composes Personal Todo, Permissions, and Assignment — task lifecycle, authorization surface, and responsibility binding — into a single coherent artifact. The emergent guarantee: every mutation is gated by an explicit permission check, and every task has at most one responsible actor at any time.
 
 ---

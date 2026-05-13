@@ -9,6 +9,14 @@ toc: true
 
 # Tamper Evidence
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A compliance primitive: cryptographic evidence that a set of records has not been altered since its authoritative creation. Each evidence is a *seal* with an opaque immutable id; the record-set reference, proof, seal timestamp, and optional external anchor are immutable properties, set at seal time. Verification is a read-only query, not a state transition, and — unlike Actor Identity's verify — requires the original record set as input, because the proof commits to the records' content. The contract the atom enforces is **detectability**: any tampering with the records since seal is detectable from the records alone, given the proof and the originating record set.
 
 ---

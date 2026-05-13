@@ -8,6 +8,14 @@ toc: true
 
 # Audit Trail
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A regulated application: every action of consequence is recorded, attributed to a verifiable actor, retained for its regulatory lifetime, and protected against after-the-fact rewriting. Composes Event Log, Actor Identity, Retention Window, and Tamper Evidence into the canonical audit primitive that SOX, HIPAA, PCI DSS, 21 CFR Part 11, SEC Rule 17a-4, and every other industrial audit regime requires but none name as a single composable concept. With this application, four freestanding atoms become the one structure the regulator actually asks about.
 
 ---

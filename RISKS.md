@@ -7,6 +7,14 @@ toc: true
 
 # Spec Layer Risks & Mitigations
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > Known failure modes for the spec-first approach, grouped by category. Each entry names the risk, how it manifests, and the mitigation. This is a living document — risks are added as the architecture encounters them in practice, not on a fixed schedule.
 
 ---

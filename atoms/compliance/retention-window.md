@@ -9,6 +9,14 @@ toc: true
 
 # Retention Window
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A compliance primitive: a record is kept under retention for a known period, then purged. Each retention has an opaque immutable id; the record reference, retention policy, retention-end deadline, and purge deadline are immutable properties, set at retention-start. Two states — Retained, Purged. Purge is forbidden before the retention period ends; purge after the period is the expected transition; the gap between retention-end and purge-deadline is the *purge window*, and operating past it is observable overshoot — visible in the records, prevented only by policy.
 
 ---

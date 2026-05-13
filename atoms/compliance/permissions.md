@@ -9,6 +9,14 @@ toc: true
 
 # Permissions
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A compliance primitive: a grant-based authorization surface binding a subject to an action scope. Each grant has an opaque immutable id; the subject reference and action scope are immutable properties set at grant time. Permission evaluation is a read-only query. The contract the atom enforces is **authorization** — `permitted` confirms the named subject holds at least one active grant covering the named action scope; `denied` is an unambiguous structural no.
 
 ---

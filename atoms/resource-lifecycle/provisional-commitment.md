@@ -9,6 +9,14 @@ toc: true
 
 # Provisional Commitment
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A resource-lifecycle primitive: a single resource is held for a single requester for a bounded window, then resolves exactly once into Confirmed, Released, or Expired. Each commitment has an opaque immutable id; the resource binding, requester, and hold window are immutable properties of the commitment, set at creation.
 
 ---

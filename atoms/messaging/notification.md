@@ -9,6 +9,14 @@ toc: true
 
 # Notification
 
+<details open markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
 > A messaging primitive: the delivery record for a single notification to a single recipient. Each notification has an opaque immutable id; the recipient reference and payload are immutable properties set at create time. The atom records *whether a piece of information reached a recipient*. The transport mechanism — WebSocket, webhook, email, push — is a deployment concern outside this atom's scope.
 
 ---
