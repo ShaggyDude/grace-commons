@@ -27,8 +27,8 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 No atoms currently in progress. The messaging atoms that were previously in-progress have reached `grounded`:
 
-- **[Subscription](./atoms/messaging/subscription.md)** — `grounded` (last full rescan: 2026-05-13)
-- **[Notification](./atoms/messaging/notification.md)** — `grounded` (last full rescan: 2026-05-13)
+- **[Subscription](./atoms/messaging/subscription.md)** — `grounded` 26-05-13
+- **[Notification](./atoms/messaging/notification.md)** — `grounded` 26-05-13
 - **[Notification Fanout](./compositions/notification-fanout.md)** — `grounded` (composition of the above two)
 
 Work on new atoms (#1 Legal Hold onward) is unblocked.
@@ -53,7 +53,7 @@ The seven atoms below are net-new to the library. They are sequenced by how many
 
 **Standards anchored.** Federal Rules of Civil Procedure Rule 37(e) (e-discovery preservation duty); SEC Rule 17a-4 (broker-dealer record retention with hold obligations); HIPAA (legal holds on PHI during investigation); SOX (holds on financial records during audit or investigation).
 
-**Unlocks.** Regulated Record Retention & Defensible Deletion (C1); Data Subject Rights Fulfillment (C6).
+**Unlocks.** Regulated Record Retention & Defensible Deletion (C1); Data Subject Rights Fulfillment (C7).
 
 ---
 
@@ -63,13 +63,13 @@ The seven atoms below are net-new to the library. They are sequenced by how many
 
 **What it is.** A compliance primitive: a binding of a data subject's affirmative agreement to a specified purpose, with a full lifecycle from grant through revocation and expiry. Consent is distinct from Permissions — Permissions governs what an internal actor may do within a system; Consent governs what the system may do *to or with* a data subject's data. A grant is tied to a specific purpose scope (e.g., `marketing:email`, `analytics:behavioral`, `research:anonymized`); the atom does not interpret scope semantics, treating them as opaque. States: Granted, Revoked, Expired.
 
-**Why it's second.** Consent is a prerequisite for Consent & Preference Management (C2), Data Subject Rights Fulfillment (C6), and KYC / Customer Onboarding (C7). It is genuinely freestanding — own state, own actions (`grant`, `revoke`, `withdraw`, `check`), own invariants — and recurs across every domain that handles personal data. No existing atom covers it; the library has Permissions (internal authorization) and Actor Identity (actor credential verification) but nothing that models the data subject's own authorization of processing.
+**Why it's second.** Consent is a prerequisite for Consent & Preference Management (C2), Data Subject Rights Fulfillment (C7), and KYC / Customer Onboarding (C8). It is genuinely freestanding — own state, own actions (`grant`, `revoke`, `withdraw`, `check`), own invariants — and recurs across every domain that handles personal data. No existing atom covers it; the library has Permissions (internal authorization) and Actor Identity (actor credential verification) but nothing that models the data subject's own authorization of processing.
 
 **Key invariants (anticipated).** Consent at time-of-action is recoverable from the consent store — `check(subject, purpose, at_time)` returns the consent state as of that instant. Revocation is not retroactive — it does not erase the record of prior consent, only terminates future reliance on it. The full consent history (every grant, revocation, withdrawal, and expiry) is an auditable record. A revoked consent cannot be re-granted under the same grant id; re-grant requires a fresh grant record.
 
 **Standards anchored.** GDPR Articles 6–7 (lawful basis, consent conditions), Article 17 (right to erasure triggers on consent withdrawal), Article 7(3) (withdrawal as easy as grant); CCPA/CPRA (opt-out of sale, opt-in for sensitive personal information); HIPAA Authorization (45 CFR §164.508).
 
-**Unlocks.** Consent & Preference Management with Revocation Propagation (C2); Data Subject Rights Fulfillment (C6); KYC / Customer Onboarding (C7).
+**Unlocks.** Consent & Preference Management with Revocation Propagation (C2); Data Subject Rights Fulfillment (C7); KYC / Customer Onboarding (C8).
 
 ---
 
@@ -113,13 +113,13 @@ The seven atoms below are net-new to the library. They are sequenced by how many
 
 **What it is.** A compliance primitive: a durable record of what subset of a record was disclosed, to whom, at what time, and under what authority. Selective Disclosure does not itself redact records — it records *that* a disclosure of a specified scope occurred, creating an auditable trail of what was shared. The atom is the accountability layer on top of whatever redaction or disclosure mechanism the implementation uses. States: a disclosure record is created on each disclosure event; the record set is append-only.
 
-**Why it's fifth.** Required by both Data Subject Rights Fulfillment (C6) — where GDPR Article 15 requires the system to disclose what data it holds and to whom it has been disclosed — and the Immutable Transaction Ledger with Selective Disclosure (C5). The atom is more novel to scope than the preceding ones (the boundary between "recording that a disclosure happened" and "performing the disclosure" requires careful EOS pass 2 scrutiny). It sits after Legal Hold, Consent, Soft Delete, and Approval Step because those are cleaner atoms with clearer boundaries.
+**Why it's fifth.** Required by both Data Subject Rights Fulfillment (C7) — where GDPR Article 15 requires the system to disclose what data it holds and to whom it has been disclosed — and the Immutable Transaction Ledger with Selective Disclosure (C6). The atom is more novel to scope than the preceding ones (the boundary between "recording that a disclosure happened" and "performing the disclosure" requires careful EOS pass 2 scrutiny). It sits after Legal Hold, Consent, Soft Delete, and Approval Step because those are cleaner atoms with clearer boundaries.
 
 **Key invariants (anticipated).** A disclosure record is immutable once created — the record of what was disclosed cannot be altered. The disclosure record names the recipient, the scope of what was shared, the authority under which the disclosure was made (a Consent id, a Legal Hold id, or a regulatory requirement citation), and the timestamp. No disclosure is unrecorded — every disclosure event produces a record. The full disclosure history for any record is queryable from the disclosure store.
 
 **Standards anchored.** GDPR Article 15(1)(c) (data subject's right to know recipients of their data); GDPR Article 30 (records of processing — disclosures are processing activities); HIPAA §164.528 (accounting of disclosures of PHI); SEC Rule 17a-4 (disclosure records for broker-dealer records).
 
-**Unlocks.** Immutable Transaction Ledger with Selective Disclosure (C5); Data Subject Rights Fulfillment (C6).
+**Unlocks.** Immutable Transaction Ledger with Selective Disclosure (C6); Data Subject Rights Fulfillment (C7).
 
 ---
 
@@ -129,13 +129,13 @@ The seven atoms below are net-new to the library. They are sequenced by how many
 
 **What it is.** A compliance primitive: a persistent, verifiable identity record for an external party — customer, patient, counterparty, beneficial owner — with a verification lifecycle distinct from the Actor Identity atom. Where Actor Identity models an internal actor's ability to sign actions with credentials, Party Identity models an external party's verified existence and identity attributes, which may be re-verified, suspended, or closed as circumstances change. States: Unverified, Verified, Suspended, Closed.
 
-**Why it's sixth.** Party Identity is a genuine atom — own state machine, own actions (`enroll`, `verify`, `suspend`, `reinstate`, `close`), own invariants around identity chain-of-custody — but it is more complex to scope than the preceding atoms. The line between "what Party Identity records about a party" and "what a KYC/AML workflow does with that record" is the key EOS pass 2 question for this atom. KYC / Customer Onboarding (C7) depends on it.
+**Why it's sixth.** Party Identity is a genuine atom — own state machine, own actions (`enroll`, `verify`, `suspend`, `reinstate`, `close`), own invariants around identity chain-of-custody — but it is more complex to scope than the preceding atoms. The line between "what Party Identity records about a party" and "what a KYC/AML workflow does with that record" is the key EOS pass 2 question for this atom. KYC / Customer Onboarding (C8) depends on it.
 
 **Key invariants (anticipated).** A Party Identity record is never deleted — it transitions through states, including Closed, but the full identity history is auditable. Verification events are immutable — each verification attempt (successful or failed) is recorded with the timestamp, the verifying actor, and the verification method used. A Suspended party may not be relied upon for new transactions until reinstated or closed. Closure is terminal for new activity but the record persists for audit.
 
 **Standards anchored.** FATF Recommendations (customer due diligence, beneficial ownership verification); BSA/AML (Bank Secrecy Act — customer identification program requirements); GDPR Article 4(1) (definition of personal data — Party Identity records are personal data); HIPAA (patient identity — the patient record is a Party Identity in the healthcare context).
 
-**Unlocks.** KYC / Customer Onboarding (C7).
+**Unlocks.** KYC / Customer Onboarding (C8).
 
 ---
 
@@ -151,7 +151,7 @@ The seven atoms below are net-new to the library. They are sequenced by how many
 
 **Standards anchored.** ISO 23081 (records management metadata — provenance as a required metadata element); W3C PROV (data provenance ontology); FDA 21 CFR Part 211 (pharmaceutical chain of custody); SEC Rule 17a-4 (records must be maintained as originally created — provenance of the original form).
 
-**Unlocks.** Enriches Immutable Transaction Ledger (C5), DSAR (C6), and KYC (C7) as an optional composing atom.
+**Unlocks.** Enriches Immutable Transaction Ledger (C6), DSAR (C7), and KYC (C8) as an optional composing atom.
 
 ---
 
@@ -211,7 +211,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 ### C1. Regulated Record Retention & Defensible Deletion
 
-**Prerequisites:** Legal Hold *(new)* + existing: Audit Trail, Retention Window, Tamper Evidence, Event Log.
+**Prerequisites:** Legal Hold *(grounded)* + existing: Audit Trail, Retention Window, Tamper Evidence, Event Log.
 
 **What it adds.** The composition that makes retention *defensible* — provably complete, provably ordered, provably unaltered. The emergent invariants: a record under a Legal Hold cannot be purged regardless of retention eligibility (Legal Hold overrides Retention Window); every retention decision (place, release hold; set retention; purge) is itself tamper-evident and attribution-stamped; the Audit Trail captures the full lifecycle of every retention decision, making the deletion of any record provably authorized.
 
@@ -221,7 +221,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 ### C2. Consent & Preference Management with Revocation Propagation
 
-**Prerequisites:** Consent *(new)* + existing: Audit Trail, Retention Window, Permissions, Event Log.
+**Prerequisites:** Consent *(grounded)* + existing: Audit Trail, Retention Window, Permissions, Event Log.
 
 **What it adds.** The composition that makes consent *operational* — checked before every processing action, propagated on revocation, and auditable for regulatory proof. The emergent invariants: no processing action proceeds under a Consent basis without a `permitted` result from the Consent instance for the relevant purpose scope; a revocation event triggers an audit record that names every downstream scope affected; the full consent history for any data subject is recoverable from the composition's records alone, without recourse to application code.
 
@@ -231,7 +231,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 ### C3. Forensic Recovery
 
-**Prerequisites:** Soft Delete *(new)* + existing: Event Log, Actor Identity, Audit Trail.
+**Prerequisites:** Soft Delete *(grounded)* + existing: Event Log, Actor Identity, Audit Trail.
 
 **What it adds.** The composition that makes soft deletion *forensically complete* — every deletion, restoration, and purge is attribution-stamped and tamper-evident; the full lifecycle of every soft-deleted record is recoverable from the audit trail. The emergent invariant: no soft-deleted record is purged without an auditable record naming who purged it, when, and under what authority; and no purge can be later denied.
 
@@ -241,7 +241,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 ### C4. Multi-Party Approval
 
-**Prerequisites:** Approval Step *(new)* + existing: Permissions, Assignment, Event Log, Actor Identity, Audit Trail.
+**Prerequisites:** Approval Step *(grounded; this composition is partially resolved — foundation round and Round 2 complete)* + existing: Permissions, Assignment, Event Log, Actor Identity, Audit Trail.
 
 **What it adds.** The composition that makes multi-actor authorization *auditably enforced* — no action proceeds until the required approval gates are cleared; the full approval chain (who approved, when, in what order, with what stated authority) is tamper-evident and attribution-stamped. The emergent invariants: a required approval gate cannot be bypassed; approvals are non-repudiable; the minimum quorum for an approval chain (one-of-N, all-of-N, threshold-of-N) is a deployment-configured property of the composition, not of the Approval Step atom.
 
@@ -251,7 +251,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 ### C5. Notification Fanout
 
-**Prerequisites:** Subscription *(in-progress, draft)* + Notification *(in-progress, draft)*.
+**Prerequisites:** Subscription *(grounded)* + Notification *(grounded)*. This composition is grounded.
 
 **What it adds.** The composition that delivers a single event to all subscribed actors, with delivery guarantees and observability. Depends on both messaging atoms reaching `grounded`. Listed here because it is already forecast in the messaging atoms' Composition notes and is the natural first composition from the messaging category.
 
@@ -259,7 +259,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 ### C6. Immutable Transaction Ledger with Selective Disclosure
 
-**Prerequisites:** Selective Disclosure *(new)* + existing: Event Log, Tamper Evidence, Actor Identity, Retention Window, Idempotent Reservation.
+**Prerequisites:** Selective Disclosure *(grounded)* + existing: Event Log, Tamper Evidence, Actor Identity, Retention Window, Idempotent Reservation.
 
 **What it adds.** The composition that makes a transaction record *both* non-repudiable *and* selectively shareable — the full ledger is tamper-evident and attribution-stamped; a subset of the ledger can be disclosed to a counterparty or regulator without breaking the integrity of the chain that remains. The emergent invariant: a disclosed subset is itself tamper-evident (the Selective Disclosure record names exactly what was shared); the undisclosed portion is not compromised by the disclosure.
 
@@ -269,7 +269,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 ### C7. Data Subject Rights Fulfillment (DSAR)
 
-**Prerequisites:** Legal Hold *(new)* + Consent *(new)* + Selective Disclosure *(new)* + existing: Audit Trail, Retention Window, Actor Identity, Event Log.
+**Prerequisites:** Legal Hold *(grounded)* + Consent *(grounded)* + Selective Disclosure *(grounded)* + existing: Audit Trail, Retention Window, Actor Identity, Event Log.
 
 **What it adds.** The composition that makes data subject rights *mechanically answerable* — a DSAR request triggers a structured query across the composition's constituent records; the response is provably complete (every record touching the data subject is accounted for), provably accurate (the Selective Disclosure record proves what was shared), and provably timely (the Audit Trail records when the request was received and when the response was dispatched). The emergent invariants: no record touching the data subject is omitted from the response without an auditable reason (active Legal Hold, third-party confidentiality obligation); every disclosure made in response to the DSAR is itself recorded in the Selective Disclosure store.
 
@@ -323,11 +323,11 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 |---|---------|------|-----------------|--------------------|----|
 | — | Subscription | Atom | — | — | Grounded |
 | — | Notification | Atom | — | — | Grounded |
-| 1 | Legal Hold | Atom | — | — | Grounded (last full rescan: 2026-05-13) |
-| 2 | Consent | Atom | — | — | Grounded (last full rescan: 2026-05-13) |
-| 3 | Soft Delete | Atom | — | — | Grounded (last full rescan: 2026-05-13) |
-| 4 | Approval Step | Atom | — | — | Grounded (last full rescan: 2026-05-13) |
-| 5 | Selective Disclosure | Atom | — | — | Grounded (last full rescan: 2026-05-13) |
+| 1 | Legal Hold | Atom | — | — | Grounded 26-05-13 |
+| 2 | Consent | Atom | — | — | Grounded 26-05-13 |
+| 3 | Soft Delete | Atom | — | — | Grounded 26-05-13 |
+| 4 | Approval Step | Atom | — | — | Grounded 26-05-13 |
+| 5 | Selective Disclosure | Atom | — | — | Grounded 26-05-13 |
 | 6 | Party Identity | Atom | — | — | Not started |
 | 7 | Provenance | Atom | — | — | Not started |
 | 8 | Capacity Constraint Enforcement | Atom | — | — | Not started |
@@ -338,11 +338,11 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | C3 | Forensic Recovery | Composition | Soft Delete | Event Log, Actor Identity, Audit Trail | Unblocked; not started |
 | C4 | Multi-Party Approval | Composition | Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Partially resolved — foundation round and Round 2 (human refinement) complete; AI adversarial round pending |
 | C5 | Notification Fanout | Composition | — | Subscription, Notification | Grounded |
-| C6 | Immutable Transaction Ledger | Composition | Selective Disclosure | Event Log, Tamper Evidence, Actor Identity, Retention Window, Idempotent Reservation | Blocked on #5 |
-| C7 | Data Subject Rights Fulfillment | Composition | Legal Hold, Consent, Selective Disclosure | Audit Trail, Retention Window, Actor Identity, Event Log | Blocked on #5 |
+| C6 | Immutable Transaction Ledger | Composition | Selective Disclosure | Event Log, Tamper Evidence, Actor Identity, Retention Window, Idempotent Reservation | Unblocked; not started |
+| C7 | Data Subject Rights Fulfillment | Composition | Legal Hold, Consent, Selective Disclosure | Audit Trail, Retention Window, Actor Identity, Event Log | Unblocked; not started |
 | C8 | KYC / Customer Onboarding | Composition | Party Identity, Consent | Audit Trail, Event Log, Idempotent Reservation, Retention Window, Actor Identity | Blocked on #6 |
 | C9 | Reservation Lifecycle | Composition | Capacity Constraint Enforcement | Provisional Commitment, Duplicate Prevention, Event Log, Actor Identity | Blocked on #8 |
-| C10 | Stateful Workflow Execution | Composition | Workflow / State Machine, Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Blocked on #4, #9 |
+| C10 | Stateful Workflow Execution | Composition | Workflow / State Machine, Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Blocked on #9 |
 | C11 | Preference-Aware Notification Fanout | Composition | Preference / Personalization | Subscription, Notification (grounded); Notification Fanout (grounded) | Blocked on #10 |
 
 ---
