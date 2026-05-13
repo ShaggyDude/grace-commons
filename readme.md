@@ -68,7 +68,8 @@ atoms/
 │   ├── duplicate-prevention     — temporally-bounded recency guard
 │   └── event-log                — append-only sequence of immutable events
 ├── resource-lifecycle/
-│   └── provisional-commitment   — Held → Confirmed | Released | Expired
+│   ├── provisional-commitment   — Held → Confirmed | Released | Expired
+│   └── soft-delete              — Active → Deleted → Purged; Deleted is reversible (unresolved)
 ├── compliance/
 │   ├── actor-identity           — verifiable action-to-actor binding
 │   ├── retention-window         — bounded record lifetime with no-early-purge

@@ -25,6 +25,7 @@ The same pattern appears across domains: a seat hold at an airline, an inventory
 ## Patterns in this category
 
 - [Provisional Commitment](./provisional-commitment.md) — a resource is held for a requester for a bounded window, then resolves into Confirmed, Released, or Expired. The lifecycle pattern behind credit-limit holds, bed assignments, inventory reservations, room bookings, and seat holds.
+- [Soft Delete](./soft-delete.md) — record marked deleted and hidden from normal queries, retained in recoverable form until explicit purge. Three states: Active, Deleted, Purged. Deleted is reversible; Purged is terminal. Anchors GDPR Article 17, HIPAA §164.310(d)(2)(i), FRCP Rule 37(e), SOX §802, and ISO 15489-1. `unresolved` — foundation round complete; human refinement and adversarial rounds pending.
 - Resource allocation with expiry — *(forthcoming)*
 - Idempotent reservation — *(forthcoming)*
 - Capacity constraint enforcement — *(forthcoming)*
