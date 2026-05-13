@@ -76,7 +76,8 @@ atoms/
 │   ├── tamper-evidence          — cryptographic detectability of record alteration
 │   ├── permissions              — grant-based access control with explicit revocation
 │   ├── legal-hold               — preservation obligation suspending purge (unresolved)
-│   └── consent                  — data subject agreement to named processing purpose (unresolved)
+│   ├── consent                  — data subject agreement to named processing purpose (unresolved)
+│   └── selective-disclosure     — append-only disclosure accountability record: recipient, scope, authority (partially resolved)
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
 │   └── notification             — delivery record for a single notification to a single recipient
