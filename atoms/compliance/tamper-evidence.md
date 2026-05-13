@@ -232,7 +232,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded` — all required structural elements resolved; identity model explicit; action signatures with fully-named rejection taxonomies including `storage-failure` and `mechanism-verification-unavailable`; nine invariants including seal store durability (Invariant 9) and mechanism-soundness qualification on Invariant 2; five cross-domain examples; regulated adversarial scenarios; eleven edge cases. Third entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
+`grounded — last full rescan: 2026-05-13` — all required structural elements resolved; identity model explicit; action signatures with fully-named rejection taxonomies including `storage-failure` and `mechanism-verification-unavailable`; nine invariants including seal store durability (Invariant 9) and mechanism-soundness qualification on Invariant 2; five cross-domain examples; regulated adversarial scenarios; eleven edge cases. Third entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
 
 ---
 

@@ -174,7 +174,7 @@ This is the generator's contract: any code generated from this application must 
 
 ## Status
 
-`grounded` — composition logic specified; emergent state (`token_results`) named with explicit `parameters_digest` specification requirements; action wiring covers all four state-changing surfaces with fully-named rejection taxonomies and explicit `action_type` check for all three transition actions; eight application-level invariants with Invariant 7 extended to address eviction ordering; walkthrough plus four cross-domain examples and four adversarial scenarios (token-collision added); edge cases enumerate deployment-shaped concerns. Second entry in `compositions/`. Survived one foundation pass and one refinement round.
+`grounded — last full rescan: 2026-05-13` — composition logic specified; emergent state (`token_results`) named with explicit `parameters_digest` specification requirements; action wiring covers all four state-changing surfaces with fully-named rejection taxonomies and explicit `action_type` check for all three transition actions; eight application-level invariants with Invariant 7 extended to address eviction ordering; walkthrough plus four cross-domain examples and four adversarial scenarios (token-collision added); edge cases enumerate deployment-shaped concerns. Second entry in `compositions/`. Survived one foundation pass and one refinement round.
 
 ---
 

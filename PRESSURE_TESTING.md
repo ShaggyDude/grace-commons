@@ -181,6 +181,12 @@ A pattern reaches the `grounded` status — the state declared in its Status sec
 - No muddled identity, sloppy invariants, happy-path-only examples, or hidden load-bearing decisions remain (Pass 3 clean).
 - All three conditions above have been confirmed by a final AI-conducted round (Phase 3), with findings recorded in Lineage notes.
 
+**Status line format.** The Status section of every grounded pattern carries a rescan date:
+
+> `` `grounded — last full rescan: YYYY-MM-DD` `` — [description of what was resolved]
+
+The date is the date of the most recent complete three-pass round. It is updated every time a touch triggers a re-pass. A pattern whose rescan date is significantly older than the current date — particularly one that predates atoms it now composes with — is a candidate for the next scheduled sweep.
+
 Patterns that have survived only one or two passes should not declare `grounded`. Patterns that have completed human refinement but not the AI round should declare `partially resolved`. Honest partial completion is more useful than false confidence.
 
 **Grandfathered patterns.** Patterns that reached `grounded` before the AI adversarial round was codified as a requirement are grandfathered at their current status. They have all completed at least one full three-pass round and carry self-documented Lineage notes — the foundation is sound. They will be brought to the full nine-pass standard in a dedicated re-pass sweep.

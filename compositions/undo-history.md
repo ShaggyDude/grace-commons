@@ -144,7 +144,7 @@ The two atoms it composes carry their own standards inheritance — Personal Tod
 
 ## Status
 
-`grounded` — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
+`grounded — last full rescan: 2026-05-13` — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
 
 ---
 
@@ -163,7 +163,7 @@ This application survived all three pressure-testing passes (see [`PRESSURE_TEST
 
 The composition's most architecturally interesting result — **identity preservation across delete/undo** (Invariant 6) — survived all three passes unchanged. It remains the showcase emergent property: neither Personal Todo nor Event Log carries it alone, and it falls out of the wiring rather than being designed in.
 
-The application is `grounded` after one round.
+The application is `grounded — last full rescan: 2026-05-13` after one round.
 
 **Refinement round 1.** Three findings, all closed in-pattern. Conventions inherited from the methodology directly.
 

@@ -240,7 +240,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded` — all required structural elements resolved; identity model explicit; transition preconditions with fully-named rejection taxonomies including `policy-not-found` and `storage-failure`; ten invariants including retention store durability (Invariant 10) and clock-qualified Invariant 8; five cross-domain examples; regulated adversarial scenarios; fourteen edge cases including concurrent retentions for the same record, purge persistence failure, and divergence between retention state and underlying record destruction (all added in refinement round 1). Second entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
+`grounded — last full rescan: 2026-05-13` — all required structural elements resolved; identity model explicit; transition preconditions with fully-named rejection taxonomies including `policy-not-found` and `storage-failure`; ten invariants including retention store durability (Invariant 10) and clock-qualified Invariant 8; five cross-domain examples; regulated adversarial scenarios; fourteen edge cases including concurrent retentions for the same record, purge persistence failure, and divergence between retention state and underlying record destruction (all added in refinement round 1). Second entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
 
 ---
 

@@ -176,7 +176,7 @@ What this composition does not cover:
 
 ## Status
 
-`grounded` — composition logic specified across all three constituent atoms; emergent application state (the two derived queries) named; cascade-on-delete rule stated as the load-bearing wiring decision; eight application-level invariants stated and justified; scope vocabulary defined with canonical seven scopes; action wiring covers all state-changing surfaces with permission-check-first discipline; three cross-domain examples (sprint board, support queue, clinical care plan) exercising role-based access and task handoff; edge cases enumerate the deployment-shaped concerns (per-task visibility, self-assignment, completion handling, concurrent races, revoked grants, audit trail, undo). Fourth entry in `compositions/`. The three-atom composition the library has been forecasting since Personal Todo landed.
+`grounded — last full rescan: 2026-05-13` — composition logic specified across all three constituent atoms; emergent application state (the two derived queries) named; cascade-on-delete rule stated as the load-bearing wiring decision; eight application-level invariants stated and justified; scope vocabulary defined with canonical seven scopes; action wiring covers all state-changing surfaces with permission-check-first discipline; three cross-domain examples (sprint board, support queue, clinical care plan) exercising role-based access and task handoff; edge cases enumerate the deployment-shaped concerns (per-task visibility, self-assignment, completion handling, concurrent races, revoked grants, audit trail, undo). Fourth entry in `compositions/`. The three-atom composition the library has been forecasting since Personal Todo landed.
 
 ---
 
