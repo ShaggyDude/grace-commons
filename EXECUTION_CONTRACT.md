@@ -1,6 +1,8 @@
 ---
 title: Execution Contract
 nav_order: 9
+has_toc: true
+toc: true
 ---
 
 # Execution Contract

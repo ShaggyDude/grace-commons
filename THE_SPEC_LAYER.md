@@ -1,6 +1,8 @@
 ---
 title: The Spec Layer
 nav_order: 2
+has_toc: true
+toc: true
 ---
 
 # The Spec Layer

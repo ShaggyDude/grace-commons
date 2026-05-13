@@ -3,6 +3,8 @@ title: Clinical Observation
 parent: Healthcare
 grand_parent: Atoms
 nav_order: 1
+has_toc: true
+toc: true
 ---
 
 # Clinical Observation

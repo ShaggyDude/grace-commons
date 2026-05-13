@@ -3,6 +3,8 @@ title: Actor Identity
 parent: Compliance
 grand_parent: Atoms
 nav_order: 1
+has_toc: true
+toc: true
 ---
 
 # Actor Identity

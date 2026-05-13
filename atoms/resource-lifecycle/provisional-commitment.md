@@ -3,6 +3,8 @@ title: Provisional Commitment
 parent: Resource Lifecycle
 grand_parent: Atoms
 nav_order: 1
+has_toc: true
+toc: true
 ---
 
 # Provisional Commitment

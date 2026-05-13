@@ -4,6 +4,8 @@ parent: Atoms
 nav_order: 5
 has_children: true
 permalink: /atoms/messaging/
+has_toc: true
+toc: true
 ---
 
 # Messaging atoms

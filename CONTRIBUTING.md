@@ -1,6 +1,8 @@
 ---
 title: Contributing
 nav_order: 4
+has_toc: true
+toc: true
 ---
 
 # Contributing to Grace Commons

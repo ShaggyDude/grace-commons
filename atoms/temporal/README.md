@@ -4,6 +4,8 @@ parent: Atoms
 has_children: true
 nav_order: 2
 permalink: /atoms/temporal/
+has_toc: true
+toc: true
 ---
 
 # Temporal Patterns

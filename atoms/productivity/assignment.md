@@ -3,6 +3,8 @@ title: Assignment
 parent: Productivity
 grand_parent: Atoms
 nav_order: 2
+has_toc: true
+toc: true
 ---
 
 # Assignment

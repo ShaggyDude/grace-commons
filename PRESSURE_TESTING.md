@@ -1,6 +1,8 @@
 ---
 title: Pressure Testing
 nav_order: 3
+has_toc: true
+toc: true
 ---
 
 # Pressure Testing

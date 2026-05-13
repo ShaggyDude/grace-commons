@@ -4,6 +4,8 @@ parent: Atoms
 has_children: true
 nav_order: 4
 permalink: /atoms/resource-lifecycle/
+has_toc: true
+toc: true
 ---
 
 # Resource Lifecycle Patterns

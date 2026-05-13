@@ -3,6 +3,8 @@ title: Permissions
 parent: Compliance
 grand_parent: Atoms
 nav_order: 4
+has_toc: true
+toc: true
 ---
 
 # Permissions

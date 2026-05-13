@@ -2,6 +2,8 @@
 title: Shared Todo
 parent: Compositions
 nav_order: 4
+has_toc: true
+toc: true
 ---
 
 # Shared Todo

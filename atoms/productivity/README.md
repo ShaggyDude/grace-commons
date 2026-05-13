@@ -4,6 +4,8 @@ parent: Atoms
 has_children: true
 nav_order: 1
 permalink: /atoms/productivity/
+has_toc: true
+toc: true
 ---
 
 # Productivity Patterns

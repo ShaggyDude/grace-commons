@@ -2,6 +2,8 @@
 title: Notification Fanout
 parent: Compositions
 nav_order: 5
+has_toc: true
+toc: true
 ---
 
 # Notification Fanout

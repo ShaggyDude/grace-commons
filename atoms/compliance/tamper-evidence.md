@@ -3,6 +3,8 @@ title: Tamper Evidence
 parent: Compliance
 grand_parent: Atoms
 nav_order: 3
+has_toc: true
+toc: true
 ---
 
 # Tamper Evidence

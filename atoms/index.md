@@ -3,6 +3,8 @@ title: Atoms
 nav_order: 5
 has_children: true
 permalink: /atoms/
+has_toc: true
+toc: true
 ---
 
 # Atoms

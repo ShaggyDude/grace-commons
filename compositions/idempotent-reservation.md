@@ -2,6 +2,8 @@
 title: Idempotent Reservation
 parent: Compositions
 nav_order: 2
+has_toc: true
+toc: true
 ---
 
 # Idempotent Reservation

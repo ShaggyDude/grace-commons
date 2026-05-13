@@ -3,6 +3,8 @@ title: Event Log
 parent: Temporal
 grand_parent: Atoms
 nav_order: 2
+has_toc: true
+toc: true
 ---
 
 # Event Log

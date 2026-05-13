@@ -2,6 +2,8 @@
 title: Audit Trail
 parent: Compositions
 nav_order: 3
+has_toc: true
+toc: true
 ---
 
 # Audit Trail

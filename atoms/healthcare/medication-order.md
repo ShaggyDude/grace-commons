@@ -2,7 +2,9 @@
 title: Medication Order
 parent: Healthcare
 grand_parent: Atoms
-nav_order: 2
+nav_order: 1
+has_toc: true
+toc: true
 ---
 
 # Medication Order
