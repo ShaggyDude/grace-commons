@@ -336,7 +336,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | C1 | Regulated Record Retention & Defensible Deletion | Composition | Legal Hold | Audit Trail, Retention Window, Tamper Evidence, Event Log | Unblocked; not started |
 | C2 | Consent & Preference Management | Composition | Consent | Audit Trail, Retention Window, Permissions, Event Log | Unblocked; not started |
 | C3 | Forensic Recovery | Composition | Soft Delete | Event Log, Actor Identity, Audit Trail | Unblocked; not started |
-| C4 | Multi-Party Approval | Composition | Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Partially resolved — foundation round complete; AI adversarial round pending |
+| C4 | Multi-Party Approval | Composition | Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Partially resolved — foundation round and Round 2 (human refinement) complete; AI adversarial round pending |
 | C5 | Notification Fanout | Composition | — | Subscription, Notification | Grounded |
 | C6 | Immutable Transaction Ledger | Composition | Selective Disclosure | Event Log, Tamper Evidence, Actor Identity, Retention Window, Idempotent Reservation | Blocked on #5 |
 | C7 | Data Subject Rights Fulfillment | Composition | Legal Hold, Consent, Selective Disclosure | Audit Trail, Retention Window, Actor Identity, Event Log | Blocked on #5 |
