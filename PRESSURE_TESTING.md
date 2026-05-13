@@ -5,7 +5,7 @@ nav_order: 3
 
 # Pressure Testing
 
-> The foundation review every Grace Commons pattern survives before being considered grounded — three mandatory initial passes followed by as many refinement passes as the pattern requires.
+> The foundation review every Grace Commons pattern survives before being considered grounded — three mandatory initial passes, as many human refinement rounds as the pattern requires, and a mandatory final AI-conducted adversarial round. Minimum standard: three rounds of three passes each, nine passes total, with the final round conducted by a high-functioning AI reviewer.
 
 A pattern's spec is incomplete in three different ways at once. Each of the three passes below catches a different class of incompleteness. None substitutes for the others. Together they constitute the mandatory foundation for atoms (in `atoms/`) and compositions (in `compositions/`).
 
@@ -158,7 +158,17 @@ The motivating evidence is from the library's own first refinement sweep. Shared
 
 The practical rule: before beginning a library-wide refinement sweep, topologically sort the files. If a composition's refinement reveals that a constituent's details are needed but not yet confirmed, pause the composition and refine the constituent first. This is not a performance optimization — it is a correctness requirement for the cross-reference surface the library accumulates.
 
-**Skipping is not an option.** Each pass catches a different class of gap. A pattern that has only survived Pass 1 is structurally complete but probably absorbs concerns it shouldn't and contains hidden decisions. A pattern that has only survived Pass 3 is precise but may be missing entire GRID nodes. Either is incomplete. Refinement passes do not substitute for the foundation — they extend it.
+**Phase 3 — Final AI adversarial round: mandatory before `grounded`.** After human refinement rounds have settled, one complete round of all three passes is conducted by a high-functioning AI reviewer before the pattern can declare `grounded`. This is not a repeat of Phase 2 — it is a structurally different kind of scrutiny. A human author who has written and revised a spec has emotional investment in the choices, accumulated blind spots from having reasoned through each decision, and a mental model that paper over gaps the written text does not actually close. An AI reviewer has none of these: it reads only what is written, applies the same pass questions without fatigue or sympathy, and has no stake in the outcome.
+
+The AI round runs all three passes, not Pass 3 alone. Pass 1 and Pass 2 benefit from the same fresh-reader quality: the AI checks GRID completeness against what the spec actually says, not what the author knows it means; and it applies the EOS extraction test without the author's sense of "we already talked about this." Pass 3 is where the AI's adversarial posture is most distinctive — it will surface muddled identity, sloppy invariants, and happy-path-only examples that a sympathetic human reviewer may rationalize past.
+
+**What counts as a high-functioning AI reviewer.** The bar is not model-specific — it is prompt discipline and structured question coverage. The AI must be given the full pass question sets from this document, the pattern under review in full, and no additional context about the author's intent beyond what the spec itself states. The reviewer's job is to surface findings, not to guess what the author meant. A review that paraphrases the spec back is not a pass — it is a read. A pass produces findings, named as findings, or a clean result with explicit confirmation that each question was applied and no gap was found.
+
+**Recording the AI round in Lineage notes.** AI-conducted rounds are recorded in the same format as human rounds, but distinguished: the entry notes "AI-conducted round" and names the model used. This is not for model attribution — it is for reproducibility. A future reader who wants to re-run the round knows what prompt discipline and reviewer type produced the original findings. Findings closed in the AI round are recorded the same way as findings closed in human rounds: what was found, how it was resolved.
+
+**The minimum standard stated plainly.** Three rounds × three passes = nine passes minimum. Round 1 is the foundation (Pass 1 → 2 → 3, once each). Rounds 2 through N−1 are human refinement, running until a complete round surfaces no new findings. Round N is the AI adversarial round, running all three passes with fresh-reader discipline. A pattern that has not completed the AI round has not met the minimum standard and should not declare `grounded`, regardless of how many human rounds it has survived.
+
+**Skipping is not an option.** Each pass catches a different class of gap. A pattern that has only survived Pass 1 is structurally complete but probably absorbs concerns it shouldn't and contains hidden decisions. A pattern that has only survived Pass 3 is precise but may be missing entire GRID nodes. Either is incomplete. Refinement passes do not substitute for the foundation — they extend it. The AI round does not substitute for human refinement — it concludes it.
 
 ---
 
@@ -169,8 +179,13 @@ A pattern reaches the `grounded` status — the state declared in its Status sec
 - All nine GRID nodes are resolved (Pass 1 clean).
 - All concerns belong to the pattern they're in; no over-absorptions remain (Pass 2 clean).
 - No muddled identity, sloppy invariants, happy-path-only examples, or hidden load-bearing decisions remain (Pass 3 clean).
+- All three conditions above have been confirmed by a final AI-conducted round (Phase 3), with findings recorded in Lineage notes.
 
-Patterns that have survived only one or two passes should not declare `grounded`. They should declare their actual status (`unresolved`, `partially resolved`) per MUSE v1.1's completeness states. Honest partial completion is more useful than false confidence.
+Patterns that have survived only one or two passes should not declare `grounded`. Patterns that have completed human refinement but not the AI round should declare `partially resolved`. Honest partial completion is more useful than false confidence.
+
+**Grandfathered patterns.** Patterns that reached `grounded` before the AI adversarial round was codified as a requirement are grandfathered at their current status. They have all completed at least one full three-pass round and carry self-documented Lineage notes — the foundation is sound. They will be brought to the full nine-pass standard in a dedicated re-pass sweep.
+
+**Touch triggers re-pass.** Any edit to a grounded pattern — invariant change, action signature update, new edge case, corrected cross-reference — requires a full three-pass round before the pattern may retain its `grounded` status. The AI round is included. This is not punitive; it is the mechanism that keeps `grounded` meaningful as the library grows. A pattern touched without a re-pass should be downgraded to `partially resolved` until the round completes.
 
 ---
 
