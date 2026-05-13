@@ -69,14 +69,14 @@ atoms/
 │   └── event-log                — append-only sequence of immutable events
 ├── resource-lifecycle/
 │   ├── provisional-commitment   — Held → Confirmed | Released | Expired
-│   └── soft-delete              — Active → Deleted → Purged; Deleted is reversible (unresolved)
+│   └── soft-delete              — Active → Deleted → Purged; Deleted is reversible (grounded)
 ├── compliance/
 │   ├── actor-identity           — verifiable action-to-actor binding
 │   ├── retention-window         — bounded record lifetime with no-early-purge
 │   ├── tamper-evidence          — cryptographic detectability of record alteration
 │   ├── permissions              — grant-based access control with explicit revocation
-│   ├── legal-hold               — preservation obligation suspending purge (unresolved)
-│   ├── consent                  — data subject agreement to named processing purpose (unresolved)
+│   ├── legal-hold               — preservation obligation suspending purge (grounded)
+│   ├── consent                  — data subject agreement to named processing purpose (grounded)
 │   └── selective-disclosure     — append-only disclosure accountability record: recipient, scope, authority (grounded)
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
