@@ -9,7 +9,7 @@ toc: true
 
 # Tamper Evidence
 
-<details open markdown="block">
+<details markdown="block">
   <summary>Table of contents</summary>
   {: .text-delta }
 1. TOC
