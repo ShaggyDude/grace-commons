@@ -13,7 +13,7 @@ toc: true
   <summary>Table of contents</summary>
   {: .text-delta }
 1. TOC
-{:toc}
+  {:toc}
 </details>
 
 > A compliance primitive: a durable, append-only record of every disclosure of subject data — to whom it was disclosed, what scope of data was shared, under what authority, and at what time. The atom does not perform disclosures, redact records, or transmit data; it records that a disclosure occurred. Each disclosure event produces one immutable disclosure record with an opaque immutable id; the subject reference, recipient, scope, authority, and timestamp are immutable properties set at recording time. The record set is append-only; no disclosure record is modified or deleted. Two actions: `record` creates a disclosure record; `read` queries the disclosure store.
@@ -54,16 +54,16 @@ The Selective Disclosure atom operates against a named store instance. A `store_
 
 Each disclosure record has an opaque, immutable, system-generated `disclosure_id` — assigned on `record`, never reused, never reassigned within the store instance. It must be a non-empty string sortable in lexicographic byte-order; this property is required for deterministic `read` ordering. The id is the disclosure record's identity; the subject reference, recipient, scope, authority, and timestamp are properties of the record, not its identity.
 
-`subject_ref` is an opaque reference to the data subject whose data was disclosed. Set on `record`, immutable. The atom does not validate that the subject exists in any other system — `subject_ref` is the caller's responsibility. Two disclosure records for the same subject have distinct `disclosure_id`s; each is its own audit record.
+`subject_ref` is an opaque string provided by the calling system identifying the data subject whose data was disclosed. The atom does not interpret `subject_ref` semantics — it may be a user id, a system-generated record id, an account number, or any other reference the calling system uses to identify data subjects. The atom does not validate that the subject exists in any other system. Must contain at least one non-whitespace character. Set on `record`, immutable. Two disclosure records for the same subject have distinct `disclosure_id`s; each is its own audit record.
 
 `recipient` is a non-empty string naming the party to whom the data was disclosed. Set on `record`, immutable. This is the entity that received the disclosed data — a regulator's identifier, a counterparty's name, a business unit's id, a research institution's reference. The atom does not interpret recipient semantics or validate that the recipient is a known party in any external system. Must contain at least one non-whitespace character.
 
-`scope` is a non-empty string naming what subset of the subject's data was disclosed. Set on `record`, immutable. The atom does not interpret scope semantics — it records the scope as declared by the calling system. Examples: `"medical-record:summary"`, `"financial:transaction-history:2023"`, `"personal-data:contact-fields"`. Must contain at least one non-whitespace character.
+`scope` is an opaque string provided by the calling system naming what subset of the subject's data was disclosed. Set on `record`, immutable. The atom does not interpret scope semantics — it records the scope as declared by the calling system, with no validation of format, vocabulary, or accuracy. The scope string format, naming convention, and vocabulary are entirely the calling system's concern; the atom does not impose or validate any structure. Illustrative examples (not a required format): `"medical-record:summary"`, `"financial:transaction-history:2023"`, `"personal-data:contact-fields"`. Must contain at least one non-whitespace character.
 
 `authority` is a structured field — a record with exactly two sub-fields — naming the legal or contractual basis under which the disclosure was made:
 
 - `authority.type` — one of exactly three named values: `consent`, `legal-hold`, or `regulatory`. No other values are valid.
-- `authority.reference` — an opaque string identifying the specific authority: a Consent record id for `type: consent`, a Legal Hold id for `type: legal-hold`, or a regulatory requirement citation for `type: regulatory` (for example, `"HIPAA §164.512(b) — public health reporting"` or `"GDPR Article 6(1)(c) — legal obligation"`). Must contain at least one non-whitespace character.
+- `authority.reference` — an opaque string the calling system provides to identify the specific authority. The atom does not validate the content of this string against any external store — it enforces only that the string contains at least one non-whitespace character. The calling system is responsible for providing a meaningful reference: a Consent record id when `type` is `consent`, a Legal Hold id when `type` is `legal-hold`, or a regulatory requirement citation when `type` is `regulatory` (for example, `"HIPAA §164.512(b) — public health reporting"` or `"GDPR Article 6(1)(c) — legal obligation"`). A caller that passes a `type: consent` authority with a regulatory citation string as `authority.reference` will not be rejected by this atom — the calling system must ensure semantic consistency. Must contain at least one non-whitespace character.
 
 The three authority types cover the complete space of legitimate disclosure authorities: data-subject authorization (`consent`), legal compulsion (`legal-hold`), and regulatory mandate (`regulatory`). A disclosure not falling into one of these three categories is not a legitimate disclosure; the atom's rejection of any other `authority.type` value is a structural enforcement of that bound. The separation into type and reference keeps the `authority` field machine-queryable by type while preserving a human-readable reference string.
 
@@ -82,9 +82,11 @@ For optional parameters in `record`, "supplied" means provided as a parseable va
 
 - `read(filters) → results | rejected(invalid-query)` — query the disclosure store and return matching disclosure records. Results are ordered by `disclosed_at` ascending, then by `disclosure_id` ascending in lexicographic byte-order as a stable tiebreaker. Implementations must assign `disclosure_id` values in a format where string byte-order sort produces a total order (e.g., ULID, UUID v7, or zero-padded integer string). The supported filter axes are exactly: `disclosure_id`, `subject_ref`, `recipient`, `authority_type`, and `disclosed_at` (as a time range). Any combination of supported axes is valid. A query supplying only a `disclosure_id` returns at most one record. A well-formed query matching no records returns an empty sequence, not a rejection — an empty result means no disclosures matching the filters have been recorded, which is itself a meaningful compliance answer (the system has not disclosed subject data in the queried scope). A query with no filters returns every record in the store.
 
-  The `authority_type` filter axis takes one of {`consent`, `legal-hold`, `regulatory`} as its value; it matches records where `authority.type` equals that value. It is distinct from `authority.reference` — reference-level filtering is not supported by this atom; reference searches are a composing-layer concern.
+  The `authority_type` filter axis takes one of {`consent`, `legal-hold`, `regulatory`} as its value; it matches records where `authority.type` equals that value. The filter key is `authority_type` (underscore-separated, flat key) because filter keys are flat strings, not dot-notation paths — this is distinct from the stored field path `authority.type`. It is distinct from `authority.reference` — reference-level filtering is not supported by this atom; reference searches are a composing-layer concern.
 
-  **Malformed-query rules (`invalid-query`):** a `disclosure_id`, `subject_ref`, or `recipient` filter value that is null, empty, or whitespace-only is `invalid-query`. An `authority_type` filter value that is not one of {`consent`, `legal-hold`, `regulatory`} is `invalid-query`. A time range on `disclosed_at` with end before start is `invalid-query`. A query carrying an unrecognized filter key — any key outside the five supported axes named above — is `invalid-query`; an unrecognized key is rejected rather than silently ignored, because silent ignore would return a result set inconsistent with the caller's intent.
+  The `disclosed_at` time range filter uses two optional sub-keys: `after` (inclusive lower bound) and `before` (inclusive upper bound). A record matches if its `disclosed_at` satisfies `after ≤ disclosed_at ≤ before`. Either sub-key may be omitted: omitting `after` means no lower bound; omitting `before` means no upper bound. A range with only `after` matches all records at or after that time; a range with only `before` matches all records at or before that time; a range with both sub-keys matches records in the closed interval. Both bounds are inclusive.
+
+  **Malformed-query rules (`invalid-query`):** a `disclosure_id`, `subject_ref`, or `recipient` filter value that is null, empty, or whitespace-only is `invalid-query`. An `authority_type` filter value that is not one of {`consent`, `legal-hold`, `regulatory`} is `invalid-query`. A time range on `disclosed_at` where the `before` value is earlier than the `after` value is `invalid-query`. A query carrying an unrecognized filter key — any key outside the five supported axes named above — is `invalid-query`; an unrecognized key is rejected rather than silently ignored, because silent ignore would return a result set inconsistent with the caller's intent.
 
 ### Outputs
 
@@ -110,7 +112,7 @@ Fields on every disclosure record: `disclosure_id`, `subject_ref`, `recipient`, 
 
 - **At `record`** — field-level checks complete first (rejection reason: `invalid-request`): `subject_ref`, `recipient`, `scope`, and `authority.reference` must each contain at least one non-whitespace character; `authority` must be present as a structured field carrying both `type` and `reference` sub-fields; the resolved `disclosed_at` — caller-supplied or wall-clock-defaulted — must not be in the future. All field-level preconditions are checked before the authority type is evaluated. Then semantic check: `authority.type` must be one of {`consent`, `legal-hold`, `regulatory`}; any other value is `unknown-authority-type`. Then persistence: `storage-failure` if the store write fails. Rejection priority: `invalid-request` → `unknown-authority-type` → `storage-failure`.
 
-- **At `read`** — every supplied filter value must be well-formed for its axis. A `disclosure_id`, `subject_ref`, or `recipient` filter value that is null, empty, or whitespace-only is `invalid-query`. An `authority_type` filter value not in {`consent`, `legal-hold`, `regulatory`} is `invalid-query`. A time range on `disclosed_at` with end before start is `invalid-query`. An unrecognized filter key — any key outside the five supported axes — is `invalid-query`; the spec rejects rather than ignores unknown keys. A well-formed query matching no records returns an empty sequence.
+- **At `read`** — every supplied filter value must be well-formed for its axis. A `disclosure_id`, `subject_ref`, or `recipient` filter value that is null, empty, or whitespace-only is `invalid-query`. An `authority_type` filter value not in {`consent`, `legal-hold`, `regulatory`} is `invalid-query`. A `disclosed_at` time range where `before` is earlier than `after` is `invalid-query`; omitting either bound is valid. An unrecognized filter key — any key outside the five supported axes — is `invalid-query`; the spec rejects rather than ignores unknown keys. A well-formed query matching no records returns an empty sequence.
 
 ### Behavior
 
@@ -126,13 +128,13 @@ Fields on every disclosure record: `disclosure_id`, `subject_ref`, `recipient`, 
 - After `record` — a new disclosure record exists in the store; `disclosure_id`, `subject_ref`, `recipient`, `scope`, `authority.type`, `authority.reference`, and `disclosed_at` are set and immutable. The `disclosure_id` is returned as `recorded(disclosure_id)`.
 - After `read` — no state change. A (possibly empty) ordered sequence of disclosure records is returned. Each record carries its full field set.
 
-Each rejected `record` action produces an observable refusal naming the failed precondition.
+Each rejected `record` action produces an observable refusal naming the failed precondition. Each rejected `read` action produces an observable refusal: `invalid-query`, naming the filter axis or condition that was malformed.
 
 ### Invariants
 
 - **Invariant 1 — Record immutability.** After a successful `record`, the fields `disclosure_id`, `subject_ref`, `recipient`, `scope`, `authority.type`, `authority.reference`, and `disclosed_at` never change, regardless of any subsequent action. There is no action in this atom that modifies a stored disclosure record.
 
-- **Invariant 2 — Authority completeness.** Every disclosure record in the store carries `authority.type` as one of {`consent`, `legal-hold`, `regulatory`} and `authority.reference` containing at least one non-whitespace character. A disclosure record with a missing `authority` field, an unrecognized `authority.type`, or an empty `authority.reference` is a conformance failure — it cannot answer the regulator's question *"under what authority was this disclosure made?"* and defeats the accountability purpose of the atom.
+- **Invariant 2 — Authority completeness.** Every disclosure record in the store carries `authority.type` as one of {`consent`, `legal-hold`, `regulatory`} and `authority.reference` containing at least one non-whitespace character. This invariant holds because the `record` action rejects any call that does not satisfy these conditions before the record is written — `invalid-request` for structural or content violations, `unknown-authority-type` for an unrecognized `authority.type`. The store-level assertion and the action-level enforcement are the same guarantee stated at different scopes. A disclosure record with a missing `authority` field, an unrecognized `authority.type`, or an empty `authority.reference` is a conformance failure — it cannot answer the regulator's question *"under what authority was this disclosure made?"* and defeats the accountability purpose of the atom.
 
 - **Invariant 3 — Field completeness.** Every disclosure record in the store carries `disclosure_id`, `subject_ref`, `recipient`, `scope`, `authority.type`, `authority.reference`, and `disclosed_at` each set to a non-absent value. `subject_ref`, `recipient`, `scope`, and `authority.reference` each contain at least one non-whitespace character. `disclosed_at` is a timestamp that is set. No field may be null, missing, or (for strings) whitespace-only in a conforming record. A record missing any field is a conformance failure.
 
@@ -210,6 +212,22 @@ record(
 
 `type: "legitimate-interest"` is not one of {`consent`, `legal-hold`, `regulatory`}. The rejection is `unknown-authority-type` because all field-level checks pass — `subject_ref`, `recipient`, `scope`, `authority.reference` are all non-empty and well-formed — but the authority type semantic check fails. No record is created.
 
+### Happy path — Legal-Hold-compelled disclosure to a regulatory investigator
+
+A financial institution is subject to an active Legal Hold (`lh-5502`) requiring preservation and disclosure of transaction records to an SEC investigation team. The institution discloses the records and calls:
+
+```
+record(
+  subject_ref: "account-sub-0187",
+  recipient: "SEC-investigation-team-ENF-2026-04",
+  scope: "financial-data:transaction-records:2023-2025",
+  authority: { type: "legal-hold", reference: "lh-5502" }
+)
+→ recorded(disclosure_id: "disc-0101")
+```
+
+`disclosed_at` is wall-clock-defaulted. The record is in the store. When the SEC examiner requests the institution's disclosure accounting under Rule 17a-4, this record confirms the compelled disclosure was made, names the legal process under which it was made, and identifies the receiving team. The accounting is complete from the records alone.
+
 ### Rejection path — future-dated `disclosed_at`
 
 A calling system mistakenly supplies a timestamp in the future:
@@ -226,6 +244,32 @@ record(
 ```
 
 The resolved `disclosed_at` is in the future relative to the receiving node's wall clock. A disclosure cannot be recorded as having occurred before it has happened. No record is created.
+
+### Non-idempotent behavior — duplicate `record` calls for the same event
+
+A calling system experiences a network timeout after sending a `record` call and cannot determine whether the call succeeded. It retries with the same parameters:
+
+```
+record(
+  subject_ref: "patient-sub-7842",
+  recipient: "oncology-research-partner-RP3",
+  scope: "medical-record:de-identified:oncology-fields",
+  authority: { type: "consent", reference: "consent-8821" },
+  disclosed_at: "2026-05-13T10:15:00Z"
+)
+→ recorded(disclosure_id: "disc-0102")   ← first call (if it succeeded)
+
+record(
+  subject_ref: "patient-sub-7842",
+  recipient: "oncology-research-partner-RP3",
+  scope: "medical-record:de-identified:oncology-fields",
+  authority: { type: "consent", reference: "consent-8821" },
+  disclosed_at: "2026-05-13T10:15:00Z"
+)
+→ recorded(disclosure_id: "disc-0103")   ← second call (retry)
+```
+
+Both calls succeed. The store now contains two disclosure records — `disc-0102` and `disc-0103` — with identical fields but distinct `disclosure_id`s. This is correct behavior: `record` is not idempotent. An auditor querying the store will see two records for the same event. If the calling system needs at-most-once semantics under retry conditions, it must compose with [Duplicate Prevention](../temporal/duplicate-prevention.md). The atom provides no deduplication mechanism.
 
 ---
 
@@ -255,6 +299,8 @@ During a security incident investigation, the incident response team needs to es
 read({disclosed_at: {after: "2026-05-10T00:00:00Z", before: "2026-05-12T23:59:59Z"}})
 ```
 
+The `after` and `before` bounds are both inclusive: this query returns all records where `2026-05-10T00:00:00Z ≤ disclosed_at ≤ 2026-05-12T23:59:59Z`.
+
 The result is every disclosure record in the window. The team reviews each record: was each recipient a legitimate recipient? Does each authority reference correspond to a valid Consent record, a real Legal Hold, or a genuine regulatory mandate? Are there records naming recipients the team does not recognize as authorized parties?
 
 Because Invariant 6 guarantees the store is append-only and no record can be deleted, the team can rely on the completeness of the result — any disclosure that was recorded is in the result; any gap between a known disclosure event and the result set is a system conformance failure under Invariant 5 (no-disclosure-unrecorded). The forensic question *"what data left the system in this window?"* is answerable from the records alone. A subsequent query `read({disclosed_at: {after: "2026-05-10T00:00:00Z", before: "2026-05-12T23:59:59Z"}, authority_type: "consent"})` returns only consent-authorized disclosures in the window, enabling the team to compare the consent-authorized set against the full set and identify any records with `authority_type: legal-hold` or `authority_type: regulatory` that warrant additional scrutiny.
@@ -265,7 +311,7 @@ Because Invariant 6 guarantees the store is append-only and no record can be del
 
 Any implementation derived from this atom must produce records and a runtime surface that pass the following checks from the records alone, without recourse to source code, runbooks, or developer narration:
 
-1. **Disclosure record completeness check.** For a set of `disclosure_id`s known to have been issued, confirm that `read({disclosure_id: X})` returns each of them. No issued `disclosure_id` may be absent from the store. An implementation that loses records after creation fails this check.
+1. **Disclosure record completeness check.** Issue `record` calls for at least three distinct subjects and capture the `disclosure_id` returned in each `recorded(disclosure_id)` response. These are the ground-truth `disclosure_id`s for this check — they are established from the action's return values, not inferred from the store. Then confirm that `read({disclosure_id: X})` returns a matching record for each captured `disclosure_id`. No issued `disclosure_id` may be absent from the store. An implementation that loses records after creation, or that issues a `disclosure_id` in the return value but fails to write the record, fails this check. Note: an in-production auditor using only the disclosure store cannot enumerate all `disclosure_id`s that have ever been issued; this check applies to test environments where the `record` call responses are observable. In production, check 3 (record immutability check) covers the store's append-only guarantee.
 
 2. **Field completeness check.** For every disclosure record in the store: confirm that `disclosure_id`, `subject_ref`, `recipient`, `scope`, `authority.type`, `authority.reference`, and `disclosed_at` are each present and non-null. Confirm that `subject_ref`, `recipient`, `scope`, and `authority.reference` each contain at least one non-whitespace character. Confirm that `disclosed_at` is a set timestamp. Confirm that `authority.type` is one of {`consent`, `legal-hold`, `regulatory`}. A record missing any field or carrying a whitespace-only string field or an unrecognized `authority.type` is a conformance failure under Invariants 2 and 3.
 
@@ -283,7 +329,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 - **The atom does not perform disclosures.** The atom records that a disclosure occurred; it does not retrieve subject data, apply redaction or anonymization, route data to recipients, or validate that the disclosed data matches the declared scope. All of these are the calling system's concern. The `scope` field is the calling system's declaration of what was disclosed; the atom does not verify it. A system that records `scope: "contact-fields-only"` but actually transmitted the full medical record has produced an inaccurate disclosure record — this is a calling-system failure, not an atom failure.
 
-- **Authority reference validation is the calling system's obligation.** For `authority.type: consent`, the atom does not validate that `authority.reference` is a real Consent record id, that the Consent record is in a valid state, or that the disclosure scope falls within the Consent's granted scope. For `authority.type: legal-hold`, the atom does not validate that `authority.reference` is a real Legal Hold id or that the hold is Active. For `authority.type: regulatory`, the atom does not validate that the regulatory citation is accurate or applicable. All validation of authority reference validity is the calling system's obligation. The atom enforces only structural completeness: that the `authority` field is present, that `type` is one of the three named values, and that `reference` contains at least one non-whitespace character.
+- **Authority reference validation is the calling system's obligation.** For `authority.type: consent`, the atom does not validate that `authority.reference` is a real Consent record id, that the Consent record is in a valid state, or that the disclosure scope falls within the Consent's granted scope. For `authority.type: legal-hold`, the atom does not validate that `authority.reference` is a real Legal Hold id or that the hold is Active. For `authority.type: regulatory`, the atom does not validate that the regulatory citation is accurate or applicable. A caller can pass `authority: { type: "consent", reference: "some-regulatory-citation" }` and the atom will accept it — `authority.reference` is opaque to the atom. All validation of authority reference content and semantic consistency with `authority.type` is the calling system's obligation. The atom enforces only structural completeness: that the `authority` field is present, that `type` is one of the three named values, and that `reference` contains at least one non-whitespace character.
 
 - **`record` is not idempotent.** Two `record` calls with the same parameters create two independent disclosure records with distinct `disclosure_id`s. If the calling system needs at-most-once semantics under retry conditions — for example, when a disclosure is recorded in a distributed system and the network acknowledgment is lost — compose with [Duplicate Prevention](../temporal/duplicate-prevention.md).
 
@@ -301,7 +347,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 - **Non-repudiation of the recording actor.** The atom records that a `record` call was made and what it contained; it does not record who made the call or bind a cryptographic proof to the recording action. If the calling system's identity must be non-repudiably bound to the disclosure record — for example, to prove that the compliance officer who recorded a disclosure actually made the call — compose with [Actor Identity](./actor-identity.md). The disclosure record is the gate; Actor Identity provides the signature.
 
-- **Clock semantics.** `disclosed_at` defaults to the receiving node's wall clock when not supplied by the caller. The resolved `disclosed_at` must not be in the future — enforced at the Decision point against the resolved value regardless of whether it was caller-supplied or wall-clock-defaulted. Backdated `disclosed_at` values are accepted — documenting a disclosure that was recognized or reported after the fact is valid in some regulated contexts, including breach notification timelines — but a backdated value records the declared disclosure time, not the current time. Regulators may scrutinize backdated disclosure timestamps; the atom records the truth as the caller declares it. Clock skew, timezone normalization, and monotonicity are deployment concerns.
+- **Clock semantics.** `disclosed_at` defaults to the receiving node's wall clock when not supplied by the caller. The resolved `disclosed_at` must not be in the future — enforced at the Decision point against the resolved value regardless of whether it was caller-supplied or wall-clock-defaulted. Note: clock skew between the caller's clock and the receiving node's clock can cause a legitimate caller-supplied `disclosed_at` to be rejected as "in the future" — a caller whose clock is ahead of the receiving node by even a small margin may supply a value that is in the future relative to the receiving node. Deployments that accept caller-supplied `disclosed_at` values must account for clock skew; this is a deployment concern. Backdated `disclosed_at` values are accepted with no lower-bound constraint — the atom does not reject timestamps that predate the store's creation or any other lower bound. Documenting a disclosure recognized or reported after the fact is valid in some regulated contexts, including breach notification timelines. Extreme backdating (timestamps predating the subject's records, the system's existence, or the disclosure regulation itself) is not rejected by this atom; regulators will scrutinize such timestamps. The atom records the truth as the caller declares it; the calling system is responsible for supplying reasonable timestamps. Clock skew, timezone normalization, and monotonicity are deployment concerns.
 
 - **Concurrency.** Multiple concurrent `record` calls — including multiple concurrent calls for the same `subject_ref` — do not conflict and do not require serialization with each other. Each produces its own `disclosure_id` and its own independent record. Implementations must serialize only the store write for a single call to ensure that a single `disclosure_id` is issued exactly once per successful `record` call.
 
@@ -336,7 +382,7 @@ Selective Disclosure is the disclosure accountability primitive that regulated d
 
 ## Status
 
-`partially resolved` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led) complete. All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. Round 2 AI adversarial round pending; that round is required before this atom may declare `grounded`.
+`partially resolved` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led) complete; Round 2 Pass 1 (AI-conducted) complete; Round 2 Pass 2 and Pass 3 (AI-conducted) complete. All nine GRID nodes resolved; all concerns conceptually independent; nine Pass 3 findings from Round 2 closed in-pattern. Round 3 mandatory AI adversarial round pending before this atom may declare `grounded`.
 
 ---
 
@@ -399,3 +445,39 @@ All nine GRID nodes resolved.
 - *Concurrency statement was vague.* Initial draft said "concurrent calls are independent" without specifying what requires serialization and what does not. Fixed: Behavior section and Edge cases both specify that concurrent `record` calls for the same `subject_ref` are not an error; each produces its own `disclosure_id` and its own record. No cross-call serialization is required. Implementations must serialize only the store write for a single call.
 
 - *Generation acceptance check for subject history queryability did not include the empty-subject case.* A system that returns `rejected(invalid-query)` for a well-formed `read({subject_ref: X})` where X has no records would fail the regulatory use case without being caught by a check that only tests non-empty subjects. Fixed: Generation acceptance check 5 explicitly includes the empty-subject case as a verification requirement.
+
+**Round 2, Pass 1 — Structural completeness (GRID). AI-conducted (claude-sonnet-4-6). 2026-05-13.** Two findings, both closed in-pattern.
+
+- *Examples section did not exercise the `legal-hold` authority type.* The three valid `authority.type` values are `consent`, `legal-hold`, and `regulatory`. Examples covered `consent` (happy path 1) and `regulatory` (happy path 2) but left `legal-hold` unexercised. The GRID Proof node requires that examples exercise the complete set of valid paths. Fixed: added a third happy-path example — Legal-Hold-compelled disclosure to an SEC investigation team — covering `authority.type: legal-hold` and a wall-clock-defaulted `disclosed_at`.
+
+- *Feedback node silent on `read` rejections.* The Feedback section stated that each rejected `record` action produces an observable refusal naming the failed precondition but made no mention of `read` rejections. GRID Feedback requires the node cover what the caller receives on each rejection path for all actions. Fixed: Feedback section now explicitly states that each rejected `read` action produces an observable refusal (`invalid-query`) naming the malformed filter axis or condition.
+
+All nine GRID nodes confirmed resolved. Pass 1 clean after two findings closed.
+
+**Round 2, Pass 2 — Conceptual independence (EOS). AI-conducted (claude-sonnet-4-6). 2026-05-13.** Five extraction candidates re-evaluated independently (without reading the foundation round's conclusions first). All held. One precision gap found and closed.
+
+- *Five foundation extraction candidates re-confirmed.* Scope interpretation, Consent validation, authority-type enforcement, recipient validation, and no-disclosure-unrecorded enforcement were all re-evaluated. All correctly kept in-pattern or excluded. No new extraction candidates surfaced.
+
+- *Scope example strings implied a format convention.* The `scope` field description used "Examples:" language that could be read as prescribing a `"category:subcategory"` format — an unintended convention the atom does not own. Fixed: description clarified that examples are "illustrative (not a required format)" and that scope string format, naming convention, and vocabulary are entirely the calling system's concern.
+
+- *`authority.reference` description was prescriptive where it should be declarative.* The field description said "`authority.reference` — a Consent record id for `type: consent`..." as if the atom validates this. The atom accepts any non-whitespace string regardless of `authority.type`. Fixed: description rewritten to make clear the atom records whatever the calling system provides, that semantic consistency between `authority.type` and `authority.reference` is the calling system's obligation, and that a caller passing a regulatory citation as `authority.reference` with `type: consent` will not be rejected.
+
+**Round 2, Pass 3 — Adversarial scrutiny (Linus mode). AI-conducted (claude-sonnet-4-6). 2026-05-13.** Nine findings. All closed in-pattern.
+
+- *`subject_ref` identity underspecified.* The atom said `subject_ref` was "an opaque reference" without saying what kind of thing it is. An implementer reading only the atom does not know whether `subject_ref` is a user id, a system record id, an email address, or an arbitrary string. The non-whitespace constraint was in the action description but not in the field description itself. Fixed: `subject_ref` field description now states it is an opaque string provided by the calling system, gives examples of what it might represent (user id, record id, account number, arbitrary reference), and states that interpretation belongs entirely to the calling system. The non-whitespace constraint is stated in the field description.
+
+- *Invariant 2 did not name its enforcement mechanism.* Invariant 2 asserts that every record in the store carries a valid `authority` field, but it did not explain why this is guaranteed — a reader might wonder whether the invariant is aspirational or enforced. Fixed: Invariant 2 now explicitly states that the assertion holds because the `record` action rejects non-conforming calls before writing, and names the store-level assertion and action-level enforcement as the same guarantee at different scopes.
+
+- *`read` time range filter keys and semantics were undefined.* The action description said `disclosed_at` supports "a time range" and the malformed-query rule said "end before start is `invalid-query`," but the atom never defined the filter sub-keys (`after`, `before`), whether the bounds are inclusive or exclusive, or how point-in-time queries work. The breach forensics example used `after` and `before` without those keys being formally defined anywhere. Fixed: `read` action now formally defines `after` (inclusive lower bound) and `before` (inclusive upper bound) as the time range sub-keys, states that both bounds are inclusive (closed interval `after ≤ disclosed_at ≤ before`), and states that either sub-key may be omitted. The Decision point for `read` updated to match. The breach forensics example now explicitly confirms the inclusive semantics.
+
+- *`authority_type` filter key naming vs. `authority.type` field path not explained.* An implementer might implement the filter axis as `authority.type` (the stored field path) rather than `authority_type` (the flat filter key) because the atom did not explain the naming difference. Fixed: `read` action now explicitly notes that the filter key is `authority_type` (underscore-separated, flat key) because filter keys are flat strings rather than dot-notation paths, distinguishing it from the stored field path `authority.type`.
+
+- *`authority.reference` semantic consistency unaddressed.* The atom accepted any non-whitespace string as `authority.reference` regardless of `authority.type`, but the field description read as prescriptive — stating what the reference SHOULD be without clearly saying the atom cannot verify it. A caller passing `{ type: "consent", reference: "HIPAA §164.512(b)" }` would be accepted silently, and this was not stated anywhere. Fixed: `authority.reference` field description rewritten to distinguish between what the calling system is expected to provide and what the atom actually validates. Edge cases section updated to explicitly state that a caller can pass any string as `authority.reference` regardless of `authority.type` without rejection.
+
+- *Non-idempotent `record` behavior had no rejection-path example.* The Behavior section documented the non-idempotent semantics but no example walked the double-record case. An implementer or auditor reading the spec could not see what the store looks like after two `record` calls with identical parameters. Fixed: new example added — "Non-idempotent behavior — duplicate `record` calls for the same event" — showing both calls succeeding with distinct `disclosure_id`s, noting the auditor will see two records, and directing the reader to Duplicate Prevention.
+
+- *`disclosed_at` backdating lower bound was a hidden decision.* The atom accepted backdated values with no lower bound, but this was not stated as a deliberate decision — it was simply silent. A timestamp of `"1970-01-01T00:00:00Z"` would be accepted, which might be a caller error. Fixed: Edge cases clock semantics section now explicitly states there is no lower-bound constraint on backdated `disclosed_at` values, that this is intentional (documenting disclosures recognized after the fact is valid in regulated contexts), and that extreme backdating is not rejected by the atom — regulators will scrutinize such timestamps; the calling system is responsible for supplying reasonable timestamps.
+
+- *Clock skew was named but the concrete implication for `disclosed_at` rejection was not stated.* The atom said "clock skew, timezone normalization, and monotonicity are deployment concerns" without explaining that clock skew between the caller and the receiving node can cause valid caller-supplied `disclosed_at` values to be rejected as "in the future." A caller whose clock is slightly ahead of the receiving node may supply a legitimate timestamp that gets rejected. Fixed: Edge cases clock semantics section now explicitly names this as a concrete risk: deployments that accept caller-supplied `disclosed_at` values must account for clock skew.
+
+- *Generation acceptance check 1 required out-of-band knowledge.* The check said "For a set of `disclosure_id`s known to have been issued" — an in-production auditor using only the disclosure store cannot enumerate all issued `disclosure_id`s from the store alone. The check was valid for test environments but overclaimed its "from the records alone" basis. Fixed: check 1 now states that the ground-truth `disclosure_id`s are captured from the `recorded(disclosure_id)` return values during the check itself (not from the store), explicitly notes this applies to test environments, and notes that check 3 (the record immutability check) covers the append-only guarantee for production auditors.
