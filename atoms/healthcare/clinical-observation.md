@@ -23,9 +23,13 @@ This is a freestanding concept in the EOS sense. It carries its own state (the o
 
 ## Structure
 
+### Store instance model
+
+The Clinical Observation atom operates against a named store instance. A `store_name` identifies the instance; multiple instances coexist in real systems — one per hospital, per department, or per care team, depending on deployment topology. The atom specifies what one instance is and how it behaves; composing patterns and deployment configuration determine how many instances to instantiate. `observation_id` values are unique within a store instance; uniqueness across instances is a composing concern. `patient_ref` is an opaque reference scoped globally — the same `patient_ref` may appear in multiple store instances for the same patient across care settings.
+
 ### Identity model
 
-Each observation has an opaque, immutable, system-generated `observation_id` — assigned on `record`, never reused, never reassigned. The id is the observation's identity; the clinical content is a property of the observation, not its identity.
+Each observation has an opaque, immutable, system-generated `observation_id` — assigned on `record`, never reused, never reassigned within the store instance. The id is the observation's identity; the clinical content is a property of the observation, not its identity.
 
 `patient_ref` is an opaque reference to the patient. It is set on `record` and is immutable. It is not the observation's identity — two observations for the same patient have different `observation_id`s. `patient_ref` is inherited unchanged by any successor observation created by `amend`.
 
@@ -42,7 +46,7 @@ Each observation has an opaque, immutable, system-generated `observation_id` —
 
 - `record(patient_ref, recorded_by, observation_type, value, unit, recorded_at?) → observation_id | rejected(invalid-observation | storage-failure)` — create a new Recorded observation. `recorded_at` defaults to the system clock if not supplied; when supplied, it must not be in the future.
 - `amend(observation_id, amended_by, value, unit, reason) → new_observation_id | rejected(not-known | already-amended | already-retracted | invalid-observation | storage-failure)` — create a successor observation that corrects the named one. The original transitions to Amended; the successor is Recorded with a `predecessor_id` referencing the original. `observation_type` and `patient_ref` are inherited from the original and may not be changed — a wrong observation type requires retraction and a fresh `record`, not amendment.
-- `retract(observation_id, retracted_by, reason) → retracted | rejected(not-known | already-retracted | storage-failure)` — mark the observation as Retracted. The record remains; no observation data is destroyed. An Amended observation may be retracted; doing so retracts only that link in the chain — prior and successor records are not affected.
+- `retract(observation_id, retracted_by, reason) → retracted | rejected(not-known | already-retracted | invalid-request | storage-failure)` — mark the observation as Retracted. The record remains; no observation data is destroyed. An Amended observation may be retracted; doing so retracts only that link in the chain — prior and successor records are not affected.
 - `read(query) → ordered_sequence_of_observations | rejected(invalid-query)` — return observations matching the query, ordered by `recorded_at` ascending. A query may filter by `patient_ref`, `observation_type`, time range, state (Recorded / Amended / Retracted), or any combination.
 
 ### Outputs
@@ -50,14 +54,14 @@ Each observation has an opaque, immutable, system-generated `observation_id` —
 - For `record`: a fresh `observation_id`, or a rejection naming the failed precondition.
 - For `amend`: a fresh `observation_id` for the successor observation, or a rejection.
 - For `retract`: the token `retracted`, or a rejection.
-- For `read`: a (possibly empty) ordered sequence of observations. Each carries its `observation_id`, `patient_ref`, `recorded_by`, `observation_type`, `value`, `unit`, `recorded_at`, `state`, and — if applicable — `predecessor_id` (for a successor) or `successor_id` (for an amended original) or `retraction_reason` and `retracted_by` (for a retracted observation).
+- For `read`: a (possibly empty) ordered sequence of observations. Each carries its `observation_id`, `patient_ref`, `recorded_by`, `observation_type`, `value`, `unit`, `recorded_at`, `state`, and — if applicable — `predecessor_id`, `amended_by`, `amendment_reason` (for a successor observation) or `successor_id` (for an amended original) or `retraction_reason` and `retracted_by` (for a retracted observation).
 
 ### State
 
 Each observation is in exactly one state:
 
 - **Recorded** — the observation stands. It may be amended or retracted.
-- **Amended** — the observation has been superseded by a correction. It is retained and visible but carries a `successor_id` pointing to the correcting observation. An Amended observation may still be retracted.
+- **Amended** — the observation has been superseded by a correction. It is retained and visible but carries a `successor_id` pointing to the correcting observation. An Amended observation may still be retracted. The successor observation that supersedes it carries `predecessor_id`, `amended_by` (the clinician who made the correction), and `amendment_reason` (required, non-empty) — set at `amend` time and immutable thereafter.
 - **Retracted** — the observation was withdrawn as erroneous. It is retained and visible but flagged as invalid. No further transitions from Retracted.
 
 Valid transitions:
@@ -78,8 +82,8 @@ Purged is not a state in this atom. Clinical records are not deleted; their rete
 ### Decision points
 
 - **At `record`** — `patient_ref` and `recorded_by` must be non-empty opaque references; `observation_type` must be non-empty; `value` must satisfy the configured value constraint for the observation type (the atom does not define what a valid blood pressure value is — that is deployment policy; it requires only that the constraint be declared and applied); `unit` must be non-empty; `recorded_at`, if supplied, must not be in the future. Any violation rejects as `invalid-observation`. If the store write fails after all preconditions are satisfied, the atom returns `rejected(storage-failure)`; the `observation_id` is not returned.
-- **At `amend`** — the named `observation_id` must exist (`not-known` if absent); must be in Recorded or Amended state (`already-amended` rejected only if the caller tries to amend an already-Amended observation — callers should amend the current end of the chain, not an intermediate node; see Edge cases); must not be Retracted (`already-retracted`); corrected `value` and `unit` must satisfy the same constraints as `record`. `observation_type` and `patient_ref` may not be changed — these are inherited from the original.
-- **At `retract`** — the named `observation_id` must exist (`not-known`); must not already be Retracted (`already-retracted`). Recorded and Amended observations may both be retracted.
+- **At `amend`** — the named `observation_id` must exist (`not-known` if absent); must be in Recorded state — an observation already in Amended state has a successor and cannot be amended again without creating a branch, which Invariant 3 prohibits (`already-amended`); must not be Retracted (`already-retracted`); corrected `value` and `unit` must satisfy the same constraints as `record`; `amended_by` must be non-empty; `reason` must be non-empty — a blank reason defeats the audit trail (`invalid-observation` for any of these content violations). `observation_type` and `patient_ref` may not be changed — these are inherited from the original.
+- **At `retract`** — the named `observation_id` must exist (`not-known`); must not already be Retracted (`already-retracted`); `retracted_by` must be non-empty; `reason` must be non-empty — both are required for the audit trail (`invalid-request` for either being empty). Recorded and Amended observations may both be retracted.
 - **At `read`** — query parameters must be well-formed (time range valid, state filter valid). A well-formed query matching no observations returns an empty sequence, not a rejection.
 
 ### Behavior
@@ -93,7 +97,7 @@ Purged is not a state in this atom. Clinical records are not deleted; their rete
 ### Feedback
 
 - After `record` — a new Recorded observation exists. `observation_id`, `patient_ref`, `recorded_by`, `observation_type`, `value`, `unit`, `recorded_at`, `state: Recorded` are set and immutable.
-- After `amend` — the original observation is now Amended (acquires `successor_id`); a new Recorded observation exists with `predecessor_id` referencing the original. The original's fields are unchanged.
+- After `amend` — the original observation is now Amended (acquires `successor_id`); a new Recorded observation exists with `predecessor_id` referencing the original, `amended_by` set to the correcting clinician, and `amendment_reason` set to the supplied reason. All three fields on the successor are immutable. The original's fields are unchanged.
 - After `retract` — the named observation is now Retracted (acquires `retraction_reason`, `retracted_by`). Its other fields are unchanged.
 - After `read` — a sequence of matching observations. The store is unchanged.
 
@@ -125,6 +129,10 @@ The nurse realizes she recorded 128 instead of 138. Calls `amend("obs-001", amen
 ### Retraction — wrong patient
 
 An observation is recorded for the wrong patient. Calls `retract("obs-003", retracted_by: "dr_patel", reason: "recorded against wrong patient — intended patient_ref p17, not p12")` → `retracted`. A correct observation is then recorded against p17. obs-003 remains in the store, visible to audit queries, flagged as Retracted.
+
+### Rejection path — invalid record
+
+A system submits a `record` call with an empty `recorded_by` field. `record(patient_ref: "p42", recorded_by: "", observation_type: "heart_rate", value: 72, unit: "bpm")` → `rejected(invalid-observation)`. No `observation_id` is issued; no record enters the store. The system must supply a non-empty clinician reference before the observation can be accepted.
 
 ### Rejection path — amending a retracted observation
 
@@ -174,6 +182,8 @@ Any implementation derived from this atom must produce records and a runtime sur
 - **Observation aggregation and trending.** Longitudinal analytics — trend lines, delta from prior, reference range comparison — are composing concerns. This atom provides the substrate; the analytics layer reads it.
 - **Units and terminology standardization.** LOINC codes, SNOMED CT, UCUM units — the atom treats `observation_type` and `unit` as opaque strings. Standardization to controlled vocabularies is a deployment concern, not an atom-level concern.
 - **Concurrency.** Two clinicians recording observations for the same patient simultaneously is permitted — each receives a distinct `observation_id`. The atom does not detect or prevent concurrent amendments to the same observation; implementations must serialize `amend` and `retract` against a given `observation_id`.
+- **`amend` two-write atomicity.** The `amend` operation requires two durable writes: creating the successor observation and updating the original to Amended state with a `successor_id`. A crash between writes leaves the store in an inconsistent state — either the successor exists without the original pointing at it (violates Invariant 2) or the original is marked Amended with a `successor_id` that does not exist in the store (violates Invariant 3). Resolving mid-transition crashes is out of scope for this atom; implementations must provide atomic transaction support across both writes, or a crash-recovery scan that detects and repairs dangling amendment links on restart.
+- **Clock semantics.** `recorded_at` defaults to the receiving node's wall clock when not supplied by the caller. "Must not be in the future" is checked against the receiving node's clock at the moment of the `record` call. Clock skew between the caller and the receiving node is a deployment concern — an observation submitted from a client with a slightly fast clock may be rejected as future-dated even if the measurement occurred in the past. Timezone normalization (storage in UTC) is a deployment convention; the atom does not enforce a timezone. Under an unreliable or skewed clock, `recorded_at` may not be monotonically increasing across observations; there is no sequence-number equivalent here. Ordering within a patient's observation history should be treated as best-effort wall time, not authoritative causal order.
 
 ---
 
@@ -193,7 +203,7 @@ Clinical Observation composes naturally with the existing library:
 ## Standards references
 
 - **HIPAA §164.312(b)** — audit controls: covered entities must implement hardware, software, and procedural mechanisms to record and examine activity in information systems that contain ePHI. The observation record, with its immutable `recorded_by` and `recorded_at`, is the primary audit surface.
-- **HL7 FHIR Observation resource** — the canonical interoperability representation of a clinical observation; this atom's structure maps directly to FHIR Observation's `subject`, `performer`, `code`, `value[x]`, `issued`, and `status` fields. FHIR's `status` values (final, amended, cancelled) correspond to Recorded, Amended, Retracted.
+- **HL7 FHIR Observation resource** — the canonical interoperability representation of a clinical observation; this atom's core fields map to FHIR Observation's `subject` (patient_ref), `performer` (recorded_by), `value[x]` (value + unit), `issued` (recorded_at), and `status` (final → Recorded, amended → Amended, cancelled → Retracted). FHIR's `code` field is a CodeableConcept (LOINC or SNOMED CT), not an opaque string — this atom deliberately defers terminology binding to deployment convention. FHIR carries many additional fields (category, encounter, bodySite, interpretation, referenceRange) not present here; those are composing-layer concerns.
 - **21 CFR Part 11** — electronic records in FDA-regulated clinical trials; each observation is a regulated electronic record requiring attribution, timestamp, and amendment trail.
 - **Joint Commission Record of Care standards** — require that corrections to medical records be dated, timed, and attributed; the amendment model satisfies this directly.
 - **IHE PCC (Patient Care Coordination)** — the Clinical Document Architecture (CDA) and FHIR-based profiles that govern how observations are exchanged across care settings.
@@ -203,10 +213,26 @@ Clinical Observation composes naturally with the existing library:
 
 ## Status
 
-`unresolved` — first draft; no pressure-testing passes completed.
+`partially resolved` — foundation passes complete (Pass 1, Pass 2, Pass 3); human refinement round pending before AI adversarial round.
 
 ---
 
 ## Lineage notes
 
-First draft. No passes run. Three-pass pressure-testing required before this atom advances.
+**Pass 1 — Structural completeness (GRID).** Two findings, both closed in-pattern.
+
+- *Store instance model absent.* The atom referenced "the store" throughout without defining whether one global store or multiple named instances are valid. Fixed: added a *Store instance model* subsection to Structure, mirroring Event Log's named-instance model. `observation_id` uniqueness is now explicitly scoped to a store instance; `patient_ref` is noted as globally scoped across instances.
+- *`amended_by` and `amendment_reason` not persisted.* The `amend` action accepted both as inputs but neither appeared in the State field listing, Outputs, or Feedback — making them unrecoverable from the records. The regulated adversarial scenarios and Generation acceptance check 2 both depend on amendment attribution. Fixed: both fields added to the Amended state description in State, to Outputs (per-record field list for successor observations), and to Feedback after `amend`. Both are set at `amend` time and immutable thereafter.
+
+All nine GRID nodes resolved. No extractions.
+
+**Pass 2 — Conceptual independence (EOS).** Clean. No over-absorptions found. One judgment call recorded: amendment chain semantics (predecessor_id, successor_id, amended_by, amendment_reason, Recorded → Amended transition) were evaluated as an extraction candidate. Kept in-pattern because the mechanic is definitional to the atom — it cannot be specified without knowing which fields can and cannot change across an amendment, making a generic "Amendment Trail" atom dependent on the host for its constraints, which inverts the composition direction. All cross-cutting concerns (actor verification, tamper-evidence, retention, access control, terminology) correctly deferred to named composing patterns. One flag forwarded to Pass 3: concurrent amendment serialization obligation unstated.
+
+**Pass 3 — Adversarial scrutiny (Linus mode).** Six findings: four real, two minor. All closed in-pattern.
+
+- *Contradictory `amend` precondition.* Decision points said "Recorded or Amended state" — contradicting Invariant 3 (linear chains) and the Edge case requiring implementations to reject amending an already-Amended observation. Fixed: Decision point now states "Recorded state only"; `already-amended` fires for any observation in Amended state; the rationale (amending an Amended observation would create a branch, prohibited by Invariant 3) is stated inline.
+- *`retract` missing input validation.* Decision points had no validation for `retracted_by` or `reason`; both could be empty; the signature lacked a rejection reason for invalid inputs. Fixed: `invalid-request` added to `retract` signature; Decision point now explicitly requires `retracted_by` non-empty and `reason` non-empty, with `invalid-request` as the rejection.
+- *`record` rejection example absent.* All examples showed successful `record` calls. Fixed: added *Rejection path — invalid record* example showing `rejected(invalid-observation)` for an empty `recorded_by`.
+- *`amend` two-write atomicity gap.* The `amend` operation requires two durable writes; a crash between them violates Invariants 2 or 3. Fixed: new edge case added naming this as out-of-scope and requiring atomic transaction support or crash-recovery logic from implementations.
+- *Clock semantics unstated (minor).* `recorded_at` defaults to "the system clock" without specifying whose clock, monotonicity, timezone, or skew behavior. Fixed: new edge case added stating `recorded_at` is best-effort wall time from the receiving node's clock; skew, timezone normalization, and monotonicity are deployment concerns.
+- *"Maps directly" to FHIR overclaims (minor).* FHIR `code` is a CodeableConcept, not an opaque string; FHIR carries many additional fields not present in this atom. Fixed: Standards reference updated to "core fields map to" with explicit field-by-field correspondence and a note on what FHIR carries that this atom defers to composing layers.
