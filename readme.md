@@ -69,7 +69,7 @@ atoms/
 │   └── notification             — delivery record for a single notification to a single recipient
 └── healthcare/
     ├── clinical-observation     — immutable clinical measurement with amendment/retraction trail (grounded)
-    └── medication-order         — prescription lifecycle from order through terminal resolution (unresolved)
+    └── medication-order         — prescription lifecycle from order through terminal resolution (grounded)
 
 compositions/
 ├── undo-history                 — Personal Todo + Event Log

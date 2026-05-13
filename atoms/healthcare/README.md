@@ -12,7 +12,7 @@ Freestanding primitives for clinical and healthcare administrative systems. Each
 | Atom | Status | What it models |
 |------|--------|----------------|
 | [Clinical Observation](./clinical-observation.md) | grounded | A single clinical measurement — vital sign, lab result, assessment score — with immutable attribution and an amendment/retraction trail |
-| [Medication Order](./medication-order.md) | unresolved | A prescription record binding prescriber, patient, medication, and dosing regimen through verification, dispensing, administration, and terminal resolution — with a regulated chain of custody and an explicit pre-/post-dispensing amendment boundary |
+| [Medication Order](./medication-order.md) | grounded — last full rescan: 2026-05-13 | A prescription record binding prescriber, patient, medication, and dosing regimen through verification, dispensing, administration, and terminal resolution — with a regulated chain of custody and an explicit pre-/post-dispensing amendment boundary |
 
 ---
 
