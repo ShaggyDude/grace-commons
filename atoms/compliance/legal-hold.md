@@ -64,7 +64,7 @@ Each hold has an opaque, immutable, system-generated `hold_id` — assigned on `
 
 - `release(hold_id, released_by, reason, released_at?) → released | rejected(not-known | already-released | invalid-request | storage-failure)` — document the end of the preservation obligation and transition the hold to Released. Records `released_by`, `release_reason`, and `released_at` (wall clock if not supplied; must not be in the future — releasing a hold in the future is not meaningful); all are immutable after the transition. `released_by` and `reason` must each contain at least one non-whitespace character (`invalid-request`). Releasing a hold on a record does not affect any other hold on the same record. `storage-failure` leaves the hold in Active state; the caller must retry.
 
-- `read(query) → ordered_sequence_of_holds | rejected(invalid-query)` — return holds matching the query, ordered by `placed_at` ascending. A query may filter by `hold_id`, `record_ref`, `placed_by`, `case_ref`, `state`, or any combination including time ranges on `placed_at` or `released_at`. A query supplying only a `hold_id` returns at most one hold. A well-formed query matching no holds returns an empty sequence, not a rejection. A query with no filters returns every hold in the store. Only malformed parameters surface as `invalid-query`: a syntactically invalid `hold_id` (non-null, non-empty), an unrecognized state value, or a time range with end before start. The query `{record_ref: X, state: Active}` returns every Active hold covering a given record — this is the operational check for whether a record is currently held.
+- `read(query) → ordered_sequence_of_holds | rejected(invalid-query)` — return holds matching the query, ordered by `placed_at` ascending, then by `hold_id` ascending as a stable tiebreaker. A query may filter by `hold_id`, `record_ref`, `placed_by`, `case_ref`, `state`, or any combination including time ranges on `placed_at` or `released_at`. A query supplying only a `hold_id` returns at most one hold. A well-formed query matching no holds returns an empty sequence, not a rejection. A query with no filters returns every hold in the store. A time range filter on `released_at` applied where `state: Active` returns an empty sequence — Active holds carry no `released_at` field. Only malformed parameters surface as `invalid-query`: a syntactically invalid `hold_id` (non-null, non-empty), an unrecognized state value, or a time range with end before start. The query `{record_ref: X, state: Active}` returns every Active hold covering a given record — this is the operational check for whether a record is currently held.
 
 ### Outputs
 
@@ -91,21 +91,21 @@ No other transitions exist. A hold cannot be re-activated after release; a new p
 1. **Litigation trigger.** Counsel determines that records relating to Project Alpha are subject to litigation hold. Calls `place(record_ref: "doc-alpha-0012", placed_by: "counsel_morgan", reason: "Litigation hold — Smith v. Acme Corp., SDNY 2026-cv-4421 — all Project Alpha records", case_ref: "matter-2026-smith-acme")` → `hold_id: "hold-001"`. The hold enters Active.
 2. **Second independent hold.** The state AG separately issues a preservation demand covering the same record. Compliance calls `place(record_ref: "doc-alpha-0012", placed_by: "compliance_lee", reason: "NY AG Civil Investigative Demand — Case INV-2026-0089", case_ref: "ag-inv-2026-0089")` → `hold_id: "hold-002"`. Two independent Active holds now cover the record.
 3. **Internal matter closes.** Smith v. Acme Corp. settles. Counsel calls `release("hold-001", released_by: "counsel_morgan", reason: "Matter settled with prejudice — May 10 2026")` → `released`. Hold-001 is now Released. Hold-002 remains Active; the record is still held.
-4. **AG investigation closes.** AG closes the investigation. `release("hold-002", released_by: "compliance_lee", reason: "NY AG CID withdrawn — May 28 2026")` → `released`. No Active holds remain; the record returns to normal retention governance.
+4. **AG investigation closes.** AG closes the investigation. `release("hold-002", released_by: "compliance_lee", reason: "NY AG CID withdrawn — May 28 2026")` → `released`. No Active holds remain on the record; the composing layer resumes normal retention governance.
 5. **Audit query.** A later audit queries `read({record_ref: "doc-alpha-0012"})` and sees both holds with full placement and release attribution. The record's complete legal hold history is recoverable without recourse to external systems.
 
 ### Decision points
 
 - **At `place`** — `record_ref`, `placed_by`, and `reason` must each contain at least one non-whitespace character; `case_ref`, if supplied, must be non-empty and non-whitespace-only; `placed_at`, if supplied, must not be in the future (checked against the receiving node's wall clock). Any violation is `invalid-request`. `storage-failure` if the store write fails; no `hold_id` is issued, no record enters the store.
 
-- **At `release`** — `not-known` if the `hold_id` does not exist in the store; `already-released` if the hold is in Released state. If neither: `released_by` and `reason` must each be non-empty and non-whitespace-only (`invalid-request`); `released_at`, if supplied, must not be in the future (`invalid-request`). `storage-failure` leaves the hold in Active; the caller must retry. Rejection priority: `not-known` → `already-released` → `invalid-request` → `storage-failure`.
+- **At `release`** — `not-known` if the `hold_id` does not exist in the store; `already-released` if the hold is in Released state. If neither: `released_by` and `reason` must each be non-empty and non-whitespace-only (`invalid-request`); `released_at`, if supplied, must not be in the future and must be ≥ the hold's `placed_at` — a release documented as occurring before the hold was placed is incoherent and a conformance failure (`invalid-request`). `storage-failure` leaves the hold in Active; the caller must retry. Rejection priority: `not-known` → `already-released` → `invalid-request` → `storage-failure`.
 
 - **At `read`** — any supplied `hold_id` must be syntactically valid (non-null, non-empty). Any supplied state filter must be one of {`Active`, `Released`}. A time range filter must have end ≥ start. A well-formed query matching no holds returns an empty sequence. Only malformed parameters surface as `invalid-query`.
 
 ### Behavior
 
 - **Holds are durable on success.** Once `place` returns a `hold_id`, the hold is in the store and will appear in subsequent reads.
-- **Hold placement is not idempotent.** Two `place` calls for the same `record_ref`, `placed_by`, and `reason` create two independent holds with distinct `hold_id`s. For at-most-once semantics under retry, compose with [Duplicate Prevention](../temporal/duplicate-prevention.md).
+- **Hold placement is not idempotent.** Two `place` calls for the same `record_ref`, `placed_by`, and `reason` create two independent holds with distinct `hold_id`s.
 - **Concurrent holds are independent.** Multiple Active holds on the same `record_ref` do not interact. Releasing hold A leaves hold B unaffected. The aggregate "is this record held?" question is answered by querying `{record_ref: X, state: Active}` and checking whether the result is non-empty; the atom does not maintain a separate aggregate state.
 - **Released state is terminal and auditable.** A Released hold carries the full placement and release record. It is the audit evidence of the complete preservation arc — when the hold was placed, by whom, why, and when it was lifted. Releasing a hold does not remove its record from the store.
 - **The atom does not enforce the purge gate.** Whether a held record is actually prevented from being purged is an enforcement concern of the composing layer (Retention Window + Legal Hold composition). The atom records that a preservation obligation exists; the composition enforces it at the purge surface.
@@ -221,7 +221,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 - **Tamper-evidence.** The atom guarantees immutability by specification; it does not cryptographically prevent a store administrator from altering hold records. For court-admissible evidence of record preservation, compose with [Tamper Evidence](./tamper-evidence.md), which provides cryptographic sealing of the hold records. Tamper-evident hold records are required under several regulatory regimes (SEC Rule 17a-4, 21 CFR Part 11 in regulated clinical contexts).
 
-- **Clock semantics.** `placed_at` and `released_at` default to the receiving node's wall clock when not supplied. `placed_at` must not be in the future — a hold cannot logically be placed in the future. Back-dated `placed_at` values are accepted; documenting a preservation obligation recognized late is valid and often necessary. Courts scrutinize backdated hold timestamps in spoliation disputes, but the atom records what the caller supplies without interpretation; legal counsel owns the evidentiary consequences. `released_at` must also not be in the future — releasing a hold "in the future" has no operational meaning. Clock skew, timezone normalization, and monotonicity are deployment concerns.
+- **Clock semantics.** `placed_at` and `released_at` default to the receiving node's wall clock when not supplied. `placed_at` must not be in the future — a hold cannot logically be placed in the future. Back-dated `placed_at` values are accepted; documenting a preservation obligation recognized late is valid and often necessary. Courts scrutinize backdated hold timestamps in spoliation disputes, but the atom records what the caller supplies without interpretation; legal counsel owns the evidentiary consequences. `released_at` must not be in the future and must be ≥ `placed_at` (enforced at the `release` Decision point). Back-dated `released_at` values are accepted — documenting a release that was communicated or recognized at an earlier time is valid. Clock skew, timezone normalization, and monotonicity are deployment concerns.
 
 - **Concurrency.** Two systems concurrently calling `release` on the same `hold_id` must be serialized. The first succeeds; the second receives `already-released`. Implementations must serialize state transitions on a given `hold_id`.
 
@@ -261,7 +261,7 @@ Legal Hold is the preservation primitive the library has held open since Retenti
 
 ## Status
 
-`unresolved` — foundation round complete (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus). Human refinement rounds and AI adversarial round not yet completed.
+`unresolved` — foundation round and Refinement round 1 complete. AI adversarial round not yet completed.
 
 ---
 
@@ -287,7 +287,19 @@ All nine GRID nodes resolved.
 
 - *Hold independence invariant as a hidden composition rule.* Could "concurrent holds are independent" mean that the atom is secretly composing two or more holds into an aggregate held state? Evaluated: no. Each hold is its own record with its own lifecycle. Independence is a constraint on the atom's behavior (releasing hold H does not affect hold H′), not a composition. The aggregate held query `{record_ref: X, state: Active}` is a read operation on the hold set, not a separate state. Clean.
 
-**Pass 3 — Adversarial scrutiny (Linus mode).** Six findings, all closed in-pattern.
+**Refinement round 1 — 2026-05-13.** Six findings across the three passes, all closed in-pattern.
+
+- *`read` ordering tiebreaker absent.* Batch `place` calls occurring in the same instant produce holds with identical `placed_at` values; ordering between them was non-deterministic. An audit tool issuing the same query at two different times could receive results in different order, breaking deterministic replay. Fixed: `read` action now specifies `placed_at` ascending, then `hold_id` ascending as a stable tiebreaker.
+
+- *`release` did not enforce `released_at ≥ placed_at` at the action level.* Invariant 6 claimed the ordering bound but the Decision point only checked that `released_at` is not in the future — a caller supplying a backdated `released_at` earlier than `placed_at` could write an incoherent Released hold. Fixed: Decision point updated to require `released_at ≥ placed_at`; `invalid-request` if violated. Clock semantics edge case updated to explicitly state backdated `released_at` is accepted (no lower bound beyond `placed_at`).
+
+- *`released_at` time range filter on `state: Active` queries was unaddressed.* A well-formed query `{state: Active, released_at: {after: X}}` was ambiguous — it could be read as `invalid-query` or as an empty result. The general rule (well-formed query matching no holds → empty sequence) applied, but the specific case of filtering on a field that Active holds don't carry was not called out. Fixed: `read` action now explicitly states this case returns an empty sequence.
+
+- *Flow step 4 stated composing-layer semantics.* "The record returns to normal retention governance" is a claim about what Retention Window and the purge gate do — not what this atom does. The atom only knows that no Active holds remain. Fixed: tightened to "the composing layer resumes normal retention governance."
+
+- *Non-idempotency cross-reference to Duplicate Prevention in Behavior section.* The Behavior bullet named Duplicate Prevention inline; per CLAUDE.md conventions, cross-atom references belong in Edge cases, not the spec's Behavior section. The same reference already existed in the Edge cases section. Fixed: removed the cross-reference from the Behavior bullet; Edge cases coverage is complete.
+
+**Pass 3 — Adversarial scrutiny (Linus mode) — foundation round.** Six findings, all closed in-pattern.
 
 - *Hold placed after record purged — spec was silent.* The initial draft said nothing about `place` against a `record_ref` whose underlying record has already been destroyed. A reader could assume the atom validates `record_ref` against the retention store (it does not) or that such a hold is rejected (it is not). This is a real and consequential scenario in spoliation litigation — placing a hold after destruction does not undo the destruction, and hiding this from the spec would be dishonest. Fixed: Edge case *Hold placed after record is purged* added, explicitly stating that the hold is created, `record_ref` is not validated against the storage layer, and legal counsel assesses the spoliative implications. The atom records the truth; it does not adjudicate.
 
