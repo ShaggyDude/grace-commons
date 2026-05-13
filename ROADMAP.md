@@ -25,12 +25,13 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ## In-progress
 
-Two atoms in `atoms/messaging/` are drafted but have not completed their full foundation passes:
+No atoms currently in progress. The messaging atoms that were previously in-progress have reached `grounded`:
 
-- **Subscription** (`atoms/messaging/subscription.md`) — `draft`. Needs all three foundation passes plus the Notification Fanout composition that depends on it.
-- **Notification** (`atoms/messaging/notification.md`) — `draft`. Second foundation pass run but not consolidated. Depends on Subscription reaching `grounded` first; the two atoms compose into **Notification Fanout**.
+- **[Subscription](./atoms/messaging/subscription.md)** — `grounded` (last full rescan: 2026-05-13)
+- **[Notification](./atoms/messaging/notification.md)** — `grounded` (last full rescan: 2026-05-13)
+- **[Notification Fanout](./compositions/notification-fanout.md)** — `grounded` (composition of the above two)
 
-These complete before any new atom work begins.
+Work on new atoms (#1 Legal Hold onward) is unblocked.
 
 ---
 
@@ -320,8 +321,8 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 | # | Pattern | Type | New atoms needed | Existing atoms used | Status |
 |---|---------|------|-----------------|--------------------|----|
-| — | Subscription | Atom | — | — | Draft |
-| — | Notification | Atom | — | — | Draft |
+| — | Subscription | Atom | — | — | Grounded |
+| — | Notification | Atom | — | — | Grounded |
 | 1 | Legal Hold | Atom | — | — | Not started |
 | 2 | Consent | Atom | — | — | Not started |
 | 3 | Soft Delete | Atom | — | — | Not started |
