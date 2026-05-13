@@ -61,13 +61,13 @@ Each record tracked by the atom has an opaque `record_id` — the identity of th
 
 ### Actions
 
-- `soft_delete(record_id, deleted_by, reason?, deleted_at?) → deleted | rejected(not-known | already-deleted | already-purged | invalid-request | storage-failure)` — mark the record as deleted. Transitions the record from Active to Deleted. Records `deleted_by`, `deletion_reason` (if supplied), and `deleted_at` (wall clock if not supplied; must not be in the future). `deleted_by` must contain at least one non-whitespace character (`invalid-request`). `not-known` if no lifecycle record exists for `record_id` in Active state — the atom requires the record to be registered as Active before it can be soft-deleted; see Decision points. `storage-failure` leaves the record in Active state; the caller must retry. Rejection priority: `not-known` → `already-deleted` → `already-purged` → `invalid-request` → `storage-failure`.
+- `soft_delete(record_id, deleted_by, reason?, deleted_at?) → deleted | rejected(already-deleted | already-purged | invalid-request | storage-failure)` — mark the record as deleted. Transitions the record from Active to Deleted. Records `deleted_by`, `deletion_reason` (if supplied), and `deleted_at` (wall clock if not supplied; must not be in the future). `deleted_by` must contain at least one non-whitespace character (`invalid-request`). On the first `soft_delete` call for a `record_id` that has no lifecycle record, the atom implicitly creates the lifecycle record and transitions it to Deleted; no prior registration is required. `already-deleted` if the record is in Deleted state; `already-purged` if the record is in Purged state. `storage-failure` leaves the record in Active state; the caller must retry. Rejection priority: `already-deleted` → `already-purged` → `invalid-request` → `storage-failure`.
 
 - `restore(record_id, restored_by, reason?, restored_at?) → restored | rejected(not-known | not-deleted | already-purged | invalid-request | storage-failure)` — return a Deleted record to Active state. Records `restored_by`, `restoration_reason` (if supplied), and `restored_at` (wall clock if not supplied; must not be in the future and must be ≥ `deleted_at`). `restored_by` must contain at least one non-whitespace character (`invalid-request`). `not-deleted` if the record is in Active state (not currently deleted). `already-purged` if the record is in Purged state — Purged records cannot be restored. `storage-failure` leaves the record in Deleted state; the caller must retry. Rejection priority: `not-known` → `not-deleted` → `already-purged` → `invalid-request` → `storage-failure`.
 
 - `purge(record_id, purged_by, reason, purged_at?) → purged | rejected(not-known | not-deleted | invalid-request | storage-failure)` — permanently destroy the record and transition to Purged. `reason` is required for purge (not optional — the destruction of a record is an auditable decision that must carry a stated justification). Records `purged_by`, `purge_reason`, and `purged_at` (wall clock if not supplied; must not be in the future and must be ≥ `deleted_at`). `purged_by` and `reason` must each contain at least one non-whitespace character (`invalid-request`). `not-deleted` if the record is in Active state — a record must be soft-deleted before it can be purged. `storage-failure` leaves the record in Deleted state; the caller must retry. Rejection priority: `not-known` → `not-deleted` → `invalid-request` → `storage-failure`.
 
-- `read(query) → ordered_sequence_of_records | rejected(invalid-query)` — return lifecycle records matching the query, ordered by the most recent transition timestamp descending, then by `record_id` ascending as a stable tiebreaker. A query may filter by `record_id`, `deleted_by`, `purged_by`, `state`, or any combination including time ranges on `deleted_at`, `restored_at`, or `purged_at`. A query supplying only a `record_id` returns at most one record. A well-formed query matching no records returns an empty sequence. A time range filter on `purged_at` applied where `state: Active` or `state: Deleted` returns an empty sequence — those records carry no `purged_at`. Only malformed parameters surface as `invalid-query`: a syntactically invalid `record_id` (non-null, non-empty), an unrecognized state value, or a time range with end before start.
+- `read(query) → ordered_sequence_of_records | rejected(invalid-query)` — return lifecycle records matching the query, ordered by the most recent transition timestamp descending, then by `record_id` ascending in lexicographic byte-order as a stable tiebreaker. The host system must supply `record_id` values in a format where string byte-order sort is total and deterministic. A query may filter by `record_id`, `deleted_by`, `purged_by`, `state`, or any combination including time ranges on `deleted_at`, `restored_at`, or `purged_at`. A query supplying only a `record_id` returns at most one record. A well-formed query matching no records returns an empty sequence. A time range filter on `purged_at` applied where `state: Active` or `state: Deleted` returns an empty sequence — those records carry no `purged_at`. Only malformed parameters surface as `invalid-query`: a syntactically invalid `record_id` (non-null, non-empty), an unrecognized state value, or a time range with end before start.
 
 ### Outputs
 
@@ -102,7 +102,7 @@ No other transitions exist. A Purged record cannot be restored; a new record req
 
 ### Decision points
 
-- **At `soft_delete`** — the atom requires the record to be in Active state. A `record_id` for which no lifecycle record exists, or for which the record is already Deleted or Purged, is rejected accordingly. On first soft-delete of a `record_id` that has never been registered, the atom implicitly creates the lifecycle record in Active state and immediately transitions to Deleted — there is no separate `register` action. `deleted_by` must be non-empty and non-whitespace-only. `deleted_at`, if supplied, must not be in the future. Any violation: `invalid-request`. `storage-failure` leaves the record in Active.
+- **At `soft_delete`** — on first call for a `record_id` with no lifecycle record, the atom implicitly creates the lifecycle record and transitions to Deleted; there is no separate `register` action and `not-known` is not returned for new `record_id`s. `already-deleted` if the record is in Deleted state; `already-purged` if the record is in Purged state. `deleted_by` must be non-empty and non-whitespace-only. `deleted_at`, if supplied, must not be in the future. Any violation: `invalid-request`. `storage-failure` leaves the record in Active.
 
 - **At `restore`** — `not-known` if the `record_id` has no lifecycle record; `not-deleted` if the record is Active; `already-purged` if the record is Purged. `restored_by` must be non-empty; `restored_at`, if supplied, must not be in the future and must be ≥ `deleted_at`. `storage-failure` leaves the record in Deleted.
 
@@ -129,7 +129,7 @@ Each rejected action produces an observable refusal naming the failed preconditi
 
 ### Invariants
 
-- **Invariant 1 — Deletion attribution is immutable.** After a successful `soft_delete`, the fields `deleted_by`, `deleted_at`, and `deletion_reason` never change, regardless of any subsequent restore or purge. Each delete/restore cycle's attribution is overwritten by the most recent delete; full history requires Event Log composition.
+- **Invariant 1 — Deletion attribution is immutable within a deletion epoch.** The fields `deleted_by`, `deleted_at`, and `deletion_reason` set by a `soft_delete` call do not change as a result of `restore` or `purge`. A subsequent `soft_delete` following a `restore` replaces all three fields with the new deletion's attribution — the prior epoch's attribution is not retained by this atom. Full delete/restore cycle history requires Event Log composition. A Purged record carries the `deleted_by`, `deleted_at`, and `deletion_reason` from the most recent `soft_delete` that preceded the purge, immutably.
 
 - **Invariant 2 — Membership exclusivity.** Every record known to the atom's store is in exactly one of {Active, Deleted, Purged} at all times.
 
@@ -139,7 +139,7 @@ Each rejected action produces an observable refusal naming the failed preconditi
 
 - **Invariant 5 — Purge attribution is complete.** Every Purged record carries non-empty `purged_by`, `purge_reason`, and `purged_at`. An anonymous purge or an unexplained destruction is a conformance failure — it defeats the audit record that legal proceedings, regulatory inspections, and GDPR compliance demonstrations require.
 
-- **Invariant 6 — Temporal ordering.** For every record: `deleted_at` ≤ `purged_at` (if Purged). For restored records: `deleted_at` ≤ `restored_at`. A purge or restore cannot be documented as occurring before the deletion it acts on.
+- **Invariant 6 — Temporal ordering within each transition.** For every Purged record: `deleted_at` ≤ `purged_at`. For every restore event: `restored_at` ≥ the `deleted_at` that was current at the time `restore` was called (enforced by the Decision point). After a subsequent `soft_delete` following a restore, `deleted_at` is overwritten with the new deletion's timestamp; the stored `restored_at` from the prior cycle then predates the new `deleted_at`. This is expected: the stored fields reflect the most recent deletion epoch and the most recent restore epoch independently. Cross-epoch ordering is not guaranteed from stored fields alone; it is verifiable only via Event Log composition, which retains the full ordered history of all transitions.
 
 - **Invariant 7 — Lifecycle record durability.** The lifecycle record for a `record_id` is never removed from the atom's store once created. The total lifecycle record count is monotonically non-decreasing. A Purged record's lifecycle record is retained as permanent audit evidence of the destruction.
 
@@ -221,6 +221,24 @@ Soft Delete is the recoverability and destruction primitive. Every atom that pro
 
 ---
 
+## Generation acceptance
+
+Any implementation derived from this atom must produce records and a runtime surface that pass the following checks from the records alone, without recourse to source code, runbooks, or developer narration:
+
+1. **Lifecycle record retention check.** For a set of `record_id`s including Purged records, confirm that `read({record_id: X})` returns each of them. A Purged record's lifecycle record must remain in the store (Invariant 7); no `record_id` with a lifecycle record may be absent from the store.
+
+2. **Purge attribution completeness check.** For every Purged record in the store: confirm `purged_by`, `purge_reason`, and `purged_at` are all non-empty, and that `purged_at ≥ deleted_at` (Invariant 5, Invariant 6). A Purged record with an empty attribution field or a reversed temporal ordering is a conformance failure.
+
+3. **Two-step purge path enforcement check.** Attempt `purge` on a record in Active state (one that has never been soft-deleted). Confirm the response is `rejected(not-deleted)` and the lifecycle record is unchanged. Invariant 4 prohibits the Active → Purged direct path; this check verifies it.
+
+4. **Terminal absorption check.** Attempt `restore` on a known Purged record. Confirm the response is `rejected(already-purged)` and the lifecycle record is unchanged. Invariant 3 guarantees Purged is terminal.
+
+5. **Multi-cycle coherence check.** For a record: (a) `soft_delete`, record `deleted_at` as T1 and `deleted_by` as A1; (b) `restore`; (c) `soft_delete` again, record `deleted_at` as T2 and `deleted_by` as A2 (T2 > T1); (d) `purge`. Confirm the final Purged lifecycle record carries `deleted_at: T2`, `deleted_by: A2`, and `purged_at ≥ T2`, all non-empty. Confirms the most-recent-epoch attribution is correct and that the prior epoch was replaced (Invariant 1).
+
+6. **Deletion attribution completeness check.** For every record in Deleted or Purged state: confirm `deleted_by` and `deleted_at` are non-empty (Invariant 8). A record in either state lacking deletion attribution is a conformance failure.
+
+---
+
 ## Status
 
 `unresolved` — foundation round complete (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus). Human refinement rounds and AI adversarial round not yet completed.
@@ -229,7 +247,7 @@ Soft Delete is the recoverability and destruction primitive. Every atom that pro
 
 ## Lineage notes
 
-Non-regulated atom in `atoms/resource-lifecycle/`. No *Regulated adversarial scenarios* or *Generation acceptance* sections required by default — however, given the atom's direct role in GDPR erasure, HIPAA disposal, and e-discovery spoliation, a future refinement round should evaluate whether the regulated-pattern conventions apply. Provisional Commitment is the reference shape for resource-lifecycle atoms; Legal Hold is the reference for the attribution and terminal-state patterns carried here.
+Non-regulated atom in `atoms/resource-lifecycle/`, with regulated obligations. *Regulated adversarial scenarios* are not required; however, given the atom's direct role in GDPR erasure, HIPAA disposal, and e-discovery spoliation, a *Generation acceptance* section is required and has been added above. Provisional Commitment is the reference shape for resource-lifecycle atoms; Legal Hold is the reference for the attribution and terminal-state patterns carried here.
 
 **Pass 1 — Structural completeness (GRID).** Three findings, all closed in-pattern.
 

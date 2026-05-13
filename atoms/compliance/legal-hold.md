@@ -44,7 +44,7 @@ The Legal Hold atom operates against a named store instance. A `store_name` iden
 
 ### Identity model
 
-Each hold has an opaque, immutable, system-generated `hold_id` — assigned on `place`, never reused, never reassigned within the store instance. The id is the hold's identity; the record reference, placing actor, reason, and timestamps are properties of the hold, not its identity.
+Each hold has an opaque, immutable, system-generated `hold_id` — assigned on `place`, never reused, never reassigned within the store instance. It must be a non-empty string sortable in lexicographic byte-order; this property is required for deterministic `read` ordering. The id is the hold's identity; the record reference, placing actor, reason, and timestamps are properties of the hold, not its identity.
 
 `record_ref` is an opaque reference to the record being held. Set on `place`, immutable. The atom does not validate that the record exists or is currently retained — `record_ref` is the caller's responsibility. Two holds over the same record have distinct `hold_id`s; each is its own audit record with its own lifecycle.
 
@@ -64,7 +64,7 @@ Each hold has an opaque, immutable, system-generated `hold_id` — assigned on `
 
 - `release(hold_id, released_by, reason, released_at?) → released | rejected(not-known | already-released | invalid-request | storage-failure)` — document the end of the preservation obligation and transition the hold to Released. Records `released_by`, `release_reason`, and `released_at` (wall clock if not supplied; must not be in the future — releasing a hold in the future is not meaningful); all are immutable after the transition. `released_by` and `reason` must each contain at least one non-whitespace character (`invalid-request`). Releasing a hold on a record does not affect any other hold on the same record. `storage-failure` leaves the hold in Active state; the caller must retry.
 
-- `read(query) → ordered_sequence_of_holds | rejected(invalid-query)` — return holds matching the query, ordered by `placed_at` ascending, then by `hold_id` ascending as a stable tiebreaker. A query may filter by `hold_id`, `record_ref`, `placed_by`, `case_ref`, `state`, or any combination including time ranges on `placed_at` or `released_at`. A query supplying only a `hold_id` returns at most one hold. A well-formed query matching no holds returns an empty sequence, not a rejection. A query with no filters returns every hold in the store. A time range filter on `released_at` applied where `state: Active` returns an empty sequence — Active holds carry no `released_at` field. Only malformed parameters surface as `invalid-query`: a syntactically invalid `hold_id` (non-null, non-empty), an unrecognized state value, or a time range with end before start. The query `{record_ref: X, state: Active}` returns every Active hold covering a given record — this is the operational check for whether a record is currently held.
+- `read(query) → ordered_sequence_of_holds | rejected(invalid-query)` — return holds matching the query, ordered by `placed_at` ascending, then by `hold_id` ascending in lexicographic byte-order as a stable tiebreaker. Implementations must assign `hold_id` values in a format where string byte-order sort produces a total order (e.g., ULID, UUID v7, or zero-padded integer string). A query may filter by `hold_id`, `record_ref`, `placed_by`, `case_ref`, `state`, or any combination including time ranges on `placed_at` or `released_at`. A query supplying only a `hold_id` returns at most one hold. A well-formed query matching no holds returns an empty sequence, not a rejection. A query with no filters returns every hold in the store. A time range filter on `released_at` returns only holds that carry a `released_at` field — i.e., Released holds. Active holds carry no `released_at` field and are implicitly excluded from results whenever a `released_at` filter is present, regardless of whether a `state` filter is also supplied. A query `{released_at: {after: X}}` with no state filter returns Released holds where `released_at > X`; Active holds are not included. A query `{state: Active, released_at: {after: X}}` returns an empty sequence by the same rule. Only malformed parameters surface as `invalid-query`: a syntactically invalid `hold_id` (non-null, non-empty), an unrecognized state value, or a time range with end before start. The query `{record_ref: X, state: Active}` returns every Active hold covering a given record — this is the operational check for whether a record is currently held.
 
 ### Outputs
 
@@ -76,7 +76,7 @@ Each hold has an opaque, immutable, system-generated `hold_id` — assigned on `
 
 Each hold is in exactly one state:
 
-- **Active** — the preservation obligation is in effect. The record referenced by `record_ref` may not be purged while this hold is Active. The hold carries `hold_id`, `record_ref`, `placed_by`, `hold_reason`, `placed_at`, and `case_ref` (if supplied). May only be released (transitioning to Released) or read.
+- **Active** — the preservation obligation for `record_ref` is in effect. Any composition wiring this atom to a purge surface must treat an Active hold as blocking purge eligibility; the atom records the obligation but does not enforce it internally. The hold carries `hold_id`, `record_ref`, `placed_by`, `hold_reason`, `placed_at`, and `case_ref` (if supplied). May only be released (transitioning to Released) or read.
 - **Released** — the preservation obligation has ended. Carries `released_by`, `release_reason`, and `released_at` (all immutable from the moment `release` completes), plus all placement fields. Terminal; no further transitions.
 
 Valid transitions:
@@ -100,7 +100,7 @@ No other transitions exist. A hold cannot be re-activated after release; a new p
 
 - **At `release`** — `not-known` if the `hold_id` does not exist in the store; `already-released` if the hold is in Released state. If neither: `released_by` and `reason` must each be non-empty and non-whitespace-only (`invalid-request`); `released_at`, if supplied, must not be in the future and must be ≥ the hold's `placed_at` — a release documented as occurring before the hold was placed is incoherent and a conformance failure (`invalid-request`). `storage-failure` leaves the hold in Active; the caller must retry. Rejection priority: `not-known` → `already-released` → `invalid-request` → `storage-failure`.
 
-- **At `read`** — any supplied `hold_id` must be syntactically valid (non-null, non-empty). Any supplied state filter must be one of {`Active`, `Released`}. A time range filter must have end ≥ start. A well-formed query matching no holds returns an empty sequence. Only malformed parameters surface as `invalid-query`.
+- **At `read`** — any supplied `hold_id` must be syntactically valid (non-null, non-empty). Any supplied state filter must be one of {`Active`, `Released`}. A time range filter must have end ≥ start. A `released_at` filter implicitly excludes Active holds, which carry no `released_at` field, regardless of whether a `state` filter is also present. A well-formed query matching no holds returns an empty sequence. Only malformed parameters surface as `invalid-query`.
 
 ### Behavior
 
@@ -185,7 +185,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 1. **Hold completeness check.** For a set of `hold_id`s known to have been issued, confirm that `read({hold_id: X})` returns each of them across all states. No issued `hold_id` may be absent from the store.
 
-2. **Active hold attribution check.** For every Active hold in the store: confirm `placed_by`, `hold_reason`, `placed_at`, `record_ref`, and `hold_id` are all non-empty. An Active hold missing any attribution field is a conformance failure under Invariant 7.
+2. **Placement attribution check — both states.** For every hold in the store, in any state: confirm `placed_by`, `hold_reason`, `placed_at`, `record_ref`, and `hold_id` are all non-empty. This applies equally to Active and Released holds — Invariant 7 covers both. A hold in either state missing any placement attribution field is a conformance failure under Invariant 7.
 
 3. **Release attribution check.** For every Released hold: confirm `released_by`, `release_reason`, and `released_at` are all non-empty, and that `released_at ≥ placed_at` (Invariant 6). A Released hold with an empty attribution field or an inverted temporal ordering is a conformance failure under Invariants 5 and 6.
 
@@ -193,7 +193,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 5. **Terminal absorption check.** Attempt `release` against a known Released hold. The call must return `rejected(already-released)`. Confirm the hold's fields are unchanged after the attempted release.
 
-6. **No-destruction check.** For a set of `hold_id`s including Released holds, confirm that `read({hold_id: X})` returns each of them. Released holds must remain in the store as audit records (Invariant 8); no issued id may be absent.
+6. **Store monotonicity check.** At time `t1`, issue `read({})` (unfiltered) and record the result set S1. Place one new hold; wait for confirmation. At time `t2 > t1`, issue `read({})` again and record result set S2. Confirm every hold in S1 appears in S2 with identical field values. Confirm the new hold appears in S2. Confirms the behavioral guarantee that the hold store is monotonically non-decreasing; the count of holds never decreases and no existing hold is altered or removed.
 
 ---
 
