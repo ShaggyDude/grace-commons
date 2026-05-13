@@ -323,7 +323,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 |---|---------|------|-----------------|--------------------|----|
 | — | Subscription | Atom | — | — | Grounded |
 | — | Notification | Atom | — | — | Grounded |
-| 1 | Legal Hold | Atom | — | — | Unresolved (foundation + refinement round 1 + AI adversarial pass complete; Opus single-atom pass pending) |
+| 1 | Legal Hold | Atom | — | — | Grounded (last full rescan: 2026-05-13) |
 | 2 | Consent | Atom | — | — | Unresolved (foundation + AI adversarial pass complete; human refinement + Opus single-atom pass pending) |
 | 3 | Soft Delete | Atom | — | — | Unresolved (foundation + AI adversarial pass complete; human refinement + Opus single-atom pass pending) |
 | 4 | Approval Step | Atom | — | — | Not started |
@@ -333,7 +333,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | 8 | Capacity Constraint Enforcement | Atom | — | — | Not started |
 | 9 | Workflow / State Machine | Atom | — | — | Not started |
 | 10 | Preference / Personalization | Atom | — | — | Not started |
-| C1 | Regulated Record Retention & Defensible Deletion | Composition | Legal Hold | Audit Trail, Retention Window, Tamper Evidence, Event Log | Blocked on #1 |
+| C1 | Regulated Record Retention & Defensible Deletion | Composition | Legal Hold | Audit Trail, Retention Window, Tamper Evidence, Event Log | Unblocked; not started |
 | C2 | Consent & Preference Management | Composition | Consent | Audit Trail, Retention Window, Permissions, Event Log | Blocked on #2 |
 | C3 | Forensic Recovery | Composition | Soft Delete | Event Log, Actor Identity, Audit Trail | Blocked on #3 |
 | C4 | Multi-Party Approval | Composition | Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Blocked on #4 |
