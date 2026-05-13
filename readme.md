@@ -52,7 +52,7 @@ A composition depends on at least one other atom. Audit Trail composes Event Log
 
 The directory layout reflects the split:
 
-- `atoms/` holds atoms, organized by category — `productivity/`, `temporal/`, `compliance/`, `resource-lifecycle/`.
+- `atoms/` holds atoms, organized by category — `productivity/`, `temporal/`, `compliance/`, `resource-lifecycle/`, `messaging/`, `workflow/`.
 - `compositions/` holds compositions. Each file declares which atoms it composes and the logic that wires them together.
 
 The test for which folder a contribution belongs in: **does its specification name another pattern?** If no, it's an atom — file under `atoms/`. If yes, it's a composition — file under `compositions/`.
@@ -80,6 +80,8 @@ atoms/
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
 │   └── notification             — delivery record for a single notification to a single recipient
+├── workflow/
+│   └── approval-step            — Pending → Approved | Rejected | Withdrawn; named-approver gate (partially resolved)
 └── healthcare/
     ├── clinical-observation     — immutable clinical measurement with amendment/retraction trail (grounded)
     └── medication-order         — prescription lifecycle from order through terminal resolution (grounded)

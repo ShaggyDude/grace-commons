@@ -326,7 +326,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | 1 | Legal Hold | Atom | — | — | Grounded (last full rescan: 2026-05-13) |
 | 2 | Consent | Atom | — | — | Grounded (last full rescan: 2026-05-13) |
 | 3 | Soft Delete | Atom | — | — | Grounded (last full rescan: 2026-05-13) |
-| 4 | Approval Step | Atom | — | — | Not started |
+| 4 | Approval Step | Atom | — | — | Partially resolved — foundation round complete; AI adversarial round pending |
 | 5 | Selective Disclosure | Atom | — | — | Not started |
 | 6 | Party Identity | Atom | — | — | Not started |
 | 7 | Provenance | Atom | — | — | Not started |
