@@ -5,7 +5,7 @@ nav_order: 3
 
 # Pressure Testing
 
-> The foundation review every Grace Commons pattern survives before being considered grounded — three mandatory initial passes, as many human refinement rounds as the pattern requires, and a mandatory final AI-conducted adversarial round. Minimum standard: three rounds of three passes each, nine passes total, with the final round conducted by a high-functioning AI reviewer.
+> The foundation review every Grace Commons pattern survives before being considered grounded. Minimum standard: three rounds of three passes each — nine passes total. Round 1 is the foundation (Pass 1 → 2 → 3, author-led). Round 2 is at least one human refinement run; additional refinement rounds follow until a complete round surfaces no new findings. Round 3 is a mandatory AI-conducted adversarial pass of all three passes. The minimum is a floor: a pattern that appears clean after the foundation still completes Round 2 before proceeding to Round 3 — the clean result is the confirmation, not a reason to skip the round.
 
 A pattern's spec is incomplete in three different ways at once. Each of the three passes below catches a different class of incompleteness. None substitutes for the others. Together they constitute the mandatory foundation for atoms (in `atoms/`) and compositions (in `compositions/`).
 
