@@ -102,11 +102,17 @@ compositions/
 │                                  ↳ emergent invariants:
 │                                    permission-gated mutations,
 │                                    no dangling assignment on delete
-└── notification-fanout          — Subscription + Notification
+├── notification-fanout          — Subscription + Notification
+│                                  ↳ emergent invariants:
+│                                    fanout coverage, payload consistency,
+│                                    at-most-one per subscriber per invocation,
+│                                    per-recipient failure isolation
+└── multi-party-approval         — Approval Step + Permissions + Assignment + Audit Trail (substrate)
                                    ↳ emergent invariants:
-                                     fanout coverage, payload consistency,
-                                     at-most-one per subscriber per invocation,
-                                     per-recipient failure isolation
+                                     chain completeness, quorum determinism,
+                                     chain terminal absorption, chain immutability,
+                                     audit completeness across chain and step events
+                                     (partially resolved)
 ```
 
 Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Notification Fanout is structurally distinct: it is the first composition in the library where a single trigger produces a variable number of effects — the fan-out count is determined at runtime by the Active subscriber set, not at composition time — and its emergent invariants (fanout coverage, payload consistency, at-most-one per subscriber) are properties of the directed invocation graph that neither constituent atom can assert alone. Each pattern also carries **Lineage notes** recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).

@@ -1,0 +1,366 @@
+---
+title: Multi-Party Approval
+parent: Compositions
+nav_order: 6
+has_toc: true
+toc: true
+---
+
+# Multi-Party Approval
+
+<details markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
+> A regulated application: an enforced approval chain over a single subject and scope, wiring N Approval Step instances under a named quorum rule (all-of-N, M-of-N, one-of-N) into a single auditable decision. Composes Approval Step (the per-gate primitive), Permissions (who may initiate, withdraw, and read chains), and Assignment (the in-tray binding for each pending step), with Audit Trail as the regulated-audit substrate (Event Log + Actor Identity + Retention Window + Tamper Evidence) that captures every chain-level and step-level action attribution-stamped, retention-bounded, and tamper-evident. The emergent guarantee: a required N-approver gate cannot be bypassed, the quorum rule is deterministic from the records, the full approval chain (who decided what, when, in what order, under what scope) is reproducible from the records alone, and no chain reaches Approved without the quorum-named decisions actually present in the Approval Step store.
+
+---
+
+## Intent
+
+Many regulated actions require more than one human approval before they may proceed. A SOX-controlled journal entry above a materiality threshold requires the controller *and* the CFO. A pharmaceutical batch release under 21 CFR Part 211 requires the qualified person on duty plus the QA director. A clinical protocol deviation under ICH E6 GCP requires the principal investigator plus, for substantive deviations, the IRB chair. A high-value engineering change order requires the engineering lead, the quality lead, and (when safety-critical) the safety officer. In each case the structure is the same: a set of named approvers, a quorum rule (all of them, a majority of them, any one of them), and a terminal decision that becomes the auditable evidence the control operated.
+
+[Approval Step](../atoms/workflow/approval-step.md) is the per-gate primitive — one named approver, one subject, one scope, one decision. It deliberately does not know about chains: it does not count approvals, does not interpret quorum, and does not wire multiple gates together. Multi-Party Approval is the composition that does. The atom's single-gate scope is preserved unchanged; the composition adds the chain identity, the quorum rule, the cross-step state evaluation, and the cascade behavior when a chain is withdrawn or quorum becomes unachievable.
+
+The composition addresses what the constituent atoms cannot answer alone. Approval Step records each gate but never asks *"is the chain done?"* Permissions records who may initiate a chain but never asks *"did the quorum's named approvers actually decide?"* Assignment binds work to actors but never asks *"is the work part of a multi-actor gate?"* Audit Trail records actions of consequence but never asks *"do these actions constitute a complete approval chain under the named rule?"* Stacked correctly, the four answer the auditor's actual question in one structure: a chain identity that names the required approvers and rule, N Approval Step records under that chain identity, an Assignment record per pending step, attestations and event-log entries for every chain-level and step-level action, and a deterministic chain-state evaluation that any reader can reproduce from the records.
+
+This is a composition, not a new primitive. The four constituent atoms (and the Audit Trail substrate) are unchanged. The application is the wiring that makes their concerns coherent — one consolidated multi-party-approval surface rather than four parallel record stores the auditor has to correlate by hand.
+
+---
+
+## Composes
+
+- **[Approval Step](../atoms/workflow/approval-step.md)** — provides the per-gate primitive: one Approval Step record per required approver, each carrying its own `step_id`, `subject_ref`, `approver_ref`, `submitter_ref`, `scope`, lifecycle (Pending → Approved | Rejected | Withdrawn), and Invariant 4 enforcement that only the named `approver_ref` may transition to Approved or Rejected. The application maintains exactly one Approval Step store instance per chain store (one-to-one) and submits N steps under each chain.
+- **[Permissions](../atoms/compliance/permissions.md)** — provides the authorization surface for chain-level actions: `grant`, `revoke`, `permitted`. The application maintains exactly one Permissions instance scoped to the chain store. Every chain-level state-changing action (`initiate_chain`, `withdraw_chain`) and every chain-level read query is gated by a `permitted` check before reaching the chain store or its constituent stores.
+- **[Assignment](../atoms/productivity/assignment.md)** — provides the in-tray binding: on chain initiation, one Assignment record per step (`task_ref = step_id`, `assignee_ref = step.approver_ref`) is created so that approvers can query *"what approval steps are sitting in my in-tray right now?"* via Assignment's `active_for`-style queries. When a step reaches a terminal state (Approved, Rejected, or Withdrawn) the corresponding Assignment is recalled — its responsibility is discharged.
+- **[Audit Trail](./audit-trail.md)** — the regulated-audit substrate. Every chain-level action (`initiate_chain`, `withdraw_chain`) and every step-level decision (`approve_step`, `reject_step`, `withdraw_step`) is recorded as one `record_action` call on the Audit Trail instance, producing an Event Log entry, an Actor Identity attestation, a Retention Window record, and (per the cadence) a Tamper Evidence seal. The application maintains exactly one Audit Trail instance configured with the host's regulatory retention policy (SOX 7-year, FDA Part 11 predicate-rule, ICH E6 trial-master-file).
+
+The Event Log and Actor Identity atoms named in the roadmap entry for this composition are reached transitively through Audit Trail; the application does not maintain separate Event Log or Actor Identity instances of its own. Audit Trail is the regulated-audit composition that owns those constituents.
+
+---
+
+## Composition logic
+
+### Application state
+
+The application owns emergent state — the chain store and the cross-atom maps — that wires the constituent atoms into one queryable approval-chain surface:
+
+- **`chain_store`** — the set of chain records. Each record carries `chain_id`, `subject_ref`, `scope`, `initiator_ref`, `approver_set` (the N actor references the chain is bound to), `quorum_rule` (one of `all-of-N`, `M-of-N(M)`, `one-of-N`), `initiated_at`, and `state` (Pending | Approved | Rejected | Withdrawn). Chain records are immutable on every field except `state`; `state` transitions are append-only in the sense that no terminal state returns to Pending.
+- **`chain_to_steps`** — map from `chain_id` to the ordered list of `step_id`s submitted under that chain. The list is set at `initiate_chain` and is immutable; reassignment or replacement of steps is not supported (a step that needs to be redone requires the chain to be withdrawn and a new chain initiated).
+- **`step_to_chain`** — inverse map from `step_id` to its `chain_id`, for fast traversal when a step-level event fires.
+- **`step_to_assignment`** — map from `step_id` to the `assignment_id` of the in-tray binding for that step. Lets the auditor traverse from a step to its responsibility record.
+- **`chain_terminal_at`** — for each chain in a terminal state, the timestamp at which the chain first satisfied the quorum rule (Approved) or became unsatisfiable (Rejected), or the timestamp the initiator withdrew the chain (Withdrawn). Set once when the chain leaves Pending; immutable thereafter.
+
+### Configuration
+
+- **`approver_set_minimum`** — the smallest valid `approver_set` size. Defaults to 1 (a single-gate chain is a degenerate but valid chain); deployments requiring genuine multi-party may configure ≥ 2. A chain initiated with `|approver_set| < approver_set_minimum` is rejected at `initiate_chain` with `invalid-request`.
+- **`approver_set_uniqueness`** — whether the `approver_set` must contain pairwise-distinct `approver_ref` values. Defaults to `true` (the same actor cannot occupy two slots in the same chain); deployments where the same actor may legitimately appear twice (e.g., wearing two roles) may configure `false`. Even under `false`, the resulting chain submits one Approval Step per slot, each with its own `step_id`.
+- **`quorum_rule_allowed`** — the set of quorum rules the deployment permits. Defaults to `{all-of-N, M-of-N, one-of-N}`. A deployment may restrict to a subset; chains initiated with a quorum rule outside the allowed set are rejected at `initiate_chain` with `invalid-request`.
+- **`audit_trail_retention_policy`** — the policy reference passed to the Audit Trail instance at each `record_action` call. Typically a regulatory policy id (`sox_7_year`, `fda_part_11_predicate_rule`, `ich_e6_tmf`). The choice is deployment policy; the composition surfaces the configuration knob.
+
+### Scope vocabulary
+
+Permissions treats action scopes as opaque. Multi-Party Approval defines the canonical scope vocabulary for its Permissions instance:
+
+| Scope | Permits |
+|-------|---------|
+| `chains:initiate` | Call `initiate_chain` to create a new approval chain |
+| `chains:withdraw` | Call `withdraw_chain` to withdraw a chain (the chain initiator's act) |
+| `chains:read` | Read chain records and their composed step/assignment/attestation surface |
+
+Step-level decisions (`approve_step`, `reject_step`, `withdraw_step`) are *not* additionally permission-gated at the chain layer: Approval Step's Invariant 4 (only the named `approver_ref` may transition Pending to Approved or Rejected) and Invariant 5 (only the named `submitter_ref` may transition Pending to Withdrawn) are the structural enforcement for who may decide each step. Adding a second permission check at the chain layer would be redundant and risks the two checks drifting out of sync. The chain composition relies on Approval Step's enforcement and surfaces an `unauthorized` rejection from the underlying atom unchanged.
+
+The vocabulary is deployment-configurable. A deployment that distinguishes "read your own chains" from "read any chain" introduces finer-grained scopes (`chains:read:own`, `chains:read:any`) and adjusts the wiring accordingly; the canonical vocabulary above is the minimum useful set.
+
+### Action wiring
+
+Every chain-level action follows the same three-step shape: Permissions check first, audit-trail record second, constituent atom call third. Step-level actions follow a two-step shape: constituent atom call first (Approval Step enforces approver/submitter exclusivity), audit-trail record second, then chain-state re-evaluation.
+
+- **`initiate_chain(actor_ref, subject_ref, scope, approver_set, quorum_rule, reason?) → chain_id | rejected(permission-denied | invalid-request | recording-failure)`**
+  1. `Permissions.permitted(actor_ref, chains:initiate)` → if `denied`, return `permission-denied`.
+  2. Validate the chain shape: `|approver_set| ≥ approver_set_minimum`; if `approver_set_uniqueness` is true, all elements of `approver_set` are pairwise distinct; `quorum_rule` is in `quorum_rule_allowed`; for `M-of-N(M)`, `1 ≤ M ≤ |approver_set|`; `subject_ref` and `scope` non-whitespace. Any violation is `invalid-request`; no records are written.
+  3. Allocate a fresh `chain_id`. Record the chain in `chain_store` with `state = Pending`, `initiated_at = now`, the supplied fields.
+  4. For each `approver_ref` in `approver_set`, in declaration order: call `ApprovalStep.submit(subject_ref, approver_ref, submitter_ref=actor_ref, scope, reason?)` → `step_id`. Append `step_id` to `chain_to_steps[chain_id]`; record `step_to_chain[step_id] = chain_id`.
+  5. For each `step_id` just submitted: call `Assignment.assign(task_ref=step_id, assignee_ref=step.approver_ref)` → `assignment_id`. Record `step_to_assignment[step_id] = assignment_id`. The in-tray binding now lets each approver query their pending decisions.
+  6. Call `AuditTrail.record_action(action_ref=chain_initiated, actor_ref, credential, data={chain_id, subject_ref, scope, approver_set, quorum_rule}, retention_policy=audit_trail_retention_policy)`. The Audit Trail produces the event-log entry, the actor attestation, the retention record, and (under per-event cadence) the tamper-evidence seal.
+  7. If any of steps 3–6 fail after Permissions has permitted, return `rejected(recording-failure)`. The implementation must handle the partial-state cases per the *Cross-store consistency under failure* edge case; in particular, an Approval Step that has been submitted cannot be unsubmitted, so a failure at step 5 or 6 leaves Approval Step records that the recovery path must reconcile (typically by chain-level withdrawal).
+  8. Return `chain_id`.
+
+- **`approve_step(actor_ref, chain_id, step_id, reason?) → approved | rejected(invalid-request | not-known | not-pending | unauthorized | recording-failure)`**
+  1. Validate that `step_to_chain[step_id] == chain_id` and that the chain is in Pending state. If `step_id` is not part of the chain, return `not-known`. If the chain is in a terminal state, return `not-pending` (any approval after chain termination is a no-op the application must refuse).
+  2. Call `ApprovalStep.approve(step_id, decided_by=actor_ref, reason?)` → propagates `invalid-request | not-known | not-pending | unauthorized | storage-failure` unchanged (storage-failure is surfaced as `recording-failure` at the application boundary for caller-API uniformity). The atom's Invariant 4 ensures `actor_ref` must match the step's `approver_ref`.
+  3. On atom-level success, call `Assignment.recall(step_to_assignment[step_id])` → discharges the in-tray binding for the approver. The recall is required regardless of the resulting chain state — once decided, the step is no longer in-tray work.
+  4. Call `AuditTrail.record_action(action_ref=step_approved, actor_ref, credential, data={chain_id, step_id, reason})`.
+  5. Re-evaluate the chain state per the *Quorum evaluation rule* below. If the chain transitions to Approved or Rejected, set `chain_store[chain_id].state` accordingly, set `chain_terminal_at = now`, and call `AuditTrail.record_action(action_ref=chain_resolved, actor_ref=system, credential=system_credential, data={chain_id, state, reason="quorum reached"|"quorum unreachable"})`. The system credential is the deployment-provisioned credential the composition uses for application-emitted records; it is not a human actor.
+  6. Return `approved`.
+
+- **`reject_step(actor_ref, chain_id, step_id, reason) → rejected_outcome | rejected(invalid-request | not-known | not-pending | unauthorized | recording-failure)`**
+  1. As `approve_step` step 1.
+  2. Call `ApprovalStep.reject(step_id, decided_by=actor_ref, reason)` → propagates the atom's rejection taxonomy; `reason` is required (Approval Step's Invariant 6 enforces it).
+  3. As `approve_step` step 3 (recall the in-tray assignment).
+  4. As `approve_step` step 4, with `action_ref=step_rejected`.
+  5. Re-evaluate the chain state; the outcome of a rejection under `all-of-N` is chain-Rejected; under M-of-N or one-of-N, it depends on remaining capacity. As `approve_step` step 5.
+  6. Return `rejected_outcome` (Approval Step's success token for `reject`).
+
+- **`withdraw_step(actor_ref, chain_id, step_id, reason) → withdrawn | rejected(invalid-request | not-known | not-pending | unauthorized | recording-failure)`**
+  1. As `approve_step` step 1.
+  2. Call `ApprovalStep.withdraw(step_id, withdrawn_by=actor_ref, reason)` → propagates the atom's rejection taxonomy; `withdrawn_by` must match `submitter_ref` (the chain initiator). Step-level withdrawal is the chain initiator correcting a single mis-submitted gate (wrong approver named, wrong scope) without retracting the whole chain.
+  3. As `approve_step` step 3 (recall the in-tray assignment).
+  4. As `approve_step` step 4, with `action_ref=step_withdrawn`.
+  5. Re-evaluate the chain state; a withdrawn step is counted alongside rejected steps for quorum-unreachability purposes (see *Quorum evaluation rule*).
+  6. Return `withdrawn`.
+
+- **`withdraw_chain(actor_ref, chain_id, reason) → withdrawn | rejected(permission-denied | not-known | not-pending | unauthorized | recording-failure)`**
+  1. `Permissions.permitted(actor_ref, chains:withdraw)` → if `denied`, return `permission-denied`.
+  2. Validate that `chain_id` is in `chain_store` (`not-known` otherwise) and in Pending state (`not-pending` otherwise).
+  3. Validate that `actor_ref == chain_store[chain_id].initiator_ref` — only the chain initiator may withdraw the chain. Mismatch is `unauthorized`.
+  4. For each `step_id` in `chain_to_steps[chain_id]` whose underlying Approval Step is still Pending: call `ApprovalStep.withdraw(step_id, withdrawn_by=initiator_ref, reason)` → discards each Pending gate. Then `Assignment.recall(step_to_assignment[step_id])` discharges each in-tray binding. Steps already in a terminal state are not affected by chain-level withdrawal — their records are immutable.
+  5. Set `chain_store[chain_id].state = Withdrawn`, `chain_terminal_at = now`.
+  6. Call `AuditTrail.record_action(action_ref=chain_withdrawn, actor_ref, credential, data={chain_id, reason})`.
+  7. Return `withdrawn`.
+
+- **`read_chain(actor_ref, query) → ordered_sequence_of_chains | rejected(permission-denied | invalid-query)`**
+  1. `Permissions.permitted(actor_ref, chains:read)` → if `denied`, return `permission-denied` (or an empty result, per deployment policy).
+  2. Query the chain store on the supported filter axes: `chain_id`, `subject_ref`, `scope`, `initiator_ref`, `state`, time ranges on `initiated_at` or `chain_terminal_at` (using the `{after: <timestamp>, before: <timestamp>}` sub-key form consistent with Approval Step's `read`). An unrecognized filter key is `invalid-query`. Empty result for a well-formed query that matches no chains; not a rejection.
+  3. For each chain in the result set, the response carries the chain record's fields plus the derived view: the ordered list of step records (via `chain_to_steps` joined against the Approval Step store), the current assignment for each Pending step (via `step_to_assignment` joined against the Assignment store), and the chain's terminal status. The application does not surface the underlying Audit Trail records on this query; auditors querying the full audit history call `AuditTrail.verify_record` directly with the relevant `event_id`s.
+
+### The quorum evaluation rule
+
+The application's load-bearing wiring decision: chain state is a deterministic function of the constituent step states under the chain's named quorum rule, re-evaluated at each step-level transition. The application is the only layer that owns this evaluation; neither Approval Step (which knows nothing about chains) nor Permissions/Assignment/Audit Trail (which know nothing about quorum) can produce the chain's terminal state alone.
+
+For a chain with `approver_set` of size N, let:
+
+- `A` = the count of step_ids in `chain_to_steps[chain_id]` whose underlying Approval Step state is Approved.
+- `R` = the count of step_ids whose state is Rejected.
+- `W` = the count of step_ids whose state is Withdrawn.
+- `P` = the count of step_ids whose state is Pending. `A + R + W + P = N`.
+
+Under quorum rule `all-of-N`:
+
+- If `A == N`, the chain transitions to **Approved**.
+- If `R + W ≥ 1`, the chain transitions to **Rejected** with reason `"quorum unreachable: all-of-N requires every approval; step S is in non-Approved terminal state"`. The first non-Approved terminal step is the trigger; subsequent step transitions do not re-fire the chain transition.
+- Otherwise the chain remains **Pending**.
+
+Under quorum rule `M-of-N(M)` (which includes `one-of-N` as `M=1`):
+
+- If `A ≥ M`, the chain transitions to **Approved**.
+- If `(N - R - W) < M` — i.e., fewer than M steps remain that are either already Approved or still capable of becoming Approved — the chain transitions to **Rejected** with reason `"quorum unreachable: M-of-N requires M approvals; only K remain achievable"`.
+- Otherwise the chain remains **Pending**.
+
+The rule is *terminal-stable*: once a chain reaches Approved or Rejected via this rule, subsequent step transitions (e.g., a still-Pending step is later approved by its named approver after the chain has already become Approved) do not alter the chain's state. The chain's terminal status is set once and is immutable. The trailing step transitions are still recorded in the Approval Step store and the Audit Trail, but the chain's state is unchanged.
+
+The rule is also *order-independent in outcome but order-sensitive in timing*: for any final distribution of step states (`A`, `R`, `W`, `P=0`), the chain's terminal state is determined by the rule above regardless of the order in which step transitions occurred. The `chain_terminal_at` timestamp captures the *first* moment the rule fired; later transitions to terminal states on still-Pending steps do not advance `chain_terminal_at`.
+
+---
+
+## Application-level invariants
+
+These invariants emerge from the composition. None belongs to a single constituent atom; each requires two or more constituents working together to hold.
+
+- **Invariant 1 — Chain completeness.** For every `chain_id` in `chain_store`, `chain_to_steps[chain_id]` is a non-empty ordered list of `step_id`s, each of which exists as a record in the Approval Step store. Every step is bound to the chain by `step_to_chain[step_id] = chain_id`. No chain has fewer than `approver_set_minimum` steps; no step is orphaned from its chain.
+
+- **Invariant 2 — Quorum determinism.** For any chain in a terminal state, the chain's `state` is the deterministic outcome of applying the chain's `quorum_rule` to the final state vector `(A, R, W, P)` of its constituent steps, as named in the *Quorum evaluation rule*. Any reader of the records can independently compute the expected terminal state from the step records and the quorum rule and confirm it matches `chain_store[chain_id].state`. A mismatch is a conformance failure.
+
+- **Invariant 3 — Permission enforcement.** No actor performs `initiate_chain`, `withdraw_chain`, or `read_chain` without a `permitted` result from the Permissions instance for the corresponding scope. A `denied` result short-circuits the action before any constituent atom is invoked. Step-level decision actions are enforced by Approval Step's Invariant 4 (named-approver exclusivity) and Invariant 5 (submitter-only withdraw) directly; the chain composition adds no separate permission check for step-level decisions.
+
+- **Invariant 4 — Assignment coverage during pendency.** For every step in Pending state, exactly one Active Assignment exists with `task_ref = step_id` and `assignee_ref = step.approver_ref`. When the step transitions to a terminal state (via `approve_step`, `reject_step`, `withdraw_step`, or cascade from `withdraw_chain`), the Assignment is recalled in the same application-level transition. No step in a terminal state has a lingering Active Assignment.
+
+- **Invariant 5 — Audit completeness.** Every chain-level action (`initiate_chain`, `withdraw_chain`) and every step-level action (`approve_step`, `reject_step`, `withdraw_step`) produces exactly one `AuditTrail.record_action` call, which in turn produces one Event Log entry, one Actor Identity attestation, and one Retention Window record. Additionally, every chain-state transition emitted by the *Quorum evaluation rule* (a `chain_resolved` event) produces its own `record_action`. The complete chain lifecycle is reconstructible from the Audit Trail records alone; no chain-level event is recorded only in the chain store without a corresponding Audit Trail entry.
+
+- **Invariant 6 — Constituent invariants preserved.** All invariants of every constituent atom hold over its respective instance. Approval Step's ten invariants (submission immutability, membership exclusivity, terminal absorption, approver exclusivity, submitter exclusivity, decision attribution completeness, temporal ordering, submission attribution completeness, concurrent step independence, step store durability) hold per step. Permissions' ten invariants hold over the chain-store-scoped Permissions instance. Assignment's ten invariants hold over the application's Assignment instance. Audit Trail's eight application-level invariants hold over its instance.
+
+- **Invariant 7 — Chain terminal absorption.** Once a chain is in Approved, Rejected, or Withdrawn, the chain's `state` does not transition further regardless of subsequent step-level events. A Pending step that is later decided after its chain has terminated produces a step-level record and an Audit Trail entry, but does not alter `chain_store[chain_id].state` or `chain_terminal_at`. This is the chain-level counterpart to Approval Step's Invariant 3 (terminal absorption on steps).
+
+- **Invariant 8 — Chain immutability of declared fields.** For every chain in `chain_store`, the fields `chain_id`, `subject_ref`, `scope`, `initiator_ref`, `approver_set`, `quorum_rule`, and `initiated_at` are immutable from the moment `initiate_chain` returns. Only `state` and `chain_terminal_at` may transition (and each transitions at most once: `state` from Pending to one terminal value; `chain_terminal_at` from unset to one timestamp). A chain cannot be re-targeted to a different subject, scope, approver set, or quorum rule; corrections require chain-level withdrawal and a new `initiate_chain` call.
+
+- **Invariant 9 — Forensic completability.** For any `chain_id`, the application's query surface returns: the chain record (subject, scope, initiator, approver set, quorum rule, state, timestamps); the ordered list of step records with each step's decision, decider, decision timestamp, and reason; the Assignment records for each step (Active or Recalled); and (via Audit Trail) the verified attestation for every chain-level and step-level action. An external auditor can reconstruct the full chain lifecycle from the records alone without recourse to source code, runbooks, or developer narration.
+
+Quorum determinism and chain completeness together give the *bypass-resistance* property — a chain cannot reach Approved without the quorum-named decisions actually present in the Approval Step store, and a reader can verify this from the records. Permission enforcement and audit completeness together give the *non-repudiability* property — every chain-level action is attribution-stamped, retention-bounded, and tamper-evident through the Audit Trail substrate. Chain terminal absorption and chain immutability together give the *finality* property — once a chain terminates, its outcome is fixed; later corrections require new chains, not retroactive edits to old ones.
+
+---
+
+## Examples
+
+### Walkthrough — SOX-controlled journal entry, all-of-N quorum
+
+A multinational bank's general-ledger system uses Multi-Party Approval to gate posting of journal entries above the $5M materiality threshold. The deployment configures `approver_set_minimum = 2`, `approver_set_uniqueness = true`, `quorum_rule_allowed = {all-of-N}`, `audit_trail_retention_policy = sox_7_year`.
+
+1. **A controller prepares a journal entry.** Journal entry JE-2026-0441 posts a $12M intercompany transfer. Under the deployment's business rules, materiality of this size requires the regional controller, the CFO, and the CEO. The controller calls `initiate_chain(actor_ref=controller_morgan, subject_ref="je-2026-0441", scope="financial:journal-entry:post:materiality-tier-3", approver_set=[finance_director_chen, cfo_park, ceo_walsh], quorum_rule="all-of-N", reason="$12M intercompany transfer per Q1 close")`.
+2. **The application validates and writes.** Permissions returns `permitted` (`controller_morgan` holds `chains:initiate`). Validation passes (three pairwise-distinct approvers, all-of-N is allowed). The application allocates `chain-2026-0441`, writes the chain record in Pending, submits three Approval Steps (`step-001`, `step-002`, `step-003`), creates three Assignments (one per approver's in-tray), and records the chain-initiated event in the Audit Trail. Returns `chain_id = chain-2026-0441`.
+3. **The CFO approves first.** `approve_step(actor_ref=cfo_park, chain_id=chain-2026-0441, step_id=step-002, reason="Reviewed Q1 close package; transfer is in-policy")` → `approved`. Step 002 transitions to Approved; Assignment is recalled; the audit trail records the approval. Quorum evaluation: `A=1, R=0, W=0, P=2`; all-of-N requires `A == N(=3)`; not satisfied; no quorum failure (no rejections or withdrawals); chain stays Pending.
+4. **The controller's regional finance director approves second.** `approve_step(actor_ref=finance_director_chen, step-001, reason="Mapping verified; consolidation rules applied correctly")` → `approved`. `A=2, R=0, W=0, P=1`; still not at quorum.
+5. **The CEO approves third.** `approve_step(actor_ref=ceo_walsh, step-003, reason="Reviewed and authorized")` → `approved`. `A=3, R=0, W=0, P=0`; `A == N`; chain transitions to Approved; `chain_terminal_at` is set; the audit trail records the `chain_resolved` event. The composing workflow system releases JE-2026-0441 for posting.
+6. **Three years later, a SOX §404 audit.** The auditor queries `read_chain({subject_ref: "je-2026-0441"})`. The result is one chain in Approved with three step records, three attestations, three retention records under the seven-year policy, and a Tamper Evidence seal covering the relevant range. `verify_record` on each Audit Trail event returns `verified`. The auditor confirms (a) Invariant 4 was enforced on each step (`decided_by` matched `approver_ref`), (b) Invariant 2 holds (chain state matches the deterministic quorum evaluation), and (c) no chain-state edit occurred after `chain_terminal_at`. Control evidence is complete from the records alone.
+
+### Happy path — FDA Part 11 batch release, M-of-N(2) quorum across three qualified persons
+
+A pharmaceutical manufacturer's batch release system requires any two of three Qualified Persons (QPs) to approve a batch release under 21 CFR Part 211. The deployment uses `quorum_rule = M-of-N(M=2)`. A batch BR-2026-0412 is ready for release. The QA manager initiates: `initiate_chain(actor_ref=qa_manager, subject_ref="br-2026-0412", scope="pharma:batch-release:bulk", approver_set=[qp_santos, qp_lopez, qp_kim], quorum_rule="M-of-N(2)")` → `chain-2026-0412`. QP Santos approves first (`A=1`); QP Lopez approves second (`A=2`); `A ≥ M`; the chain transitions to Approved without needing QP Kim's decision. QP Kim's step remains Pending forever — the chain has terminated, but the step's records are immutable (Invariant 7) and the trailing decision, if Kim later approves, is recorded in the audit trail without altering the chain state. The released batch carries the chain id as its control evidence; an FDA inspector queries the chain and confirms the two named QPs decided affirmatively under their respective Actor Identity attestations.
+
+### Happy path — ICH E6 GCP protocol deviation, one-of-N quorum across a delegated approver pool
+
+A clinical trial protocol deviation at a multi-site study can be approved by any one of the site principal investigators on call. The trial coordinator initiates: `initiate_chain(actor_ref=coordinator_lee, subject_ref="dev-2026-1057", scope="clinical-trial:protocol-deviation:non-substantive", approver_set=[pi_chen, pi_okafor, pi_müller, pi_singh], quorum_rule="one-of-N")`. PI Okafor approves: `A=1, M=1`; chain Approved. The other three steps remain Pending in the audit trail. If a fifth approval is needed later (e.g., for a substantive deviation that requires escalation), a new chain is initiated with the appropriate quorum and approver set; the original chain is not modified.
+
+### Rejection path — all-of-N quorum, one approver rejects
+
+In the SOX walkthrough above, suppose the CEO finds the entry suspicious and rejects: `reject_step(actor_ref=ceo_walsh, step_id=step-003, reason="Counterparty not on approved-affiliates list; refer back to finance team for review")` → `rejected_outcome`. Quorum evaluation: `R=1, R + W ≥ 1`; under all-of-N the chain transitions to **Rejected** with reason `"quorum unreachable: all-of-N requires every approval; step step-003 is in non-Approved terminal state"`. `chain_terminal_at` is set; the audit trail records the chain resolution. JE-2026-0441 is not released for posting; the composing workflow routes the entry back to the controller, who must initiate a new chain for the corrected entry (a fresh `chain_id`, fresh step ids — no editing of the rejected chain's records).
+
+### Rejection path — chain withdrawal by initiator
+
+The controller submitting JE-2026-0441 discovers a clerical error in the entry before any approver has decided: the chain was opened against the wrong subject. The controller calls `withdraw_chain(actor_ref=controller_morgan, chain_id=chain-2026-0441, reason="Wrong journal entry id; superseded by new chain on JE-2026-0441-revised")`. The chain transitions to Withdrawn; each of the three still-Pending steps cascades to Approval Step's Withdrawn state; each Assignment is recalled; the audit trail records the chain withdrawal and the three step withdrawals. A new chain is initiated on the corrected entry.
+
+### Regulated adversarial scenarios
+
+Three adversarial reads the composition must survive in regulated contexts:
+
+- **Regulator audit — SOX §404 control evidence query, "show me every chain that approved a material journal entry in Q1 with full attribution."** The auditor queries `read_chain({scope: "financial:journal-entry:post:materiality-tier-3", state: Approved, initiated_at: {after: "2026-01-01T00:00:00Z", before: "2026-03-31T23:59:59Z"}})`. Every chain in the result set carries its approver set, its quorum rule, its constituent step records (with `decided_by` matched to `approver_ref` by Approval Step's Invariant 4), and its Audit Trail attestations under the seven-year retention. The auditor independently computes the expected chain state from the step records and the quorum rule and confirms Invariant 2 holds: no chain reached Approved without the quorum-named decisions actually present. The auditor also queries `read_chain({scope: "...:tier-3", state: Pending, initiated_at: {after: ..., before: ...}})` to verify no chain was left unresolved — a non-empty result would identify a stalled material chain, a control gap the auditor would surface. The covered entity has documentable, auditable control evidence with no recourse to developer testimony.
+
+- **Disputed approval — FDA Part 11 electronic signature challenge against a chain participant.** An FDA investigator reviewing batch BR-2026-0412 challenges the authenticity of QP Lopez's approval: the actor claims they did not approve the batch. The investigator queries `read_chain({subject_ref: "br-2026-0412"})` and retrieves the chain plus its step records. Step `step-lopez-0412` shows `decided_by: "qp_lopez"`, `decided_at: "2026-04-15T16:04:00Z"`, `decision_reason: "Specification limits met; COA reviewed"`. Invariant 4 of Approval Step guarantees Lopez's reference matched `approver_ref` at decision time — no other actor could have produced this record. The Audit Trail's Actor Identity attestation for the corresponding `step_approved` event is then verified against `qp_lopez`'s registered public material at `decided_at`. The denied-approval claim cannot be sustained against the structural record without claiming credential compromise; that reinterpretation is the Compromise Disclosure composing pattern's responsibility, not the chain composition's.
+
+- **Breach or incident forensics — unauthorized chain initiation investigation.** During a security incident review, the incident response team needs to determine whether any chains were initiated by actors who should not have held `chains:initiate` during a window of suspected privilege escalation (2026-05-01T00:00:00Z through 2026-05-03T23:59:59Z). The team queries `read_chain({initiated_at: {after: ..., before: ...}})` and, for each chain in the window, walks the Audit Trail back to the `chain_initiated` event and verifies its Actor Identity attestation. The team also queries the Permissions store for grants of `chains:initiate` active during the same window; any initiator whose grant was not active at `initiated_at` is a finding. The chain composition's records faithfully document every initiation and outcome; the cross-store verification — initiator attestation vs. Permissions grant state at the initiation timestamp — is the audit operation that surfaces unauthorized chains.
+
+---
+
+## Generation acceptance
+
+A derived implementation of Multi-Party Approval is *acceptable* — in the regulator-acceptance sense — when an external auditor, given the application's emergent state plus the constituent stores, can do all of the following without recourse to source code, runbooks, or developer narration:
+
+1. **Reconstruct any chain's full lifecycle.** From `chain_id`: the chain record (subject, scope, initiator, approver set, quorum rule, state, timestamps); the ordered list of step records with each step's decision, decider, decision timestamp, and reason; the Assignment records for each step; and the Audit Trail's `verify_record` result for every chain-level and step-level event. Invariants 1 and 9 are the structural guarantee; this check verifies the reconstruction is complete and consistent.
+
+2. **Verify quorum determinism over every terminal chain.** For every chain in Approved, Rejected, or Withdrawn: independently compute the expected state from the constituent step state vector (`A`, `R`, `W`, `P`) and the chain's `quorum_rule` per the *Quorum evaluation rule*, and confirm it matches `chain_store[chain_id].state`. Invariant 2 is the contract; this check verifies it holds across the chain store.
+
+3. **Verify chain completeness and immutability.** For every chain: `chain_to_steps[chain_id]` is non-empty; `|chain_to_steps[chain_id]| == |chain.approver_set| ≥ approver_set_minimum`; each `step_id` exists in the Approval Step store and has `step_to_chain[step_id] = chain_id`; the chain's declared fields (subject, scope, initiator, approver set, quorum rule, initiated_at) are unchanged across snapshots. Invariants 1 and 8 are the contract.
+
+4. **Verify assignment coverage during pendency and recall on transition.** For every step in Pending state in the chain's `chain_to_steps`: exactly one Active Assignment exists with `task_ref = step_id` and `assignee_ref = step.approver_ref`. For every step in a terminal state: any Assignment for that step is in Recalled or Transferred (not Active). Invariant 4 is the contract; this check verifies the in-tray binding tracks the step lifecycle.
+
+5. **Verify audit completeness.** For every chain-level and step-level state transition recorded in the chain store and the Approval Step store, exactly one corresponding `record_action` event exists in the Audit Trail. The reverse direction also holds: every chain-related action in the Audit Trail corresponds to a chain or step record. No chain or step transition is invisible to the Audit Trail; no Audit Trail entry refers to a chain or step that does not exist. Invariant 5 is the contract.
+
+6. **Verify chain terminal absorption.** Identify chains whose `chain_terminal_at` is set and whose constituent steps include at least one still-Pending step (the trailing-decision case). Confirm that `chain_store[chain_id].state` and `chain_terminal_at` are unchanged in subsequent snapshots, regardless of any trailing step decisions. Invariant 7 is the contract.
+
+### Audit gaps: what cannot be cleared from these records alone
+
+The six checks above cover every application-level invariant the composition enforces internally. Three audit questions arise around this composition that *cannot* be answered from the composition's records alone; an external auditor must compose with other patterns or external evidence to clear them. They are named here so the audit boundary is explicit.
+
+- **Whether the deployment's approver-set policy was correctly applied.** The composition records the `approver_set` declared at `initiate_chain` and enforces structural validity (size, uniqueness). It does not — and cannot — verify that the declared approver set was the *correct* set for the subject under the deployment's regulatory policy. *"Was this $12M journal entry required to be approved by exactly these three actors?"* is a calling-system policy question; the chain records the answer the calling system declared. Verification of the policy mapping (transaction type → required approver set) is parallel to Approval Step's named out-of-scope on *which approvals are required for a given subject* and Selective Disclosure's Invariant 5 (calling-system integration obligation). Auditors verify this by reading the calling system's policy declaration alongside the chain records.
+
+- **Whether the initiator's `chains:initiate` grant was *appropriate* at initiation time.** The composition enforces that the grant existed and was Active at the `Permissions.permitted` check (Invariant 3). It does not verify that the grant was *correctly issued* in the first place — that the actor who issued the grant held the meta-authority to do so, that the grant scope matched the deployment's policy for the subject type, or that segregation-of-duties policies were honored at grant time. Grant appropriateness is a composing-Permissions / governance concern; this composition's audit surface is grant existence and use.
+
+- **Whether the chain's terminal `chain_resolved` event corresponds to the *first* moment the quorum rule fired.** The application sets `chain_terminal_at` at the moment the *Quorum evaluation rule* first transitions the chain to a terminal state. Detection that this timestamp matches the actual first-firing moment (rather than a delayed or batched re-evaluation) requires comparing `chain_terminal_at` against the Audit Trail's receipt timestamp on the corresponding step event that triggered the transition. The Audit Trail provides the receipt timestamps; the composition's records alone cannot prove the firing was prompt. For deployments under strict-cadence audit obligations, the Audit Trail's `record_action` receipt timestamp on the triggering step event versus `chain_terminal_at` is the audit pair.
+
+---
+
+## Edge cases and explicit non-goals
+
+What this composition does not cover:
+
+- **Quorum rules beyond the three named.** `all-of-N`, `M-of-N`, and `one-of-N` cover the canonical multi-party-approval patterns. Weighted-voting quorums (where approvers carry different vote weights), conditional quorums (M-of-N where the M must include specific actors), and sequenced quorums (where approver order is enforced — A must approve before B) are *not* supported in the canonical composition. Each is a richer quorum semantics that belongs to a higher-order composition; the canonical chain treats approvers as equal voters and decisions as order-independent in outcome.
+
+- **Sequenced (ordered) approval chains.** Some regulated processes require approvals in a specific order (e.g., the safety officer must approve before the engineering lead). The canonical composition does not enforce ordering — all steps are submitted at `initiate_chain` and become Pending in parallel. A Sequenced Approval Chain composition (forthcoming, not on the current roadmap) would extend this composition with an explicit ordering constraint and a *step-not-yet-eligible* rejection on out-of-order approvals.
+
+- **Delegation.** As named in Approval Step's Edge cases, delegation — binding a different actor to step in for the named approver — is not a property of the per-gate atom. It is also not a property of this composition. A deployment requiring delegation composes a separate Delegation pattern that intercepts `approve_step` / `reject_step` and re-authorizes the call when a delegation record permits the delegate to act on behalf of the named approver. The chain composition does not absorb the delegation policy.
+
+- **Segregation of duties.** As named in Approval Step's Edge cases, segregation of duties (the submitter cannot also be an approver; an approver cannot be on the second gate in a sequenced chain) is a policy concern. The chain composition does not enforce it. The composing Permissions pattern is the layer that rejects `initiate_chain` calls whose `(initiator_ref, approver_set)` pairing violates a declared SoD policy. The composition's `approver_set_uniqueness` config addresses only the pairwise-distinct case within the chain; broader SoD policies are external.
+
+- **Step-level rejection causing chain-level Rejected vs. Withdrawn.** Under all-of-N, a single step rejection makes quorum unreachable and the chain transitions to Rejected (not Withdrawn). Withdrawal is reserved for the initiator's deliberate retraction of the whole chain. The two terminal states carry different audit semantics: Rejected names a quorum failure attributable to specific approver decisions; Withdrawn names a chain retracted before reaching quorum determination. Conflating them would lose audit information.
+
+- **Re-submission of a step under the same chain.** Once a step is in a terminal state (any of Approved, Rejected, Withdrawn), it cannot be re-opened or re-submitted under the same chain. The chain's `chain_to_steps` list is fixed at `initiate_chain`. A redo requires a new chain. This mirrors Approval Step's Invariant 3 (terminal absorption) at the chain layer.
+
+- **Late decisions on a terminated chain.** A step's named approver may approve or reject after the chain has already reached a terminal state via the quorum rule (e.g., under M-of-N(2) of 3, the third approver decides after the first two already satisfied the quorum). The atom-level decision is recorded (Approval Step's Invariant 4 still gates who may decide), the Assignment is recalled, and the Audit Trail captures the event. The chain's state does not change (Invariant 7). The trailing decision is preserved as audit evidence but is not part of the chain's terminal disposition.
+
+- **Concurrent step decisions on the same chain.** Two approvers concurrently calling `approve_step` for distinct steps of the same chain are processed independently by their respective Approval Step records. Each step's transition is atomic at the atom level; chain-state re-evaluation after each step transition may race. Implementations must serialize the chain-state re-evaluation step (step 5 of `approve_step` / `reject_step` / `withdraw_step`) on a given `chain_id` to ensure the re-evaluation reads a consistent step state vector. Concurrent `withdraw_chain` and step-level decisions on the same chain must also be serialized — the implementation is responsible for the chain-scope mutex; the spec assumes it.
+
+- **Audit Trail composition with Legal Hold.** When a chain's subject is under a Legal Hold, the Audit Trail's `purge_eligible` cascade is suspended for the chain's events. The chain composition does not interact with Legal Hold directly; the suspension happens at the Audit Trail layer. The chain's records persist through any retention horizon while a hold is active.
+
+- **Audit Trail records of failed chain initiations.** A `record_action` is emitted only on a successful `initiate_chain`. A call rejected at the Permissions check (`permission-denied`) or at structural validation (`invalid-request`) leaves no Audit Trail entry by default. High-assurance deployments where failed initiation attempts are themselves auditable compose a Failed-Attempt Log pattern; the canonical composition's audit surface is committed chain actions, not attempted actions. This parallels Audit Trail's *Failed attribution attempts* edge case.
+
+- **Clock source for `chain_terminal_at`.** The application sets `chain_terminal_at` at the moment the quorum evaluation rule transitions the chain to a terminal state. The clock source is the application's `now` — typically the receiving node's wall clock. Clock skew across distributed application nodes can produce a `chain_terminal_at` that is earlier than the triggering step's `decided_at` or `withdrawn_at` under sufficient skew. For deployments under strict clock-discipline requirements, the Trusted Timestamping composing pattern (referenced in Audit Trail) is the resolution.
+
+- **Cross-store consistency under failure.** `initiate_chain` writes to four constituent stores in sequence (chain, Approval Step ×N, Assignment ×N, Audit Trail). A failure mid-sequence leaves partial state. The implementation must order operations so that either all writes succeed atomically or a compensating record is produced. The simplest recovery for a partial `initiate_chain` failure is chain-level withdrawal of the partially-submitted chain — the Approval Step records that were submitted are immutable, but they can be withdrawn through the cascade. Cross-store consistency on `approve_step` / `reject_step` / `withdraw_step` is tighter: the Approval Step transition is the load-bearing write; subsequent Assignment recall and Audit Trail recording are recovery-amenable through the orphan-state edge case in Audit Trail. The implementation owns the transactional boundary.
+
+- **Concurrent chains on the same subject.** A subject may have multiple concurrent chains — for example, a financial transaction may require approvals under both a SOX chain and a separate AML chain. The composition does not restrict this; each chain has its own `chain_id` and its own quorum evaluation. A composing system that requires "all chains on subject X must reach Approved before X may proceed" is a higher-order policy not enforced by this composition.
+
+---
+
+## Standards references
+
+This composition is the structural form of what every multi-actor regulatory approval regime requires:
+
+- **Sarbanes-Oxley §404 (17 U.S.C. §7262) — Internal control over financial reporting.** Material financial actions require multi-actor approval; SOX auditors query the approval chain to confirm the control existed and operated. The composition is the structural form. Composes with Audit Trail's SOX §802 retention obligation (7 years).
+- **FDA 21 CFR Part 211 (Current Good Manufacturing Practice for Finished Pharmaceuticals)** — batch release requires authorization by a Qualified Person (QP) or equivalent designated authority. Multi-QP releases under M-of-N(M) quorum are the canonical composition for high-value batches and for batches requiring QA-plus-QP dual signoff.
+- **FDA 21 CFR Part 11 (Electronic Records; Electronic Signatures)** — each approval in a chain is an electronic signature event. Part 11 §11.50 requires signatures be attributable; §11.70 requires they be linked to records to prevent removal, substitution, or falsification. The composition's Audit Trail substrate (with Actor Identity providing the cryptographic binding and Tamper Evidence providing the linking) satisfies both.
+- **ICH E6(R3) Good Clinical Practice — Guideline.** Sections 4–5 require documented approvals at multiple points in the trial lifecycle, often by multiple parties (investigator, sponsor, IRB). One-of-N over a delegated PI pool is a recurring composition shape for non-substantive deviations; M-of-N is the form for substantive deviations requiring both PI and sponsor approval.
+- **ISO 9001:2015 §8.5.1 (Control of production and service provision)** and **§7.5.3 (Control of documented information)** — controlled changes require approval by named authorities. Multi-party chains map to ISO 9001 documented-procedure approval requirements.
+- **ISO 13485:2016 §7.3 (Design and development)** — medical device design changes require multi-disciplinary approval (design lead, quality, regulatory affairs, often clinical). M-of-N quorum is the structural form.
+- **SOC 2 (Trust Services Criteria — Control Activities, Common Criterion CC2.1, CC8.1)** — changes to data, infrastructure, or business processes require documented multi-party approval; SOC 2 audits query the approval chain as control evidence. The composition is one structural form.
+- **NIST SP 800-53 Rev. 5 (AC-5 Separation of Duties; CM-3 Configuration Change Control)** — multi-actor approval is the operational form of separation of duties for change control. The composition is the structural form.
+- **PCI DSS Requirement 6.5.3 (Production data must not be used for testing or development) and 6.4.5 (Change control procedures)** — production changes require documented multi-party approval.
+
+It inherits from:
+
+- **Daniel Jackson, *The Essence of Software*** — the composition discipline: the per-gate atom is freestanding; the chain is the composing pattern that wires N gates under a quorum rule.
+- **Approval chain literature in change-control and regulatory engineering** — every major change-management framework (ITIL change advisory boards, FDA design-control reviews, SOC change-control gates) names multi-party approval as the structural form; the composition is the formal version.
+
+---
+
+## Status
+
+`partially resolved` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led) complete. Composition logic specified across all four constituent atoms plus the Audit Trail substrate; emergent state (`chain_store`, `chain_to_steps`, `step_to_chain`, `step_to_assignment`, `chain_terminal_at`) named; nine application-level invariants stated and justified; action wiring covers chain-level and step-level actions with fully-named rejection taxonomies; the quorum evaluation rule is named as the load-bearing wiring decision and stated deterministically; walkthrough plus four cross-domain examples (SOX all-of-N, FDA M-of-N, ICH GCP one-of-N, all-of-N rejection, chain withdrawal) and three adversarial scenarios; eleven edge cases (quorum beyond the three named, sequenced chains, delegation, SoD, Rejected vs. Withdrawn, step re-submission, late decisions, concurrency, legal hold, failed initiation, cross-store consistency, concurrent chains); Generation acceptance bar explicit with six checks plus three named audit gaps. Sixth entry in `compositions/`. Round 2 (human refinement) and Round 3 (AI adversarial) required before `grounded`.
+
+---
+
+## Lineage notes
+
+Regulated composition. Conventions — *Regulated adversarial scenarios* and *Generation acceptance* — inherited from the methodology directly ([`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md)), baked in from the first draft. Audit Trail is the primary structural reference (regulated four-atom composition shape); Shared Todo is the secondary reference (Permissions + Assignment wiring discipline). The atoms this composition depends on most heavily are Approval Step (whose Round 3 just landed — see [`atoms/workflow/approval-step.md`](../atoms/workflow/approval-step.md) Lineage notes for what was settled there) and Audit Trail (whose application-level invariants this composition transitively relies on).
+
+**Structural milestone.** This composition is the first to compose another composition (Audit Trail) as one of its constituents. The decision to treat Audit Trail as a substrate rather than re-listing its four atoms as constituents at this layer is a deliberate scoping choice: Audit Trail owns the regulated-audit invariants (attribution coverage, retention coverage, integrity coverage, cascade-on-purge); this composition does not re-derive them. The ROADMAP entry lists Event Log and Actor Identity as prerequisites, but they are reached transitively through Audit Trail — neither is composed directly at this layer. The Composes section names this explicitly.
+
+**Pass 1 — Structural completeness (GRID).** Three findings, all closed in-pattern.
+
+- *Application state lacked the `chain_terminal_at` field.* Early draft tracked chain state transitions through the audit log only; without a `chain_terminal_at` on the chain record, queries like *"when did this chain reach Approved?"* required walking the Audit Trail for every chain. Fixed: `chain_terminal_at` added to `chain_store`, set once when the chain leaves Pending, and surfaced in the `read_chain` query result.
+
+- *The quorum evaluation rule was implicit.* Initial draft described chain states in prose without specifying the deterministic function from (step state vector, quorum rule) to (chain state). A reader could not independently verify Invariant 2 (quorum determinism). Fixed: explicit *Quorum evaluation rule* subsection added under Composition logic, naming variables (A, R, W, P), giving the rule per quorum class, and stating the *terminal-stable* and *order-independent* properties.
+
+- *`read_chain` filter axes and `invalid-query` conditions unstated.* Parallel to every prior atom's Pass 1 finding on read queries. Fixed: `read_chain` action description enumerates the six filter axes, names the `{after, before}` time-range form (mirroring Approval Step's), and states that unrecognized filter keys are `invalid-query` and well-formed empty results are an empty sequence (not a rejection).
+
+All nine GRID nodes resolved.
+
+**Pass 2 — Conceptual independence (EOS).** Clean. Six extraction candidates evaluated; all kept in-pattern or correctly externalized.
+
+- *Quorum rule as a separate atom.* Could the quorum evaluation logic be its own atom (Quorum Rule, taking a state vector and returning a terminal state)? Evaluated: the rule has no state of its own — it is a pure function from `(quorum_rule, state vector)` to chain state. It does not recur as a freestanding concept; it appears only in the context of a multi-party gate. Extracting it would produce a stateless function masquerading as an atom. Kept in-composition as the *Quorum evaluation rule*.
+
+- *Sequenced ordering as an absorbed concern.* Could the composition absorb step ordering (A must approve before B)? Evaluated: sequenced ordering is a richer quorum semantics that genuinely changes the state machine — Pending becomes "Pending blocked on step S" — and recurs across regulated change-control workflows. It belongs to a higher-order composition (Sequenced Approval Chain). Named as an explicit out-of-scope.
+
+- *Delegation as an absorbed concern.* Already settled by Approval Step at the atom level (composing concern). Re-evaluated at the composition level: delegation logic at the chain layer would require importing delegation state into chain records, which is the same over-absorption the atom rejected. Kept as a composing concern (parallel to Approval Step's Lineage); named as an out-of-scope.
+
+- *Segregation of duties as an absorbed concern.* Settled by Approval Step's Round 3 (composing Permissions/Multi-Party-Approval concern). The chain composition is the *Multi-Party Approval* composition Approval Step's Round 3 named — so the question becomes whether SoD policy enforcement belongs *here*. Evaluated: SoD policy is calling-system-specific (same role? same department? same legal entity?) and cannot be settled at composition level any more cleanly than at atom level. Permissions is the layer that can reject `initiate_chain` calls with a policy-violating actor pairing. Kept as composing-Permissions concern; named in Edge cases.
+
+- *Audit Trail as a constituent atom or as a substrate composition.* Treated as a substrate composition rather than a constituent atom (the composition-of-composition decision). Evaluated: Audit Trail's eight application-level invariants are what this composition needs from the audit substrate; re-listing its four atoms as constituents would re-derive those invariants here and risk drift. Kept as substrate; the Composes section names this explicitly with the rationale.
+
+- *Failed-attempt logging.* The composition does not log Permissions-denied initiation attempts. Evaluated: parallel to Audit Trail's *Failed attribution attempts* edge case, this is a composing concern (Failed-Attempt Log) for high-assurance deployments. Named in Edge cases.
+
+No new atoms extracted. Pass 2 clean.
+
+**Pass 3 — Adversarial scrutiny (Linus mode).** Eight findings, all closed in-pattern.
+
+- *Identity model on `chain_id` and chain immutability unstated.* Initial draft treated chain identity informally — the chain "has an id" — without specifying immutability or non-reuse. Fixed: Invariant 8 (chain immutability of declared fields) and the Application state subsection now name `chain_id` as opaque, system-generated, never reused, never reassigned, with the declared fields (subject, scope, initiator, approver set, quorum rule, initiated_at) immutable from `initiate_chain` return.
+
+- *Late-decision behavior on terminated chains unaddressed.* Under M-of-N(2) of 3, what happens when the third approver decides after the chain has reached Approved? Initial draft was silent. A naive implementation might (a) reject the decision (`not-pending`), (b) accept it and update the chain's state machine, or (c) accept it and ignore the chain implication. Fixed: Invariant 7 (chain terminal absorption) names the contract — the step's decision is recorded by Approval Step (its Invariant 4 still gates who may decide), the Assignment is recalled, the Audit Trail captures the event, but the chain's state does not change. Edge case *Late decisions on a terminated chain* makes this explicit.
+
+- *Rejection priority on `initiate_chain` not enumerated.* Initial Decision points described preconditions but did not state evaluation order. Fixed: rejection priority across `initiate_chain` follows the pattern from Approval Step's Round 2 — Permissions check first, structural validation second, recording-failure last.
+
+- *Quorum rule's behavior on `one-of-N` as distinct from `M-of-N(1)`.* Initial draft enumerated three quorum rules but did not state that `one-of-N` is mathematically equivalent to `M-of-N` with `M=1`. A reader could implement them as distinct rules and drift. Fixed: the quorum evaluation rule names `one-of-N` as a special case of `M-of-N(M=1)`; the evaluation logic is unified.
+
+- *Step-level vs. chain-level withdraw semantics conflated.* Initial draft had a single `withdraw` action ambiguous about whether it withdrew the chain or a single step. Fixed: `withdraw_chain` and `withdraw_step` named as distinct actions; the Edge cases subsection *Step-level rejection causing chain-level Rejected vs. Withdrawn* explains the audit-semantics distinction.
+
+- *Audit Trail substrate not surfaced for failed-initiation attempts.* Initial draft did not name that Permissions-denied `initiate_chain` calls produce no Audit Trail entry. Fixed: Edge case *Audit Trail records of failed chain initiations* names the gap and the Failed-Attempt Log composing pattern as the resolution for high-assurance deployments.
+
+- *Cross-store consistency under partial failure unaddressed.* `initiate_chain` writes to four constituent stores in sequence; what if step 4 (Approval Step submission) succeeds for the first two approvers and fails for the third? Initial draft was silent. Fixed: Edge case *Cross-store consistency under failure* names the partial-state recovery path (chain-level withdrawal cascading through the Approval Steps that did succeed), parallel to Audit Trail's edge case of the same name.
+
+- *Generation acceptance silent on what the auditor cannot clear.* The six numbered checks cover every application-level invariant the composition enforces internally. But three audit questions — whether the deployment's approver-set policy was correctly applied, whether the initiator's grant was *appropriate* at issuance time, and whether the `chain_terminal_at` corresponds to the actual first-firing moment — cannot be cleared from these records alone. Fixed: parallel to Selective Disclosure's Round 3 fix, an *Audit gaps* subsection added to Generation acceptance naming the three unclearable questions and the composing patterns or external evidence that surface each.
+
+Three deferred concerns are named as explicit out-of-scope rather than fixed in-pattern: clock skew on `chain_terminal_at` under distributed deployment (Trusted Timestamping is the resolution), concurrent chain decisions requiring serialization on chain-state re-evaluation (implementation-owned), and concurrent chains on the same subject (composing-policy concern). Each is correctly external to the composition.
+
+The three passes together exercise the architecture as designed: GRID checks structural completeness of a chain-plus-substrate composition (no missing wiring; every emergent property has a named state component); EOS keeps the composition from absorbing quorum-rule-as-atom, sequenced-ordering, delegation, and SoD — each is correctly externalized; Linus catches the eight hidden contracts (chain identity model, late decisions, rejection priority on initiate, quorum-rule unification, withdraw semantics, failed-initiation audit gap, cross-store consistency, audit-gap framing in Generation acceptance) that would otherwise hide beneath the *"just compose Approval Step under a quorum rule"* summary. The composition is stronger because all three checks happened.
