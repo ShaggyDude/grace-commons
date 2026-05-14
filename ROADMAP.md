@@ -217,6 +217,8 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 
 **Standards anchored.** SOX (record retention and deletion controls under audit); HIPAA (medical record retention and destruction requirements); SEC Rule 17a-4 (broker-dealer records — non-erasable, immutable, audit-supervised destruction); GDPR Article 17 (right to erasure — the composition answers whether erasure is permissible given active Legal Holds and retention obligations); Federal Rules of Civil Procedure Rule 37(e) (preservation duty — Legal Hold is the operative control).
 
+**Status.** Partially resolved — foundation round (passes 1–3) complete; see [`compositions/defensible-retention.md`](./compositions/defensible-retention.md). Human refinement and AI adversarial rounds pending.
+
 ---
 
 ### C2. Consent & Preference Management with Revocation Propagation
@@ -333,7 +335,7 @@ Compositions are listed after their atom prerequisites are noted as `grounded`. 
 | 8 | Capacity Constraint Enforcement | Atom | — | — | Not started |
 | 9 | Workflow / State Machine | Atom | — | — | Not started |
 | 10 | Preference / Personalization | Atom | — | — | Not started |
-| C1 | Regulated Record Retention & Defensible Deletion | Composition | Legal Hold | Audit Trail, Retention Window, Tamper Evidence, Event Log | Unblocked; not started |
+| C1 | Regulated Record Retention & Defensible Deletion | Composition | Legal Hold | Audit Trail, Retention Window, Tamper Evidence, Event Log | Partially resolved — foundation round complete; human refinement and AI adversarial rounds pending |
 | C2 | Consent & Preference Management | Composition | Consent | Audit Trail, Retention Window, Permissions, Event Log | Unblocked; not started |
 | C3 | Forensic Recovery | Composition | Soft Delete | Event Log, Actor Identity, Audit Trail | Unblocked; not started |
 | C4 | Multi-Party Approval | Composition | Approval Step | Permissions, Assignment, Event Log, Actor Identity, Audit Trail | Grounded 26-05-13 |
