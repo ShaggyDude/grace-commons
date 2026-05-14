@@ -203,6 +203,18 @@ Patterns that have survived only one or two passes should not declare `grounded`
 
 **Touch triggers re-pass.** Any edit to a grounded pattern — invariant change, action signature update, new edge case, corrected cross-reference — requires a full three-pass round before the pattern may retain its `grounded` status. The AI round is included. This is not punitive; it is the mechanism that keeps `grounded` meaningful as the library grows. A pattern touched without a re-pass should be downgraded to `partially resolved` until the round completes.
 
+**Scheduled rescan.** Grounded patterns are also re-passed on a regular schedule — a weekly or weekend batch is the working default — regardless of whether anything has touched them. A scheduled rescan is the same complete three-pass round as a touch-triggered re-pass; it is not a lighter check. Its purpose is not to find regressions (the spec hasn't changed, so the spec itself can't have regressed) but to **ratchet confidence** in the pattern as the library's surrounding context evolves. Each clean rescan is independent corroborating evidence that the pattern still holds against the current state of the library's vocabulary, the current state of the constituent atoms it composes with, and (for AI rounds) the current state of reviewer models. A pattern that has survived five scheduled rescans without findings is materially more reliable than one that has survived one — the *number* of clean rescans is part of what `grounded` means in practice, even though the status word is the same.
+
+A scheduled rescan can surface findings for reasons the prior round could not have caught. Three of the common cases:
+
+- *A constituent atom has been refined since the last rescan*, gaining a new invariant or renaming a rejection reason; the composition's cross-references are now stale. This is the multi-file refinement order rule operating at the timescale of weeks rather than within a single sweep.
+- *Methodology conventions added since the last rescan apply retroactively.* The two regulated-pattern conventions (Regulated adversarial scenarios; Generation acceptance) and the Audit-Trail-traversal-clearable / externally-clearable split from Multi-Party Approval's Round 3 are examples; both were applied retroactively to earlier patterns once codified.
+- *The reviewer (human or AI) has improved.* An adversarial pass conducted today by a sharper reviewer than the prior round can surface a finding the prior round missed without the spec having changed.
+
+A scheduled rescan that closes with no findings updates the rescan date in the Status line and adds a one-line Lineage entry: *"Scheduled rescan: YYYY-MM-DD — clean."* A scheduled rescan that surfaces findings is treated identically to a touch-triggered re-pass — full Lineage entry naming what each pass found, fixes applied, status preserved at `grounded` only if the round closes clean across all three passes. Findings from a scheduled rescan are not a failure of the prior round; they are the rescan doing its job.
+
+The cadence is deployment-shaped. The working default is weekly with weekends as the batch window, but a library churning slowly may rescan less often, and a library under active multi-author refinement may rescan more often. The discipline is that the cadence is *fixed and externally driven*, not "when somebody remembers." The whole point is to ratchet confidence on a rhythm independent of any particular author's attention.
+
 ---
 
 ## Where the journey gets recorded
