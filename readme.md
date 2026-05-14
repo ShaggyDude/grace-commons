@@ -22,6 +22,15 @@ Named for Grace Hopper, who first argued that business logic should be readable 
 
 ---
 
+## Four reasons Grace Commons is different
+
+1. **Structured English as the canonical form.** Your PM, your lawyer, your auditor, your regulator can read it *and edit it*. Formal methods exclude these stakeholders by notation; Grace Commons includes them by design.
+2. **One spec, many derivations.** Tests, code, multiple frontends, formal models, audit artifacts — all projected from the same canonical source.
+3. **Stack-agnostic by construction.** The spec doesn't know about your runtime. The projector compiles to whatever stack a deployment needs — web, CLI, mobile, voice, future channels.
+4. **Bidirectional refinement.** Findings from running tests, real-world incidents, regulator audits feed back into the canonical spec via the methodology. The system improves with use; it doesn't go stale.
+
+---
+
 ## What this is
 
 Most software systems are 80% patterns that have been implemented thousands of times: resource reservation, billing cycles, auth flows, audit trails, compliance rules, notification logic. None of this is novel. All of it gets reinvented, inconsistently, in every new system.
