@@ -57,16 +57,16 @@ Two enrollments for the same natural person produce two records with two distinc
 - Actions:
   - `enroll(name, date_of_birth, document_type, document_ref, enrolling_actor_ref) → party_id | rejected(invalid-request | storage-failure)`
   - `verify(party_id, verifying_actor_ref, verification_method, verification_result, evidence_ref) → verification_id | rejected(not-known | already-closed | invalid-request | storage-failure)`
-  - `suspend(party_id, suspending_actor_ref, reason) → ok | rejected(not-known | not-verifiable | already-suspended | already-closed | invalid-request | storage-failure)`
-  - `reinstate(party_id, reinstating_actor_ref, reason) → ok | rejected(not-known | not-suspended | already-closed | invalid-request | storage-failure)`
-  - `close(party_id, closing_actor_ref, reason) → ok | rejected(not-known | already-closed | invalid-request | storage-failure)`
+  - `suspend(party_id, suspending_actor_ref, reason) → state_change_id | rejected(not-known | not-verifiable | already-suspended | already-closed | invalid-request | storage-failure)`
+  - `reinstate(party_id, reinstating_actor_ref, reason) → state_change_id | rejected(not-known | not-suspended | already-closed | invalid-request | storage-failure)`
+  - `close(party_id, closing_actor_ref, reason) → state_change_id | rejected(not-known | already-closed | invalid-request | storage-failure)`
 - An implicit clock providing wall-time timestamps.
 
 **On `verify`:** `verification_result` must be exactly `passed` or `failed`; any other value is `invalid-request`. `verification_method` is an opaque non-empty string naming the method used (`manual-document-review`, `automated-ocr`, `biometric-match`, `database-check`, etc.). `evidence_ref` is an opaque non-empty pointer to the verification evidence record. All three fields are required; any empty or missing field is `invalid-request`.
 
 **On `suspend`, `reinstate`, `close`:** `reason` is required; non-empty; maximum 2000 characters; stored as supplied, no normalization. `*_actor_ref` fields are opaque non-empty references.
 
-**Outputs** — the current set of party records; for each party: `party_id`, `name`, `date_of_birth`, `document_type`, `document_ref`, `enrolled_at`, `enrolling_actor_ref`, current state, state-change log, and the full ordered list of verification events. For each verification event: `verification_id`, `party_id`, `verifying_actor_ref`, `verification_method`, `verification_result`, `evidence_ref`, `verified_at`. Action returns: `party_id` from `enroll`; `verification_id` from `verify`; `ok` from `suspend`, `reinstate`, `close`.
+**Outputs** — the current set of party records; for each party: `party_id`, `name`, `date_of_birth`, `document_type`, `document_ref`, `enrolled_at`, `enrolling_actor_ref`, current state, state-change log, and the full ordered list of verification events. For each verification event: `verification_id`, `party_id`, `verifying_actor_ref`, `verification_method`, `verification_result`, `evidence_ref`, `verified_at`. Action returns: `party_id` from `enroll`; `verification_id` from `verify`; `state_change_id` from `suspend`, `reinstate`, `close`. All three state-mutating actions return the id of the state-change event they created, symmetric with `enroll` returning `party_id` and `verify` returning `verification_id` — the caller has the id in hand without a follow-up query, which is required for passing to Actor Identity for attestation.
 
 ### State
 
@@ -168,9 +168,9 @@ Each successful action produces an observable, measurable change:
 
 - After `enroll` — a new party appears in Unverified with fresh `party_id` and `enrolled_at`. Total party count increases by one.
 - After `verify` — a new verification event appears in the party's event list, with fresh `verification_id` and `verified_at`. If the result was `passed` and the party was Unverified, the party's state is now Verified (observable on the party record). If the party was Suspended or Verified, the state is unchanged but the event count grows by one.
-- After `suspend` — the party's state is Suspended. A state-change entry appears on the party record with a fresh `state_change_id`, prior state (Verified), new state (Suspended), `suspending_actor_ref`, timestamp, and reason. Verified-count decreases by one; Suspended-count increases by one.
-- After `reinstate` — the party's state is Verified. State-change entry appended with a fresh `state_change_id`. Suspended-count decreases by one; Verified-count increases by one.
-- After `close` — the party's state is Closed. State-change entry appended with a fresh `state_change_id`. The relevant state-count (Unverified, Verified, or Suspended) decreases by one; Closed-count increases by one. Total party count is unchanged.
+- After `suspend` — the party's state is Suspended. A state-change entry appears on the party record with a fresh `state_change_id` (returned to the caller), prior state (Verified), new state (Suspended), `suspending_actor_ref`, timestamp, and reason. Verified-count decreases by one; Suspended-count increases by one.
+- After `reinstate` — the party's state is Verified. State-change entry appended; fresh `state_change_id` returned to caller. Suspended-count decreases by one; Verified-count increases by one.
+- After `close` — the party's state is Closed. State-change entry appended; fresh `state_change_id` returned to caller. The relevant state-count (Unverified, Verified, or Suspended) decreases by one; Closed-count increases by one. Total party count is unchanged.
 
 Each rejected action produces an observable refusal with a named reason. The state-count segmentation (Unverified, Verified, Suspended, Closed) is computable from the party record set at any time; the atom does not maintain pre-aggregated counters but does not hide the underlying records.
 
@@ -344,7 +344,7 @@ Party Identity is freestanding and is the external-party identity contract that 
 
 ## Status
 
-`draft`
+`partially resolved` — foundation round complete (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus all run; findings closed). AI adversarial round not yet run.
 
 ---
 
@@ -355,6 +355,14 @@ This is the foundation draft of Party Identity. The three pressure-testing passe
 The regulated-overlay conventions (Regulated adversarial scenarios and Generation acceptance) are included from the first draft in accordance with the methodology's inheritance discipline documented in PRESSURE_TESTING.md and established by Actor Identity and Retention Window. This atom cites the methodology directly rather than treating either predecessor as its canonical reference.
 
 Two composing patterns named throughout this draft — Consent (grounded 2026-05-13) and Actor Identity (grounded 2026-05-13) — are both available; forthcoming-link markers for those two are resolved. The remaining forthcoming-link debts (KYC / Customer Onboarding C8, Identity Document Store, Attribute Update, Ownership Structure, Identity Federation, Delegation / Representation) are named explicitly and will resolve as those patterns land.
+
+**Pass 1 — Structural completeness (GRID). One finding, closed in-pattern.**
+
+All nine GRID nodes resolved. Reference graph clean — Friction items reference specific composing patterns; Decisions link to State transitions and rejection paths; Proof (Invariants + Generation acceptance) links to Intent. One finding: `suspend`, `reinstate`, and `close` returned `ok` despite now creating state-change events with `state_change_id`. The `enroll` / `verify` pattern — returning the id of the created record — is the correct discipline because the caller needs the id to pass to Actor Identity for attestation without a follow-up query. Resolved: all three actions updated to return `state_change_id`; Outputs and Feedback sections updated to match.
+
+**Pass 2 — Conceptual independence (EOS). Clean.**
+
+Eleven concerns examined; all correctly named as composing patterns or explicit non-goals. State-change log as a sub-record of the party record was tested against Event Log: the state-change log is tightly bound to the party record's lifecycle, not a general-purpose system event stream — different concern, different state machine, correctly scoped here. The `*_actor_ref` fields assert attribution without cryptographic binding; Actor Identity composes to add non-repudiation — correctly external. No over-absorptions.
 
 **Pass 3 — Adversarial scrutiny (Linus mode), applied to the foundation draft. Five findings, all closed in-pattern.**
 
