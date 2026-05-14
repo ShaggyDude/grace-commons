@@ -180,7 +180,15 @@ The AI round runs all three passes, not Pass 3 alone. Pass 1 and Pass 2 benefit 
 
 **Automated councils satisfying Phase 3.** Phase 3 may be conducted by a single AI reviewer in one session or by an automated council that decomposes the three passes across agents (typically one agent per pass plus a consolidate step). The Phase 3 discipline applies *uniformly* to Pass 3: **Pass 3 always runs in fresh-reader mode**, in every round, regardless of whether the round is refinement or final. Pass 1 and Pass 2 findings drive document changes between rounds (applied by a human, an apply-agent, or whatever the council provides); Pass 3 then reads the resulting document with no findings context. Every Pass 3 invocation is structurally a Phase 3 candidate; the invocation that surfaces no findings — i.e., a clean Pass 3 in a round where Passes 1 and 2 were also clean — grants `grounded` eligibility. There is no mode switch, no "final round" detection, no escalation logic. The rule chooses simplicity and discipline over convergence speed: redundant findings during refinement (Pass 3 surfacing the same gap across rounds before the document fully absorbs the fix) is a small cost; priming Pass 3 with prior findings is the exact failure the fresh-reader discipline exists to foreclose. Pass 1 and Pass 2 may flow findings forward within a round (Pass 2 may read Pass 1's findings; Pass 1 has no prior to read) — those passes are structural and conceptual rather than adversarial, and findings context does not undermine their job. Lineage notes record the council pattern used (which model per agent, which formula) and confirm that Pass 3 ran in fresh-reader mode throughout.
 
-**The minimum standard stated plainly.** Three rounds × three passes = nine passes minimum. Round 1 is the foundation (Pass 1 → 2 → 3, once each). Rounds 2 through N−1 are human or council refinement, running until a complete round surfaces no new findings. Round N is the final AI adversarial round, running all three passes with fresh-reader discipline as defined above — single-reviewer or automated-council, the discipline is what counts. A pattern that has not completed an AI round under fresh-reader discipline has not met the minimum standard and should not declare `grounded`, regardless of how many refinement rounds it has survived.
+**Phase 4 — Clearance gate: Opus at Angry Torvalds X2.** After the nine-pass minimum has been satisfied and Phase 3 returns clean, one additional mandatory pass runs before the pattern may declare `grounded`. This pass is conducted by Opus — the most capable available model — at twice the adversarial intensity of standard Pass 3 (Linus mode). It is not a fourth round in the same sense as Phases 1–3; it is a single-pass clearance gate whose job is to find what nine passes missed.
+
+*Why a separate gate, and why Opus at X2.* A pattern that has survived nine passes has been iterated and defended; the remaining gaps, if any, are subtle — they survived precisely because they were well-hidden or well-defended. Standard Phase 3 uses "a high-functioning AI reviewer" with structured question coverage and fresh-reader discipline; that bar is correct for the closing AI round of a refinement sequence. It is not the bar for final clearance. Opus at X2 intensity is the instrument calibrated to find what a structured review does not: defenses that sound airtight but aren't, invariants that hold under the author's assumptions but break under adversarial ones, composing-concern boundaries drawn conveniently rather than correctly.
+
+*What X2 intensity means operationally.* The reviewer receives the full pass question sets, the pattern in full, and nothing else — fresh-reader discipline still applies. Pass 1 and Pass 2 run at standard intensity. Pass 3 runs at X2: the reviewer does not accept a defended-in-line claim as settled but attacks the defense itself. Every "this is a composing concern" is tested — is the boundary real, or drawn conveniently? Every invariant is tested for conditionality gaps — does the stated condition cover every reachable state, or only the states the author reasoned about? Every example is tested for adversarial completeness — could a regulator construct a scenario that exercises an invariant the example does not walk? The posture is not "find gaps" but "assume the pattern is subtly wrong and prove it."
+
+*Recording the clearance gate in Lineage notes.* The Lineage entry notes "Opus clearance gate — Angry Torvalds X2" and the model version used. If the gate surfaces findings, they are closed and the gate runs again; the pattern remains `partially resolved` until the gate returns clean. A clean gate result is the final Lineage entry before `grounded` is declared.
+
+**The minimum standard stated plainly.** Three rounds × three passes = nine passes minimum, plus one Opus clearance gate (Phase 4). Round 1 is the foundation (Pass 1 → 2 → 3, once each). Rounds 2 through N−1 are human or council refinement, running until a complete round surfaces no new findings. Round N is the final AI adversarial round (Phase 3), running all three passes with fresh-reader discipline — single-reviewer or automated-council, the discipline is what counts. After Round N returns clean, the Opus clearance gate (Phase 4) runs as the tenth and final step. A pattern that has not cleared the Phase 4 gate has not met the minimum standard and should not declare `grounded`, regardless of how many refinement rounds it has survived.
 
 **Skipping is not an option.** Each pass catches a different class of gap. A pattern that has only survived Pass 1 is structurally complete but probably absorbs concerns it shouldn't and contains hidden decisions. A pattern that has only survived Pass 3 is precise but may be missing entire GRID nodes. Either is incomplete. Refinement passes do not substitute for the foundation — they extend it. The AI round does not substitute for human refinement — it concludes it.
 
@@ -194,6 +202,7 @@ A pattern reaches the `grounded` status — the state declared in its Status sec
 - All concerns belong to the pattern they're in; no over-absorptions remain (Pass 2 clean).
 - No muddled identity, sloppy invariants, happy-path-only examples, or hidden load-bearing decisions remain (Pass 3 clean).
 - All three conditions above have been confirmed by a final AI-conducted round (Phase 3), with findings recorded in Lineage notes.
+- The Opus clearance gate (Phase 4 — Angry Torvalds X2) has returned clean, with the gate result recorded in Lineage notes as the final entry before `grounded` is declared.
 
 **Status line format.** The Status section of every grounded pattern carries a rescan date:
 
@@ -243,13 +252,14 @@ Each fresh application of the methodology becomes evidence the architecture is d
 
 ## Three classes of gap, three classes of fix
 
-| Pass | Class of gap | Lens | Typical fix |
-|------|--------------|------|-------------|
-| 1 — GRID | Missing pieces | Structural completeness | Specify the missing node; resolve dangling references |
-| 2 — EOS | Over-absorption | Conceptual independence | Extract the concern as a separate atom; document the composition |
-| 3 — Linus | Hidden decisions | Adversarial scrutiny | State the load-bearing decision explicitly; tighten invariants; add rejection-path examples |
+| Phase | Pass | Class of gap | Lens | Typical fix |
+|-------|------|--------------|------|-------------|
+| 1–3 | 1 — GRID | Missing pieces | Structural completeness | Specify the missing node; resolve dangling references |
+| 1–3 | 2 — EOS | Over-absorption | Conceptual independence | Extract the concern as a separate atom; document the composition |
+| 1–3 | 3 — Linus | Hidden decisions | Adversarial scrutiny | State the load-bearing decision explicitly; tighten invariants; add rejection-path examples |
+| 4 | Clearance gate | Surviving subtleties | Opus — Angry Torvalds X2 | Attack defenses, not just gaps; close what nine passes left standing |
 
-A pattern is `grounded` when all three columns are clean. Until then, the pattern is *in process* — and that is a respectable state to be in, provided the actual state is declared honestly.
+A pattern is `grounded` when all four rows are clean. Until then, the pattern is *in process* — and that is a respectable state to be in, provided the actual state is declared honestly.
 
 ---
 
