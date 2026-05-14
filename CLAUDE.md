@@ -22,8 +22,9 @@ If you have no prior context, read in this order:
 2. **[`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md)** — the manifesto. The *Principles* section (information-management triad + design-quality inheritances) and *Bridges* section (load-bearing humans↔machines bridge, *does this build a bridge, or build a wall?* litmus test) anchor the framing.
 3. **[`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md)** — the three-pass methodology (GRID structural, EOS conceptual independence, Linus adversarial), the four-step authoring rubric, and the **Regulated-pattern conventions** section that canonicalizes *Regulated adversarial scenarios* and *Generation acceptance*.
 4. **[`CONTRIBUTING.md`](./CONTRIBUTING.md)** — contribution shape, the three perspectives (rigor / clarity / implementability), the quality bar, and the contribution lifecycle.
-5. **An example atom.** [`atoms/productivity/personal-todo.md`](./atoms/productivity/personal-todo.md) for the simplest atom shape with a two-iteration Lineage record. [`atoms/compliance/actor-identity.md`](./atoms/compliance/actor-identity.md) for the regulated-atom shape (carries both regulated-pattern conventions).
-6. **An example application.** [`compositions/idempotent-reservation.md`](./compositions/idempotent-reservation.md) for a two-atom composition. [`compositions/audit-trail.md`](./compositions/audit-trail.md) for the four-atom canonical regulated-audit composition.
+5. **[`SPEC_FORMAT.md`](./SPEC_FORMAT.md)** — the canonical reference for the shape of a Grace Commons spec. Enumerates the three shapes (atom, composition, regulated overlay), the required sections in order, and the canonical examples to mirror. Drafter agents (human or AI) read from here.
+6. **An example atom.** [`atoms/productivity/personal-todo.md`](./atoms/productivity/personal-todo.md) for the simplest atom shape with a two-iteration Lineage record. [`atoms/compliance/actor-identity.md`](./atoms/compliance/actor-identity.md) for the regulated-atom shape (carries both regulated-pattern conventions).
+7. **An example application.** [`compositions/idempotent-reservation.md`](./compositions/idempotent-reservation.md) for a two-atom composition. [`compositions/audit-trail.md`](./compositions/audit-trail.md) for the four-atom canonical regulated-audit composition.
 
 When drafting a new pattern, additionally read the most structurally adjacent existing pattern — mirror its shape.
 
@@ -144,6 +145,7 @@ The only prompt-shaped content that belongs in the repo is methodology — the t
 - [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md) — the architectural manifesto.
 - [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) — three-pass methodology, regulated-pattern conventions, multi-file refinement order.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution shape, three perspectives, four-step authoring rubric, lifecycle.
+- [`SPEC_FORMAT.md`](./SPEC_FORMAT.md) — canonical reference for the three spec shapes (atom, composition, regulated overlay), required sections in order, and the canonical examples to mirror.
 - [`ROADMAP.md`](./ROADMAP.md) — planned atoms and compositions in dependency order; what each unlocks; what each blocks on.
 - [`EXECUTION_CONTRACT.md`](./EXECUTION_CONTRACT.md) — the deterministic compilation target: three primitives, four-step pipeline, atom-to-runtime mapping, conformance definition.
 - `atoms/<category>/README.md` — per-category catalogs.
