@@ -128,6 +128,16 @@ When a session has a strong case for resolving one of these, the move is to (a) 
 
 ---
 
+## Session hygiene
+
+**Prompts go in chat, not files.** When asked for a prompt — for an AI adversarial review pass, a kickoff, a handoff, a sub-agent brief, anything — write it inline in the chat reply, as short as the task permits. Do **not** create prompt files in the repo. Prompts are ephemeral scaffolding; they carry no review pass, no Lineage notes, no authoring discipline, and they clutter the repo as content structurally indistinguishable from canonical patterns to any future reader (human or AI). Past sessions have written Round 3 review prompts as standalone files at the repo root; that was a mistake. The review's findings land in the pattern's Lineage notes (Pass 7 / Pass 8 / Pass 9, per the Multi-Party Approval and Defensible Retention convention); the prompt that drove the review stays in the chat where it was issued and is not committed.
+
+The same rule applies to review *outputs*: a Round 3 review's findings are folded into Lineage notes, not written as a standalone review file alongside the pattern.
+
+The only prompt-shaped content that belongs in the repo is methodology — the three-pass question sets and authoring rubric in [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md). That content is canonical, reviewed, and edited like any other library document. Everything else is chat.
+
+---
+
 ## Canonical documents
 
 - [`readme.md`](./readme.md) — home page, current contents snapshot, three-layers framing.
