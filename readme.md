@@ -24,6 +24,10 @@ Named for Grace Hopper, who first argued that business logic should be readable 
 
 ## Four reasons Grace Commons is different
 
+Architects draw plans. Composers write scores. Car designers build CAD models. Lawyers write statutes. Software has a Git repo and hopes the README is current.
+
+Software is the only engineering discipline operating without a canonical-intent layer. We're closing the gap.
+
 1. **Structured English as the canonical form.** Your PM, your lawyer, your auditor, your regulator can read it *and edit it*. Formal methods exclude these stakeholders by notation; Grace Commons includes them by design.
 2. **One spec, many derivations.** Tests, code, multiple frontends, formal models, audit artifacts — all projected from the same canonical source.
 3. **Stack-agnostic by construction.** The spec doesn't know about your runtime. The projector compiles to whatever stack a deployment needs — web, CLI, mobile, voice, future channels.
