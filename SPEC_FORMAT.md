@@ -46,19 +46,9 @@ Reference examples: [`atoms/productivity/personal-todo.md`](./atoms/productivity
 
 3. **Intent.** Several paragraphs of prose explaining the business or regulatory problem the atom addresses, why the concern recurs across domains, and what the atom does and does not commit to. The Intent must be testable — falsifiable by observable behavior of an implementation. This is GRID's Intent node.
 
-4. **Summary.** *(Required for specs over 140 lines)* A plain-English description of what the atom does, what it guarantees, and its most common uses. Complete over concise — the Summary is done when someone working in any discipline (formal methods, design, engineering) could read it and start their work without a clarifying question. Placed immediately after Intent. Written assuming intelligence, not vocabulary — define any key terms inline rather than expecting the reader to bring them. The purpose is explicit: give both human readers and AI models a reliable anchor before they enter the atom's machinery. Do not trust implicit comprehension; a reader or model that skims Intent and pattern-matches on vocabulary will occasionally construct the wrong mental model, and wrong mental models compound across every spec that builds on this one. A well-authored Summary forecloses that. The system teaches itself — each Summary that defines its terms inline builds the reader's vocabulary without requiring them to look anything up.
+4. **Summary.** A plain-English description of what the atom does, what it guarantees, and its most common uses. Complete over concise — the Summary is done when someone working in any discipline (formal methods, design, engineering) could read it and start their work without a clarifying question. Placed immediately after Intent. Written assuming intelligence, not vocabulary — define any key terms inline rather than expecting the reader to bring them. The purpose is explicit: give both human readers and AI models a reliable anchor before they enter the atom's machinery. Do not trust implicit comprehension; a reader or model that skims Intent and pattern-matches on vocabulary will occasionally construct the wrong mental model, and wrong mental models compound across every spec that builds on this one. A well-authored Summary forecloses that. The system teaches itself — each Summary that defines its terms inline builds the reader's vocabulary without requiring them to look anything up.
 
-   Template:
-   ```md
-   ## Summary
-   This atom enforces a hard capacity limit on shared resource pools. It guarantees
-   that total allocated units never exceed the declared capacity, using a
-   hold-then-confirm lifecycle (a two-step process where resources are reserved first
-   and confirmed only when the calling system commits). Common uses include seat
-   inventory, hospital beds, credit limits, and connection pools.
-   ```
-
-6. **Identity model.** What identifies an instance of the atom's primary record. State explicitly whether identity is an opaque system-generated id (the usual answer) and which fields are immutable properties set on the creating action. Never use a content field (description, name, reason) as identity. Identity model precision is the single most common Pass 3 finding when missing.
+5. **Identity model.** What identifies an instance of the atom's primary record. State explicitly whether identity is an opaque system-generated id (the usual answer) and which fields are immutable properties set on the creating action. Never use a content field (description, name, reason) as identity. Identity model precision is the single most common Pass 3 finding when missing.
 
 7. **Inputs and Outputs.** What the atom takes and produces. For each input: the type, validity rules (empty allowed? whitespace? Unicode normalization? length cap?), and rejection-reason name if violated. For each output: the shape and which fields are present in which states.
 
@@ -98,11 +88,11 @@ Reference examples: [`compositions/idempotent-reservation.md`](./compositions/id
 
 2. **Intent.** Several paragraphs explaining the friction at the boundary between the composed atoms, the emergent rule the composition exists to enforce, and what the composition is *not* (typically: not a new primitive — the constituent atoms are unchanged).
 
-3. **Summary.** *(Required for compositions over 140 lines — which is nearly all of them.)* Same rule as the atom shape: plain English, assume intelligence not vocabulary, define key terms inline. Complete over concise. For compositions, the Summary should also name what the composition wires together and what emergent guarantee results — the thing no single constituent atom can provide alone.
+3. **Summary.** Same rule as the atom shape: plain English, assume intelligence not vocabulary, define key terms inline. Complete over concise. For compositions, the Summary should also name what the composition wires together and what emergent guarantee results — the thing no single constituent atom can provide alone.
 
-5. **Composes.** A list of the constituent atoms (or substrate compositions — see *Compositions of compositions* below). Each entry: the constituent's name (linked), a one-line description of the role it plays in this composition, and a note on how the composition uses its surface (which actions are wrapped, which queries are passed through, which state is consulted).
+4. **Composes.** A list of the constituent atoms (or substrate compositions — see *Compositions of compositions* below). Each entry: the constituent's name (linked), a one-line description of the role it plays in this composition, and a note on how the composition uses its surface (which actions are wrapped, which queries are passed through, which state is consulted).
 
-4. **Composition logic.** The main body of the composition's specification. Always contains the following named subsections, in this order:
+5. **Composition logic.** The main body of the composition's specification. Always contains the following named subsections, in this order:
 
    - **Application state** — the emergent state the composition owns (maps, indexes, derived records) that does not belong to any single constituent. For each state element: what it maps, what populates it, what removes it, and what reads it. The State node's completeness rule (*what changes and under what condition*) is verified against this subsection.
 
