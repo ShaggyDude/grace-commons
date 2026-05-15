@@ -46,33 +46,45 @@ Reference examples: [`atoms/productivity/personal-todo.md`](./atoms/productivity
 
 3. **Intent.** Several paragraphs of prose explaining the business or regulatory problem the atom addresses, why the concern recurs across domains, and what the atom does and does not commit to. The Intent must be testable — falsifiable by observable behavior of an implementation. This is GRID's Intent node.
 
-4. **Identity model.** What identifies an instance of the atom's primary record. State explicitly whether identity is an opaque system-generated id (the usual answer) and which fields are immutable properties set on the creating action. Never use a content field (description, name, reason) as identity. Identity model precision is the single most common Pass 3 finding when missing.
+4. **Summary.** *(Required for specs over 200 lines; optional but encouraged for shorter specs.)* A 4–6 line plain-English description of what the atom does, what it guarantees, and its most common uses. Placed immediately after Intent. Written assuming intelligence, not vocabulary — define any key terms inline rather than expecting the reader to bring them. The purpose is explicit: give both human readers and AI models a reliable anchor before they enter the atom's machinery. Do not trust implicit comprehension; a reader or model that skims Intent and pattern-matches on vocabulary will occasionally construct the wrong mental model, and wrong mental models compound across every spec that builds on this one. A well-authored Summary forecloses that. The system teaches itself — each Summary that defines its terms inline builds the reader's vocabulary without requiring them to look anything up.
 
-5. **Inputs and Outputs.** What the atom takes and produces. For each input: the type, validity rules (empty allowed? whitespace? Unicode normalization? length cap?), and rejection-reason name if violated. For each output: the shape and which fields are present in which states.
+   Template:
+   ```md
+   ## Summary
+   This atom enforces a hard capacity limit on shared resource pools. It guarantees
+   that total allocated units never exceed the declared capacity, using a
+   hold-then-confirm lifecycle (a two-step process where resources are reserved first
+   and confirmed only when the calling system commits). Common uses include seat
+   inventory, hospital beds, credit limits, and connection pools.
+   ```
 
-6. **State.** The state machine. Name every state, every transition, and the action that drives each transition. Terminal states are named explicitly. State must name what changes and under what condition. This is GRID's State node.
+6. **Identity model.** What identifies an instance of the atom's primary record. State explicitly whether identity is an opaque system-generated id (the usual answer) and which fields are immutable properties set on the creating action. Never use a content field (description, name, reason) as identity. Identity model precision is the single most common Pass 3 finding when missing.
 
-7. **Flow.** The lifecycle a typical record traverses from creation to terminal state, with the actions that drive each step. At least one branch must be named (happy path versus rejection, or two valid lifecycle paths). This is GRID's Flow node.
+7. **Inputs and Outputs.** What the atom takes and produces. For each input: the type, validity rules (empty allowed? whitespace? Unicode normalization? length cap?), and rejection-reason name if violated. For each output: the shape and which fields are present in which states.
 
-8. **Decision points.** Where the atom's logic chooses a path — quorum evaluation, eligibility check, rejection-priority ordering, etc. Each decision links to a State or Behavior node. This is GRID's Decision node.
+8. **State.** The state machine. Name every state, every transition, and the action that drives each transition. Terminal states are named explicitly. State must name what changes and under what condition. This is GRID's State node.
 
-9. **Behavior.** The observable consequences of each action — what the caller sees, what state has changed, what records have been written. Behavior must be observable, not inferred. This is GRID's Behavior node.
+9. **Flow.** The lifecycle a typical record traverses from creation to terminal state, with the actions that drive each step. At least one branch must be named (happy path versus rejection, or two valid lifecycle paths). This is GRID's Flow node.
 
-10. **Feedback.** The signals the atom produces that a composing system can read — measurable counts, status fields, returned tuples, observable rejection codes. Feedback must be tied to a specific signal or metric. This is GRID's Feedback node.
+10. **Decision points.** Where the atom's logic chooses a path — quorum evaluation, eligibility check, rejection-priority ordering, etc. Each decision links to a State or Behavior node. This is GRID's Decision node.
 
-11. **Invariants.** Named descriptively first, then numbered. Format: `**Invariant N — Descriptive name.** Statement.` Never letter-prefix codes (no Invariant A.1, B.2). Each invariant is a property that holds across every reachable state of the atom; together they are what an implementation must produce records to prove. This is GRID's Proof node.
+11. **Behavior.** The observable consequences of each action — what the caller sees, what state has changed, what records have been written. Behavior must be observable, not inferred. This is GRID's Behavior node.
 
-12. **Examples.** A happy-path walkthrough and at least one rejection-path walkthrough using concrete values. Examples expose what the actions actually look like in use; happy-path-only examples are a Pass 3 finding.
+12. **Feedback.** The signals the atom produces that a composing system can read — measurable counts, status fields, returned tuples, observable rejection codes. Feedback must be tied to a specific signal or metric. This is GRID's Feedback node.
 
-13. **Edge cases and explicit non-goals.** Out-of-scope concerns named explicitly, each pointing at the composing pattern or external mechanism that owns the concern. Edge cases that name another atom or composition do so by link, with `*(forthcoming)*` if the referenced pattern hasn't landed yet.
+13. **Invariants.** Named descriptively first, then numbered. Format: `**Invariant N — Descriptive name.** Statement.` Never letter-prefix codes (no Invariant A.1, B.2). Each invariant is a property that holds across every reachable state of the atom; together they are what an implementation must produce records to prove. This is GRID's Proof node.
 
-14. **Composition notes.** Which composing patterns name this atom (with links). New entries land here when a new composition is grounded; forthcoming-links resolve when the composition lands.
+14. **Examples.** A happy-path walkthrough and at least one rejection-path walkthrough using concrete values. Examples expose what the actions actually look like in use; happy-path-only examples are a Pass 3 finding.
 
-15. **Standards references.** The regulatory or industry standards the atom's invariants satisfy or contribute toward, with section anchors where applicable. Cite only standards that genuinely apply at this layer; frame standards that belong to a composing pattern as the composing pattern's obligation.
+15. **Edge cases and explicit non-goals.** Out-of-scope concerns named explicitly, each pointing at the composing pattern or external mechanism that owns the concern. Edge cases that name another atom or composition do so by link, with `*(forthcoming)*` if the referenced pattern hasn't landed yet.
 
-16. **Status.** A one-line status indicator (`grounded — last full rescan: YYYY-MM-DD` for a grounded atom, `partially resolved` for an atom that has not completed all required passes, or `draft` for a freshly authored atom). See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the status taxonomy.
+16. **Composition notes.** Which composing patterns name this atom (with links). New entries land here when a new composition is grounded; forthcoming-links resolve when the composition lands.
 
-17. **Lineage notes.** The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Pass 1 GRID findings, Pass 2 EOS extractions, Pass 3 Linus fixes, and any Round 2 / Round 3 / scheduled-rescan entries — what was found, what was closed in-pattern, what was deferred as explicit out-of-scope. The Lineage notes section is the evidence the atom has been pressure-tested; an absence here is not necessarily a problem but a rich Lineage section is provably evidence-bearing.
+17. **Standards references.** The regulatory or industry standards the atom's invariants satisfy or contribute toward, with section anchors where applicable. Cite only standards that genuinely apply at this layer; frame standards that belong to a composing pattern as the composing pattern's obligation.
+
+18. **Status.** A one-line status indicator (`grounded — last full rescan: YYYY-MM-DD` for a grounded atom, `partially resolved` for an atom that has not completed all required passes, or `draft` for a freshly authored atom). See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the status taxonomy.
+
+19. **Lineage notes.** The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Pass 1 GRID findings, Pass 2 EOS extractions, Pass 3 Linus fixes, and any Round 2 / Round 3 / scheduled-rescan entries — what was found, what was closed in-pattern, what was deferred as explicit out-of-scope. The Lineage notes section is the evidence the atom has been pressure-tested; an absence here is not necessarily a problem but a rich Lineage section is provably evidence-bearing.
 
 ---
 
@@ -86,7 +98,9 @@ Reference examples: [`compositions/idempotent-reservation.md`](./compositions/id
 
 2. **Intent.** Several paragraphs explaining the friction at the boundary between the composed atoms, the emergent rule the composition exists to enforce, and what the composition is *not* (typically: not a new primitive — the constituent atoms are unchanged).
 
-3. **Composes.** A list of the constituent atoms (or substrate compositions — see *Compositions of compositions* below). Each entry: the constituent's name (linked), a one-line description of the role it plays in this composition, and a note on how the composition uses its surface (which actions are wrapped, which queries are passed through, which state is consulted).
+3. **Summary.** *(Required for compositions over 200 lines — which is nearly all of them.)* Same rule as the atom shape: 4–6 lines, plain English, assume intelligence not vocabulary, define key terms inline. For compositions, the Summary should also name what the composition wires together and what emergent guarantee results — the thing no single constituent atom can provide alone.
+
+5. **Composes.** A list of the constituent atoms (or substrate compositions — see *Compositions of compositions* below). Each entry: the constituent's name (linked), a one-line description of the role it plays in this composition, and a note on how the composition uses its surface (which actions are wrapped, which queries are passed through, which state is consulted).
 
 4. **Composition logic.** The main body of the composition's specification. Always contains the following named subsections, in this order:
 
@@ -100,17 +114,17 @@ Reference examples: [`compositions/idempotent-reservation.md`](./compositions/id
 
    - **The load-bearing wiring decision** — the structural reason the composition exists. Each composition turns on one decision the constituents cannot make alone (a quorum evaluation, a hold-blocks-purge gate, a cascade rule). This subsection names that decision and defends it in-line in four parts: *Principle* (the rule the decision enforces), *Likely objection* (the question a sharp reader would ask), *Mechanism that resolves it* (why the decision lives at the composition layer rather than being pushed into a constituent or out to the calling layer), and *Result* (what the decision produces structurally — typically a records-alone-defensible signal). The defended-in-line discipline prevents Pass 3 from re-litigating a settled architectural choice; the choice is made visible and justified up front.
 
-5. **Application-level invariants.** The emergent invariants — properties that arise only at composition time and belong to no single constituent. Numbered, descriptively named. Each invariant should reference the constituent invariants it depends on and the action wiring step that establishes it. The composition's defending claim is that each of these invariants holds; the Generation acceptance section is how an auditor verifies it.
+6. **Application-level invariants.** The emergent invariants — properties that arise only at composition time and belong to no single constituent. Numbered, descriptively named. Each invariant should reference the constituent invariants it depends on and the action wiring step that establishes it. The composition's defending claim is that each of these invariants holds; the Generation acceptance section is how an auditor verifies it.
 
-6. **Examples.** A walkthrough using concrete values (an end-to-end run of the load-bearing action sequence) plus several domain examples that exercise different regulatory regimes or different parameter combinations. The walkthrough must show the load-bearing wiring decision firing in both its accepting and rejecting modes if applicable; happy-path-only examples are a Pass 3 finding.
+7. **Examples.** A walkthrough using concrete values (an end-to-end run of the load-bearing action sequence) plus several domain examples that exercise different regulatory regimes or different parameter combinations. The walkthrough must show the load-bearing wiring decision firing in both its accepting and rejecting modes if applicable; happy-path-only examples are a Pass 3 finding.
 
-7. **Edge cases and explicit non-goals.** Same structure as atom shape — out-of-scope concerns named explicitly with the composing pattern or external mechanism that owns each. Cross-store consistency under failure (for compositions that write to multiple stores in sequence) is a canonical edge case that should be addressed for every multi-step action.
+8. **Edge cases and explicit non-goals.** Same structure as atom shape — out-of-scope concerns named explicitly with the composing pattern or external mechanism that owns each. Cross-store consistency under failure (for compositions that write to multiple stores in sequence) is a canonical edge case that should be addressed for every multi-step action.
 
-8. **Standards references.** Regulations and industry standards the composition satisfies — typically broader than any single constituent because the composition is what produces the records-alone defensibility the regulation actually requires.
+9. **Standards references.** Regulations and industry standards the composition satisfies — typically broader than any single constituent because the composition is what produces the records-alone defensibility the regulation actually requires.
 
-9. **Status.** Same form as atom shape.
+10. **Status.** Same form as atom shape.
 
-10. **Lineage notes.** Same form as atom shape, with one addition: a *Structural milestone* paragraph naming which forthcoming-link debts the composition retires. New compositions typically resolve one or more `*(forthcoming)*` references that previous patterns left behind; making this explicit closes the loop on the library's accumulating cross-reference surface.
+11. **Lineage notes.** Same form as atom shape, with one addition: a *Structural milestone* paragraph naming which forthcoming-link debts the composition retires. New compositions typically resolve one or more `*(forthcoming)*` references that previous patterns left behind; making this explicit closes the loop on the library's accumulating cross-reference surface.
 
 ### Compositions of compositions
 
@@ -147,6 +161,7 @@ Both regulated-overlay conventions are *inherited from the methodology directly*
 
 This document enumerates sections. It does not enumerate authoring conventions — those live in [`CLAUDE.md`](./CLAUDE.md) and are reinforced by [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md). The conventions every section must honor (regardless of which shape) include:
 
+- **Assume intelligence, not vocabulary.** Write for a smart reader who may not share your specific technical vocabulary. Define key terms inline at first use — in the Summary, in the Intent, and anywhere a term is load-bearing. The spec should teach the reader the vocabulary it needs them to know, not assume they already have it. This is the mechanism by which the library teaches itself: each spec that defines its terms consistently builds the reader's vocabulary without requiring them to look anything up elsewhere.
 - Invariants named descriptively first, then numbered (never letter-prefix codes)
 - Identity model explicit, opaque-id over content-field
 - Action signatures explicit, with every rejection reason named
