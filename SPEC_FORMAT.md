@@ -46,7 +46,7 @@ Reference examples: [`atoms/productivity/personal-todo.md`](./atoms/productivity
 
 3. **Intent.** Several paragraphs of prose explaining the business or regulatory problem the atom addresses, why the concern recurs across domains, and what the atom does and does not commit to. The Intent must be testable — falsifiable by observable behavior of an implementation. This is GRID's Intent node.
 
-4. **Summary.** *(Required for specs over 140 lines)* A 4–6 line plain-English description of what the atom does, what it guarantees, and its most common uses. Placed immediately after Intent. Written assuming intelligence, not vocabulary — define any key terms inline rather than expecting the reader to bring them. The purpose is explicit: give both human readers and AI models a reliable anchor before they enter the atom's machinery. Do not trust implicit comprehension; a reader or model that skims Intent and pattern-matches on vocabulary will occasionally construct the wrong mental model, and wrong mental models compound across every spec that builds on this one. A well-authored Summary forecloses that. The system teaches itself — each Summary that defines its terms inline builds the reader's vocabulary without requiring them to look anything up.
+4. **Summary.** *(Required for specs over 140 lines)* A plain-English description of what the atom does, what it guarantees, and its most common uses. Complete over concise — the Summary is done when someone working in any discipline (formal methods, design, engineering) could read it and start their work without a clarifying question. Placed immediately after Intent. Written assuming intelligence, not vocabulary — define any key terms inline rather than expecting the reader to bring them. The purpose is explicit: give both human readers and AI models a reliable anchor before they enter the atom's machinery. Do not trust implicit comprehension; a reader or model that skims Intent and pattern-matches on vocabulary will occasionally construct the wrong mental model, and wrong mental models compound across every spec that builds on this one. A well-authored Summary forecloses that. The system teaches itself — each Summary that defines its terms inline builds the reader's vocabulary without requiring them to look anything up.
 
    Template:
    ```md
@@ -98,7 +98,7 @@ Reference examples: [`compositions/idempotent-reservation.md`](./compositions/id
 
 2. **Intent.** Several paragraphs explaining the friction at the boundary between the composed atoms, the emergent rule the composition exists to enforce, and what the composition is *not* (typically: not a new primitive — the constituent atoms are unchanged).
 
-3. **Summary.** *(Required for compositions over 140 lines — which is nearly all of them.)* Same rule as the atom shape: 4–6 lines, plain English, assume intelligence not vocabulary, define key terms inline. For compositions, the Summary should also name what the composition wires together and what emergent guarantee results — the thing no single constituent atom can provide alone.
+3. **Summary.** *(Required for compositions over 140 lines — which is nearly all of them.)* Same rule as the atom shape: plain English, assume intelligence not vocabulary, define key terms inline. Complete over concise. For compositions, the Summary should also name what the composition wires together and what emergent guarantee results — the thing no single constituent atom can provide alone.
 
 5. **Composes.** A list of the constituent atoms (or substrate compositions — see *Compositions of compositions* below). Each entry: the constituent's name (linked), a one-line description of the role it plays in this composition, and a note on how the composition uses its surface (which actions are wrapped, which queries are passed through, which state is consulted).
 
@@ -161,6 +161,7 @@ Both regulated-overlay conventions are *inherited from the methodology directly*
 
 This document enumerates sections. It does not enumerate authoring conventions — those live in [`CLAUDE.md`](./CLAUDE.md) and are reinforced by [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md). The conventions every section must honor (regardless of which shape) include:
 
+- **Complete over concise.** A section is done when it fully conveys its intent — not when it hits a line count. Brevity that loses meaning is a defect; length that preserves it is a feature.
 - **Assume intelligence, not vocabulary.** Write for a smart reader who may not share your specific technical vocabulary. Define key terms inline at first use — in the Summary, in the Intent, and anywhere a term is load-bearing. The spec should teach the reader the vocabulary it needs them to know, not assume they already have it. This is the mechanism by which the library teaches itself: each spec that defines its terms consistently builds the reader's vocabulary without requiring them to look anything up elsewhere.
 - Invariants named descriptively first, then numbered (never letter-prefix codes)
 - Identity model explicit, opaque-id over content-field
