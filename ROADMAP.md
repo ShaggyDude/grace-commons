@@ -23,9 +23,9 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ---
 
-## Current state — 2026-05-14
+## Current state — 2026-05-15
 
-Nineteen atoms and seven compositions are `grounded`. Nothing is in-progress. The next move is one of the four remaining unblocked atoms (#7–#10 below) or one of the unblocked compositions (any of C2, C3, C6, C7, C8, C9 — see compositions section).
+Twenty atoms and seven compositions are `grounded`. Nothing is in-progress. The next move is one of the three remaining unblocked atoms (#7, #9, #10 below) or one of the unblocked compositions (any of C2, C3, C6, C7, C8, C9 — see compositions section).
 
 **Atoms grounded:**
 
@@ -33,7 +33,7 @@ Nineteen atoms and seven compositions are `grounded`. Nothing is in-progress. Th
 - `atoms/healthcare/` (2): Clinical Observation, Medication Order
 - `atoms/messaging/` (2): Notification, Subscription
 - `atoms/productivity/` (2): Assignment, Personal Todo
-- `atoms/resource-lifecycle/` (2): Provisional Commitment, Soft Delete
+- `atoms/resource-lifecycle/` (3): Capacity Constraint Enforcement, Provisional Commitment, Soft Delete
 - `atoms/temporal/` (2): Duplicate Prevention, Event Log
 - `atoms/workflow/` (1): Approval Step
 
@@ -45,7 +45,7 @@ The healthcare atoms (Clinical Observation, Medication Order) are outside the co
 
 ## Remaining atoms — in draft order
 
-Four atoms remain on the planned-sequence list. They are sequenced by how many downstream compositions they unblock.
+Three atoms remain on the planned-sequence list. They are sequenced by how many downstream compositions they unblock.
 
 ---
 
@@ -64,24 +64,6 @@ Four atoms remain on the planned-sequence list. They are sequenced by how many d
 **Standards anchored.** ISO 23081 (records management metadata — provenance as a required metadata element); W3C PROV (data provenance ontology); FDA 21 CFR Part 211 (pharmaceutical chain of custody); SEC Rule 17a-4 (records must be maintained as originally created — provenance of the original form).
 
 **Unlocks.** Enriches Immutable Transaction Ledger (C6), DSAR (C7), and KYC (C8) as an optional composing atom. Does not strictly block any composition.
-
----
-
-### 8. Capacity Constraint Enforcement
-
-**Category:** `atoms/resource-lifecycle/`
-
-**Status:** Not started.
-
-**What it is.** A resource-lifecycle primitive: a named, bounded pool of a finite resource — seats, inventory units, time slots, bandwidth allocations, credit headroom — with actions that allocate from, release back to, and query against the pool. Capacity Constraint Enforcement does not know what is being constrained; it models the pool's arithmetic: declared capacity, currently allocated units, and available units at a point in time. It composes with Provisional Commitment (which issues a hold against a specific resource slot) and Duplicate Prevention (which guards against double-allocation under concurrent requests). States: Open (accepting allocations), Drained (at capacity — new allocations rejected), Suspended (no new allocations; existing allocations held intact), Closed (terminal; existing allocations may complete; pool is decommissioned).
-
-**Why it's after Provenance.** Reservation Lifecycle (C9) is blocked entirely on this atom — Provisional Commitment handles the per-reservation hold and Duplicate Prevention handles idempotency under concurrent demand, but neither enforces that the pool's total allocation never exceeds its stated capacity. That invariant belongs here. C9 is the only composition this atom unblocks, so its sequence is "next after Provenance" rather than "first" — Provenance has broader composing surface even though it strictly blocks nothing.
-
-**Key invariants (anticipated).** Total allocated units never exceed pool capacity — an allocation that would exceed capacity is rejected with `over-capacity`. Released units are returned to available immediately; the pool does not retain per-allocation identity — it tracks aggregate counts only. Capacity adjustments (upward or downward) are recorded with the timestamp and the adjusting actor. A downward adjustment that would put current allocation over the new capacity is rejected — the atom enforces the constraint; the caller owns the resolution policy.
-
-**Standards anchored.** General resource management practice (no single regulatory standard owns capacity constraint enforcement; it appears as an implied obligation in ticketing, scheduling, inventory, and financial settlement systems). Composes naturally with SOX-scope financial controls when the constrained resource is a financial limit or credit line.
-
-**Unlocks.** Reservation Lifecycle (C9).
 
 ---
 
@@ -121,9 +103,9 @@ Four atoms remain on the planned-sequence list. They are sequenced by how many d
 
 ---
 
-## Grounded atoms — short status (formerly atoms #1–#6)
+## Grounded atoms — short status (formerly atoms #1–#6, #8)
 
-The six atoms below were on the planned sequence and have shipped. Detailed authoring notes are in the atom files themselves; the entries below are retained as roadmap-history.
+The seven atoms below were on the planned sequence and have shipped. Detailed authoring notes are in the atom files themselves; the entries below are retained as roadmap-history.
 
 - **[Legal Hold](./atoms/compliance/legal-hold.md)** — `grounded` 2026-05-13. Compliance primitive; actor-issued hold preventing record purge regardless of retention eligibility. Unblocked C1 (Defensible Retention, now grounded) and C7 (DSAR).
 - **[Consent](./atoms/compliance/consent.md)** — `grounded` 2026-05-13. Compliance primitive; data subject's agreement to a specified processing purpose with grant/revoke/expire lifecycle. Unblocked C2 (Consent & Preference Management), C7 (DSAR), C8 (KYC).
@@ -131,12 +113,13 @@ The six atoms below were on the planned sequence and have shipped. Detailed auth
 - **[Approval Step](./atoms/workflow/approval-step.md)** — `grounded` 2026-05-13. Workflow primitive; single approval gate with Pending/Approved/Rejected/Withdrawn lifecycle. Unblocked C4 (Multi-Party Approval, now grounded). First entry in `atoms/workflow/`.
 - **[Selective Disclosure](./atoms/compliance/selective-disclosure.md)** — `grounded` 2026-05-13. Compliance primitive; durable record of what subset of a record was disclosed, to whom, when, and under what authority. Unblocked C6 (Immutable Transaction Ledger) and C7 (DSAR).
 - **[Party Identity](./atoms/compliance/party-identity.md)** — `grounded` 2026-05-14. Compliance primitive; persistent verifiable identity record for an external party with Unverified/Verified/Suspended/Closed lifecycle. Unblocked C8 (KYC / Customer Onboarding). Survived foundation round plus Opus Phase 4 clearance gate; six clearance-gate findings closed in-pattern.
+- **[Capacity Constraint Enforcement](./atoms/resource-lifecycle/capacity-constraint-enforcement.md)** — `grounded` 2026-05-15. Resource-lifecycle primitive; named, bounded pool of a finite resource with arithmetic enforcing *total allocated never exceeds declared capacity* under four named host obligations. Unblocked C9 (Reservation Lifecycle). Foundation round plus two Phase 4 Opus clearance-gate rounds (round 1: 11 foundational findings closed; round 2: 3 foundational + 5 refining + 1 rhetorical closed). First atom grounded under the 93%-good threshold codified in this revision of PRESSURE_TESTING.md.
 
 ---
 
 ## Compositions — current state
 
-Compositions are sequenced by readiness. Three are grounded; six are unblocked and not started; two are blocked on remaining atoms (Provenance is optional rather than blocking, so it does not gate any composition).
+Compositions are sequenced by readiness. Three are grounded; seven are unblocked and not started; two are blocked on remaining atoms (Provenance is optional rather than blocking, so it does not gate any composition).
 
 ---
 
@@ -194,17 +177,19 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 **Newly unblocked.** This composition was blocked on Party Identity through 2026-05-13; it is unblocked as of 2026-05-14 and is the natural first composition to author after the Party Identity gate cleared.
 
----
-
-### Blocked on remaining atoms
-
 #### C9. Reservation Lifecycle
 
-**Prerequisites:** Capacity Constraint Enforcement *(atom #8 — not started)* + existing: Provisional Commitment, Duplicate Prevention, Event Log, Actor Identity.
+**Prerequisites:** Capacity Constraint Enforcement + Provisional Commitment + Duplicate Prevention + Event Log + Actor Identity — all grounded (Capacity Constraint Enforcement completed 2026-05-15).
 
 **What it adds.** The full arc of a reservation: capacity query against the pool, provisional hold against a specific slot, idempotent confirmation under concurrent demand, and eventual resolution — confirmed, cancelled, or expired. Emergent invariants: confirmed reservations never exceed pool capacity; a cancelled or expired reservation releases its slot back to the pool atomically; no reservation transitions to Confirmed unless its provisional hold is still Active at confirmation time.
 
 **Standards anchored.** Booking and ticketing systems; financial settlement (credit limit enforcement); supply chain and inventory.
+
+**Newly unblocked.** This composition was blocked on Capacity Constraint Enforcement through 2026-05-14; it is unblocked as of 2026-05-15.
+
+---
+
+### Blocked on remaining atoms
 
 #### C10. Stateful Workflow Execution
 
@@ -241,7 +226,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 | 5 | Selective Disclosure | Atom | `grounded` 2026-05-13 | C6, C7 |
 | 6 | Party Identity | Atom | `grounded` 2026-05-14 | C8 |
 | 7 | Provenance | Atom | Not started | Enriches C6, C7, C8 (optional) |
-| 8 | Capacity Constraint Enforcement | Atom | Not started | C9 |
+| 8 | Capacity Constraint Enforcement | Atom | `grounded` 2026-05-15 | C9 |
 | 9 | Workflow / State Machine | Atom | Not started | C10; resolves workflow-category question |
 | 10 | Preference / Personalization | Atom | Not started | C11 |
 | — | Undo History | Composition | `grounded` 2026-05-13 | Personal Todo + Event Log |
@@ -256,9 +241,23 @@ These compositions have all their constituent atoms grounded. They are ready for
 | C6 | Immutable Transaction Ledger | Composition | Unblocked; not started | Selective Disclosure (grounded) |
 | C7 | Data Subject Rights Fulfillment | Composition | Unblocked; not started | Legal Hold + Consent + Selective Disclosure (all grounded) |
 | C8 | KYC / Customer Onboarding | Composition | Unblocked; not started — **newly unblocked 2026-05-14** | Party Identity + Consent (both grounded) |
-| C9 | Reservation Lifecycle | Composition | Blocked on atom #8 | Capacity Constraint Enforcement |
+| C9 | Reservation Lifecycle | Composition | Unblocked; not started — **newly unblocked 2026-05-15** | Capacity Constraint Enforcement (grounded) + Provisional Commitment + Duplicate Prevention |
 | C10 | Stateful Workflow Execution | Composition | Blocked on atom #9 | Workflow / State Machine + Approval Step |
 | C11 | Preference-Aware Notification Fanout | Composition | Blocked on atom #10 | Preference / Personalization |
+
+---
+
+## Methodology debts — open
+
+These are methodology-level items the library has accumulated and not yet resolved. They are recorded here so a future session picks them up rather than re-deriving them.
+
+**1. Propagation pass for the 93%-good threshold and three-class finding taxonomy.** [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) §"What grounded means" was extended on 2026-05-15 with the *93%-good grounding threshold* (a pattern grounds when the Phase 4 clearance gate's foundational findings reach zero, even if refining and rhetorical findings remain) and the *foundational / refining / rhetorical* three-class finding taxonomy. Capacity Constraint Enforcement is the first atom whose Lineage notes were authored under the new taxonomy and the new compact finding-→-fix line format (*F-id — short name — class → fix in one or two sentences*). All other grounded patterns retain Lineage notes in the prior narrative-paragraph form and Status lines that reference the prior unbounded "gate runs again until clean" rule rather than the threshold. A propagation pass should: (a) update each grounded pattern's Status line to reference the threshold and the foundational-density-at-grounding count, (b) refactor each pattern's Lineage notes to the compact format with explicit class labels per finding, (c) process in dependency order (atoms before compositions that name them) so cross-references stay stable. Priority order for the pass: Party Identity (most recent prior gate-clearing atom; the format is most directly comparable), then the canonical regulated-audit stack (Event Log, Actor Identity, Retention Window, Tamper Evidence, Audit Trail), then the remaining atoms and compositions in their grounded-date order.
+
+**2. Methodology cross-reference from existing pattern Lineage notes to the threshold.** Patterns whose Lineage notes refer to "the gate runs again until clean" or similar pre-threshold phrasing should be updated to point at PRESSURE_TESTING.md §"The 93%-good grounding threshold" once the propagation pass runs. This is a substring-search-and-replace rather than a content rewrite; the existing findings and fixes stay, only the methodology rationale anchors update.
+
+**3. Decide whether the threshold counts toward grandfathering.** Patterns grandfathered at `grounded` before the AI adversarial round was codified (per PRESSURE_TESTING.md §"What grounded means" — "Grandfathered patterns") have not been subjected to a Phase 4 clearance gate at all, much less under the 93%-good threshold. The grandfathering clause currently says they will be brought to the full nine-pass standard in a dedicated re-pass sweep. Question for that future sweep: does running Phase 4 under the threshold count as bringing them to standard, or is a pre-threshold-era clean Phase 4 required first? The pragmatic read is yes — the threshold is a refinement on what *clean* means, not a different standard — but the question should be resolved when the sweep is scheduled, not before.
+
+**4. Author-fatigue / round-count signal.** Capacity Constraint Enforcement required two Phase 4 rounds (11 + 9 findings closed across both) before clearing under the new threshold. The library's prior gate-clearing pattern (Party Identity) cleared in one round (6 findings). The two-round count for CCE is correlated with the atom's surface area — 14 invariants, four host obligations, two state machines, regulated overlay, eight composing patterns. The empirical pattern: more surface = more rounds, with diminishing structural-finding density per round. The threshold is what makes the loop terminate cleanly. No action required, but a useful data point for future rich-surface atoms (Workflow / State Machine and Provenance are likely candidates).
 
 ---
 
