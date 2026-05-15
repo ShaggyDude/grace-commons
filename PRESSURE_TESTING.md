@@ -15,7 +15,7 @@ toc: true
 </details>
 
 
-> The foundation review every Grace Commons pattern survives before being considered grounded. Minimum standard: three rounds of three passes each — nine passes total. Round 1 is the foundation (Pass 1 → 2 → 3, author-led). Round 2 is at least one human refinement run; additional refinement rounds follow until a complete round surfaces no new findings. Round 3 is a mandatory AI-conducted adversarial pass of all three passes. The minimum is a floor: a pattern that appears clean after the foundation still completes Round 2 before proceeding to Round 3 — the clean result is the confirmation, not a reason to skip the round.
+> The foundation review every Grace Commons pattern survives before being considered grounded (fully reviewed, complete, and reliable). Minimum standard: three rounds of three passes (structured review sweeps) each — nine passes total. Round 1 is the foundation (Pass 1 → 2 → 3, author-led). Round 2 is at least one human refinement run; additional refinement rounds follow until a complete round surfaces no new findings. Round 3 is a mandatory AI-conducted adversarial pass (where an AI reviewer actively attacks the spec looking for weaknesses) of all three passes. The minimum is a floor: a pattern that appears clean after the foundation still completes Round 2 before proceeding to Round 3 — the clean result is the confirmation, not a reason to skip the round.
 
 A pattern's spec is incomplete in three different ways at once. Each of the three passes below catches a different class of incompleteness. None substitutes for the others. Together they constitute the mandatory foundation for atoms (in `atoms/`) and compositions (in `compositions/`).
 
@@ -27,11 +27,11 @@ The three passes are recursive in a useful way: applying them to a pattern produ
 
 ## Pass 1 — Structural completeness (GRID)
 
-**What it checks.** For each of GRID's nine nodes — Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof — is the node specified? Does the spec satisfy the node's completeness rule? Are the node's references to other nodes resolved?
+**What it checks.** For each of GRID's nine nodes (GRID is a nine-checkpoint completeness framework — each node is one checkpoint) — Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof — is the node specified? Does the spec satisfy the node's completeness rule? Are the node's references to other nodes resolved?
 
 **What it catches.** Missing pieces. Nodes that aren't addressed at all. Friction items that don't reference a Flow step. Decisions that aren't linked to a State or Behavior. Intent claims that aren't testable.
 
-**How to run it.** Mechanical. Walk the nine nodes one by one with their MUSE v1.1 completeness rules:
+**How to run it.** Mechanical. Walk the nine nodes one by one with their MUSE v1.1 (the completeness framework GRID is built on) rules:
 
 | Node | Completeness rule |
 |------|-------------------|
@@ -45,7 +45,7 @@ The three passes are recursive in a useful way: applying them to a pattern produ
 | Behavior | Must be observable — not inferred |
 | Proof | Must be measurable and defined before development begins |
 
-Then check the reference graph: every Friction links to a Flow step; every Decision links to State and Behavior; every Proof links to Intent. Orphaned references are violations.
+Then check the reference graph: every Friction links to a Flow step; every Decision links to State and Behavior; every Proof links to Intent. Orphaned references (links that point to something not defined in the spec) are violations.
 
 **Time:** 15–30 minutes for an atom; longer for an application with multiple constituents.
 
@@ -53,11 +53,11 @@ Then check the reference graph: every Friction links to a Flow step; every Decis
 
 ---
 
-## Pass 2 — Conceptual independence (EOS)
+## Pass 2 — Conceptual independence (EOS — Essence of Software)
 
 **What it checks.** For each concern named in the spec, does that concern belong to *this* concept, or to a different concept that ought to compose with it?
 
-**What it catches.** Over-absorption. A spec absorbing a concern that is generic, recurs across many concepts, and deserves its own freestanding atom. EOS calls these *concerns that should be freestanding* — they are not properties of the host concept; they are concepts in their own right.
+**What it catches.** Over-absorption (when a spec takes on more than it should — grabbing concerns that belong to a different concept). A spec absorbing a concern that is generic, recurs across many concepts, and deserves its own freestanding atom. EOS calls these *concerns that should be freestanding* — they are not properties of the host concept; they are concepts in their own right.
 
 **How to run it.** For each concern, ask:
 
@@ -72,7 +72,7 @@ Then check the reference graph: every Friction links to a Flow step; every Decis
 
 ---
 
-## Pass 3 — Adversarial scrutiny (Linus mode)
+## Pass 3 — Adversarial scrutiny (Linus mode — named after Linus Torvalds, creator of Linux, known for blunt and unsparing code reviews)
 
 **What it checks.** Read the spec like someone with low patience for hand-waving. Look for muddled thinking, decisions deferred dressed up as deliberate ambiguity, marketing claims without justification, examples that exercise only happy paths, invariants that aren't actually invariant.
 
@@ -83,16 +83,16 @@ Then check the reference graph: every Friction links to a Flow step; every Decis
 - **Identity.** What concretely *is* the identity model? Is identity an opaque id, or is it a property like name or description? What happens if the identity-property changes — is that the same entity or a different one? Pick a side. State it.
 - **Action signatures.** What does each action *return* on success? On failure? What are the rejection reasons, named?
 - **Primitive policies.** For every string, number, date, identifier in the spec — what are the rules? Empty allowed? Whitespace? Unicode normalization? Length cap? Trim? Case-sensitivity?
-- **Invariant precision.** Are invariants stated with proper conditional structure when terms are optional? A chain inequality `a ≤ b ≤ c` is wrong if any term may be undefined.
+- **Invariant precision.** Are invariants (rules that must always be true, no matter what) stated with proper conditional structure when terms are optional? A chain inequality `a ≤ b ≤ c` is wrong if any term may be undefined.
 - **Examples.** Do they exercise rejection paths, edge cases, and the explicit non-goals — or only the happy path?
-- **Deferred concerns.** Are concurrency, atomicity, clock semantics, persistence named explicitly as out-of-scope, or implicitly assumed away?
+- **Deferred concerns.** Are concurrency (multiple operations happening at the same time), atomicity (an operation either fully completes or fully fails — no in-between), clock semantics (rules about where timestamps come from and whether they can be trusted), and persistence named explicitly as out-of-scope, or implicitly assumed away?
 - **Marketing.** Does the spec claim it *extends* or *is informed by* or *is built on* something? Is the claim accurate, or sleight-of-hand papering over a different model?
 - **Atomicity.** Are state transitions atomic? What about a crash mid-transition — is an invariant violated? Whose problem is that?
 - **Time.** Where does `now` come from? Whose clock? What about skew, monotonicity, timezone?
 
 **Time:** 30–60 minutes for a thorough pass. The most labor-intensive of the three.
 
-**Personal Todo example.** Surfaced five gaps in the simplified post-Pass-1-and-2 spec: identity model muddled, `add` return value unspecified, description rules unspecified, timestamp monotonicity malformed (chain inequality with optional terms), examples were happy-path only. All five fixed in a third revision; three additional concerns (concurrency, atomicity, clock semantics) named as explicit out-of-scope rather than fixed in-pattern.
+**Personal Todo example.** Surfaced five gaps in the simplified post-Pass-1-and-2 spec: identity model muddled, `add` return value unspecified, description rules unspecified, timestamp monotonicity (the requirement that timestamps always move forward, never backward) malformed (chain inequality with optional terms), examples were happy-path only. All five fixed in a third revision; three additional concerns (concurrency, atomicity, clock semantics) named as explicit out-of-scope rather than fixed in-pattern.
 
 ---
 
@@ -100,7 +100,7 @@ Then check the reference graph: every Friction links to a Flow step; every Decis
 
 The three passes are review tools — they catch gaps. Authoring well in the first place reduces what the passes find. The strongest writing discipline for architectural specs: **every claim is defended in-line by the same paragraph that introduces it.**
 
-**The four-step rubric:**
+**The four-step rubric** (rubric: a structured guide for evaluating something)**:**
 
 1. **State the principle.** The architectural claim, expressed cleanly.
 2. **Name the likely objection or barrier.** What would a senior reviewer push back on? What historical concern attaches to this claim?
@@ -134,11 +134,11 @@ Two structural conventions emerged as Pass 3 findings on the first regulated ato
 
 **The structural fix.** A dedicated `Examples` subsection — *Regulated adversarial scenarios* — walking three canonical adversarial reads: **regulator audit** (a query against the records that must return the expected result by virtue of an invariant), **disputed transaction or data-subject request** (an external party challenges the system's claim and the records must answer), and **breach or incident investigation** (an investigator queries during or after an anomaly). The three classes exercise different invariant surfaces: audit checks structural guarantees, dispute exercises the contract under hostile interpretation, breach exercises forensic queryability.
 
-**Worked examples.** [Provisional Commitment's adversarial scenarios](atoms/resource-lifecycle/provisional-commitment.md#regulated-adversarial-scenarios) walk regulator-audit-of-confirmation-window, GDPR-erasure-on-personal-data, and breach-window-forensics. [Actor Identity's](atoms/compliance/actor-identity.md#regulated-adversarial-scenarios) walk regulator-audit-of-attribution, disputed-transaction-by-actor, and compromised-credential-discovery. [Idempotent Reservation's](compositions/idempotent-reservation.md#regulated-adversarial-scenarios) walk regulator-audit-for-double-charges, disputed-double-charge, and replay-attack — exercising the *emergent* invariants of the composition rather than the constituents' invariants.
+**Worked examples.** [Provisional Commitment's adversarial scenarios](atoms/resource-lifecycle/provisional-commitment.md#regulated-adversarial-scenarios) walk regulator-audit-of-confirmation-window, GDPR-erasure-on-personal-data (GDPR is Europe's data protection law — it gives people the right to have their data deleted), and breach-window-forensics. [Actor Identity's](atoms/compliance/actor-identity.md#regulated-adversarial-scenarios) walk regulator-audit-of-attribution, disputed-transaction-by-actor, and compromised-credential-discovery. [Idempotent Reservation's](compositions/idempotent-reservation.md#regulated-adversarial-scenarios) walk regulator-audit-for-double-charges, disputed-double-charge, and replay-attack — exercising the *emergent* invariants of the composition rather than the constituents' invariants.
 
 ### Generation acceptance
 
-**The Pass 3 gap.** Success criteria for derived implementations are almost always implicit — the *"the invariants hold and rejections surface"* assumption. For regulated atoms, that assumption fails to specify what an external auditor reading the records must be able to *do*. The MUSE Proof node requires success criteria be "measurable and defined before development begins," but the bar is rarely written down; it lives in the architect's head.
+**The Pass 3 gap.** Success criteria for derived implementations are almost always implicit — the *"the invariants hold and rejections surface"* assumption. For regulated atoms, that assumption fails to specify what an external auditor reading the records must be able to *do*. The MUSE Proof node (the "Proof" checkpoint in GRID's nine-node framework — requires success criteria be testable and defined upfront) requires success criteria be "measurable and defined before development begins," but the bar is rarely written down; it lives in the architect's head.
 
 **The structural fix.** A standalone `Generation acceptance` section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks: reconstruct lifecycles from records, verify every invariant from records, observe every rejection-outcome class, identify composing patterns in use, trace ids across boundaries. The framing is *"any code generated from this atom must produce records and a runtime surface that pass the following checks"* — the generator's contract.
 
@@ -166,7 +166,7 @@ The corollary follows immediately: when a constituent's refinement round changes
 
 The motivating evidence is from the library's own first refinement sweep. Shared Todo and Undo History were refined before Personal Todo; both used `invalid-request` for Personal Todo's description-validation rejection, which turned out to be `invalid-description`. The error was only discoverable when Personal Todo was refined last and the correct name was confirmed. Strict dependency order — Personal Todo before any composition naming it — would have surfaced the discrepancy in-round rather than requiring retroactive correction. The same sweep also produced stale invariant counts in Shared Todo (referencing "nine Assignment invariants" after Assignment gained a tenth during its own refinement round), again a consequence of refining the composition before its constituent had fully settled.
 
-The practical rule: before beginning a library-wide refinement sweep, topologically sort the files. If a composition's refinement reveals that a constituent's details are needed but not yet confirmed, pause the composition and refine the constituent first. This is not a performance optimization — it is a correctness requirement for the cross-reference surface the library accumulates.
+The practical rule: before beginning a library-wide refinement sweep, topologically sort the files (order them so that each atom comes before any composition that depends on it). If a composition's refinement reveals that a constituent's details are needed but not yet confirmed, pause the composition and refine the constituent first. This is not a performance optimization — it is a correctness requirement for the cross-reference surface the library accumulates.
 
 **Phase 3 — Final AI adversarial round: mandatory before `grounded`.** After human refinement rounds have settled, one complete round of all three passes is conducted by a high-functioning AI reviewer before the pattern can declare `grounded`. This is not a repeat of Phase 2 — it is a structurally different kind of scrutiny. A human author who has written and revised a spec has emotional investment in the choices, accumulated blind spots from having reasoned through each decision, and a mental model that paper over gaps the written text does not actually close. An AI reviewer has none of these: it reads only what is written, applies the same pass questions without fatigue or sympathy, and has no stake in the outcome.
 
@@ -180,7 +180,7 @@ The AI round runs all three passes, not Pass 3 alone. Pass 1 and Pass 2 benefit 
 
 **Automated councils satisfying Phase 3.** Phase 3 may be conducted by a single AI reviewer in one session or by an automated council that decomposes the three passes across agents (typically one agent per pass plus a consolidate step). The Phase 3 discipline applies *uniformly* to Pass 3: **Pass 3 always runs in fresh-reader mode**, in every round, regardless of whether the round is refinement or final. Pass 1 and Pass 2 findings drive document changes between rounds (applied by a human, an apply-agent, or whatever the council provides); Pass 3 then reads the resulting document with no findings context. Every Pass 3 invocation is structurally a Phase 3 candidate; the invocation that surfaces no findings — i.e., a clean Pass 3 in a round where Passes 1 and 2 were also clean — grants `grounded` eligibility. There is no mode switch, no "final round" detection, no escalation logic. The rule chooses simplicity and discipline over convergence speed: redundant findings during refinement (Pass 3 surfacing the same gap across rounds before the document fully absorbs the fix) is a small cost; priming Pass 3 with prior findings is the exact failure the fresh-reader discipline exists to foreclose. Pass 1 and Pass 2 may flow findings forward within a round (Pass 2 may read Pass 1's findings; Pass 1 has no prior to read) — those passes are structural and conceptual rather than adversarial, and findings context does not undermine their job. Lineage notes record the council pattern used (which model per agent, which formula) and confirm that Pass 3 ran in fresh-reader mode throughout.
 
-**Phase 4 — Clearance gate: Opus at Angry Torvalds X2.** After the nine-pass minimum has been satisfied and Phase 3 returns clean, one additional mandatory pass runs before the pattern may declare `grounded`. This pass is conducted by Opus — the most capable available model — at twice the adversarial intensity of standard Pass 3 (Linus mode). It is not a fourth round in the same sense as Phases 1–3; it is a single-pass clearance gate whose job is to find what nine passes missed.
+**Phase 4 — Clearance gate: Opus at Angry Torvalds X2.** (Opus is Anthropic's most capable AI model; "Angry Torvalds X2" means running the adversarial Pass 3 at twice the intensity of a normal review.) After the nine-pass minimum has been satisfied and Phase 3 returns clean, one additional mandatory pass runs before the pattern may declare `grounded`. This pass is conducted by Opus — the most capable available model — at twice the adversarial intensity of standard Pass 3 (Linus mode). It is not a fourth round in the same sense as Phases 1–3; it is a single-pass clearance gate whose job is to find what nine passes missed.
 
 *Why a separate gate, and why Opus at X2.* A pattern that has survived nine passes has been iterated and defended; the remaining gaps, if any, are subtle — they survived precisely because they were well-hidden or well-defended. Standard Phase 3 uses "a high-functioning AI reviewer" with structured question coverage and fresh-reader discipline; that bar is correct for the closing AI round of a refinement sequence. It is not the bar for final clearance. Opus at X2 intensity is the instrument calibrated to find what a structured review does not: defenses that sound airtight but aren't, invariants that hold under the author's assumptions but break under adversarial ones, composing-concern boundaries drawn conveniently rather than correctly.
 
