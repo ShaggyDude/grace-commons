@@ -139,6 +139,20 @@ The only prompt-shaped content that belongs in the repo is methodology — the t
 
 ---
 
+## Implementation-discovered findings
+
+Building demos or production systems against a spec sometimes surfaces problems the three-pass review missed. The discipline below keeps the spec-as-canonical story honest without silencing implementation discoveries.
+
+A **finding** is a contradiction *inside* the spec — an action wiring and an invariant disagree, two passages describe different behavior for the same case, a CHECK and a trigger cannot both hold, an example violates an invariant, a forthcoming-link points at something that already landed under a different name. Findings are Pass-3-shaped and belong in the pattern's Lineage notes as a new pass. Log them; route them through the standard review channel; do not modify the spec mid-build.
+
+A **preference** is anything else — *"this would be cleaner if…"*, *"I'd rather have one table than four"*, *"the column name is awkward"*, *"this collapses to a simpler form in my implementation"*. Preferences are implementation choice and belong in the implementation's own follow-up tracker (e.g., a `CORNERS.md` alongside the build), not in the spec.
+
+The single distinguishing question: does the observation name a contradiction *inside* the spec, or a preference *outside* it? If the answer is not obviously the first, it is the second. The bar is "contradiction, not preference" — deliberately not "very wrong," because *very wrong* slides under any sustained effort and *contradiction* does not. A contradiction can be named by pointing at the two passages that disagree; a preference cannot.
+
+Builds proceed against the spec as written. The spec changes only through a review pass, not through a code commit. An agent that rewrites the spec inline during a build has made a process error, regardless of whether the rewrite is correct — the correct path is to log the finding, finish the build against the existing spec, and let the review channel adjudicate.
+
+---
+
 ## Canonical documents
 
 - [`readme.md`](./readme.md) — home page, current contents snapshot, three-layers framing.
