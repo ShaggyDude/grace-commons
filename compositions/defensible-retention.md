@@ -32,6 +32,18 @@ This is a composition, not a new primitive. Legal Hold, Retention Window, and Au
 
 ---
 
+## Summary
+
+Defensible Retention is a regulated composition (a spec that wires two or more atoms — freestanding, self-contained pattern specs — together) that solves a specific problem that neither its constituent atoms nor Audit Trail alone can solve: ensuring that a record under an active Legal Hold (a legally mandated preservation order suspending normal deletion) cannot be purged even after its retention window (the bounded period during which records must be kept) has elapsed, and that every destruction event is provably compliant to an external auditor from the records alone. It wires three constituents: Legal Hold (which records who placed a preservation directive, on which record, and why), Retention Window (which records the minimum lifetime a record must be kept and enforces that no record is deleted before that window closes), and Audit Trail (the tamper-evident — designed so unauthorized changes are detectable — regulated-audit substrate that attribution-stamps and seals every governance decision).
+
+The composition's defining emergent invariant (a property that only appears when atoms are combined — no single atom carries it) is the hold-blocks-purge gate: no record with at least one Active hold may be purged through this composition's surface under strict mode, regardless of whether the retention clock has run out. Neither Legal Hold nor Retention Window enforces this rule alone — Legal Hold records the obligation but does not intercept purge calls; Retention Window enforces the clock but has no knowledge of the hold store. The gate lives in the composition's wiring, between the hold check and the purge call, and it fires an Audit Trail event both when it passes (a `record_purged` event carrying `hold_check_result: empty`) and when it blocks (a `purge_blocked_by_hold` event carrying the blocking hold identifiers). An external auditor can read those two event classes and verify, from the records alone, both that every destruction was hold-clear and that every hold-blocked attempt was recorded — the full dual-sided behavior of the gate is visible in the records.
+
+Beyond the gate, the composition guarantees that every hold placement, hold release, retention placement, and purge decision is attribution-stamped and tamper-evident through the Audit Trail substrate. It also guarantees defensible destruction (deletion that can be proven compliant to an auditor — all holds cleared, retention satisfied): every successfully purged record has, in the records, an Audit Trail purge event with `hold_check_result: empty`, a Retention Window record in Purged state, and a tamper-evident seal — the three elements an auditor needs to confirm the destruction was lawful, attributed, and unaltered.
+
+This composition is grounded (passed all required review passes and is stable enough to generate from). Its most common uses are financial records governance under SOX (Sarbanes-Oxley Act) §802, patient records under HIPAA (US Health Insurance Portability and Accountability Act) §164.530(j), electronically stored information subject to FRCP (Federal Rules of Civil Procedure) Rule 37(e) litigation holds, and broker-dealer communications under SEC Rule 17a-4. Any system that must prove it did not destroy records while a legal or regulatory hold was active — and that it did eventually destroy them once the hold was released and the retention window had closed — is a candidate for this composition.
+
+---
+
 ## Composes
 
 - **[Legal Hold](../atoms/compliance/legal-hold.md)** — provides the preservation directive: a named, actor-issued hold on a record that suspends purge eligibility regardless of the retention window's clock. The composition maintains exactly one Legal Hold store instance. The `place`, `release`, and `read` API are used directly; the composition wraps `place` and `release` with Audit Trail recording.
@@ -55,7 +67,7 @@ The hold store is owned by the Legal Hold instance; the composition queries it v
 
 ### Configuration
 
-- **`audit_trail_retention_policy`** — the policy reference passed to the Audit Trail instance at each `record_action` call. The audit trail of a retention or hold decision should persist at least as long as the business record it describes, and often longer (for litigation defensibility after the business record is purged). The deployment configures this separately from the business record retention policies. Multi-jurisdiction policy reconciliation — selecting the longer of competing obligations (HIPAA + state law, SOX + GDPR) — is out of scope; a Policy Reconciliation composing pattern produces the reconciled `policy_ref` values this composition consumes.
+- **`audit_trail_retention_policy`** — the policy reference passed to the Audit Trail instance at each `record_action` call. The audit trail of a retention or hold decision should persist at least as long as the business record it describes, and often longer (for litigation defensibility after the business record is purged). The deployment configures this separately from the business record retention policies. Multi-jurisdiction policy reconciliation — selecting the longer of competing obligations (HIPAA + state law, SOX + GDPR (EU General Data Protection Regulation)) — is out of scope; a Policy Reconciliation composing pattern produces the reconciled `policy_ref` values this composition consumes.
 - **`hold_check_mode`** — `strict` (default) or `advisory`. Under `strict`, a non-empty Active hold set causes `purge_record` to return `rejected(under-legal-hold)`. Under `advisory`, the hold presence is recorded in the Audit Trail event with `hold_override = true` and purge proceeds — only valid where a deployment has an external authority that can authorize override (e.g., court-ordered destruction superseding a litigation hold). Deployments operating under FRCP Rule 37(e), SEC Rule 17a-4, or SOX must not configure `advisory`; the `strict` default is the required posture for those regimes.
 
 ### Primitive policies
@@ -113,7 +125,7 @@ The composition exposes five orchestrating actions. Every successful state-chang
 
 The composition's structural reason to exist: **a record under an Active Legal Hold cannot be purged regardless of whether its retention window has elapsed.** This rule sits in `purge_record` step 3 — between the hold check and the `RetentionWindow.purge` call — and is the gate neither constituent atom can enforce alone.
 
-*Principle:* Retention Window's `retention-period-not-elapsed` precondition prevents premature purge but has no knowledge of Legal Hold's state. Legal Hold records preservation obligations but does not intercept purge calls. Without the composition wiring the two checks together, a system can lawfully (from each atom's perspective) purge a record that is under an active litigation hold — a spoliation exposure that is structurally invisible to either atom alone.
+*Principle:* Retention Window's `retention-period-not-elapsed` precondition prevents premature purge but has no knowledge of Legal Hold's state. Legal Hold records preservation obligations but does not intercept purge calls. Without the composition wiring the two checks together, a system can lawfully (from each atom's perspective) purge a record that is under an active litigation hold — a spoliation (destruction of evidence subject to a preservation duty) exposure that is structurally invisible to either atom alone.
 
 *Likely objection:* Why not have Legal Hold intercept `RetentionWindow.purge` directly, rather than needing a composition?
 
@@ -125,7 +137,7 @@ The composition's structural reason to exist: **a record under an Active Legal H
 
 ## Application-level invariants
 
-These invariants emerge from the composition. None belongs to a single constituent; each requires two or more working together to hold.
+These invariants (conditions that must always hold) emerge from the composition. None belongs to a single constituent; each requires two or more working together to hold.
 
 - **Invariant 1 — Hold-blocks-purge.** For every record `r` covered by at least one Active hold at the time of a `purge_record(retention_id)` call, the call returns `rejected(under-legal-hold)` and `RetentionWindow.purge` is not invoked under `strict` mode. No record with `LegalHold.read({record_ref: r, state: Active})` returning a non-empty sequence transitions to Purged state via this composition under `strict` mode. This is the composition's defining emergent invariant — it cannot be derived from Legal Hold (which does not intercept purge calls) or from Retention Window (which does not consult the hold store) alone.
 
@@ -139,7 +151,7 @@ These invariants emerge from the composition. None belongs to a single constitue
 
 - **Invariant 5 — Audit completeness modulo Audit Trail's partial-attestation contract.** Every state-changing action produces exactly one `AuditTrail.record_action` call. The invariant inherits Audit Trail's atomicity surface: if Actor Identity's `attest` (inside `record_action`) succeeds but Event Log's `append` fails, an orphan attestation exists without a corresponding event-log entry. This composition does not re-derive Audit Trail's orphan-resolution discipline; it inherits it and requires the implementation to surface and resolve any orphan attestation referencing this composition's `action_ref` values. Invariant 5 holds *modulo* Audit Trail's own partial-attestation contract, as established for regulated compositions in Multi-Party Approval's Invariant 5.
 
-- **Invariant 6 — Non-retroactivity of holds.** A hold placed after a successful `purge_record` does not alter the Retention Window record (terminal in Purged state, by Retention Window's Invariant 3), does not remove the Audit Trail purge event (immutable by Event Log's Invariant 2), and does not change the composition's assessment of the purge's legality. The hold creates a new Legal Hold record with `placed_at` postdating `purged_at`. The records faithfully document the chronology; legal counsel and the court assess the consequences.
+- **Invariant 6 — Non-retroactivity of holds.** A hold placed after a successful `purge_record` does not alter the Retention Window record (terminal in Purged state, by Retention Window's Invariant 3), does not remove the Audit Trail purge event (immutable — unchangeable once written — by Event Log's Invariant 2), and does not change the composition's assessment of the purge's legality. The hold creates a new Legal Hold record with `placed_at` postdating `purged_at`. The records faithfully document the chronology; legal counsel and the court assess the consequences.
 
 - **Invariant 7 — Multi-hold independence.** When N Active holds cover a record, releasing any subset does not make the record purge-eligible unless zero Active holds remain. `purge_eligible()` lists a record as hold-blocked whenever `hold_count ≥ 1`. `purge_record` returns `under-legal-hold` if any Active hold remains, regardless of count. Legal Hold's Invariant 4 (concurrent holds are independent) is the constituent guarantee; this invariant names the aggregate consequence at composition level.
 
@@ -275,7 +287,7 @@ These audit questions arise around this composition but cannot be answered from 
 
 - **Access control on hold placement, release, and purge.** Who may place holds, who may release them, and who may purge records is not defined by this composition. A Permissions composing pattern governs these. The action wiring includes `actor_ref` and `credential` parameters at every action boundary; the deployment wires Permissions checks per its organizational policy.
 
-- **Cryptographic shredding.** For records that cannot be directly deleted (append-only logs, distributed replicas, immutable storage), `purge_record` delegates to `RetentionWindow.purge`, which delegates to the storage layer's destruction mechanism. Cryptographic shredding is a composing pattern for those storage scenarios; this composition treats both mechanisms as the same state transition.
+- **Cryptographic shredding.** For records that cannot be directly deleted (append-only — records can be added but never changed or deleted — logs, distributed replicas, immutable storage), `purge_record` delegates to `RetentionWindow.purge`, which delegates to the storage layer's destruction mechanism. Cryptographic shredding is a composing pattern for those storage scenarios; this composition treats both mechanisms as the same state transition.
 
 - **GDPR Article 17 adjudication.** The composition records the state of holds and retention windows at the time of an erasure request (as shown in the GDPR collision example). It does not adjudicate whether the legal-claims exception under Article 17(3)(e) applies, whether HIPAA retention overrides GDPR erasure for a specific record type, or whether cryptographic shredding satisfies the erasure right. Legal counsel adjudicates. The composition provides the records that inform the decision.
 
@@ -325,7 +337,7 @@ Regulated composition. Conventions — *Regulated adversarial scenarios* and *Ge
 
 All nine GRID nodes resolved.
 
-**Pass 2 — Conceptual independence (EOS).** Clean. Four extraction candidates evaluated; none warranted.
+**Pass 2 — Conceptual independence (EOS — Essence of Software, Daniel Jackson's framework for specifying software concepts as freestanding, composable units).** Clean. Four extraction candidates evaluated; none warranted.
 
 - *Override-precedence rule as its own atom.* Could "Legal Hold overrides Retention Window" recur enough to be a freestanding atom? Evaluated: the rule has no state of its own — it is a constraint on the interaction of two specific atoms, enforced at the call site between `LegalHold.read` and `RetentionWindow.purge`. It does not recur across other atom pairings in the current library. A stateless rule with no independent lifecycle is not EOS-grade freestanding. Kept in-composition as the *load-bearing wiring decision*. This is the same conclusion Multi-Party Approval's Pass 2 reached for the Quorum evaluation rule.
 

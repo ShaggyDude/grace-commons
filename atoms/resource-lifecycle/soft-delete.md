@@ -32,7 +32,19 @@ The atom does not define what "hidden from normal query" means operationally. Th
 
 Purge is the destruction surface. It is irreversible and requires explicit attribution — who authorized the destruction, when, and why. This makes Purge the atom's regulated interface: GDPR Article 17 erasure, HIPAA record destruction, and e-discovery spoliation risk all attach to the Purge action, not to the Deleted state. The atom records the purge faithfully; whether a purge is legally permissible at a given moment — whether a legal hold is active, whether the retention window has elapsed — is a composing-layer concern. The records carry the full attribution chain of deletion and destruction, immutable by specification; cryptographic protection of those records against post-hoc modification — the bar for court-admissible and regulator-admissible evidence — is added by composition with [Tamper Evidence](../compliance/tamper-evidence.md), not by this atom alone.
 
-This is a freestanding concept in the EOS sense. It carries its own state (the record's lifecycle state plus deletion and purge attribution), its own actions (`soft_delete`, `restore`, `purge`, `read`), and its own invariants (terminal absorption, Purge irreversibility, attribution completeness, audit retention). Composing patterns add purge gate enforcement, access control, batch operations, and retention-window and legal-hold integration.
+This is a freestanding (can be specified without naming any other pattern) concept in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It carries its own state (the record's lifecycle state plus deletion and purge attribution), its own actions (`soft_delete`, `restore`, `purge`, `read`), and its own invariants — conditions that must always hold — (terminal absorption, Purge irreversibility, attribution completeness, audit retention). Composing patterns add purge gate enforcement, access control, batch operations, and retention-window and legal-hold integration.
+
+---
+
+## Summary
+
+Soft Delete is a resource-lifecycle atom (a freestanding pattern spec — one that can be specified without naming any other pattern) that separates the two things a conventional hard-delete conflates: hiding a record from normal operation, and destroying it permanently. In this atom, "deletion" means the first of those things only — the record is marked as removed and excluded from standard read surfaces, but it is retained in storage, its deletion is attributed to a named actor, and it remains recoverable. "Purge" (permanent, unrecoverable removal from storage) means the second — the record is permanently destroyed, with full attribution of who authorized the destruction and when. Between deletion and purge, a restore path is available: the record can return to Active state as though it had never been deleted.
+
+The atom tracks three states for any record it has seen: Active (previously deleted and since restored), Deleted (marked as removed but recoverable), and Purged (permanently destroyed — terminal). A record that has never been touched by the atom has no lifecycle record at all; the atom's scope begins at the first soft-delete call. Once a record is Purged, no further transitions are possible — the lifecycle record itself is retained as audit evidence of the destruction, but the record's content is gone.
+
+Purge is the atom's regulated interface. GDPR Article 17 erasure, HIPAA record disposal, and e-discovery spoliation risk all attach to the Purge action, not to the Deleted state. The atom records the purge faithfully with complete attribution; whether a purge is legally permissible at a given moment — whether a legal hold is active, whether the retention window has elapsed — is a composing-layer concern, not this atom's. The atom's records carry the full attribution chain of deletion and destruction immutably by specification; cryptographic protection of those records against post-hoc modification is added by composition with Tamper Evidence, not by this atom alone.
+
+The three-state lifecycle appears across nearly every domain that handles records with any lifecycle significance: content moderation (posts hidden but not erased), account management (accounts deactivated before closure), clinical records (superseded entries marked inactive but retained for audit), financial records (voided transactions retained for reconciliation), and e-discovery (records preserved in a recoverable state pending a hold decision). The vocabulary differs across domains — "archived," "deactivated," "tombstoned" (a deletion marker left in place of a removed record), "voided" — but the structure is constant.
 
 ---
 
@@ -44,7 +56,7 @@ The Soft Delete atom operates against a named store instance. A `store_name` ide
 
 ### Identity model
 
-Each record tracked by the atom has an opaque `record_id` — the identity of the record in the host system, supplied by the caller on `soft_delete`. The atom does not generate ids; it accepts them. `record_id` is immutable once a lifecycle record exists for it in the atom's store.
+Each record tracked by the atom has an opaque `record_id` — the identity of the record in the host system, supplied by the caller on `soft_delete`. The atom does not generate ids; it accepts them. `record_id` is immutable (unchangeable once written) once a lifecycle record exists for it in the atom's store.
 
 `deleted_by` is an opaque reference to the actor who performed the deletion. Set on `soft_delete`, immutable. Empty or whitespace-only values are rejected.
 
@@ -208,7 +220,7 @@ An automated purge job mistakenly targets a record that was never soft-deleted: 
 
 Soft Delete is the recoverability and destruction primitive. Every atom that produces records with a lifecycle longer than a single session potentially composes with it:
 
-- **[Event Log](../temporal/event-log.md)** — provides the full delete/restore cycle history that the atom retains only in summary (most-recent-delete attribution). The Event Log is the append-only record of every state transition; Soft Delete's lifecycle record is the current-state summary.
+- **[Event Log](../temporal/event-log.md)** — provides the full delete/restore cycle history that the atom retains only in summary (most-recent-delete attribution). The Event Log is the append-only (records can be added but never changed or deleted) record of every state transition; Soft Delete's lifecycle record is the current-state summary.
 - **[Actor Identity](../compliance/actor-identity.md)** — `deleted_by`, `restored_by`, and `purged_by` are opaque references; Actor Identity provides cryptographic attestation that those references are real, credentialed actors. In regulated contexts, purge is a regulated action requiring verifiable authorship.
 - **[Audit Trail](../../compositions/audit-trail.md)** — every `soft_delete`, `restore`, and `purge` event is an auditable action; Audit Trail provides the tamper-evident, attributed, retention-governed record of the full destruction lifecycle.
 - **[Legal Hold](../compliance/legal-hold.md)** — a Deleted record under an Active Legal Hold must not be purged. The Legal Hold atom records the preservation obligation; the composing layer enforces the gate. Soft Delete does not check for Legal Holds before executing `purge`.
@@ -252,7 +264,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Consent) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
+`grounded (passed all required review passes and is stable enough to generate from) — last full rescan: 2026-05-13` — foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Consent) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
 
 ---
 

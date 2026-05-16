@@ -26,9 +26,21 @@ Personal Todo is single-actor by design. It has no concept of who is acting, no 
 
 The pattern addresses the form of multi-actor work that recurs across virtually every collaborative domain: a development team's sprint board where tasks are visible to all but editable only by their owners; a support queue where tickets are assigned to agents with different role-based access; a clinical care plan where nurses and physicians see the same task list but hold different permissions over it; a legal matter where paralegals and partners share a checklist with clear ownership of each item.
 
-The shape is constant across all of them: actors see and act on tasks according to granted scopes; one actor is responsible for each task at any given time; the full history of who held what permission and who was responsible for what task is recoverable from the records alone.
+The shape is constant across all of them: actors see and act on tasks according to granted scopes (opaque permission tokens, such as `tasks:edit`, that the composition defines and Permissions enforces); one actor is responsible for each task at any given time; the full history of who held what permission and who was responsible for what task is recoverable from the records alone.
 
 This is a composition, not a new primitive. Personal Todo, Permissions, and Assignment are unchanged. The application is the wiring that makes their three concerns coherent — a single multi-actor task surface rather than three separate record stores the caller has to coordinate by hand.
+
+---
+
+## Summary
+
+Shared Todo is a three-atom composition that lifts a single-user task list into a multi-actor collaborative surface where every mutation is gated by an explicit permission check and every task has at most one responsible actor at any time. It wires three freestanding atoms (atoms whose specifications do not name any other pattern): Personal Todo, which governs the task lifecycle (adding, editing, completing, and deleting tasks through a Pending-to-Done state machine); Permissions, which provides the authorization surface — a generic grant-and-revoke mechanism that the composition configures with a vocabulary of task-specific scopes; and Assignment, which records responsibility binding — the at-most-one relationship between a task and the actor currently accountable for completing it.
+
+Neither Personal Todo, Permissions, nor Assignment knows about the others. Personal Todo has no concept of who is acting or what different actors are permitted to do. Permissions has no concept of tasks — it treats action scopes as opaque strings whose meaning is defined by the composing application. Assignment has no concept of permission — it records responsibility but does not gate it. The composition is the wiring that makes all three concerns coherent: every action routes through a Permissions check before reaching either Personal Todo or Assignment; a task deletion cascades to recall any active assignment before the task is removed; the application surfaces two derived queries — who is responsible for a given task right now, and which tasks a given actor may see — that neither constituent can answer alone.
+
+Beyond what the constituent atoms guarantee individually, Shared Todo produces five emergent invariants (properties that only appear when atoms are combined — no single atom carries them). Permission enforcement ensures no actor can mutate the shared task surface beyond their granted scopes. Cascade-on-delete ensures no active assignment is left dangling against a deleted task — the load-bearing wiring decision that distinguishes deletion from completion, which is deliberately left to deployment policy. Responsibility queryability ensures the full history of who was responsible for what task is recoverable from the assignment store alone. Authorization history completeness ensures the full grant history for any actor is recoverable from the permissions store alone. Coherent multi-actor surface and recoverable accountability together make this composition the standard building block for any collaborative task application where ownership and access control are audit requirements.
+
+The most common uses are software development sprint boards with role-based edit and assignment rights, support queue systems where tickets are assigned to agents with different tier-level access, clinical care planning where nurses and physicians share a task list but hold different permissions over it, and legal or compliance workflows where checklist items require clear ownership and an auditable record of who held which permission.
 
 ---
 
@@ -36,7 +48,7 @@ This is a composition, not a new primitive. Personal Todo, Permissions, and Assi
 
 - **[Personal Todo](../atoms/productivity/personal-todo.md)** — provides the task lifecycle: `add`, `edit`, `complete`, `delete`, the state machine (Pending → Done → deleted), the eight invariants (identity model, active-set description uniqueness, timestamp monotonicity, and so on). The application maintains exactly one Personal Todo instance (the shared task store).
 - **[Permissions](../atoms/compliance/permissions.md)** — provides the authorization surface: `grant`, `revoke`, `permitted`. The application maintains exactly one Permissions instance scoped to the task list. Every state-changing action and every read query is gated by a `permitted` check before reaching Personal Todo or Assignment.
-- **[Assignment](../atoms/productivity/assignment.md)** — provides the responsibility binding: `assign`, `recall`, `reassign`. The application maintains exactly one Assignment instance. At most one actor is responsible for any task at any time; the full responsibility history for every task is recoverable from the assignment store.
+- **[Assignment](../atoms/productivity/assignment.md)** — provides the responsibility binding (the record that names which actor is accountable for a task and tracks transitions — Active, Recalled, Transferred — as accountability changes): `assign`, `recall`, `reassign`. The application maintains exactly one Assignment instance. At most one actor is responsible for any task at any time; the full responsibility history for every task is recoverable from the assignment store.
 
 ---
 
@@ -104,7 +116,7 @@ Read-only queries (`visible_tasks`, `responsible_actor`, task detail by id) chec
 
 ### The cascade-on-delete rule
 
-The application's load-bearing wiring decision: when a task is deleted, any Active assignment for that task is recalled before the deletion proceeds. Neither Personal Todo (which knows nothing about assignments) nor Assignment (which knows nothing about task deletion) enforces this; the application wiring does. The recall is recorded in the Assignment store — the assignment moves Active → Recalled, with `recalled_at` — before the task leaves the Personal Todo store. This preserves the invariant that no Active assignment references a deleted task.
+The application's load-bearing wiring decision: when a task is deleted, any Active assignment for that task is recalled before the deletion proceeds. Neither Personal Todo (which knows nothing about assignments) nor Assignment (which knows nothing about task deletion) enforces this; the application wiring does. The recall is recorded in the Assignment store — the assignment moves Active → Recalled (Active means one actor currently holds responsibility; Recalled means responsibility was explicitly withdrawn), with `recalled_at` — before the task leaves the Personal Todo store. This preserves the invariant (a condition that must always hold) that no Active assignment references a deleted task.
 
 ---
 

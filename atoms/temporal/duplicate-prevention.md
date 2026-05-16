@@ -29,7 +29,17 @@ The pattern prevents an identity from being acted on (added, submitted, posted, 
 
 The concept addresses a class of integrity and UX problems that recur across virtually every system accepting user or external input: accidental double-submits, rapid double-add of the same task, replayed messages, repeated payments, double-posted comments, redundant newsletter sign-ups. The common shape is constant — an action accepts an identity, the outcome should be rejected (or de-duplicated, or replayed) if the same identity was recently observed, and "recently" is a wall-time window.
 
-This is a freestanding concept in the EOS sense. It has its own state, its own actions, and its own operational principles, and is designed to compose with patterns that contain identifiable items rather than to be absorbed into them. The same mechanic appears under different names across literatures — *idempotency window* in distributed systems, *cooldown* in UX, *replay protection* in security — but the underlying concept is identical.
+This is a freestanding (can be specified without naming any other pattern) concept in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state, its own actions, and its own operational principles, and is designed to compose with patterns that contain identifiable items rather than to be absorbed into them. The same mechanic appears under different names across literatures — *idempotency window* in distributed systems, *cooldown* in UX, *replay protection* in security — but the underlying concept is identical.
+
+---
+
+## Summary
+
+Duplicate Prevention is a composable temporal atom (a freestanding pattern spec — one that can be specified without naming any other pattern) that gives any containing system a configurable memory of recently-seen identities. Its contract is simple: when a containing pattern removes an item, it calls `record(identity)`; before it accepts a new item, it calls `check(identity)`. If the identity was recorded within the configured time window, `check` returns `seen` and the containing pattern can reject or otherwise handle the repeat; once the window has elapsed, `check` returns `not-seen` and the identity is again freely usable.
+
+The atom is deliberately free of policy: it does not decide what to do with a `seen` result — that is the containing pattern's responsibility. This separation makes the same mechanic reusable across wildly different contexts. In a personal task list, a 24-hour window prevents accidental re-adds of just-deleted items. In a payment processor, a 5-minute window makes charge requests idempotent (submitting the same operation twice produces the same result as once) so that network retries do not produce duplicate charges. In a comment system, a 60-second window prevents a double-click from posting twice. In a newsletter signup form, an hour-long window suppresses duplicate confirmation emails. The identity-matching rule — whether comparison is exact, case-insensitive, normalized, or hashed — is also delegated to the containing pattern, so the atom imposes no opinion on how identities are canonicalized.
+
+The atom's single-recording invariant (a condition that must always hold) is the key design decision: calling `record` on an identity that is already under guard does not extend the window. This prevents a rapid sequence of deletions and re-additions from pushing the guard window forward indefinitely. The window is anchored to the first observation and expires cleanly at a fixed point in wall-time (clock time as a human would read it, not an internal counter). Grounded (passed all required review passes and is stable enough to generate from) after one full three-pass review and one refinement round.
 
 ---
 
@@ -42,7 +52,7 @@ This is a freestanding concept in the EOS sense. It has its own state, its own a
 - An identity-matching rule, supplied by the containing pattern (string equality, case-insensitive, normalized, hashed).
 - Action: `record(identity) → ok` — invoked when an item with this identity has been observed and removed. The action is total: it never rejects.
 - Action: `check(identity) → seen | not-seen` — invoked before the containing system accepts a new identity.
-- An implicit clock providing wall-time.
+- An implicit clock providing wall-time (clock time as a human would read it, not an internal counter).
 
 ### Outputs
 
@@ -149,7 +159,7 @@ It inherits from:
 
 - **Daniel Jackson, *The Essence of Software*** — the conception of a freestanding concept with state, actions, and operational principles, designed for composition rather than absorption.
 - **Distributed-systems idempotency literature** — the underlying mechanic appears as "idempotency window" or "exactly-once-within-window semantics" in message-queue and payment-processor designs.
-- **Linear temporal logic** — the eventual-expiry invariant expressed as a temporal property.
+- **Linear temporal logic** (a formal notation for reasoning about sequences of states over time) — the eventual-expiry invariant expressed as a temporal property.
 
 ---
 

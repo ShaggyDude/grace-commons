@@ -17,7 +17,7 @@ toc: true
 </details>
 
 
-> A compliance primitive: a grant-based authorization surface binding a subject to an action scope. Each grant has an opaque immutable id; the subject reference and action scope are immutable properties set at grant time. Permission evaluation is a read-only query. The contract the atom enforces is **authorization** — `permitted` confirms the named subject holds at least one active grant covering the named action scope; `denied` is an unambiguous structural no.
+> A compliance primitive: a grant-based authorization surface binding a subject to an action scope. Each grant (an explicit record conferring a permission) has an opaque (system-generated, with no meaningful content) immutable id; the subject reference and action scope are immutable properties set at grant time. Permission evaluation is a read-only query. The contract the atom enforces is **authorization** — `permitted` confirms the named subject holds at least one active grant covering the named action scope; `denied` is an unambiguous structural no.
 
 ---
 
@@ -29,7 +29,17 @@ The pattern addresses the *can* question that Actor Identity cannot answer. Acto
 
 A grant is the atom's unit of authorization: a binding of a subject to an action scope that remains active until revoked. Evaluation is grant-lookup: if any active grant exists for the queried (subject, scope) pair, the answer is `permitted`; otherwise `denied`. No active grant, no permission — there is no implicit permission and no notion of a default-allow posture within this atom.
 
-This is a freestanding atom in the EOS sense. It has its own state (the grant set), its own actions (`grant`, `revoke`, `permitted`), and its own operational principles (grants are immutable once recorded; revocation is terminal; evaluation is a read-only query over the active grant set). It does not implement role management, attribute-based policy evaluation, delegation, inheritance, hierarchical scope matching, or time-bounded grants. Each is a separate composable pattern; see Composition notes.
+This is a freestanding (can be specified without naming any other pattern) atom in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state (the grant set), its own actions (`grant`, `revoke`, `permitted`), and its own operational principles (grants are immutable once recorded; revocation (the explicit removal of a previously granted permission) is terminal; evaluation is a read-only query over the active grant set). It does not implement role management, attribute-based policy evaluation, delegation, inheritance, hierarchical scope matching, or time-bounded grants. Each is a separate composable pattern; see Composition notes.
+
+---
+
+## Summary
+
+Permissions is the compliance atom (a freestanding pattern spec — one that does not name any other pattern — that captures a single software concept with its own state and actions) that answers the question *"is this actor allowed to do this thing right now?"* It does so through grants: explicit records that bind a subject (the actor requesting access) to an action scope (the set of operations the grant covers). A grant is active until revoked; revocation is immediate and permanent. Evaluating whether an actor holds permission is a pure read-only query — `permitted` searches the active grant set for any record matching the queried subject and scope, returns `permitted` if one exists, and returns `denied` otherwise. There is no implicit permission: absence of a grant is always denial. The atom enforces what security literature calls default-deny access control, grounded entirely in stored records so that any auditor can reproduce the same evaluation independently.
+
+The most common uses are: segregation of duties in regulated financial systems, where no single employee may both initiate and approve a high-value transaction; HIPAA minimum-necessary access controls, where each clinician's access is bounded to the patients they directly care for; PCI DSS restrictions on who may read cardholder data; document access in legal matters, where access must be bounded to staff actively assigned to the matter; and branch-protection rules in FDA-regulated software pipelines. In every case the mechanic is the same — issue a grant at the time access is authorized, revoke it when it ends, query with `permitted` at every access attempt — and the audit trail answers the regulator's question: *"who had access to what, from when to when, and who authorized it?"*
+
+Permissions does not manage roles (named collections of scopes), attribute-based policies, scope hierarchies, explicit deny rules, delegation, time-bounded grants, or grantor attribution. Each is a separate composable pattern. The atom supplies the minimal grant store and evaluation surface; everything else composes on top.
 
 ---
 
@@ -125,7 +135,7 @@ The full grant set — Active and Revoked — is queryable. Per-grant fields (id
 
 ### Invariants
 
-The following hold across all valid sequences of actions and constitute the verification surface of the pattern:
+The following invariants (conditions that must always hold, regardless of what sequence of actions has occurred) constitute the verification surface of the pattern:
 
 - **Invariant 1 — Grant immutability.** Once recorded, a grant's `grant_id`, `subject_ref`, `action_scope`, and `granted_at` never change.
 - **Invariant 2 — Status monotonicity.** A grant's status transitions only in one direction: Active → Revoked. No grant returns from Revoked to Active.
@@ -152,7 +162,7 @@ Regulatory policy requires that no single employee can both initiate and approve
 
 ### Healthcare — HIPAA minimum necessary access
 
-A hospitalist physician is granted access to records for patients under their direct care: `grant(dr_chen, records:ward-7-patients) → g14`. A billing clerk holds a narrower grant: `grant(clerk_b3, records:billing-fields-only) → g22`. When the billing clerk attempts to open a full patient chart, `permitted(clerk_b3, records:ward-7-patients)` returns `denied`. When Dr. Chen's patient is discharged and transferred, the hospitalist grant is revoked: `revoke(g14)`. Subsequent `permitted` queries for Dr. Chen return `denied` for that ward's records. HIPAA §164.312(a)(1) requires access controls that limit access to the minimum necessary; the grant store is the audit surface.
+A hospitalist physician is granted access to records for patients under their direct care: `grant(dr_chen, records:ward-7-patients) → g14`. A billing clerk holds a narrower grant: `grant(clerk_b3, records:billing-fields-only) → g22`. When the billing clerk attempts to open a full patient chart, `permitted(clerk_b3, records:ward-7-patients)` returns `denied`. When Dr. Chen's patient is discharged and transferred, the hospitalist grant is revoked: `revoke(g14)`. Subsequent `permitted` queries for Dr. Chen return `denied` for that ward's records. HIPAA (US Health Insurance Portability and Accountability Act) §164.312(a)(1) requires access controls that limit access to the minimum necessary; the grant store is the audit surface.
 
 ### Payments — PCI DSS restricted cardholder data access
 
@@ -182,7 +192,7 @@ Three scenarios the atom must survive in regulated contexts:
 
 What this atom does not cover:
 
-- **Role management.** Roles — named collections of scopes assigned to subjects — are a composing RBAC pattern. The bare atom deals in direct grants; a role is a shorthand that the composing system resolves into a set of grants before calling `grant`.
+- **Role management.** Roles — named collections of scopes assigned to subjects — are a composing RBAC (Role-Based Access Control — permissions granted to roles, which actors are then assigned) pattern. The bare atom deals in direct grants; a role is a shorthand that the composing system resolves into a set of grants before calling `grant`.
 - **Attribute-based policy evaluation.** Evaluating whether an actor's attributes (department, clearance level, time of day, resource sensitivity) satisfy a policy expression belongs to an ABAC composing pattern.
 - **Scope hierarchy and wildcard matching.** A grant for `documents:*` does not automatically cover `documents:read` in the bare atom. Scope semantics — wildcards, prefix matching, inheritance — belong to the composing system's scope vocabulary. The atom does exact match.
 - **Explicit deny.** There is no `deny` grant that overrides an active `allow` grant. Absence of grant is denial; explicit-deny semantics belong to a Policy Layer composing pattern.
@@ -209,7 +219,7 @@ Permissions is freestanding and is designed to compose with the authorization an
 
 - **[Actor Identity](./actor-identity.md)** — records *who authorized a grant or revocation* (the grantor attribution concern). Calling `attest(grant_action_ref, grantor_ref, grantor_credential)` alongside `grant` produces a verifiable non-repudiation record for each grant issuance. The composing system stores `attestation_id` alongside `grant_id`.
 - **[Event Log](../temporal/event-log.md)** — records access attempts. Each `permitted` query result can be appended as an event: `{subject_ref, action_scope, result: "permitted" | "denied", at}`. Neither this atom nor Event Log requires the composition; the host system decides whether to log.
-- **[Retention Window](./retention-window.md)** — the grant store and its audit history must be retained for the regulatory lifetime of the system. SOX, HIPAA, and PCI DSS each specify minimum retention periods for access-control records.
+- **[Retention Window](./retention-window.md)** — the grant store and its audit history must be retained for the regulatory lifetime of the system. SOX (Sarbanes-Oxley Act — US financial reporting law), HIPAA, and PCI DSS each specify minimum retention periods for access-control records.
 - **[Tamper Evidence](./tamper-evidence.md)** — the grant store is a target for privilege escalation attacks. Cryptographic hash chains, Merkle-tree commitment, or external anchoring make any rewrite of the grant store detectable from the records alone.
 - **RBAC / Role Management** *(forthcoming)* — named roles as collections of scopes. The role manager resolves a role assignment into a set of `grant` calls and a role revocation into a set of `revoke` calls.
 - **ABAC / Policy Evaluation** *(forthcoming)* — attribute-based policies that resolve to `permitted`/`denied` by evaluating subject attributes, resource attributes, and environmental conditions against a policy expression. Wraps or composes with the grant surface.
@@ -233,7 +243,7 @@ Permissions is a foundational access-control primitive with wide regulatory anch
 - **HIPAA §164.312(a)(1) (Technical Safeguards — Access Control)** — unique user identification, emergency access procedure, automatic logoff, encryption. The minimum-necessary principle (§164.514(d)) is operationalized as narrow action scopes. The grant store demonstrates compliance.
 - **Sarbanes-Oxley §404 (Internal Control over Financial Reporting)** — segregation of duties, access controls on financial systems. The grant store's timeline (who had what access, from when to when) is the §404 evidence trail.
 - **PCI DSS Requirement 7 (Restrict Access to System Components and Cardholder Data)** — need-to-know access, formal access authorization, denial by default. Invariant 7 (denial by absence) is the structural form of PCI DSS's default-deny posture.
-- **GDPR Article 25 (Data Protection by Design and by Default)** — technical measures ensuring only necessary data is processed. Scoped grants are the technical measure; the grant store demonstrates the measure.
+- **GDPR (EU General Data Protection Regulation) Article 25 (Data Protection by Design and by Default)** — technical measures ensuring only necessary data is processed. Scoped grants are the technical measure; the grant store demonstrates the measure.
 - **NIST SP 800-63-3 (Digital Identity Guidelines)** — the atom composes with Authentication (which supplies NIST IAL/AAL/FAL assurance levels) and with Actor Identity (which records the authorization-to-grant event).
 
 It inherits from:

@@ -29,7 +29,19 @@ Notification records *delivery*. It does not know about subscriptions, events, o
 
 The three terminal states are distinct because they answer different questions. Delivered: *did the recipient receive it?* Failed: *was delivery attempted and did the attempt not succeed?* Expired: *did this sit undelivered beyond the allowed window without a recorded failure?* Collapsing them into a single terminal state would hide information that operators, auditors, and retry logic each need separately.
 
-This is a freestanding atom in the EOS sense. It has its own state (the notification set), its own actions (`create`, `deliver`, `fail`, `expire`, `status_of`, `pending_for`), and its own operational principles (notifications are immutable once recorded; terminal states are irreversible; `status_of` and `pending_for` are read-only queries). It does not implement routing, subscription evaluation, retry scheduling, or delivery transport. Each is a separate composable pattern; see Composition notes.
+This is a freestanding (can be specified without naming any other pattern) atom in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state (the notification set), its own actions (`create`, `deliver`, `fail`, `expire`, `status_of`, `pending_for`), and its own operational principles (notifications are immutable once recorded; terminal states are irreversible; `status_of` and `pending_for` are read-only queries). It does not implement routing, subscription evaluation, retry scheduling, or delivery transport. Each is a separate composable pattern; see Composition notes.
+
+---
+
+## Summary
+
+Notification is the atom that records the delivery lifecycle for a single piece of information sent to a single recipient. Where Subscription records who wants to know about a class of events, Notification records whether a specific piece of information actually reached a specific person. Its job is to create a durable (persisted to storage, survives system restarts), immutable (unchangeable once written) record of a delivery attempt and then track that attempt to one of three terminal outcomes: Delivered (the transport layer confirmed receipt), Failed (the transport layer returned a definitive error), or Expired (the delivery window elapsed without any recorded outcome). Each of these is a distinct, named state because each answers a different operational question and is acted upon by a different part of the system — the delivery layer, the failure handler, and the expiry scheduler respectively.
+
+The atom does not route, subscribe, or decide who should be notified. Those decisions belong upstream. Notification is the downstream end of a delivery pipeline: by the time `create` is called, the receiving system has already determined who the recipient is and what the payload should be. Once created, the atom tracks the delivery record through its lifecycle and makes the full record available for query at any time — including after the notification has reached a terminal state. No notification is ever deleted; the store is append-only (records can be added but never changed or deleted), so the full delivery history of any notification is always recoverable.
+
+The atom works most naturally in composition with Subscription (which determines who should receive a notification when an event fires) via the Notification Fanout pattern, which wires the two atoms together with an event source into an end-to-end delivery pipeline. In that pipeline, Notification Fanout calls `Subscription.subscribers_for(event_scope)` and then `Notification.create(subscriber_ref, payload)` for each result, producing one Notification record per subscriber per event.
+
+The most common uses are: tracking whether users received alerts, assignment notices, or policy updates; building the delivery audit trail required in regulated contexts (financial compliance notifications, healthcare alerts); and providing the substrate for retry logic, which works by creating a new Notification record for each retry attempt rather than modifying the failed one. The atom is grounded (passed all required review passes and is stable enough to generate from) and is the second entry in the `messaging/` category.
 
 ---
 
@@ -261,7 +273,7 @@ Notification is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — structure and invariants specified; `status_of` query added after Pass 2 identified the missing read surface; Invariant 8 corrected to conditional-per-state form after Pass 1 identified the set-notation error; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. Second entry in `atoms/messaging/`.
+`grounded` (passed all required review passes and is stable enough to generate from) `— last full rescan: 2026-05-13` — structure and invariants specified; `status_of` query added after Pass 2 identified the missing read surface; Invariant 8 corrected to conditional-per-state form after Pass 1 identified the set-notation error; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. Second entry in `atoms/messaging/`.
 
 ---
 

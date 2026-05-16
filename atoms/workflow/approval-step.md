@@ -34,7 +34,21 @@ The atom is structurally distinct from three adjacent concepts, and the distinct
 
 **Approval Step vs. the eventual Workflow / State Machine atom.** The forthcoming [Workflow / State Machine](../../ROADMAP.md) atom (#9) is the general-purpose state machine engine: a named entity moving through a deployment-declared set of states via deployment-declared transitions, with the full transition history auditable. Approval Step is a *specific kind of state machine* whose states are fixed by this atom (Pending, Approved, Rejected, Withdrawn), whose transitions are approval-specific (submit, approve, reject, withdraw), and whose semantics are approval-specific (exactly one named approver; decision produces a terminal outcome that is itself a compliance record). The distinction matters because Approval Step is fully specified at the atom level — external evaluators know the states and their semantics without consulting a deployment configuration — while Workflow / State Machine is specified by deployment declaration. Multi-party approval chains that wire multiple Approval Step instances together belong to the [Multi-Party Approval](../../compositions/multi-party-approval.md) composition; chains where the approval state logic is itself configurable at deployment time belong to Stateful Workflow Execution (C10). This atom's scope is the single gate.
 
-This is a freestanding concept in the EOS sense. It carries its own state (the approval step record set), its own actions (`submit`, `approve`, `reject`, `withdraw`, `read`), and its own invariants (subject immutability, approver exclusivity, terminal absorption, decision completeness, concurrent step independence). Composing patterns add multi-party chains, access control, event logging, tamper evidence, and delegation.
+This is a freestanding (can be specified without naming any other pattern) concept in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It carries its own state (the approval step record set), its own actions (`submit`, `approve`, `reject`, `withdraw`, `read`), and its own invariants (subject immutability, approver exclusivity, terminal absorption, decision completeness, concurrent step independence). Composing patterns add multi-party chains, access control, event logging, tamper evidence, and delegation.
+
+---
+
+## Summary
+
+Approval Step is the atom that records a single authorization gate: the binding of a named approver to a specific subject requiring their approval, for a declared scope of action, with a lifecycle that runs from submission through a terminal decision. Its job is to produce an auditable, immutable (unchangeable once written) record that a required approval gate existed, was presented to a specific named actor, and was either approved, rejected, or withdrawn — together with who made the decision, when, and why.
+
+The structure is fixed by design. Each approval step has exactly one named approver (the only actor who may approve or reject it), one named submitter (the only actor who may withdraw it), one subject (the thing being approved — a document, a transaction, a protocol deviation), and one scope (the category of approval being requested — for example, `financial:journal-entry:post` or `clinical-trial:protocol-deviation`). Four states are possible: Pending (the initial state, gate is open), Approved (affirmative decision by the named approver), Rejected (negative decision by the named approver, with a required reason), and Withdrawn (the submitter retracted the request before a decision was made). All three terminal states are absorbing (no further transitions are possible once reached).
+
+The atom's core guarantee is decision attribution completeness: every Approved or Rejected step carries the deciding actor's reference and timestamp, both immutable; every Rejected step additionally carries a required reason; every Withdrawn step carries the withdrawing actor, a required reason, and a timestamp. An anonymous decision, a blank reason on a rejected step, or a missing timestamp is a conformance failure. This makes Approval Step the structural form of a regulated control — when an SOX auditor asks for evidence that journal entries were approved by the right controller, or an FDA investigator asks who approved a pharmaceutical batch release, the answer must come from the records alone without recourse to developer testimony.
+
+Approval Step is distinct from Permissions (which governs standing, reusable authorization for a class of actions) and from Assignment (which governs who owns a work item, not who approved it). It is also distinct from the forthcoming Workflow / State Machine atom, which provides a general-purpose engine with deployment-declared states; Approval Step is a specific kind of state machine whose states and semantics are fixed here and are fully interpretable by external evaluators without consulting any deployment configuration.
+
+The most common uses are: SOX §404 financial control gates (controller approval before a journal entry posts), FDA 21 CFR Part 11 electronic signature requirements (named actor approval of batch release, protocol deviation), clinical trial oversight (investigator approval before a deviant procedure occurs), and engineering change control (approval chain before a change order reaches production). The atom is grounded (passed all required review passes and is stable enough to generate from) and is the first entry in `atoms/workflow/`.
 
 ---
 
@@ -96,7 +110,7 @@ For optional parameters in `submit`, `approve`, `reject`, and `withdraw`, "suppl
 
 Each approval step is in exactly one state:
 
-- **Pending** — the approval gate is open; no terminal decision has been made. Carries `step_id`, `subject_ref`, `approver_ref`, `submitter_ref`, `scope`, `submitted_at`, and `reason` (if supplied). May be transitioned to Approved (by the named approver), Rejected (by the named approver), or Withdrawn (by the submitter). No other transitions are valid.
+- **Pending** — the approval gate (a named checkpoint that must be cleared before a workflow can advance) is open; no terminal decision has been made. Carries `step_id`, `subject_ref`, `approver_ref`, `submitter_ref`, `scope`, `submitted_at`, and `reason` (if supplied). May be transitioned to Approved (by the named approver), Rejected (by the named approver), or Withdrawn (by the submitter). No other transitions are valid.
 - **Approved** — the named approver has affirmatively decided. Carries all submission fields plus `decided_by`, `decision_reason` (if supplied), and `decided_at` (all immutable from the moment `approve` completes). Terminal; no further transitions.
 - **Rejected** — the named approver has negatively decided. Carries all submission fields plus `decided_by`, `decision_reason`, and `decided_at` (all immutable from the moment `reject` completes). Terminal; no further transitions. `decision_reason` is required on Rejected steps; it is optional on Approved steps.
 - **Withdrawn** — the submitter has retracted the request. Carries all submission fields plus `withdrawn_by`, `withdrawal_reason`, and `withdrawn_at` (all immutable from the moment `withdraw` completes). Terminal; no further transitions.
@@ -266,7 +280,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 - **Concurrency.** Two systems concurrently calling `approve` or `reject` on the same `step_id` must be serialized. The first succeeds; the second receives `not-pending`. Similarly, concurrent calls to `withdraw` on the same `step_id` are serialized. Implementations must serialize state transitions on a given `step_id`.
 
-- **Multi-party approval and quorum.** When an action requires N approvals from a designated set of approvers — all-of-N, threshold-of-N, one-of-N — each required approval is modeled as a separate Approval Step instance. The quorum rule (how many Approved steps constitute sufficient authorization) belongs to the [Multi-Party Approval](../../ROADMAP.md) composition (C4). This atom specifies the single gate; the composition specifies the chain.
+- **Multi-party approval and quorum.** When an action requires N approvals from a designated set of approvers — all-of-N, threshold-of-N, one-of-N — each required approval is modeled as a separate Approval Step instance. The quorum (the minimum number of approvals required for a decision to be valid) rule (how many Approved steps constitute sufficient authorization) belongs to the [Multi-Party Approval](../../ROADMAP.md) composition (C4). This atom specifies the single gate; the composition specifies the chain.
 
 ---
 
@@ -299,7 +313,7 @@ Approval Step is the approval-gate primitive that Multi-Party Approval and State
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (AI-conducted, claude-sonnet-4-6), and Round 3 (AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. First entry in `atoms/workflow/`.
+`grounded` (passed all required review passes and is stable enough to generate from) `— last full rescan: 2026-05-13` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (AI-conducted, claude-sonnet-4-6), and Round 3 (AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. First entry in `atoms/workflow/`.
 
 ---
 

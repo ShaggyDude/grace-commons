@@ -27,7 +27,19 @@ A requester needs a resource whose grant is not yet certain. The system promises
 
 The pattern addresses a class of needs that recur across virtually every regulated industry: credit-limit holds at banks (pending settlement), bed assignments at hospitals (pending admission), inventory reservations at retailers (pending checkout), room bookings at hotels (pending check-in), seat holds at airlines (pending purchase). The shape is constant — a resource is encumbered for a bounded window, the encumbrance resolves into commitment or release, and the audit record of the encumbrance is itself a regulated asset.
 
-This is a freestanding atom in the EOS sense. It has its own state (the commitment record), its own actions (place hold, confirm, release, expire), and its own operational principles (the hold window is binding; the three terminal transitions are absorbing). It does not implement idempotency under retry, the full audit trail of every observation, or aggregate capacity constraints over a resource pool. Each is a separate composable atom; see Composition notes.
+This is a freestanding atom (can be specified without naming any other pattern) in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state (the commitment record), its own actions (place hold, confirm, release, expire), and its own operational principles (the hold window is binding; the three terminal transitions are absorbing). It does not implement idempotency (submitting the same operation twice produces the same result as once) under retry, the full audit trail of every observation, or aggregate capacity constraints over a resource pool. Each is a separate composable atom; see Composition notes.
+
+---
+
+## Summary
+
+Provisional Commitment is a resource-lifecycle atom (a freestanding pattern spec that does not name any other pattern) that models the universal business act of "holding" a resource for a requester while they decide whether to proceed. The atom owns the complete lifecycle of that hold: it comes into existence when a hold is placed, it lives in a single active state (Held) during the decision window, and it resolves exactly once into one of three terminal states — Confirmed (the requester took the resource), Released (the requester gave it back voluntarily), or Expired (the window closed without a decision). The hold window is a binding contract in both directions: the system promises to keep the resource reserved for the requester until the window closes, and the requester must decide within that window or lose the hold automatically.
+
+Every commitment is identified by an opaque identifier (a system-generated ID with no meaningful content) that is immutable (unchangeable once written) for its lifetime. The resource reference, requester reference, and hold window are likewise immutable properties set at the moment the hold is placed; they cannot be changed after creation. This discipline ensures that each commitment is an unambiguous fact about the past once it settles — an auditor can reconstruct the full lifecycle of any hold from the record alone.
+
+The atom covers the five most common regulated domains in which this pattern appears: credit-limit holds at banks, bed assignments at hospitals, inventory reservations at retailers, room bookings at hotels, and seat holds at airlines. Across all five, the mechanic is identical: one resource, one requester, one bounded window, one terminal outcome. What differs between domains is the resource semantics, the window duration, the regulatory framing of the audit trail, and the composing atoms that handle fare locks, capacity caps, no-show fees, payment idempotency, and the like.
+
+The atom does not attempt to handle idempotency (submitting the same operation twice produces the same result as once) under retry, the full audit journal of every intermediate observation, or aggregate capacity constraints over a resource pool. Each of those concerns is freestanding (can be specified without naming any other pattern) in its own right and is addressed by a separate composing atom. This separation keeps the Provisional Commitment atom small and its invariants (conditions that must always hold) unambiguous — a composing system can rely on the terminal-absorption guarantee and the hold-window contract without also taking on the complexity of idempotency tokens, event journals, or pool arithmetic.
 
 ---
 
@@ -51,7 +63,7 @@ The opaque-id model is load-bearing. Identifying a commitment by its `(resource,
   - `confirm(id) → ok | rejected(not-known | not-held | window-elapsed | storage-failure)`
   - `release(id) → ok | rejected(not-known | not-held | storage-failure)`
   - `expire(id) → ok | rejected(not-known | not-held | window-not-elapsed | storage-failure)`
-- An implicit clock providing wall-time timestamps.
+- An implicit clock providing wall-time (clock time as a human would read it) timestamps.
 
 ### Outputs
 
@@ -113,7 +125,7 @@ Observed behavior, derived from how regulated systems use provisional commitment
 - The hold window is a contract with two faces: a commitment to the requester (the resource is theirs to confirm within the window) and a constraint on the requester (decide within the window or lose the hold). Both faces are load-bearing — auditors check both.
 - Expiry is a state transition, not a passive absence. A commitment whose wall-time has passed `expires_at` is still in Held until `expire(id)` is invoked. Implementations may invoke `expire` eagerly (a scheduled sweep) or lazily (at next observation of the commitment). The audit-trail consequences differ; see Edge cases.
 - Concurrent `place_hold` calls for the same resource resolve serially under the host environment's serialization guarantees. Whichever call wins the race produces a Held commitment; the loser receives `resource-unavailable`.
-- The commitment record persists in its terminal state indefinitely from the atom's perspective. Retention, archival, and purge are composing concerns; the regulated-deployment composition is with [Retention Window](../compliance/retention-window.md).
+- The commitment record persists in its terminal state indefinitely from the atom's perspective. Retention, archival, and purge (permanent, unrecoverable removal from storage) are composing concerns; the regulated-deployment composition is with [Retention Window](../compliance/retention-window.md).
 - Audit trails read the commitment record directly. Every state transition has a timestamp; every commitment names a requester and a resource. This is the minimum surface a regulator expects.
 
 ### Feedback
@@ -190,7 +202,7 @@ These scenarios exercise the atom against the questions regulators actually ask.
 
 What this atom does not cover:
 
-- **Idempotency under retry.** If a requester invokes `place_hold` twice for the same logical intent (network retry, double-click), the atom on its own produces two commitments. Idempotent reservation composes with [Duplicate Prevention](../temporal/duplicate-prevention.md), keyed on an idempotency token supplied by the requester. See Composition notes.
+- **Idempotency under retry.** If a requester invokes `place_hold` twice for the same logical intent (network retry, double-click), the atom on its own produces two commitments. Idempotent reservation composes with [Duplicate Prevention](../temporal/duplicate-prevention.md), keyed on an idempotency token (a client-supplied token that makes repeated submissions safe) supplied by the requester. See Composition notes.
 - **Full audit trail of state transitions.** The commitment record carries one timestamp per terminal transition, sufficient for *terminal-state* audit. Reconstructing the full sequence of observations — every read, every retry, every observer — requires composing with [Event Log](../temporal/event-log.md). The commitment record is the projection; the Event Log is the journal.
 - **Aggregate capacity constraints.** Rules like *no more than 110 concurrent holds against a 100-seat aircraft* (overbooking limits, fractional reserves, inventory pool caps) belong to a separate Capacity Constraint Enforcement atom — *forthcoming*. The bare Provisional Commitment atom holds *one* resource per commitment and does not opine on pool-level rules.
 - **Partial release.** A commitment is for one resource and resolves in full. Holding ten units and releasing three is two operations against two commitments at the registry's grain, not a partial transition of one commitment.
@@ -259,7 +271,7 @@ This is the *generator's contract*: any code generated from this atom must produ
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — all required structural elements resolved; identity model explicit; transition preconditions explicit; rejection paths enumerated; five cross-domain examples covering banking, healthcare, retail, hospitality, airline; deferred concerns (idempotency under retry, full audit trail, aggregate capacity, partial release, renewal, retroactive cancellation, resource availability semantics, concurrency, clock semantics, eager vs. lazy expiry, the business meaning of confirmation) named as out-of-scope with composing patterns where applicable. Ready for composition with Duplicate Prevention, Event Log, Capacity Constraint Enforcement, and Reversal.
+`grounded (passed all required review passes and is stable enough to generate from) — last full rescan: 2026-05-13` — all required structural elements resolved; identity model explicit; transition preconditions explicit; rejection paths enumerated; five cross-domain examples covering banking, healthcare, retail, hospitality, airline; deferred concerns (idempotency under retry, full audit trail, aggregate capacity, partial release, renewal, retroactive cancellation, resource availability semantics, concurrency, clock semantics, eager vs. lazy expiry, the business meaning of confirmation) named as out-of-scope with composing patterns where applicable. Ready for composition with Duplicate Prevention, Event Log, Capacity Constraint Enforcement, and Reversal.
 
 ---
 

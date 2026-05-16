@@ -27,7 +27,15 @@ Every system that distributes work across multiple actors must answer two questi
 
 The pattern addresses a class of needs that recurs across virtually every domain where work is delegated: task assignment in project management, ticket routing in support queues, patient-to-nurse assignment in clinical workflows, job allocation in manufacturing, case assignment in legal and government systems. The shape is constant — a unit of work is bound to an actor, the binding may be transferred or recalled, and the full history of who held responsibility and when is a recoverable record.
 
-This is a freestanding atom in the EOS sense. It has its own state (the assignment record), its own actions (assign, recall, reassign), and its own operational principles (at most one Active assignment per task; both recall and transfer are terminal; the audit history is complete). It does not implement accept/decline workflows, expiry-based auto-recall, assigner authorization rules, or work capacity constraints. Each is a separate composable atom; see Composition notes.
+This is a freestanding (can be specified without naming any other pattern) atom in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state (the assignment record), its own actions (assign, recall, reassign), and its own operational principles (at most one Active assignment per task; both recall and transfer are terminal; the audit history is complete). It does not implement accept/decline workflows, expiry-based auto-recall, assigner authorization rules, or work capacity constraints. Each is a separate composable atom; see Composition notes.
+
+---
+
+## Summary
+
+Assignment is a single-responsibility-binding atom (a freestanding pattern spec that does not name any other pattern) that answers two enduring questions about any system distributing work across people: who is responsible for a given unit of work right now, and what is the complete history of everyone who held that responsibility. It models a binding — a named record that ties a task reference to an assignee reference — and tracks that binding through its full lifecycle: Active (in force), Recalled (withdrawn without a successor), or Transferred (superseded by a new Active binding). Every assignment is given an opaque identifier (a system-generated ID with no meaningful content) at creation; that identifier, the task reference, the assignee reference, and the creation timestamp are all immutable once set, which means no assignment record is ever silently overwritten or lost.
+
+The atom enforces exactly one invariant (a condition that must always hold) about simultaneous coverage: at most one assignment may be Active for any given task at any moment. The `reassign` action satisfies this invariant atomically — it transitions the old assignment to Transferred and creates the new Active assignment in a single committed operation, so there is never a window during which the task is unassigned. By contrast, a caller-driven recall-then-assign sequence would produce such a gap; `reassign` exists precisely to eliminate it. The atom does not model whether the assignee accepts the binding, who is authorized to issue assignments, how many assignments a single actor may hold, or what happens when the task itself is completed — all of these are composing-pattern concerns that attach to the atom's boundaries without changing its core mechanics. The result is a pattern that applies without modification to project-management boards, support-ticket queues, healthcare shift assignments, legal case routing, and any other domain where accountability and auditability of work distribution matter. Grounded (passed all required review passes and is stable enough to generate from) after one full three-pass review and one refinement round.
 
 ---
 
@@ -75,7 +83,7 @@ Each assignment carries:
 - **`assignment_id`** — opaque, immutable, system-generated. Set on `assign` or the `assign` inside `reassign`. Never changes.
 - **`task_ref`** — opaque reference to the unit of work. Set on creation. Never changes.
 - **`assignee_ref`** — opaque reference to the responsible actor. Set on creation. Never changes.
-- **`assigned_at`** — wall-time when the assignment was created. Set on creation. Never changes.
+- **`assigned_at`** — wall-time (clock time as a human would read it, not an internal counter) when the assignment was created. Set on creation. Never changes.
 - **`status`** — `active`, `recalled`, or `transferred`. Set to `active` on creation.
 - **`recalled_at`** — wall-time of recall. Present only in Recalled. Set on `recall`. Never changes after set.
 - **`transferred_at`** — wall-time of transfer. Present only in Transferred. Set on `reassign`. Never changes after set.
@@ -222,7 +230,7 @@ Assignment is a productivity primitive with broad operational anchoring and ligh
 - **ISO/IEC 20000 (IT Service Management)** — formalizes incident assignment and reassignment as required process steps with audit-trail obligations. The assignment store satisfies the audit requirement.
 - **HL7 FHIR Task resource** — healthcare task management defines assignment as a `Task.owner` binding, with history of ownership tracked per task. The atom's responsibility-history invariant (Invariant 9) is the FHIR-compatible form.
 - **PMI PMBOK (Project Management Body of Knowledge)** — responsibility assignment matrices (RAM / RACI) are the structured form of the same mechanic: binding work packages to responsible individuals. The atom is the dynamic runtime form of a RACI row.
-- **GDPR Article 5(1)(f) and Article 32** — in systems processing personal data, assignment records establish who had access and responsibility for personal data at what time. The assignment store is part of the accountability trail.
+- **GDPR (EU General Data Protection Regulation) Article 5(1)(f) and Article 32** — in systems processing personal data, assignment records establish who had access and responsibility for personal data at what time. The assignment store is part of the accountability trail.
 
 It inherits from:
 

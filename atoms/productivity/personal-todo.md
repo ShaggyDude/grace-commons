@@ -25,9 +25,17 @@ toc: true
 
 A single user records discrete units of work they intend to complete. Each unit can be edited while pending, marked done, and removed entirely. At any moment, every known unit is in exactly one logical condition.
 
+---
+
+## Summary
+
+Personal Todo is a single-actor task-tracking atom (a freestanding pattern spec that does not name any other pattern) that models the complete lifecycle of a personal work item: creation, optional revision, completion, and removal. It gives every item an opaque identifier (a system-generated ID with no meaningful content) that serves as its permanent, immutable identity, while keeping the human-readable description as a mutable property subject to explicit normalization and uniqueness rules. The atom guarantees that at any moment every item is in exactly one of two states — Pending or Done — and that once an item is deleted its identity is permanently retired. Description uniqueness is enforced across the entire active set (both Pending and Done items) using NFC normalization (Unicode canonical form — ensures equivalent characters have one standard byte sequence) so that text typed in one encoding and text pasted from another source compare equal under the uniqueness check.
+
+The pattern is explicitly scoped to a single actor: the person who adds an item is the same person who completes or removes it. This makes it directly usable for personal task lists, reading lists, grocery lists, and single-user goal capture. Every action — add, edit, complete, delete — carries named rejection reasons, so consuming systems receive precise feedback rather than generic failure signals. The atom is designed to compose with other patterns rather than absorb their concerns: recency-based duplicate prevention, edit history, priority ordering, recurrence, task delegation, and multi-user sharing are all handled by separate composing atoms that connect to Personal Todo through well-defined interfaces. Grounded (passed all required review passes and is stable enough to generate from) after two full pressure-testing iterations plus one refinement round.
+
 The pattern addresses single-actor task tracking: personal task lists, reading lists, grocery lists, personal goals, single-user project capture. The actor and the audience are the same person. Multi-actor variants (shared lists, assignment, delegation) are separate patterns.
 
-This concept is freestanding in the EOS sense. It does not implement duplicate-prevention windows, ordering, priorities, or recurrence. Each of those is a separate composable concept; see Composition notes below.
+This concept is freestanding (can be specified without naming any other pattern) in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It does not implement duplicate-prevention windows, ordering, priorities, or recurrence. Each of those is a separate composable concept; see Composition notes below.
 
 ---
 
@@ -42,14 +50,14 @@ Every unit known to the system has an **`id`** — an opaque, immutable, system-
 - Ids are not reused after a unit is deleted.
 - The implementation chooses the id scheme (UUID, ULID, autoincrementing integer, opaque string). The spec requires only uniqueness within the system's lifetime and stability across sessions.
 
-This model differs from the Alloy `todo.als` concept: that version uses fully opaque atoms with no description at all (`var sig Task {}`); this pattern carries a user-visible description as a mutable property under an active-set uniqueness constraint. See Lineage notes for the honest framing of how the two concepts relate.
+This model differs from the Alloy (a formal modeling language for checking structural properties) `todo.als` concept: that version uses fully opaque atoms with no description at all (`var sig Task {}`); this pattern carries a user-visible description as a mutable property under an active-set uniqueness constraint. See Lineage notes for the honest framing of how the two concepts relate.
 
 ### Description policy
 
 Every description provided to `add` or `edit` is normalized before it enters state and before any active-set uniqueness comparison:
 
 - **Trim** leading and trailing whitespace.
-- **NFC-normalize** Unicode codepoints.
+- **NFC-normalize** Unicode codepoints (the numeric values that identify individual characters in Unicode).
 - **Reject** if the result is empty (rejection reason: `invalid-description`).
 - **Reject** if the result exceeds the maximum length (default: 1024 codepoints; configurable per implementation; rejection reason: `invalid-description`).
 
@@ -65,7 +73,7 @@ The user-facing display preserves the normalized form (post-trim, post-NFC) — 
   - `edit(id, newDescription) → ok | rejected(not-known | not-pending | not-editable | invalid-description | duplicate-active | storage-failure)`
   - `complete(id) → ok | rejected(not-known | not-pending | storage-failure)`
   - `delete(id) → ok | rejected(not-known | storage-failure)`
-- An implicit clock providing wall-time timestamps.
+- An implicit clock providing wall-time (clock time as a human would read it, not an internal counter) timestamps.
 
 ### Outputs
 
@@ -155,7 +163,7 @@ The following hold across all valid sequences of actions and constitute the veri
   - if both `last_edited_at` and `completed_at` are defined, `last_edited_at ≤ completed_at`.
 - **Invariant 8 — Id stability.** A unit's `id` is set on `add` and never changes. Edits to `description` do not change `id`.
 
-Add-then-Pending persistence and Complete-then-Done persistence correspond to the linear-temporal-logic `until` assertions in the Alloy `todo.als` specification. The remaining four (edit preserves state, active-set description uniqueness, timestamp monotonicity, id stability) are extensions specific to this pattern; the Alloy version does not carry description, mutability, timestamps, or an explicit identity model.
+Add-then-Pending persistence and Complete-then-Done persistence correspond to the linear temporal logic (a formal notation for reasoning about sequences of states over time) `until` assertions in the Alloy `todo.als` specification. The remaining four (edit preserves state, active-set description uniqueness, timestamp monotonicity, id stability) are extensions specific to this pattern; the Alloy version does not carry description, mutability, timestamps, or an explicit identity model.
 
 ---
 

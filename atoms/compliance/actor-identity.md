@@ -17,7 +17,7 @@ toc: true
 </details>
 
 
-> A compliance primitive: a verifiable binding of an action to the actor who authorized it. Each binding is an *attestation* with an opaque immutable id; the action reference, actor reference, proof, and timestamp are immutable properties, set at attest time. Verification is a read-only query, not a state transition. The contract the atom enforces is **non-repudiation** — a verified attestation binds the named actor to the named action and the actor cannot plausibly deny it.
+> A compliance primitive: a verifiable binding of an action to the actor who authorized it. Each binding is an *attestation* with an opaque (system-generated, with no meaningful content) immutable id; the action reference, actor reference, proof, and timestamp are immutable properties, set at attest time. Verification is a read-only query, not a state transition. The contract the atom enforces is **non-repudiation** — a verified attestation binds the named actor to the named action and the actor cannot plausibly deny it.
 
 ---
 
@@ -27,7 +27,17 @@ Regulated systems require that every action of consequence be attributable to an
 
 The pattern addresses the *who* question that audit trails alone cannot answer. An event log records *what happened*; an attestation records *who authorized it* in a form the regulator accepts as binding. Without attestations, the audit trail is the system's claim about who acted; with attestations, the audit trail is the actor's own commitment to having acted.
 
-This is a freestanding atom in the EOS sense. It has its own state (the attestation record), its own actions (attest, verify), and its own operational principles (proofs are immutable; verification is a read-only function of the attestation and the actor registry's public material). It does not implement actor registration, credential lifecycle, authentication flows, authorization rules, multi-actor witness schemes, or compromise disclosure. Each is a separate composable atom; see Composition notes.
+This is a freestanding atom in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state (the attestation record), its own actions (attest, verify), and its own operational principles (proofs are immutable; verification is a read-only function of the attestation and the actor registry's public material). It does not implement actor registration, credential lifecycle, authentication flows, authorization rules, multi-actor witness schemes, or compromise disclosure. Each is a separate composable atom; see Composition notes.
+
+---
+
+## Summary
+
+Actor Identity is the compliance atom (a freestanding pattern spec — one that does not name any other pattern — that captures a single software concept with its own state and actions) that answers the question *"who authorized this action, and can you prove it?"* It does this through attestations: immutable (unchangeable once written) records that bind an actor (any party — user, system, or service — that performs an action) to a specific action via a cryptographic proof (a mathematical artifact computed from the actor's credential that can be verified later without the credential itself). Each attestation is created by a single `attest` call, which consumes the actor's credential to produce the proof and then discards the credential — the proof, not the credential, is what persists. Verification is a pure read-only query: given an `attestation_id`, the system checks the stored proof against the stored action and actor references, consulting only the actor registry's public material. The atom enforces non-repudiation — if verification succeeds, the named actor authorized the named action, and cannot plausibly deny it without claiming their credential was compromised.
+
+The most common uses are: regulated financial transactions that require a supervisor's verifiable approval before funds move; electronic prescriptions for controlled substances that must carry a physician's cryptographically bound authorization; payment-card transactions where the cardholder's chip-and-PIN produces the proof; legal contracts signed under qualified electronic signature law; and source-control commits in FDA-regulated or SOX-scoped software environments. In every case the mechanic is the same — attest at action time, verify at audit time — and the result is the same: the audit question *"who authorized this?"* has a structural answer derivable from stored records, not from developer testimony.
+
+Actor Identity does not cover actor registration, authentication flows, authorization rules, multi-actor witness schemes, or compromise disclosure. Each of those is a separate composable atom or composing pattern. This atom's responsibility begins when a credential arrives at `attest` and ends when `verify` returns its result.
 
 ---
 
@@ -77,7 +87,7 @@ Transitions:
 
 ### Flow
 
-1. **Composing pattern initiates an action that requires attribution.** It calls `attest(action_ref, actor_ref, credential)` with the actor's credential in hand.
+1. **Composing pattern initiates an action that requires attribution** (attribution — the binding of an action to the actor who performed it). It calls `attest(action_ref, actor_ref, credential)` with the actor's credential in hand.
 2. **Atom validates the credential and computes the proof.** If the credential does not validate against the actor's public material, the call is rejected. Otherwise the atom records the attestation and returns the id.
 3. **Time passes; the attestation persists.** The host application stores the `attestation_id` alongside whatever it represents (the commitment record, the event log entry, the contract artifact).
 4. **An auditor, verifier, or composing pattern queries the attestation.** Calls `verify(attestation_id)`. The atom retrieves the attestation, checks the proof against `action_ref` and `actor_ref` using the actor registry's public material, and returns the verification result.
@@ -111,7 +121,7 @@ The attestation set is queryable. Per-attestation fields (id, action_ref, actor_
 
 ### Invariants
 
-The following hold across all valid sequences of actions and constitute the verification surface of the pattern:
+The following invariants (conditions that must always hold, regardless of what sequence of actions has occurred) constitute the verification surface of the pattern:
 
 - **Invariant 1 — Attestation immutability.** Once recorded, an attestation's `attestation_id`, `action_ref`, `actor_ref`, `proof`, and `attested_at` never change.
 - **Invariant 2 — Action binding.** For any attestation in the system, the recorded `proof` verifies cryptographically or procedurally against the recorded `action_ref`. A proof produced for a different action does not verify against this attestation.
@@ -149,7 +159,7 @@ Two parties sign a contract via a qualified electronic signature service. Each i
 
 ### Source control — signed commits in regulated software
 
-A developer at an FDA-cleared medical-device company pushes a commit signed with their hardware-key-backed credential. The version-control system records the attestation: `attest(commit_c44a, dev_smith, smith_credential) → attestation_a17`. CI infrastructure calls `verify(a17)` before allowing merge into the release branch. During an FDA software-of-unknown-provenance audit, the auditor walks the release branch and re-verifies every commit's attestation. SOX-scoped financial systems and Common Criteria evaluated products follow the same pattern.
+A developer at an FDA-cleared medical-device company pushes a commit signed with their hardware-key-backed credential. The version-control system records the attestation: `attest(commit_c44a, dev_smith, smith_credential) → attestation_a17`. CI infrastructure calls `verify(a17)` before allowing merge into the release branch. During an FDA software-of-unknown-provenance audit, the auditor walks the release branch and re-verifies every commit's attestation. SOX (Sarbanes-Oxley Act — US financial reporting law)-scoped financial systems and Common Criteria evaluated products follow the same pattern.
 
 The mechanic is identical across all five. What differs: the credential mechanism (smart card, software key, qualified signature instrument, hardware token, chip-card secure element), the verification frequency (every action vs. on dispute vs. on audit), the regulatory consequence of `failed-verification`, and the composing patterns active around it (two-factor for prescriptions, witness signatures for some legal contracts, MFA for high-value wires).
 
@@ -213,9 +223,9 @@ Actor Identity is a foundational compliance primitive with deep regulatory ancho
 - **FIPS 186-4 / FIPS 186-5 (Digital Signature Standard)** — cryptographic foundation for asymmetric attestation. The atom is mechanism-neutral but FIPS 186 is the canonical credential-mechanism anchor.
 - **ISO/IEC 27001 §A.9 (Access Control) and §A.12.4 (Logging and Monitoring)** — actor attribution as an access-control and audit requirement.
 - **21 CFR Part 11 (FDA Electronic Records and Electronic Signatures)** — for healthcare, pharmaceuticals, and medical devices: requires electronic signatures to be uniquely attributable to one individual, with cryptographic or procedural binding that resists repudiation.
-- **HIPAA §164.312(d) (Person or Entity Authentication)** — verification that a person or entity seeking access is the one claimed.
+- **HIPAA (US Health Insurance Portability and Accountability Act) §164.312(d) (Person or Entity Authentication)** — verification that a person or entity seeking access is the one claimed.
 - **DEA EPCS (21 CFR §1311)** — Electronic Prescriptions for Controlled Substances: two-factor cryptographic attestation requirements.
-- **GDPR Article 32 (Security of Processing)** — names "ensuring the ongoing confidentiality, integrity, availability and resilience of processing systems and services"; non-repudiation is a recognized security property under Article 32's scope.
+- **GDPR (EU General Data Protection Regulation) Article 32 (Security of Processing)** — names "ensuring the ongoing confidentiality, integrity, availability and resilience of processing systems and services"; non-repudiation is a recognized security property under Article 32's scope.
 - **Sarbanes-Oxley §302 and §404** — officer certifications and internal control over financial reporting. Authenticated attestations on financial-system changes are §302 / §404 evidence.
 - **PCI DSS Requirement 8 (Identify and Authenticate Access)** — for payment systems handling cardholder data.
 

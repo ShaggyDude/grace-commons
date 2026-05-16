@@ -27,7 +27,17 @@ A composing pattern records facts about state changes. The Event Log preserves t
 
 The pattern addresses a class of needs that recur across virtually every system that mutates state: audit trails, undo histories, activity feeds, event sourcing, write-ahead logs, replication journals, version-control logs, replay buffers. The shape is constant — a stream of facts, recorded in order, never altered after the fact, available for retrospective query.
 
-This is a freestanding concept in the EOS sense. It carries its own state (the sequence), its own actions (`append`, `read`), and its own operational principles (append-only, total order, immutability). Composing patterns wrap it with retention policies, tamper-evidence, actor identity, reverse-lookup indices, and so on. The Event Log itself imposes no semantics on what an event *means*; it imposes only the structural guarantee that the sequence is faithful to what was recorded.
+This is a freestanding (can be specified without naming any other pattern) concept in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It carries its own state (the sequence), its own actions (`append`, `read`), and its own operational principles (append-only — records can be added but never changed or deleted, total order, immutability — unchangeable once written). Composing patterns wrap it with retention policies, tamper-evidence, actor identity, reverse-lookup indices, and so on. The Event Log itself imposes no semantics on what an event *means*; it imposes only the structural guarantee that the sequence is faithful to what was recorded.
+
+---
+
+## Summary
+
+Event Log is a foundational temporal atom (a freestanding pattern spec — one that can be specified without naming any other pattern) that provides a single, simple guarantee: anything appended to the log stays in the log, in the order it arrived, forever (within the lifetime of the log instance), unchanged. It is the substrate from which audit trails, undo histories, activity feeds, event-sourced systems, replication journals, and write-ahead logs are all built. The pattern exposes exactly two actions: `append`, which adds a new event at the tail and returns an opaque identifier (a system-generated ID with no meaningful content) for that event; and `read`, which returns events in strict sequence order for any well-formed query. There is no edit and no delete surface — the log is append-only (records can be added but never changed or deleted) by design.
+
+Each event carries four fields: its unique identifier, a strictly increasing sequence number that determines total order (meaning every pair of events has a defined earlier/later relationship with no ties, regardless of clock behavior), a wall-time (clock time as a human would read it, not an internal counter) timestamp for human-readable annotation, and an opaque payload that the Event Log does not interpret. The distinction between sequence number and wall-time is intentional and load-bearing: wall-time is best-effort and can be non-monotonic under clock skew, but sequence number is the authoritative ordering source and is always strictly monotonic. This means the log can be replayed faithfully even on systems with imperfect clocks.
+
+The atom deliberately carries no opinions about retention duration, cryptographic integrity proof, actor attribution, payload schema, or indexing by payload field — all of those are separate composing patterns (Retention Window, Tamper Evidence, Actor Identity, Schema Evolution, Reverse Index respectively). This separation means the same Event Log atom underlies a personal task history, a healthcare clinical record, a bank transaction journal, and a regulated compliance audit trail, with the compliance-layer concerns layered on only where they are needed. Grounded (passed all required review passes and is stable enough to generate from) after one full three-pass review and one refinement round.
 
 ---
 
@@ -43,7 +53,7 @@ Each Event Log is itself a named instance. Multiple instances coexist in real sy
 
 - A sequence of `append` calls from composing patterns.
 - A `read` API for retrospective query.
-- An implicit clock providing wall-time timestamps.
+- An implicit clock providing wall-time (clock time as a human would read it, not an internal counter) timestamps.
 
 ### Actions
 
@@ -156,7 +166,7 @@ What this pattern does not cover:
 - **Subscriptions / change feeds.** A pull-only `read` API. Push-based notification of new events belongs to an Observer or Change Feed pattern.
 - **Multi-event atomicity.** Each `append` is atomic. Multi-event transactions ("append A and B together or neither") belong to a Transaction pattern.
 - **Durability across crashes.** The atom specifies in-memory semantics. Persistence across process restarts is a deployment concern; durable implementations must provide write-ahead logging or equivalent. Append-only and event immutability are best-effort across crashes unless the implementation supplies durability.
-- **Right-to-be-forgotten erasure.** Where law mandates true deletion of recorded events (GDPR Article 17, certain healthcare contexts), the architectural answer *append corrections, never edit history* breaks down. A composing pattern (Erasure Tombstone, Cryptographic Shredding) must be designed alongside legal counsel.
+- **Right-to-be-forgotten erasure.** Where law mandates true deletion of recorded events (GDPR — EU General Data Protection Regulation — Article 17, certain healthcare contexts), the architectural answer *append corrections, never edit history* breaks down. A composing pattern (Erasure Tombstone, Cryptographic Shredding) must be designed alongside legal counsel.
 - **Sequence-number gaps on storage failure.** If an implementation allocates a sequence number before attempting the write, a `storage-failure` consumes that sequence number. The next successful append receives a strictly higher sequence number, creating a gap in the sequence. Sequence-number monotonicity (Invariant 4) is not violated — the invariant holds over successfully appended events only — but consumers who assume a dense sequence may misinterpret the gap as missing events. Implementations that want to avoid gaps must allocate sequence numbers only after the write succeeds, or use a rollback mechanism that returns the allocated number to the pool on write failure.
 
 Where the pattern breaks down: when the host environment cannot supply atomic, serialized appends (most adversarially-distributed settings); when events must be edited or deleted in place; when ordering must be derived from something other than append order.
@@ -197,7 +207,7 @@ It inherits from:
 
 - **Daniel Jackson, *The Essence of Software*** — the conception of a freestanding concept with state, actions, and operational principles.
 - **Eiffel's design-by-contract** — preconditions on `append` and `read`.
-- **Linear temporal logic** — append-only, event immutability, and sequence-number monotonicity expressed as temporal properties (`always`, `until`).
+- **Linear temporal logic** (a formal notation for reasoning about sequences of states over time) — append-only, event immutability, and sequence-number monotonicity expressed as temporal properties (`always`, `until`).
 
 ---
 

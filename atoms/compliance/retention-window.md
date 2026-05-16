@@ -17,7 +17,7 @@ toc: true
 </details>
 
 
-> A compliance primitive: a record is kept under retention for a known period, then purged. Each retention has an opaque immutable id; the record reference, retention policy, retention-end deadline, and purge deadline are immutable properties, set at retention-start. Two states — Retained, Purged. Purge is forbidden before the retention period ends; purge after the period is the expected transition; the gap between retention-end and purge-deadline is the *purge window*, and operating past it is observable overshoot — visible in the records, prevented only by policy.
+> A compliance primitive: a record is kept under retention for a known period, then purged. Each retention has an opaque (system-generated, with no meaningful content) immutable (unchangeable once written) id; the record reference, retention policy, retention-end deadline, and purge deadline are immutable properties, set at retention-start. Two states — Retained, Purged. Purge is forbidden before the retention period ends; purge after the period is the expected transition; the gap between retention-end and purge-deadline is the *purge window*, and operating past it is observable overshoot — visible in the records, prevented only by policy.
 
 ---
 
@@ -27,7 +27,19 @@ Every regulated record has a bounded life. Tax records must be kept seven years 
 
 The pattern addresses the *how long* question that record-keeping discipline cannot answer with documentation alone. A retention policy says *"keep for seven years."* The retention atom enforces that promise structurally — purge cannot happen before the policy's clock runs out, and the record's lifecycle is observable to any external evaluator from the record's own fields.
 
-This is a freestanding atom in the EOS sense. It has its own state (the retention record), its own actions (place under retention, purge), and its own operational principles (the retention window is binding for its duration; purge is terminal; the audit can see whether retention obligations were met). It does not implement storage tier (active vs. cold), legal hold, cryptographic shredding, policy registry management, or right-to-erasure. Each is a separate composable atom; see Composition notes.
+This is a freestanding (can be specified without naming any other pattern) atom in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state (the retention record), its own actions (place under retention, purge), and its own operational principles (the retention window is binding for its duration; purge is terminal; the audit can see whether retention obligations were met). It does not implement storage tier (active vs. cold), legal hold, cryptographic shredding, policy registry management, or right-to-erasure. Each is a separate composable atom; see Composition notes.
+
+---
+
+## Summary
+
+Retention Window is the compliance atom (a freestanding pattern spec — one that does not name any other pattern — that captures a single software concept with its own state and actions) that enforces the structural rule that a record must be kept for a minimum period and then becomes eligible for destruction. It answers the question *"has this record's retention obligation been honored?"* by recording, for every managed record, exactly which retention policy applies, when the retention period ends, and when the latest acceptable purge date falls. The atom prevents premature deletion: calling `purge` before the retention period has elapsed is rejected outright. It also surfaces overdue records: any record still retained past its purge deadline is visible in the data as an overshoot metric, observable by any compliance dashboard without needing developer narration.
+
+Each retention has two key deadlines computed at the time it is placed: `retention_until` (the earliest date purge is permitted) and `purge_deadline` (the latest date the regulator expects purge to occur). The window between those two dates is the purge window — the period during which the record's destruction is both legally permissible and expected. The atom enforces the opening boundary (no purge before `retention_until`) but treats the closing boundary as observable rather than enforced: a record purged past its deadline is a compliance finding surfaced by the records themselves, not a rejected operation, because refusing a late purge would compound the violation rather than resolve it.
+
+The most common uses are: seven-year SOX (Sarbanes-Oxley Act — US financial reporting law) retention of transaction and audit records in financial systems; HIPAA (US Health Insurance Portability and Accountability Act) retention of medical records to federal and state minimums; PCI DSS data-minimization requirements for cardholder data, where the goal is to purge as quickly as the business need permits; SEC retention of broker-dealer communications; and contract retention beyond the end of the contract's commercial life because legal claims can outlast the underlying transaction.
+
+Retention Window does not cover storage tier (where a record lives physically), legal hold (suspending purge during litigation), cryptographic shredding (destroying keys to make encrypted records irrecoverable), the right to erasure under GDPR (EU General Data Protection Regulation), or the registry of what retention policies exist. Each is a separate composable pattern. The atom's responsibility is the retention lifecycle of a single record: place, wait, purge, and produce an audit trail of the entire arc.
 
 ---
 
@@ -117,7 +129,7 @@ The Retained and Purged sets are queryable. The *overshoot* metric — for any P
 
 ### Invariants
 
-The following hold across all valid sequences of actions and constitute the verification surface of the pattern:
+The following invariants (conditions that must always hold, regardless of what sequence of actions has occurred) constitute the verification surface of the pattern:
 
 - **Invariant 1 — Membership exclusivity.** For every retention `r` known to the system, `r` is in exactly one of {Retained, Purged}.
 - **Invariant 2 — Retain-then-Retained persistence.** After a successful `place_under_retention`, the resulting retention is in Retained and remains so until `purge` is invoked.
@@ -140,11 +152,11 @@ The same atom, five regulated domains, identical mechanic.
 
 ### Banking — transaction-record retention under SOX
 
-A bank places every settled transaction under retention with a 7-year policy (`policy_sox_settled_txn`: duration = 7 years, max_purge_delay = 30 days). At the seven-year mark, the records become eligible for purge; the bank's records-management system invokes `purge(retention_id)` within the 30-day purge window. Each purge is logged for SOX §802 audit. An external auditor querying *"any transaction record purged before its 7-year obligation?"* gets the empty set — Invariant 7 guarantees it.
+A bank places every settled transaction under retention with a 7-year policy (`policy_sox_settled_txn`: duration = 7 years, max_purge_delay = 30 days). At the seven-year mark, the records become eligible for purge; the bank's records-management system invokes `purge(retention_id)` within the 30-day purge window. Each purge is logged for SOX (Sarbanes-Oxley Act — US financial reporting law) §802 audit. An external auditor querying *"any transaction record purged before its 7-year obligation?"* gets the empty set — Invariant 7 guarantees it.
 
 ### Healthcare — medical-record retention under HIPAA and state law
 
-A hospital places each patient encounter record under retention with the maximum of HIPAA's federal 6-year baseline (45 CFR §164.530(j)) and the state's longer requirement (often 10–25 years for adult records, longer for pediatric). The policy_ref captures the applicable rule; the retention's `retention_until` is the patient-specific deadline. Purges occur on a rolling schedule; the audit reads the retention records to demonstrate compliance with the longer of the applicable rules.
+A hospital places each patient encounter record under retention with the maximum of HIPAA's (US Health Insurance Portability and Accountability Act) federal 6-year baseline (45 CFR §164.530(j)) and the state's longer requirement (often 10–25 years for adult records, longer for pediatric). The policy_ref captures the applicable rule; the retention's `retention_until` is the patient-specific deadline. Purges occur on a rolling schedule; the audit reads the retention records to demonstrate compliance with the longer of the applicable rules.
 
 ### Payments — cardholder-data retention under PCI DSS
 
