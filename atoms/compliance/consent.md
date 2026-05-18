@@ -1,7 +1,7 @@
 ---
 title: Consent
 parent: Compliance
-grand_parent: Atoms
+grand_parent: Atomic Concepts
 nav_order: 6
 has_toc: true
 toc: true

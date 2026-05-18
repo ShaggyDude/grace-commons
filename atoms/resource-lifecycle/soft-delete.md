@@ -1,7 +1,7 @@
 ---
 title: Soft Delete
 parent: Resource Lifecycle
-grand_parent: Atoms
+grand_parent: Atomic Concepts
 nav_order: 2
 has_toc: true
 toc: true

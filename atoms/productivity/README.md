@@ -1,6 +1,6 @@
 ---
 title: Productivity
-parent: Atoms
+parent: Atomic Concepts
 has_children: true
 nav_order: 1
 permalink: /atoms/productivity/

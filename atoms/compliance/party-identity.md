@@ -1,7 +1,7 @@
 ---
 title: Party Identity
 parent: Compliance
-grand_parent: Atoms
+grand_parent: Atomic Concepts
 nav_order: 8
 has_toc: true
 toc: true

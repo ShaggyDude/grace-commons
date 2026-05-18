@@ -1,6 +1,6 @@
 ---
 title: Resource Lifecycle
-parent: Atoms
+parent: Atomic Concepts
 has_children: true
 nav_order: 4
 permalink: /atoms/resource-lifecycle/

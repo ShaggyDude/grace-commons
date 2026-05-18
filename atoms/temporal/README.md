@@ -1,6 +1,6 @@
 ---
 title: Temporal
-parent: Atoms
+parent: Atomic Concepts
 has_children: true
 nav_order: 2
 permalink: /atoms/temporal/

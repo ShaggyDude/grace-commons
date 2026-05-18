@@ -1,6 +1,6 @@
 ---
 title: Messaging
-parent: Atoms
+parent: Atomic Concepts
 nav_order: 5
 has_children: true
 permalink: /atoms/messaging/

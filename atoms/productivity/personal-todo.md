@@ -1,7 +1,7 @@
 ---
 title: Personal Todo
 parent: Productivity
-grand_parent: Atoms
+grand_parent: Atomic Concepts
 nav_order: 1
 has_toc: true
 toc: true

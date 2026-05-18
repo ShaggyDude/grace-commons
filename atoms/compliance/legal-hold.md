@@ -1,7 +1,7 @@
 ---
 title: Legal Hold
 parent: Compliance
-grand_parent: Atoms
+grand_parent: Atomic Concepts
 nav_order: 5
 has_toc: true
 toc: true

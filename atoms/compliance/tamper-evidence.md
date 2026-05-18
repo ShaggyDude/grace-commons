@@ -1,7 +1,7 @@
 ---
 title: Tamper Evidence
 parent: Compliance
-grand_parent: Atoms
+grand_parent: Atomic Concepts
 nav_order: 3
 has_toc: true
 toc: true
