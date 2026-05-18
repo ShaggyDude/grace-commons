@@ -23,9 +23,9 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ---
 
-## Current state — 2026-05-15
+## Current state — 2026-05-18
 
-Twenty atoms and seven compositions are `grounded`. Nothing is in-progress. The next move is one of the three remaining unblocked atoms (#7, #9, #10 below) or one of the unblocked compositions (any of C2, C3, C6, C7, C8, C9 — see compositions section).
+Twenty atoms and eight compositions are `grounded`. Nothing is in-progress. The next move is one of the three remaining unblocked atoms (#7, #9, #10 below) or one of the unblocked compositions (any of C2, C3, C6, C7, C8, C9 — see compositions section).
 
 **Atoms grounded:**
 
@@ -37,7 +37,7 @@ Twenty atoms and seven compositions are `grounded`. Nothing is in-progress. The 
 - `atoms/temporal/` (2): Duplicate Prevention, Event Log
 - `atoms/workflow/` (1): Approval Step
 
-**Compositions grounded:** Audit Trail, Defensible Retention, Idempotent Reservation, Multi-Party Approval, Notification Fanout, Shared Todo, Undo History.
+**Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, Idempotent Reservation, Multi-Party Approval, Notification Fanout, Shared Todo, Undo History.
 
 The healthcare atoms (Clinical Observation, Medication Order) are outside the core dependency-ordered sequence — they were authored as worked examples of the methodology applied to a domain where the regulatory surface is HIPAA and 21 CFR Part 11 rather than the BSA/AML/GDPR/SOX cluster the compliance atoms anchor. They are grounded and composable; their downstream compositions (e.g., a Clinical Trial Data Capture composition, a Medication Administration Record composition) are not on this roadmap yet because the worked-example value is in the atoms themselves rather than in any specific composition the library is committed to delivering next.
 
@@ -248,6 +248,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 | — | Audit Trail | Composition | `grounded` 2026-05-13 | Event Log + Actor Identity + Retention Window + Tamper Evidence |
 | — | Shared Todo | Composition | `grounded` 2026-05-13 | Personal Todo + Permissions + Assignment |
 | — | Notification Fanout | Composition | `grounded` 2026-05-13 | Subscription + Notification |
+| — | Attributed Permissions Admin | Composition | `grounded` 2026-05-18 | Permissions + Actor Identity; first two-compliance-atom composition; ships with dynamic Alloy trace model |
 | C1 | Defensible Retention | Composition | `grounded` 2026-05-13 | Legal Hold + Audit Trail + Retention Window |
 | C2 | Consent & Preference Management | Composition | Unblocked; not started | Consent (grounded) |
 | C3 | Forensic Recovery | Composition | Unblocked; not started | Soft Delete (grounded) |

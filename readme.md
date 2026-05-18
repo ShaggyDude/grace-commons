@@ -84,7 +84,9 @@ atoms/
 │   └── event-log                — append-only sequence of immutable events
 ├── resource-lifecycle/
 │   ├── provisional-commitment   — Held → Confirmed | Released | Expired
-│   └── soft-delete              — Active → Deleted → Purged; Deleted is reversible (grounded)
+│   ├── soft-delete              — Active → Deleted → Purged; Deleted is reversible (grounded)
+│   └── capacity-constraint-enforcement
+│                                — named, bounded pool of a finite resource with total-allocated-never-exceeds-declared-capacity (grounded)
 ├── compliance/
 │   ├── actor-identity           — verifiable action-to-actor binding
 │   ├── retention-window         — bounded record lifetime with no-early-purge
@@ -92,7 +94,8 @@ atoms/
 │   ├── permissions              — grant-based access control (access must be explicitly given, not assumed) with explicit revocation (access can be removed)
 │   ├── legal-hold               — preservation obligation (a legal requirement to keep data) suspending purge (preventing deletion) (grounded)
 │   ├── consent                  — data subject agreement (a person's consent to how their data is used) for a named processing purpose (a specific, declared reason) (grounded)
-│   └── selective-disclosure     — append-only disclosure accountability record: recipient, scope, authority (grounded)
+│   ├── selective-disclosure     — append-only disclosure accountability record: recipient, scope, authority (grounded)
+│   └── party-identity           — persistent verifiable identity record for an external party with Unverified → Verified → Suspended → Closed lifecycle (grounded)
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
 │   └── notification             — delivery record for a single notification to a single recipient
@@ -127,10 +130,16 @@ compositions/
 │                                    chain completeness, quorum determinism,
 │                                    chain terminal absorption, chain immutability,
 │                                    audit completeness across chain and step events
-└── defensible-retention         — Legal Hold + Retention Window + Audit Trail (substrate)  *(partially resolved)*
+├── defensible-retention         — Legal Hold + Retention Window + Audit Trail (substrate)
+│                                  ↳ emergent invariants:
+│                                    hold-blocks-purge, retention coverage,
+│                                    hold audit coverage, defensible destruction
+└── attributed-permissions-admin — Permissions + Actor Identity
                                    ↳ emergent invariants:
-                                     hold-blocks-purge, retention coverage,
-                                     hold audit coverage, defensible destruction
+                                     attribution completeness, revocation attribution,
+                                     attribution recoverability, attribution-time monotonicity,
+                                     constituent invariants preserved, pairing-map durability,
+                                     attestation exclusivity, orphan log durability
 ```
 
 Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant (a rule that must always be true — here, that deleting and undoing a task leaves it with the same identity it had before) in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Notification Fanout is structurally distinct: it is the first composition in the library where a single trigger produces a variable number of effects — the fan-out count is determined at runtime by the Active subscriber set, not at composition time — and its emergent invariants (fanout coverage, payload consistency, at-most-one per subscriber) are properties of the directed invocation graph that neither constituent atom can assert alone. Each pattern also carries **Lineage notes** (a record of what each review pass found and how it was resolved) recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
