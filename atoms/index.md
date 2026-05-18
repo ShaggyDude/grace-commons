@@ -1,5 +1,5 @@
 ---
-title: Atoms
+title: Atomic Concepts
 nav_order: 5
 has_children: true
 permalink: /atoms/
@@ -7,7 +7,7 @@ has_toc: true
 toc: true
 ---
 
-# Atoms
+# Atomic Concepts
 
 <details markdown="block">
   <summary>Table of contents</summary>
