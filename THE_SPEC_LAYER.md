@@ -263,6 +263,12 @@ These show up in well-formed patterns automatically, the same way they show up i
 
 The honest framing: the information-management triad is what we are claiming as novel. The design-quality principles are what we are inheriting. Both matter; only the first is the contribution.
 
+**The minimum-formalism principle** is the operating discipline that governs how rigor is introduced into a spec. We embrace the smallest possible formalism when irreducible complexity requires it, defaulting to plain English but employing high-logic tooling under the hood. The result satisfies human readability and the highest possible verification output simultaneously — not as a compromise between the two but as a consequence of the correct architecture.
+
+Plain English is the canonical representation and the default. Formalism is introduced only at the layer where it provides coverage the layer above cannot: decision tables and decision trees are inline constructs — self-evident enough to require no prose gloss — that compress complex conditional logic without cost to readability. Alloy and TLA+ are sibling artifacts that check structural invariants and behavioral sequences exhaustively against the spec, catching unknown unknowns no prose reviewer thought to probe. Property-based tests are downstream artifacts that verify the compiled implementation against the spec's stated properties. Each layer operates without burdening the layers above it. A reader of a Grace Commons spec never needs to know Alloy; the Alloy model catches what the reader would not have caught.
+
+This is what makes the architecture both rigorous and accessible — not *rigorous for specialists, accessible for everyone else* but rigorous *and* accessible simultaneously, because the formalism is under the hood and the plain English is on top. The formal tools serve the spec; they do not compete with it, and they are never prerequisites for authoring it.
+
 ## Bridges
 
 Grace Commons is, structurally, a bridge-building exercise. Every architectural decision is calibrated to *connect* rather than displace — appropriate technology used to bridge audiences, eras, disciplines, and abstraction layers that have historically been walled off.

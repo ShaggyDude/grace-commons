@@ -96,7 +96,7 @@ A Grace Commons spec participates in three distinct verification layers. Each ca
 
 **Layer 3 — Property-based and exhaustive tests (implementation time).** Once a spec is compiled to running code via the Execution Contract, the spec's invariants become checkable properties in a property-based testing framework (Hypothesis, fast-check, QuickCheck). The framework generates and exhausts the input space against the stated properties, verifying that the implementation satisfies every invariant the spec declares. This layer does not live in the spec library — Grace Commons defers implementations — but it belongs in the pipeline that derives implementations from specs. The verification harness is derived directly from the Generation acceptance bar and the application-level invariants. This approach has been demonstrated in practice; it is not yet codified as a formal convention in this library.
 
-These three layers are the full verification stack. The spec is canonical; the formal model checks it before implementation; the property tests verify the implementation against it.
+These three layers are the full verification stack. The spec is canonical; the formal model checks it before implementation; the property tests verify the implementation against it. The governing principle is the *minimum-formalism principle* in `THE_SPEC_LAYER.md`: plain English by default, formalism introduced only when irreducible complexity requires it, high-logic tooling always under the hood.
 
 ---
 
