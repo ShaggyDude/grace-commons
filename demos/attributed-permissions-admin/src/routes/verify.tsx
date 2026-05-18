@@ -2,7 +2,7 @@
 //
 // GET /verify  → HTML page showing each invariant pass/fail, mapped to its
 //                Alloy assertion name.
-// GET /verify.json → same data as JSON (for automated checks).
+// GET /verify/json → same data as JSON (for automated checks).
 //
 // Each check corresponds to a named assert in alloy/attributed-permissions-admin.als.
 
@@ -178,7 +178,7 @@ verify.get("/", (c) => {
   return c.html(<VerifyPage data={data} currentActor={actor} actors={actors} />);
 });
 
-verify.get(".json", (c) => {
+verify.get("/json", (c) => {
   return c.json(runChecks());
 });
 

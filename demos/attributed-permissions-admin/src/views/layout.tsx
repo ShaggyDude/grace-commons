@@ -37,7 +37,7 @@ export const Layout: FC<LayoutProps> = ({
               Orphan log
             </a>
             <a href="/verify" class="text-sm text-ink-gray-600 hover:text-ink-gray-900">
-              Verify
+              Verify Invariants
             </a>
           </nav>
 

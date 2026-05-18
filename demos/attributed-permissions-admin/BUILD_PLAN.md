@@ -59,7 +59,7 @@ Routes:
 - `POST /grants/:id/revoke` — calls `revoke_grant()`
 - `GET /orphans` — orphan log list
 - `GET /verify` — live invariant check page (HTML)
-- `GET /verify.json` — same data as JSON
+- `GET /verify/json` — same data as JSON
 
 The `/verify` route is the demo's signature feature: it evaluates all 8 composition
 invariants over the current DB state and renders them with their Alloy assertion

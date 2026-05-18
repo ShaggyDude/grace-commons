@@ -118,7 +118,7 @@ Deno.test("GET /verify returns 200 with invariant check results", async () => {
 });
 
 Deno.test("GET /verify.json returns structured check data", async () => {
-  const res = await app.fetch(new Request("http://localhost/verify.json", {
+  const res = await app.fetch(new Request("http://localhost/verify/json", {
     headers: { Cookie: `actor_ref=${CISO.ref}` },
   }));
   assertEquals(res.status, 200);
