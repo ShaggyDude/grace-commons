@@ -18,7 +18,7 @@ color_scheme: dark
 # Aux nav (top right)
 aux_links:
   "GitHub":
-    - "https://github.com/ShaggyDude/grace-commons"
+    - "https://github.com/scottromack/grace-commons"
 
 # Footer
 footer_content: 'Grace Commons — open foundation for business logic patterns.'
