@@ -86,13 +86,17 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 
 ## Current state of the library
 
+Twenty atoms and eight compositions are `grounded`. [`ROADMAP.md`](./ROADMAP.md) is the canonical state-of-the-library tracker and lists what is in-progress, what is unblocked, and what is blocked on remaining atoms; the snapshot below mirrors it.
+
 **Atoms (`atoms/`):**
 
 - `productivity/` — Personal Todo, Assignment (both `grounded`)
 - `temporal/` — Duplicate Prevention, Event Log (both `grounded`)
-- `resource-lifecycle/` — Provisional Commitment (`grounded`)
-- `compliance/` — Actor Identity, Retention Window, Tamper Evidence, Permissions (all `grounded`)
-- `messaging/` — Subscription, Notification (both `grounded`; Notification Fanout composition forthcoming)
+- `resource-lifecycle/` — Provisional Commitment, Soft Delete, Capacity Constraint Enforcement (all `grounded`)
+- `compliance/` — Actor Identity, Consent, Legal Hold, Party Identity, Permissions, Retention Window, Selective Disclosure, Tamper Evidence (all `grounded`)
+- `messaging/` — Subscription, Notification (both `grounded`)
+- `workflow/` — Approval Step (`grounded`; one-atom category — see *Open architectural questions* below for the second-atom-pending status)
+- `healthcare/` — Clinical Observation, Medication Order (both `grounded`; outside the core dependency-ordered sequence, retained as worked examples of the methodology applied to a HIPAA and 21 CFR Part 11 domain rather than the BSA/AML/GDPR/SOX cluster the compliance atoms anchor)
 
 **Compositions (`compositions/`)** — all `grounded`:
 
@@ -101,8 +105,19 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 - Audit Trail (Event Log + Actor Identity + Retention Window + Tamper Evidence)
 - Shared Todo (Personal Todo + Permissions + Assignment)
 - Notification Fanout (Subscription + Notification)
+- Defensible Retention (Legal Hold + Retention Window + Audit Trail substrate)
+- Multi-Party Approval (Approval Step + Permissions + Assignment + Audit Trail substrate)
+- Attributed Permissions Admin (Permissions + Actor Identity)
 
-The canonical regulated-audit stack — Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail — is complete. Notification Fanout is the fifth composition and the first to produce a variable number of effects from a single trigger; it completes the messaging atom pair (Subscription + Notification) and formalizes the fan-out boundary rule from the Execution Contract.
+Structural milestones the catalog records, in roughly chronological order:
+
+- **Audit Trail** is the canonical regulated-audit stack — four atoms (Event Log + Actor Identity + Retention Window + Tamper Evidence) wired into a single application with attribution coverage, retention coverage, cascade-on-purge, and forensic completability as emergent invariants. The library's worked example of multi-atom composition under regulated load.
+- **Notification Fanout** is the first composition to produce a variable number of effects from a single trigger; it completes the messaging atom pair and formalizes the fan-out boundary rule from the Execution Contract.
+- **Multi-Party Approval** is the first composition to compose another composition (Audit Trail as substrate), establishing the substrate-composition pattern.
+- **Defensible Retention** anchors the FRCP Rule 37(e) / SOX §802 / HIPAA §164.530(j) / SEC Rule 17a-4 / GDPR Article 17 record-retention axis; retires forthcoming-links in Legal Hold, Retention Window, and Audit Trail.
+- **Attributed Permissions Admin** is the first composition to pair two compliance-infrastructure atoms (Permissions + Actor Identity) into a single administrative surface, and the first to ship with a dynamic Alloy trace model (Alloy 6 LTL) verifying its load-bearing temporal claims alongside the static structural model. Carries eight emergent invariants including attestation exclusivity and orphan-log durability.
+
+Three atoms remain on the roadmap (Provenance, Workflow / State Machine, Preference / Personalization). Six C-numbered compositions are unblocked and unstarted (C2, C3, C6, C7, C8, C9); three are blocked on the remaining atoms (C10 on Workflow / State Machine, C11 on Preference / Personalization, C12 on Provenance). See [`ROADMAP.md`](./ROADMAP.md) for the full sequencing and the dependency-readiness logic.
 
 ---
 
@@ -121,7 +136,7 @@ The canonical regulated-audit stack — Event Log + Actor Identity + Retention W
 
 These are deliberately deferred until content or evidence forces resolution; they are documented honestly rather than re-decided each session:
 
-- **Taxonomy axes.** Current pattern categories (`productivity`, `temporal`, `resource-lifecycle`, `compliance`, `messaging`, `workflow`) mix conceptual axes. The right axial split will be forced by content as the catalog grows past the size where preemptive cuts are reasonable; restructuring earlier would relocate the same confusion under different labels. The `workflow/` sub-question — whether one atom justified the category — is resolved: Workflow / State Machine (roadmap atom #9) is the second workflow atom, and the category stands. The broader axial split question remains open. See the *Open question on the current axes* paragraph in the Taxonomy section of [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md).
+- **Taxonomy axes.** Current pattern categories (`productivity`, `temporal`, `resource-lifecycle`, `compliance`, `messaging`, `workflow`, `healthcare`) mix conceptual axes — `healthcare` is domain-scoped while the others are concept-scoped; `compliance` mixes pure-compliance-infrastructure atoms with atoms that happen to be regulated. The right axial split will be forced by content as the catalog grows past the size where preemptive cuts are reasonable; restructuring earlier would relocate the same confusion under different labels. The `workflow/` sub-question — whether one atom justifies the category — remains open: the category currently holds one atom (Approval Step) and stands on the strength of the planned second atom (Workflow / State Machine, roadmap atom #9, `Not started`) rather than on present catalog evidence. The sub-question will be resolved once that atom lands. The broader axial split question is independently open. See the *Open question on the current axes* paragraph in the Taxonomy section of [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md), and [`ROADMAP.md`](./ROADMAP.md) §"Open taxonomy question" for the parallel ROADMAP framing.
 
 - **Regulation as folder vs. attribute.** The current `atoms/compliance/` folder conflates two things: atoms whose primary domain *is* compliance infrastructure (Actor Identity, Retention Window, Tamper Evidence — these have no meaningful non-regulated use case), and atoms that belong to other domains but carry a heavy regulated surface (Soft Delete is `resource-lifecycle` by nature; Medication Order and Clinical Observation are `healthcare`; Legal Hold could reasonably be `resource-lifecycle` or `temporal`). As the library grows, "regulation" may belong as a frontmatter attribute — `regulated: true`, or a `standards: [GDPR, HIPAA, FRCP]` field — rather than a folder that atoms are placed in by consequence rather than by domain. The practical implication: the `compliance/` folder may eventually narrow to pure compliance infrastructure primitives, while regulated atoms in other domains carry their regulatory surface as metadata. This restructuring will cause significant tree churn and cross-reference updates across every regulated atom's Composition notes; it should be executed as a single discrete refactor pass once the content forces the decision, not incrementally. Deferred until the catalog is large enough to make the right cut obvious.
 

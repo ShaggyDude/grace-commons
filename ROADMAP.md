@@ -57,13 +57,13 @@ Three atoms remain on the planned-sequence list. They are sequenced by how many 
 
 **What it is.** A compliance and temporal primitive: an append-only chain recording the origin, custody history, and transformation history of a record or artifact. Provenance answers *where did this come from, who has handled it, and what has been done to it*. It is distinct from Event Log (which records what happened in a system) and from Actor Identity (which verifies who performed an action) — Provenance specifically models the chain of custody of a *thing*, not a stream of system events. Each custody event is immutable once recorded; the chain is append-only.
 
-**Why it's next.** Of the remaining atoms, Provenance is the highest-leverage in terms of composing surface: it enriches Immutable Transaction Ledger (C6), Data Subject Rights Fulfillment (C7), and KYC / Customer Onboarding (C8) as an optional composing atom for chain-of-custody guarantees. The scoping requires careful EOS Pass 2 work to establish what "this thing's custody history" means without absorbing the event-log or actor-identity concerns — the boundary against Event Log is the key conceptual-independence test.
+**Why it's next.** Of the remaining atoms, Provenance is the highest-leverage in terms of composing surface: it strictly blocks Chain of Custody (C12) — the library's cross-domain reference case spanning pharmaceutical and legal-evidence custody — and additionally enriches Immutable Transaction Ledger (C6), Data Subject Rights Fulfillment (C7), and KYC / Customer Onboarding (C8) as an optional composing atom for chain-of-custody guarantees. The scoping requires careful EOS Pass 2 work to establish what "this thing's custody history" means without absorbing the event-log or actor-identity concerns — the boundary against Event Log is the key conceptual-independence test.
 
 **Key invariants (anticipated).** Each provenance entry is immutable once recorded. The chain is append-only — no entry is removed or reordered. Every entry names a custodian (an actor reference), a timestamp, and an event type (originated, received, transformed, transferred, disclosed, archived). The chain is complete — no custody gap is permitted between recorded entries; a gap is a finding, not a valid state.
 
 **Standards anchored.** ISO 23081 (records management metadata — provenance as a required metadata element); W3C PROV (data provenance ontology); FDA 21 CFR Part 211 (pharmaceutical chain of custody); SEC Rule 17a-4 (records must be maintained as originally created — provenance of the original form).
 
-**Unlocks.** Enriches Immutable Transaction Ledger (C6), DSAR (C7), and KYC (C8) as an optional composing atom. Does not strictly block any composition.
+**Unlocks.** Strictly blocks Chain of Custody (C12) — Provenance is C12's core atom, not an enrichment. Additionally enriches Immutable Transaction Ledger (C6), DSAR (C7), and KYC (C8) as an optional composing atom for chain-of-custody guarantees; those three are unblocked without Provenance but gain emergent invariants when composed with it.
 
 ---
 
@@ -119,7 +119,7 @@ The seven atoms below were on the planned sequence and have shipped. Detailed au
 
 ## Compositions — current state
 
-Compositions are sequenced by readiness. Three are grounded; seven are unblocked and not started; two are blocked on remaining atoms (Provenance is optional rather than blocking, so it does not gate any composition).
+Compositions are sequenced by readiness. Of the twelve C-numbered compositions, three are grounded (C1, C4, C5); six are unblocked and not started (C2, C3, C6, C7, C8, C9); three are blocked on remaining atoms (C10 on Workflow / State Machine, C11 on Preference / Personalization, C12 on Provenance). Provenance also enriches three other compositions (C6, C7, C8) as an optional composing atom for chain-of-custody guarantees — those compositions remain unblocked without it, but gain emergent invariants when composed with it once it lands.
 
 ---
 
