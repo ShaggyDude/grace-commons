@@ -3,7 +3,7 @@ module attributed_permissions_admin
 /*
  * Alloy model: Attributed Permissions Admin
  * Corresponds to: compositions/attributed-permissions-admin.md
- * Status: Round 1 — static structural model
+ * Status: Round 3 — static structural model + dynamic trace model
  *
  * ---------------------------------------------------------------
  * HOW TO READ THIS FILE
@@ -35,7 +35,10 @@ module attributed_permissions_admin
  *   - Invariant 5 (constituent invariants preserved) implicit in typing
  *
  * A dynamic model (tracing sequences of issue_grant / revoke_grant
- * operations) is the natural Round 2 extension.
+ * operations) is appended below as the Round 3 extension. It uses
+ * Alloy 6's built-in LTL operators (always, eventually, ' for "next
+ * state") and fresh `Dyn*` sig names so the static and dynamic
+ * models coexist in this one file without interference.
  * ---------------------------------------------------------------
  */
 
@@ -342,20 +345,237 @@ run has_orphan_attestations for 5
 
 
 -- ==============================================================
--- DEFERRED: Dynamic model (Round 2)
+-- ROUND 3 — DYNAMIC TRACE MODEL
 --
--- A static model captures valid states. To model the *transition*
--- properties — attest-before-record ordering, the fact that
--- revocation is terminal, that pairing entries are never modified —
--- we need a trace-based model: a sequence of states where each
--- step is one of {issue_grant, revoke_grant} and pre/post
--- conditions are stated on adjacent states.
+-- The static model above checks the spec's snapshot invariants —
+-- properties that must hold in any valid state. It cannot check
+-- the spec's *temporal* claims, deferred from Round 1 and Round 2:
 --
--- The key property to verify dynamically:
---   "If grant G exists in state S, then grant_attribution[G] is
---    populated in every state S' reachable from S."
--- That's Invariant 1 stated as a temporal property over traces,
--- not just as a fact about snapshots.
+--   (T1) Attest-before-record ordering — no transition records a
+--        grant (or revocation) without also writing the pairing.
+--   (T2) Invariant 1 holds in every reachable state, not just in
+--        valid snapshots.
+--   (T3) Invariant 2 holds over Revoked grants in every reachable
+--        state.
+--   (T4) Invariant 6 — Pairing-map durability over time. Entries
+--        in grant_attribution and revocation_attribution, once
+--        written, persist in every subsequent state.
+--   (T5) Revocation is terminal — once a grant's status flips to
+--        Revoked, it stays Revoked forever.
 --
--- Alloy 6 has built-in temporal logic (LTL) operators for this.
+-- This section uses Alloy 6's built-in LTL operators (always,
+-- eventually, ' for "next state") to express these directly. The
+-- dynamic model uses fresh sig names prefixed `Dyn` so it does
+-- not perturb the static facts above; the two models coexist in
+-- this file by separating namespaces.
+--
+-- Orphan-log durability (Invariant 8) and failure-path orphan
+-- creation are intentionally NOT modeled in this section. The
+-- happy-path transitions are sufficient to discharge the load-
+-- bearing temporal claims listed above. Adding failure transitions
+-- and the orphan log is the natural Round 4 extension if a
+-- failure-case evidence requirement arises.
 -- ==============================================================
+
+
+-- ==============================================================
+-- DYNAMIC TYPES
+--
+-- Fresh sigs prefixed `Dyn` so the static model's Grant /
+-- Attestation / System sigs are not made mutable (which would
+-- change the meaning of the static facts above).
+-- ==============================================================
+
+sig DynGrant {
+    dyn_subject : one SubjectRef,
+    dyn_scope   : one ActionScope
+}
+
+sig DynAttestation {
+    dyn_actor      : one ActorRef,
+    dyn_action_ref : one ActionRef
+}
+
+
+-- ==============================================================
+-- DYNAMIC STATE
+--
+-- `var` fields can change between trace states. The set fields
+-- (grants_in_store, attestations_in_store) track which atoms are
+-- live in the corresponding store at the current time; the
+-- relation fields track the composition's emergent state.
+-- ==============================================================
+
+one sig DynSystem {
+    var dyn_grants_in_store        : set DynGrant,
+    var dyn_attestations_in_store  : set DynAttestation,
+    var dyn_grant_status           : DynGrant -> lone GrantStatus,
+    var dyn_grant_attribution      : DynGrant -> lone DynAttestation,
+    var dyn_revocation_attribution : DynGrant -> lone DynAttestation
+}
+
+
+-- ==============================================================
+-- INITIAL STATE
+--
+-- All stores empty at trace start. The dynamic model exercises
+-- the composition from a clean slate.
+-- ==============================================================
+
+pred dyn_init {
+    no DynSystem.dyn_grants_in_store
+    no DynSystem.dyn_attestations_in_store
+    no DynSystem.dyn_grant_status
+    no DynSystem.dyn_grant_attribution
+    no DynSystem.dyn_revocation_attribution
+}
+
+
+-- ==============================================================
+-- TRANSITIONS
+--
+-- Each transition is atomic — it describes the next state in one
+-- step. The `'` (prime) operator names a relation's value in the
+-- next state.
+-- ==============================================================
+
+-- Stutter: no state change.
+pred dyn_stutter {
+    DynSystem.dyn_grants_in_store'        = DynSystem.dyn_grants_in_store
+    DynSystem.dyn_attestations_in_store'  = DynSystem.dyn_attestations_in_store
+    DynSystem.dyn_grant_status'           = DynSystem.dyn_grant_status
+    DynSystem.dyn_grant_attribution'      = DynSystem.dyn_grant_attribution
+    DynSystem.dyn_revocation_attribution' = DynSystem.dyn_revocation_attribution
+}
+
+-- issue_grant happy path: atomically add attestation, add grant
+-- with status Active, write the issuance pairing.
+pred dyn_issue_grant [g : DynGrant, a : DynAttestation] {
+    -- Preconditions
+    g not in DynSystem.dyn_grants_in_store
+    a not in DynSystem.dyn_attestations_in_store
+
+    -- Postconditions (next state)
+    DynSystem.dyn_grants_in_store'        = DynSystem.dyn_grants_in_store + g
+    DynSystem.dyn_attestations_in_store'  = DynSystem.dyn_attestations_in_store + a
+    DynSystem.dyn_grant_status'           = DynSystem.dyn_grant_status + (g -> Active)
+    DynSystem.dyn_grant_attribution'      = DynSystem.dyn_grant_attribution + (g -> a)
+    DynSystem.dyn_revocation_attribution' = DynSystem.dyn_revocation_attribution
+}
+
+-- revoke_grant happy path: atomically add revocation attestation,
+-- flip status Active -> Revoked, write the revocation pairing.
+pred dyn_revoke_grant [g : DynGrant, a : DynAttestation] {
+    -- Preconditions
+    g in DynSystem.dyn_grants_in_store
+    DynSystem.dyn_grant_status[g] = Active
+    a not in DynSystem.dyn_attestations_in_store
+
+    -- Postconditions (next state)
+    DynSystem.dyn_grants_in_store'        = DynSystem.dyn_grants_in_store
+    DynSystem.dyn_attestations_in_store'  = DynSystem.dyn_attestations_in_store + a
+    DynSystem.dyn_grant_status'           = (DynSystem.dyn_grant_status - (g -> Active)) + (g -> Revoked)
+    DynSystem.dyn_grant_attribution'      = DynSystem.dyn_grant_attribution
+    DynSystem.dyn_revocation_attribution' = DynSystem.dyn_revocation_attribution + (g -> a)
+}
+
+
+-- ==============================================================
+-- TRACE FACT
+--
+-- The dynamic system starts in dyn_init and every transition is
+-- one of {stutter, issue_grant for some g/a, revoke_grant for
+-- some g/a}. `always` in a fact context constrains every state
+-- transition along every valid trace.
+-- ==============================================================
+
+fact dyn_trace {
+    dyn_init
+    always (
+        dyn_stutter or
+        (some g : DynGrant, a : DynAttestation | dyn_issue_grant[g, a]) or
+        (some g : DynGrant, a : DynAttestation | dyn_revoke_grant[g, a])
+    )
+}
+
+
+-- ==============================================================
+-- LTL ASSERTIONS — the temporal claims
+-- ==============================================================
+
+-- T2: Invariant 1 — Attribution completeness holds in every state.
+-- For every grant currently in the store, an issuance pairing exists.
+-- The dynamic claim: this holds not just in valid snapshots, but in
+-- every reachable state along every reachable trace.
+assert Dyn_Invariant_1_Always {
+    always (all g : DynSystem.dyn_grants_in_store |
+        one DynSystem.dyn_grant_attribution[g])
+}
+check Dyn_Invariant_1_Always for 4 but 1..6 steps
+
+-- T3: Invariant 2 — Revocation attribution holds in every state.
+-- For every Revoked grant currently in the store, a revocation
+-- pairing exists.
+assert Dyn_Invariant_2_Always {
+    always (all g : DynSystem.dyn_grants_in_store |
+        DynSystem.dyn_grant_status[g] = Revoked implies
+            one DynSystem.dyn_revocation_attribution[g])
+}
+check Dyn_Invariant_2_Always for 4 but 1..6 steps
+
+-- T4: Pairing-map durability over time. Once a pairing entry
+-- (g -> a) exists in grant_attribution or revocation_attribution,
+-- it persists in every subsequent state. This is Invariant 6
+-- stated as a temporal property.
+assert Dyn_Pairing_Durability {
+    always (all g : DynGrant, a : DynAttestation |
+        (g -> a) in DynSystem.dyn_grant_attribution implies
+            always ((g -> a) in DynSystem.dyn_grant_attribution))
+    always (all g : DynGrant, a : DynAttestation |
+        (g -> a) in DynSystem.dyn_revocation_attribution implies
+            always ((g -> a) in DynSystem.dyn_revocation_attribution))
+}
+check Dyn_Pairing_Durability for 4 but 1..6 steps
+
+-- T5: Revocation is terminal. Once a grant's status flips to
+-- Revoked, it stays Revoked.
+assert Dyn_Revocation_Terminal {
+    always (all g : DynGrant |
+        DynSystem.dyn_grant_status[g] = Revoked implies
+            always (DynSystem.dyn_grant_status[g] = Revoked))
+}
+check Dyn_Revocation_Terminal for 4 but 1..6 steps
+
+-- T1: Attest-before-record. The transitions are structured so that
+-- whenever a grant enters the store, the corresponding pairing
+-- enters the map simultaneously (atomic). Equivalent dynamic claim:
+-- no state contains a grant in the store with no pairing — which is
+-- exactly Dyn_Invariant_1_Always above, restated by construction.
+-- The stronger ordering claim (the attestation enters the
+-- attestations_in_store set in the same transition as the grant)
+-- is captured by the structure of dyn_issue_grant: both writes
+-- happen in one atomic step. This assertion is the witness that
+-- the dynamic model rules out any reachable state with an
+-- attestation-before-grant gap.
+assert Dyn_Attest_Before_Record {
+    always (all g : DynSystem.dyn_grants_in_store |
+        DynSystem.dyn_grant_attribution[g] in DynSystem.dyn_attestations_in_store)
+}
+check Dyn_Attest_Before_Record for 4 but 1..6 steps
+
+
+-- ==============================================================
+-- RUN: an existence witness — a trace producing a Revoked grant
+--
+-- Confirms the dynamic model is satisfiable: there exists a trace
+-- that starts in dyn_init, takes some sequence of transitions,
+-- and ends with at least one grant in Revoked state. If this run
+-- returns no instance, the facts are over-constrained.
+-- ==============================================================
+
+pred dyn_trace_with_revoked {
+    eventually (some g : DynSystem.dyn_grants_in_store |
+        DynSystem.dyn_grant_status[g] = Revoked)
+}
+
+run dyn_trace_with_revoked for 4 but 1..6 steps
