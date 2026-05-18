@@ -86,22 +86,34 @@ Applications that compose regulated atoms follow the same *Regulated adversarial
 
 ---
 
+## Verification layers
+
+A Grace Commons spec participates in three distinct verification layers. Each catches a different class of defect at a different point in a pattern's lifecycle. None substitutes for the others.
+
+**Layer 1 — Structured English and decision constructs (specification time).** The spec itself is the first verification layer. Structured natural language with explicit invariants, named rejection reasons, defended-in-line architectural decisions, and complete action signatures catches the class of defect that comes from ambiguity and incompleteness — the underspecified edge case, the invariant that has no corresponding action, the rejection reason with no name. Decision tables and decision trees may be embedded inline wherever conditional logic is complex enough to benefit from structured presentation. These constructs are self-explanatory and require no prose commentary beyond what the surrounding spec provides — they are the one class of structured construct that can appear without a human-readable gloss alongside it.
+
+**Layer 2 — Formal models (design time).** Alloy and TLA+ catch the class of defect that structured language cannot: unknown unknowns — structural properties or behavioral sequences that no reviewer thought to probe. A three-pass review catches what a careful reader notices; a formal model catches what nobody thought to ask. Alloy checks valid-state invariants via bounded exhaustive search; TLA+ checks operation-sequence properties via model checking. Both run at design time, before any implementation exists. The Alloy model for Attributed Permissions Admin found a missing invariant that sixteen prose-review findings missed. See *Formal-model artifacts* below for conventions.
+
+**Layer 3 — Property-based and exhaustive tests (implementation time).** Once a spec is compiled to running code via the Execution Contract, the spec's invariants become checkable properties in a property-based testing framework (Hypothesis, fast-check, QuickCheck). The framework generates and exhausts the input space against the stated properties, verifying that the implementation satisfies every invariant the spec declares. This layer does not live in the spec library — Grace Commons defers implementations — but it belongs in the pipeline that derives implementations from specs. The verification harness is derived directly from the Generation acceptance bar and the application-level invariants. This approach has been demonstrated in practice; it is not yet codified as a formal convention in this library.
+
+These three layers are the full verification stack. The spec is canonical; the formal model checks it before implementation; the property tests verify the implementation against it.
+
+---
+
 ## Formal-model artifacts
 
-Natural language is the canonical form of a Grace Commons spec — it is what includes every reader at once. Formal tools add something the prose review cannot provide: exhaustive bounded search over the space of possible worlds. A three-pass review catches the things a careful reader notices; a formal model catches the things nobody thought to check. The Alloy model for Attributed Permissions Admin found a missing invariant (Invariant 7 — Attestation Exclusivity) that sixteen prose-review findings missed, because nobody thought to ask whether the same attestation record could be shared across grants. That class of unknown unknown is what formal tools are for.
-
-Formal-model artifacts are recognized companion artifacts to any Grace Commons spec. They are not prerequisites — a spec does not need one to be `grounded` — but when they exist, they are first-class artifacts with their own conventions.
+Formal-model artifacts (Layer 2 above) are recognized companion artifacts to any Grace Commons spec. They are not prerequisites for `grounded` status, but when they exist they are first-class artifacts with their own conventions.
 
 **Recognized tools.** Alloy and TLA+ are the current recognized tools. Alloy (relational, bounded exhaustive model finder) is the right first choice for structural invariant checking — valid states, structural properties, reachability. TLA+ (temporal/behavioral model checker) is the right choice for operation-sequence properties — does a sequence of actions preserve invariants, are there liveness or fairness concerns. Other tools may be added as the library grows.
 
 **Value.** Both tools generate checks rather than tests. The distinction matters: a test says "it worked for the cases I tried"; a model check says "there is no counterexample within scope N." This provides coverage of the unknown unknowns — the structural gaps no reviewer thought to probe — and is categorically stronger than any prose review.
 
-**Location convention.** When a spec acquires formal artifacts, all formal artifacts for that spec live in a subdirectory named after the spec:
+**Location convention.** Formal artifacts live as sibling files alongside their spec, sharing the same base name with a tool-appropriate extension:
 
-- `atoms/compliance/actor-identity/actor-identity.als` alongside `atoms/compliance/actor-identity.md`
-- `compositions/attributed-permissions-admin/attributed-permissions-admin.als` alongside `compositions/attributed-permissions-admin.md`
+- `atoms/compliance/actor-identity.md` → `atoms/compliance/actor-identity.als`, `atoms/compliance/actor-identity.tla`
+- `compositions/attributed-permissions-admin.md` → `compositions/attributed-permissions-admin.als`, `compositions/attributed-permissions-admin.tla`
 
-The spec file stays at its canonical path; the named subdirectory holds all formal artifacts for it. The naming convention makes the relationship self-evident.
+Same directory, same base name, different extension. The extension identifies the tool; the naming makes the relationship self-evident without subdirectories. (Subdirectories are avoided because they interfere with Jekyll HTML generation from `.md` files.)
 
 **Human-readability requirement.** Every formal construct — every `sig`, `fact`, `assert`, `check`, `pred`, `run` in Alloy; every definition, invariant, and property in TLA+ — MUST be accompanied by a prose comment legible to a reader who does not know the tool. The comment should explain what the construct is checking and why it matters, not just restate the syntax. A formal artifact that requires tool expertise to interpret is a wall; one with plain-English commentary alongside every construct is a bridge. The bridge is the standard. See `compositions/attributed-permissions-admin.als` for the reference example.
 
