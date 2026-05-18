@@ -1,0 +1,5 @@
+@import "./src/inkset.css";
+
+@source "./src/views/**/*.tsx";
+@source "./src/routes/pages.tsx";
+@source "./src/routes/steps.tsx";

@@ -1,2 +1,13 @@
+# Editor / OS
+.DS_Store
 .vscode/.server-controller-port.log
-.vscode/.server-controller-port.log
+
+# Private planning docs (NLnet proposal, project roadmap, TLA+ POC, grant context).
+# Lives locally in grace-commons/grants/ for convenience; not committed.
+grants/
+
+# Demos — committed source, but exclude build artifacts and runtime data.
+demos/*/node_modules/
+demos/*/.deno/
+demos/*/data/
+demos/*/public/styles.css

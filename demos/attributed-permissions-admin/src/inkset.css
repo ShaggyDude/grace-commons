@@ -1,0 +1,643 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@view-transition {
+  navigation: auto;
+}
+
+@font-face {
+  font-family: "Alliance";
+  src: url("/fonts/alliance.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Alliance";
+  src: url("/fonts/alliance-bold.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* === INKset: ========== auto darkmode for Tailwind ===>
+  Ink  = pigment (single resolved color)
+  Inkset = bg + fg pairing
+  Inks = shorthand for Inkset
+*/
+
+@theme {
+  --header-h: 120px;
+  --radius: var(--radius-lg);
+  --default-transition-duration: 160ms !important;
+
+  /* THE CURVE (chroma intensity per lightness level) */
+  --chroma-50: 0.018;
+  --chroma-100: 0.044;
+  --chroma-200: 0.084;
+  --chroma-300: 0.15;
+  --chroma-400: 0.209;
+  --chroma-500: 0.219;
+  --chroma-600: 0.194;
+  --chroma-700: 0.154;
+  --chroma-800: 0.119;
+  --chroma-900: 0.095;
+  --chroma-950: 0.065;
+
+  /* Hues === 30° red | 60° orange | 90° yellow | 140° green 180° cyan | 250° blue | 300° violet | 330° pink */
+  --sage-hue: 140;
+
+  /* ===========================================
+     BASE: Raw OKLCH (not light/dark aware)
+     =========================================== */
+
+  --base-gray-50: oklch(0.982 0 0);
+  --base-gray-100: oklch(0.962 0 0);
+  --base-gray-200: oklch(0.925 0 0);
+  --base-gray-300: oklch(0.871 0 0);
+  --base-gray-400: oklch(0.792 0 0);
+  --base-gray-500: oklch(0.723 0 0);
+  --base-gray-600: oklch(0.627 0 0);
+  --base-gray-700: oklch(0.527 0 0);
+  --base-gray-800: oklch(0.448 0 0);
+  --base-gray-900: oklch(0.393 0 0);
+  --base-gray-950: oklch(0.2 0 0);
+
+  /* Generated from gray + chroma + hue */
+  --base-sage-50: oklch(from var(--base-gray-50) l var(--chroma-50) var(--sage-hue));
+  --base-sage-100: oklch(from var(--base-gray-100) l var(--chroma-100) var(--sage-hue));
+  --base-sage-200: oklch(from var(--base-gray-200) l var(--chroma-200) var(--sage-hue));
+  --base-sage-300: oklch(from var(--base-gray-300) l var(--chroma-300) var(--sage-hue));
+  --base-sage-400: oklch(from var(--base-gray-400) l var(--chroma-400) var(--sage-hue));
+  --base-sage-500: oklch(from var(--base-gray-500) l var(--chroma-500) var(--sage-hue));
+  --base-sage-600: oklch(from var(--base-gray-600) l var(--chroma-600) var(--sage-hue));
+  --base-sage-700: oklch(from var(--base-gray-700) l var(--chroma-700) var(--sage-hue));
+  --base-sage-800: oklch(from var(--base-gray-800) l var(--chroma-800) var(--sage-hue));
+  --base-sage-900: oklch(from var(--base-gray-900) l var(--chroma-900) var(--sage-hue));
+  --base-sage-950: oklch(from var(--base-gray-950) l var(--chroma-950) var(--sage-hue));
+
+  /* ===========================================
+     INK: Singletons (light/dark aware)
+     =========================================== */
+
+  --ink-sage-0: light-dark(white, black);
+  --ink-sage-50: light-dark(var(--base-sage-50), var(--base-sage-950));
+  --ink-sage-100: light-dark(var(--base-sage-100), var(--base-sage-900));
+  --ink-sage-200: light-dark(var(--base-sage-200), var(--base-sage-800));
+  --ink-sage-300: light-dark(var(--base-sage-300), var(--base-sage-700));
+  --ink-sage-400: light-dark(var(--base-sage-400), var(--base-sage-600));
+  --ink-sage-500: var(--base-sage-500);
+  --ink-sage-600: light-dark(var(--base-sage-600), var(--base-sage-400));
+  --ink-sage-700: light-dark(var(--base-sage-700), var(--base-sage-300));
+  --ink-sage-800: light-dark(var(--base-sage-800), var(--base-sage-200));
+  --ink-sage-900: light-dark(var(--base-sage-900), var(--base-sage-100));
+  --ink-sage-950: light-dark(var(--base-sage-950), var(--base-sage-50));
+  --ink-sage-1000: light-dark(black, white);
+
+  --ink-gray-0: light-dark(white, black);
+  --ink-gray-50: light-dark(var(--base-gray-50), var(--base-gray-950));
+  --ink-gray-100: light-dark(var(--base-gray-100), var(--base-gray-900));
+  --ink-gray-200: light-dark(var(--base-gray-200), var(--base-gray-800));
+  --ink-gray-300: light-dark(var(--base-gray-300), var(--base-gray-700));
+  --ink-gray-400: light-dark(var(--base-gray-400), var(--base-gray-600));
+  --ink-gray-500: var(--base-gray-500);
+  --ink-gray-600: light-dark(var(--base-gray-600), var(--base-gray-400));
+  --ink-gray-700: light-dark(var(--base-gray-700), var(--base-gray-300));
+  --ink-gray-800: light-dark(var(--base-gray-800), var(--base-gray-200));
+  --ink-gray-900: light-dark(var(--base-gray-900), var(--base-gray-100));
+  --ink-gray-950: light-dark(var(--base-gray-950), var(--base-gray-50));
+  --ink-gray-1000: light-dark(black, white);
+
+  /* ===========================================
+     TAILWIND COLOR UTILITIES
+     Enables: bg-ink-sage-500, text-ink-gray-200,
+     stroke-ink-*, fill-ink-*, border-ink-*, etc.
+     =========================================== */
+
+  --color-ink-sage-0: var(--ink-sage-0);
+  --color-ink-sage-50: var(--ink-sage-50);
+  --color-ink-sage-100: var(--ink-sage-100);
+  --color-ink-sage-200: var(--ink-sage-200);
+  --color-ink-sage-300: var(--ink-sage-300);
+  --color-ink-sage-400: var(--ink-sage-400);
+  --color-ink-sage-500: var(--ink-sage-500);
+  --color-ink-sage-600: var(--ink-sage-600);
+  --color-ink-sage-700: var(--ink-sage-700);
+  --color-ink-sage-800: var(--ink-sage-800);
+  --color-ink-sage-900: var(--ink-sage-900);
+  --color-ink-sage-950: var(--ink-sage-950);
+  --color-ink-sage-1000: var(--ink-sage-1000);
+
+  --color-ink-gray-0: var(--ink-gray-0);
+  --color-ink-gray-50: var(--ink-gray-50);
+  --color-ink-gray-100: var(--ink-gray-100);
+  --color-ink-gray-200: var(--ink-gray-200);
+  --color-ink-gray-300: var(--ink-gray-300);
+  --color-ink-gray-400: var(--ink-gray-400);
+  --color-ink-gray-500: var(--ink-gray-500);
+  --color-ink-gray-600: var(--ink-gray-600);
+  --color-ink-gray-700: var(--ink-gray-700);
+  --color-ink-gray-800: var(--ink-gray-800);
+  --color-ink-gray-900: var(--ink-gray-900);
+  --color-ink-gray-950: var(--ink-gray-950);
+  --color-ink-gray-1000: var(--ink-gray-1000);
+
+  /* SEMANTIC */
+  --color-border: oklch(from var(--ink-gray-500) l c h / 0.20);
+}
+
+@property --bg {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --fg {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: currentColor;
+}
+
+@layer base {
+  html {
+    font-family: "Alliance", sans-serif;
+    font-optical-sizing: auto;
+  }
+
+  :root {
+    --root-scale: .9375;
+    font-size: calc(16px * var(--root-scale));
+  }
+
+  @media (max-width: 640px) {
+    :root {
+      --root-scale: 0.75;
+      transition: font-size 0.25s ease-in-out;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      transition: none;
+    }
+  }
+
+  /* @supports (corner-shape: squircle) {
+    .rounded {
+      corner-shape: superellipse(1.8);
+    }
+  } */
+
+  :focus {
+    @apply ring-0 outline-none;
+  }
+
+  canvas {
+    @apply absolute inset-0 -z-1 pointer-events-none mx-auto block will-change-transform backface-hidden;
+    color: var(--ink-sage-500); /* topology — to adjust the animation color */
+    mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  }
+
+  /* article {
+    @apply text-shadow-sm;
+  } */
+
+  input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px var(--ink-gray-50) inset !important;
+  }
+
+  :root {
+    color-scheme: light dark;
+
+    /* ==== INKS: Pre-computed bg/fg pairs ==========> */
+
+    /* SAGE */
+    --inks-sage-0-bg: var(--ink-sage-0);
+    --inks-sage-0-fg: var(--ink-sage-1000);
+    --inks-sage-50-bg: var(--ink-sage-50);
+    --inks-sage-50-fg: var(--ink-sage-1000);
+    --inks-sage-100-bg: var(--ink-sage-100);
+    --inks-sage-100-fg: var(--ink-sage-1000);
+    --inks-sage-200-bg: var(--ink-sage-200);
+    --inks-sage-200-fg: var(--ink-sage-1000);
+    --inks-sage-300-bg: var(--ink-sage-300);
+    --inks-sage-300-fg: var(--ink-sage-1000);
+    --inks-sage-400-bg: var(--ink-sage-400);
+    --inks-sage-400-fg: var(--ink-sage-1000);
+    /* ↓ FLIP POINT ↓ */
+    --inks-sage-500-bg: var(--ink-sage-500);
+
+    --inks-sage-500-fg: var(--ink-sage-0);
+    --inks-sage-600-bg: var(--ink-sage-600);
+    --inks-sage-600-fg: var(--ink-sage-0);
+    --inks-sage-700-bg: var(--ink-sage-700);
+    --inks-sage-700-fg: var(--ink-sage-0);
+    --inks-sage-800-bg: var(--ink-sage-800);
+    --inks-sage-800-fg: var(--ink-sage-0);
+    --inks-sage-900-bg: var(--ink-sage-900);
+    --inks-sage-900-fg: var(--ink-sage-0);
+    --inks-sage-950-bg: var(--ink-sage-950);
+    --inks-sage-950-fg: var(--ink-sage-0);
+    --inks-sage-1000-bg: var(--ink-sage-1000);
+    --inks-sage-1000-fg: var(--ink-sage-0);
+
+    /* GRAY */
+    --inks-gray-0-bg: var(--ink-gray-0);
+    --inks-gray-0-fg: var(--ink-gray-1000);
+    --inks-gray-50-bg: var(--ink-gray-50);
+    --inks-gray-50-fg: var(--ink-gray-1000);
+    --inks-gray-100-bg: var(--ink-gray-100);
+    --inks-gray-100-fg: var(--ink-gray-1000);
+    --inks-gray-200-bg: var(--ink-gray-200);
+    --inks-gray-200-fg: var(--ink-gray-1000);
+    --inks-gray-300-bg: var(--ink-gray-300);
+    --inks-gray-300-fg: var(--ink-gray-1000);
+    --inks-gray-400-bg: var(--ink-gray-400);
+    --inks-gray-400-fg: var(--ink-gray-1000);
+    /* ↓ FLIP POINT ↓ */
+    --inks-gray-500-bg: var(--ink-gray-500);
+    --inks-gray-500-fg: var(--ink-gray-0);
+    --inks-gray-600-bg: var(--ink-gray-600);
+    --inks-gray-600-fg: var(--ink-gray-0);
+    --inks-gray-700-bg: var(--ink-gray-700);
+    --inks-gray-700-fg: var(--ink-gray-0);
+    --inks-gray-800-bg: var(--ink-gray-800);
+    --inks-gray-800-fg: var(--ink-gray-0);
+    --inks-gray-900-bg: var(--ink-gray-900);
+    --inks-gray-900-fg: var(--ink-gray-0);
+    --inks-gray-950-bg: var(--ink-gray-950);
+    --inks-gray-950-fg: var(--ink-gray-0);
+    --inks-gray-1000-bg: var(--ink-gray-1000);
+    --inks-gray-1000-fg: var(--ink-gray-0);
+  }
+
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  svg {
+    stroke-width: 1.5;
+  }
+
+  b {
+    font-weight: unset;
+    display: block;
+  }
+
+  s {
+    text-decoration: unset;
+    display: inline-block;
+  }
+
+  ::selection {
+    background: var(--ink-sage-100);
+    color: var(--ink-sage-950);
+  }
+
+  .prose {
+    max-width: 68ch !important;
+  }
+
+  .prose ::marker {
+    background: var(--ink-sage-100);
+    color: var(--ink-sage-950);
+  }
+
+  .prose p:has(> strong) + h2,
+  .prose p:has(> strong) + h1 {
+    /* heading styles stay normal */
+  }
+
+  .prose p:has(> strong):has(+ h2),
+  .prose p:has(> strong):has(+ h1) {
+    @apply text-sm uppercase;
+  }
+
+  .prose p:has(> strong):has(+ h2) strong {
+    color: var(--color-ink-sage-600) !important;
+    @apply tracking-wider;
+  }
+}
+
+@layer components {
+  /* ===   INKS CLASSES   Usage: <b class="inkset-sage-500">auto contrast</b> */
+  [class^="inkset-"],
+  [class*=" inkset-"],
+  [class^="inks-"],
+  [class*=" inks-"] {
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  /* SAGE */
+  .inkset-sage-0,
+  .inks-sage-0 {
+    --bg: var(--inks-sage-0-bg);
+    --fg: var(--inks-sage-0-fg);
+  }
+  .inks-sage-50 {
+    --bg: var(--inks-sage-50-bg);
+    --fg: var(--inks-sage-50-fg);
+  }
+  .inks-sage-100 {
+    --bg: var(--inks-sage-100-bg);
+    --fg: var(--inks-sage-100-fg);
+  }
+  .inks-sage-200 {
+    --bg: var(--inks-sage-200-bg);
+    --fg: var(--inks-sage-200-fg);
+  }
+  .inks-sage-300 {
+    --bg: var(--inks-sage-300-bg);
+    --fg: var(--inks-sage-300-fg);
+  }
+  .inks-sage-400 {
+    --bg: var(--inks-sage-400-bg);
+    --fg: var(--inks-sage-400-fg);
+  }
+  .inks-sage-500 {
+    --bg: var(--inks-sage-500-bg);
+    --fg: var(--inks-sage-500-fg);
+  }
+  .inks-sage-600 {
+    --bg: var(--inks-sage-600-bg);
+    --fg: var(--inks-sage-600-fg);
+  }
+  .inks-sage-700 {
+    --bg: var(--inks-sage-700-bg);
+    --fg: var(--inks-sage-700-fg);
+  }
+  .inks-sage-800 {
+    --bg: var(--inks-sage-800-bg);
+    --fg: var(--inks-sage-800-fg);
+  }
+  .inks-sage-900 {
+    --bg: var(--inks-sage-900-bg);
+    --fg: var(--inks-sage-900-fg);
+  }
+  .inks-sage-950 {
+    --bg: var(--inks-sage-950-bg);
+    --fg: var(--inks-sage-950-fg);
+  }
+  .inks-sage-1000 {
+    --bg: var(--inks-sage-1000-bg);
+    --fg: var(--inks-sage-1000-fg);
+  }
+  /* GRAY */
+  .inks-gray-0 {
+    --bg: var(--inks-gray-0-bg);
+    --fg: var(--inks-gray-0-fg);
+  }
+  .inks-gray-50 {
+    --bg: var(--inks-gray-50-bg);
+    --fg: var(--inks-gray-50-fg);
+  }
+  .inks-gray-100 {
+    --bg: var(--inks-gray-100-bg);
+    --fg: var(--inks-gray-100-fg);
+  }
+  .inks-gray-200 {
+    --bg: var(--inks-gray-200-bg);
+    --fg: var(--inks-gray-200-fg);
+  }
+  .inks-gray-300 {
+    --bg: var(--inks-gray-300-bg);
+    --fg: var(--inks-gray-300-fg);
+  }
+  .inks-gray-400 {
+    --bg: var(--inks-gray-400-bg);
+    --fg: var(--inks-gray-400-fg);
+  }
+  .inks-gray-500 {
+    --bg: var(--inks-gray-500-bg);
+    --fg: var(--inks-gray-500-fg);
+  }
+  .inks-gray-600 {
+    --bg: var(--inks-gray-600-bg);
+    --fg: var(--inks-gray-600-fg);
+  }
+  .inks-gray-700 {
+    --bg: var(--inks-gray-700-bg);
+    --fg: var(--inks-gray-700-fg);
+  }
+  .inks-gray-800 {
+    --bg: var(--inks-gray-800-bg);
+    --fg: var(--inks-gray-800-fg);
+  }
+  .inks-gray-900 {
+    --bg: var(--inks-gray-900-bg);
+    --fg: var(--inks-gray-900-fg);
+  }
+  .inks-gray-950 {
+    --bg: var(--inks-gray-950-bg);
+    --fg: var(--inks-gray-950-fg);
+  }
+  .inks-gray-1000 {
+    --bg: var(--inks-gray-1000-bg);
+    --fg: var(--inks-gray-1000-fg);
+  }
+
+  [popover] {
+    translate: 0 -100vh;
+    opacity: 0;
+    transition:
+      opacity 0.1s,
+      display 0.1s;
+    transition-behavior: allow-discrete;
+  }
+
+  [popover]:popover-open {
+    translate: 0 0;
+    opacity: 1;
+    margin: 8rem auto;
+  }
+
+  @starting-style {
+    [popover]:popover-open {
+      translate: 0 -100vh;
+      opacity: 0;
+    }
+  }
+
+  ::backdrop {
+    background: oklch(from var(--ink-gray-50) l c h / 0.1);
+    transition: background 150ms, backdrop-filter 150ms, display 150ms;
+    transition-behavior: allow-discrete;
+    @apply backdrop-blur-none;
+  }
+
+  :popover-open::backdrop {
+    @apply backdrop-blur-sm;
+  }
+
+  @starting-style {
+    :popover-open::backdrop {
+      @apply backdrop-blur-none;
+    }
+  }
+
+  /* .raised {
+    @apply border border-ink-gray-500/12 p-10 backdrop-blur-sm backdrop-saturate-150;
+    background: linear-gradient(
+        to top left,
+        oklch(from var(--ink-sage-1000) l c h / 0.05),
+        transparent
+      ),
+      oklch(from var(--ink-sage-0) l c h / 0.3);
+  } */
+
+  .raised {
+    @apply border border-ink-gray-500/12 p-10 backdrop-blur-sm backdrop-saturate-150;
+    background: linear-gradient(
+        to bottom right,
+        oklch(from var(--ink-sage-1000) l c h / 0.01),
+        transparent
+      ),
+      oklch(from var(--ink-sage-0) l c h / 0.2);
+  }
+
+  .raised .raised {
+    @apply border border-ink-sage-500/40;
+  }
+
+  section,
+  article {
+    background: oklch(from var(--ink-gray-0) l c h / .6);
+    box-shadow: 0 0 8rem 4rem oklch(from var(--ink-gray-0) l c h / .8);
+    border-radius: 3rem;
+  }
+
+  .linkamation {
+    @apply relative inline-block;
+  }
+
+  .linkamation::after {
+    content: "";
+    @apply absolute bottom-0 left-0 h-px w-full origin-center scale-x-0 bg-current opacity-30 ring-0 transition-transform duration-100 ease-out;
+  }
+
+  .linkamation:hover::after,
+  .linkamation:focus::after,
+  .linkamation:focus-visible::after,
+  .linkamation[aria-current]::after {
+    @apply scale-x-100;
+  }
+
+
+  .raised.XXprimary {
+    border-color: var(--ink-sage-500);
+    background: linear-gradient(
+        to top left,
+        oklch(from var(--ink-sage-500) l c h / 0.18),
+        transparent
+      ),
+      oklch(from var(--bg) l c h / 0.2);
+  }
+
+
+  .prose {
+    font-size: 1.125rem;
+    --tw-prose-body: var(--ink-gray-900) !important;
+    --tw-prose-headings: var(--ink-gray-950) !important;
+    --tw-prose-lead: var(--ink-gray-700) !important;
+    --tw-prose-links: var(--ink-sage-600) !important;
+    --tw-prose-bold: var(--ink-gray-950) !important;
+    --tw-prose-counters: var(--ink-sage-600) !important;
+    --tw-prose-bullets: var(--ink-sage-500) !important;
+    --tw-prose-hr: var(--color-border) !important;
+    --tw-prose-quotes: var(--ink-gray-800) !important;
+    --tw-prose-quote-borders: var(--ink-sage-400) !important;
+    --tw-prose-captions: var(--ink-gray-500) !important;
+    --tw-prose-kbd: var(--ink-gray-800) !important;
+    --tw-prose-kbd-shadows: transparent !important;
+    --tw-prose-code: var(--ink-sage-700) !important;
+    --tw-prose-pre-code: var(--ink-gray-200) !important;
+    --tw-prose-pre-bg: var(--ink-gray-950) !important;
+    --tw-prose-th-borders: var(--color-border) !important;
+    --tw-prose-td-borders: var(--color-border) !important;
+    a {
+      text-decoration: none !important;
+      font-weight: 600 !important;
+    }
+  }
+
+  .prose h1 {
+    @apply text-4xl! font-normal!;
+  }
+  .prose h2 {
+    @apply text-3xl! font-normal!;
+  }
+  .prose h3 {
+    @apply text-2xl! font-normal!;
+  }
+  .prose h4 {
+    @apply text-xl! font-normal!;
+  }
+  .prose h5 {
+    @apply text-lg! font-normal!;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-wrap: balance;
+  }
+
+  .prose strong {
+    @apply font-medium!;
+  }
+
+  .prose img {
+    @apply rounded opacity-90 saturate-50 max-w-3/4;
+  }
+
+  .prose table {
+    @apply my-8 w-full border-collapse text-sm;
+  }
+
+  .prose thead {
+    background: oklch(from var(--ink-sage-500) l c h / 0.08);
+    border-bottom: 1px solid var(--ink-sage-500);
+  }
+
+  .prose thead th {
+    @apply px-4 py-3 text-left font-semibold;
+    color: var(--ink-gray-900);
+  }
+
+  .prose tbody tr {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .prose tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .prose tbody td {
+    @apply px-4 py-3 align-top;
+    color: var(--ink-gray-700);
+  }
+
+  .prose tbody td:first-child {
+    color: var(--ink-sage-600);
+    font-weight: 500;
+  }
+}
+
+@layer utilities {
+  .hover:hover {
+    @apply transition hover:brightness-[1.1] hover:saturate-[1.1];
+  }
+
+  .flex.one > * {
+    @apply flex-1;
+  }
+}

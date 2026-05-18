@@ -1,0 +1,7 @@
+# Build artifacts and runtime data (also matched by parent .gitignore, but
+# duplicated here so the demo is self-contained if extracted later).
+node_modules/
+.deno/
+data/
+public/styles.css
+.DS_Store

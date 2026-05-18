@@ -1,0 +1,26 @@
+{
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "setup": "deno run --allow-net --allow-write scripts/setup.ts",
+    "dev": "deno task build:css --watch & deno run -A --watch src/main.ts",
+    "build:css": "deno run -A npm:@tailwindcss/cli -i app.css -o public/styles.css",
+    "migrate": "deno run -A src/db/migrate.ts",
+    "seed": "deno run -A src/db/seed.ts",
+    "test": "deno test --allow-read --allow-write --allow-net --allow-env --allow-ffi tests/"
+  },
+  "imports": {
+    "tailwindcss": "npm:tailwindcss@^4",
+    "@tailwindcss/typography": "npm:@tailwindcss/typography",
+    "hono": "jsr:@hono/hono",
+    "hono/jsx": "jsr:@hono/hono/jsx",
+    "hono/jsx/jsx-runtime": "jsr:@hono/hono/jsx/jsx-runtime",
+    "@db/sqlite": "jsr:@db/sqlite",
+    "@std/ulid": "jsr:@std/ulid",
+    "@std/crypto": "jsr:@std/crypto",
+    "@std/assert": "jsr:@std/assert"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx"
+  }
+}
