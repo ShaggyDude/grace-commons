@@ -265,33 +265,32 @@ check Issuance_Revocation_Pools_Disjoint for 5
 
 
 -- ==============================================================
--- THE THREE FAILING CHECKS NAME ONE MISSING INVARIANT:
--- Attestation Exclusivity
+-- INVARIANT 7 — Attestation Exclusivity
 --
--- All three counterexamples above are facets of one gap: the spec
--- never states that every Attestation is used *at most once* across
--- the entire system — as issuance proof for exactly one grant, or
--- as revocation proof for exactly one grant, but not both and not
--- shared between grants. This should be Invariant 7.
+-- Surfaced by Round 1 Alloy model; closed in spec before Round 2.
+-- The three checks above (Issuance_Revocation_Attestations_Differ,
+-- Grant_Attribution_Injective, Issuance_Revocation_Pools_Disjoint)
+-- all found counterexamples without this fact. With it, all three
+-- pass clean. The prose review argued this held via the nonce
+-- mechanism in Configuration; the model showed that mechanism
+-- argument does not substitute for a named, checkable invariant.
 --
--- If we add this as a fact, all three checks above pass.
--- The fact below demonstrates this. Toggle it on by removing
--- the block comment, then re-run the checks.
+-- Three properties in one fact:
+--   (1) grant_attribution is injective — no shared issuance proofs
+--   (2) revocation_attribution is injective — no shared revocation proofs
+--   (3) the two ranges are disjoint — no attestation serves both roles
 -- ==============================================================
 
-/*
 fact Invariant7_Attestation_Exclusivity {
-    -- Each Attestation appears at most once in grant_attribution
-    -- (injectivity — `lone` on the domain side)
+    -- (1) Each Attestation appears at most once in grant_attribution
     all a : Attestation | lone System.grant_attribution.a
 
-    -- Each Attestation appears at most once in revocation_attribution
+    -- (2) Each Attestation appears at most once in revocation_attribution
     all a : Attestation | lone System.revocation_attribution.a
 
-    -- The two pools are disjoint: no attestation serves both roles
+    -- (3) The two pools are disjoint: no attestation serves both roles
     no System.grant_attribution[Grant] & System.revocation_attribution[Grant]
 }
-*/
 
 
 -- ==============================================================
