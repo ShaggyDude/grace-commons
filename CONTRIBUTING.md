@@ -86,6 +86,29 @@ Applications that compose regulated atoms follow the same *Regulated adversarial
 
 ---
 
+## Formal-model artifacts
+
+Natural language is the canonical form of a Grace Commons spec — it is what includes every reader at once. Formal tools add something the prose review cannot provide: exhaustive bounded search over the space of possible worlds. A three-pass review catches the things a careful reader notices; a formal model catches the things nobody thought to check. The Alloy model for Attributed Permissions Admin found a missing invariant (Invariant 7 — Attestation Exclusivity) that sixteen prose-review findings missed, because nobody thought to ask whether the same attestation record could be shared across grants. That class of unknown unknown is what formal tools are for.
+
+Formal-model artifacts are recognized companion artifacts to any Grace Commons spec. They are not prerequisites — a spec does not need one to be `grounded` — but when they exist, they are first-class artifacts with their own conventions.
+
+**Recognized tools.** Alloy and TLA+ are the current recognized tools. Alloy (relational, bounded exhaustive model finder) is the right first choice for structural invariant checking — valid states, structural properties, reachability. TLA+ (temporal/behavioral model checker) is the right choice for operation-sequence properties — does a sequence of actions preserve invariants, are there liveness or fairness concerns. Other tools may be added as the library grows.
+
+**Value.** Both tools generate checks rather than tests. The distinction matters: a test says "it worked for the cases I tried"; a model check says "there is no counterexample within scope N." This provides coverage of the unknown unknowns — the structural gaps no reviewer thought to probe — and is categorically stronger than any prose review.
+
+**Location convention.** When a spec acquires formal artifacts, all formal artifacts for that spec live in a subdirectory named after the spec:
+
+- `atoms/compliance/actor-identity/actor-identity.als` alongside `atoms/compliance/actor-identity.md`
+- `compositions/attributed-permissions-admin/attributed-permissions-admin.als` alongside `compositions/attributed-permissions-admin.md`
+
+The spec file stays at its canonical path; the named subdirectory holds all formal artifacts for it. The naming convention makes the relationship self-evident.
+
+**Human-readability requirement.** Every formal construct — every `sig`, `fact`, `assert`, `check`, `pred`, `run` in Alloy; every definition, invariant, and property in TLA+ — MUST be accompanied by a prose comment legible to a reader who does not know the tool. The comment should explain what the construct is checking and why it matters, not just restate the syntax. A formal artifact that requires tool expertise to interpret is a wall; one with plain-English commentary alongside every construct is a bridge. The bridge is the standard. See `compositions/attributed-permissions-admin.als` for the reference example.
+
+**Lineage recording.** Findings from formal models are recorded in the spec's Lineage notes under a "Formal model" entry, following the same pattern as Pass 1–3 findings: what the model checked, what it found, what was closed in-pattern and what was deferred.
+
+---
+
 ## Three perspectives
 
 Grace Commons needs three mindsets in the core review of every pattern, not in separate committees:
@@ -123,7 +146,7 @@ A pattern that has only survived one or two passes is *in process* — and that 
 - Language bindings
 - Tooling
 
-Grace Commons is a specification library. The implementations come later, elsewhere.
+Grace Commons is a specification library. The implementations come later, elsewhere. Formal-model artifacts (Alloy, TLA+) are not code in this sense — they are formal specifications, not implementations, and they are welcome per the *Formal-model artifacts* section above.
 
 ---
 
