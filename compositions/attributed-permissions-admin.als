@@ -362,6 +362,9 @@ run has_orphan_attestations for 5
 --        written, persist in every subsequent state.
 --   (T5) Revocation is terminal — once a grant's status flips to
 --        Revoked, it stays Revoked forever.
+--   (T6) Invariant 8 — Orphan log durability over time. Entries,
+--        once written to the orphan log, persist (structurally
+--        identical to T4 for the attribution maps).
 --
 -- This section uses Alloy 6's built-in LTL operators (always,
 -- eventually, ' for "next state") to express these directly. The
@@ -369,12 +372,21 @@ run has_orphan_attestations for 5
 -- not perturb the static facts above; the two models coexist in
 -- this file by separating namespaces.
 --
--- Orphan-log durability (Invariant 8) and failure-path orphan
--- creation are intentionally NOT modeled in this section. The
+-- Orphan-log DURABILITY (Invariant 8) is modeled: dyn_orphan_log
+-- is a `var` field on DynSystem, dyn_init sets it empty, every
+-- transition preserves it (happy-path transitions add no orphans),
+-- and Dyn_Orphan_Log_Durability asserts entries persist over
+-- time. On the current trace fact the log stays empty and the
+-- assertion is vacuously satisfied; the assertion structure
+-- nonetheless encodes the durability discipline and becomes
+-- nontrivial when failure-path transitions are added later.
+-- Round 4 F4.2 closure.
+--
+-- Failure-path orphan CREATION is intentionally NOT modeled. The
 -- happy-path transitions are sufficient to discharge the load-
--- bearing temporal claims listed above. Adding failure transitions
--- and the orphan log is the natural Round 4 extension if a
--- failure-case evidence requirement arises.
+-- bearing temporal claims listed above; adding the rejection
+-- branches and the resulting orphan-creation writes is a natural
+-- later extension if a failure-case evidence requirement arises.
 -- ==============================================================
 
 
@@ -411,7 +423,8 @@ one sig DynSystem {
     var dyn_attestations_in_store  : set DynAttestation,
     var dyn_grant_status           : DynGrant -> lone GrantStatus,
     var dyn_grant_attribution      : DynGrant -> lone DynAttestation,
-    var dyn_revocation_attribution : DynGrant -> lone DynAttestation
+    var dyn_revocation_attribution : DynGrant -> lone DynAttestation,
+    var dyn_orphan_log             : set DynAttestation
 }
 
 
@@ -428,6 +441,7 @@ pred dyn_init {
     no DynSystem.dyn_grant_status
     no DynSystem.dyn_grant_attribution
     no DynSystem.dyn_revocation_attribution
+    no DynSystem.dyn_orphan_log
 }
 
 
@@ -446,6 +460,7 @@ pred dyn_stutter {
     DynSystem.dyn_grant_status'           = DynSystem.dyn_grant_status
     DynSystem.dyn_grant_attribution'      = DynSystem.dyn_grant_attribution
     DynSystem.dyn_revocation_attribution' = DynSystem.dyn_revocation_attribution
+    DynSystem.dyn_orphan_log'             = DynSystem.dyn_orphan_log
 }
 
 -- issue_grant happy path: atomically add attestation, add grant
@@ -461,6 +476,7 @@ pred dyn_issue_grant [g : DynGrant, a : DynAttestation] {
     DynSystem.dyn_grant_status'           = DynSystem.dyn_grant_status + (g -> Active)
     DynSystem.dyn_grant_attribution'      = DynSystem.dyn_grant_attribution + (g -> a)
     DynSystem.dyn_revocation_attribution' = DynSystem.dyn_revocation_attribution
+    DynSystem.dyn_orphan_log'             = DynSystem.dyn_orphan_log
 }
 
 -- revoke_grant happy path: atomically add revocation attestation,
@@ -477,6 +493,7 @@ pred dyn_revoke_grant [g : DynGrant, a : DynAttestation] {
     DynSystem.dyn_grant_status'           = (DynSystem.dyn_grant_status - (g -> Active)) + (g -> Revoked)
     DynSystem.dyn_grant_attribution'      = DynSystem.dyn_grant_attribution
     DynSystem.dyn_revocation_attribution' = DynSystem.dyn_revocation_attribution + (g -> a)
+    DynSystem.dyn_orphan_log'             = DynSystem.dyn_orphan_log
 }
 
 
@@ -546,22 +563,62 @@ assert Dyn_Revocation_Terminal {
 }
 check Dyn_Revocation_Terminal for 4 but 1..6 steps
 
--- T1: Attest-before-record. The transitions are structured so that
--- whenever a grant enters the store, the corresponding pairing
--- enters the map simultaneously (atomic). Equivalent dynamic claim:
--- no state contains a grant in the store with no pairing — which is
--- exactly Dyn_Invariant_1_Always above, restated by construction.
--- The stronger ordering claim (the attestation enters the
--- attestations_in_store set in the same transition as the grant)
--- is captured by the structure of dyn_issue_grant: both writes
--- happen in one atomic step. This assertion is the witness that
--- the dynamic model rules out any reachable state with an
--- attestation-before-grant gap.
+-- T1: Attest-before-record (consequence form). The spec's
+-- "attest before record" temporal claim says the attestation is
+-- recorded in Actor Identity before the grant is recorded in
+-- Permissions. The atomic dyn_issue_grant transition collapses
+-- both writes into a single step, so the ordering itself is not
+-- directly observable in the trace. The *consequence* of the
+-- ordering is observable, and that is what this assertion checks:
+-- at every reachable state, for every grant in the store, the
+-- attestation paired with it (via grant_attribution) must be in
+-- the attestations_in_store set — i.e., the pairing must point
+-- at a currently-stored attestation, not at a phantom reference.
+--
+-- This assertion is STRICTLY STRONGER than Dyn_Invariant_1_Always
+-- above. Dyn_Invariant_1_Always asserts only that
+-- `one grant_attribution[g]` (a pairing exists in the map
+-- relation). Dyn_Attest_Before_Record additionally requires the
+-- pairing's target to be in attestations_in_store — ruling out
+-- the state where the map points at an Attestation atom that
+-- isn't (or is no longer) in the Actor Identity store.
+--
+-- Both hold on the current transition set only because no
+-- transition removes from attestations_in_store. Absent that
+-- monotonicity, the two assertions would diverge — which is
+-- exactly the situation an adversarial deletion of an Actor
+-- Identity record would produce, and which Invariant 6 + Actor
+-- Identity's Invariant 9 jointly forbid.
 assert Dyn_Attest_Before_Record {
     always (all g : DynSystem.dyn_grants_in_store |
         DynSystem.dyn_grant_attribution[g] in DynSystem.dyn_attestations_in_store)
 }
 check Dyn_Attest_Before_Record for 4 but 1..6 steps
+
+
+-- T6: Invariant 8 — Orphan log durability over time. Once an
+-- attestation appears in the orphan log, it persists in every
+-- subsequent state. This is the temporal version of Invariant 8,
+-- structurally identical to Dyn_Pairing_Durability for the
+-- attribution maps.
+--
+-- On the current happy-path-only trace fact, dyn_issue_grant and
+-- dyn_revoke_grant preserve dyn_orphan_log (both add nothing to
+-- it). The log is therefore always empty along every reachable
+-- trace, and the assertion is vacuously satisfied. The assertion
+-- structure nonetheless encodes the durability discipline: when
+-- a future round adds failure-path transitions that populate the
+-- log, the assertion becomes nontrivial and verifies that those
+-- transitions cannot retroactively remove or rewrite log entries.
+-- Holding the assertion clean in the current model is the
+-- structural precondition for adding failure transitions later
+-- without rewriting the durability contract.
+assert Dyn_Orphan_Log_Durability {
+    always (all a : DynAttestation |
+        a in DynSystem.dyn_orphan_log implies
+            always (a in DynSystem.dyn_orphan_log))
+}
+check Dyn_Orphan_Log_Durability for 4 but 1..6 steps
 
 
 -- ==============================================================
