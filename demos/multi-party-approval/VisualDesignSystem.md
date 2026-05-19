@@ -13,7 +13,7 @@ Large type, organic intelligence, exuding confidence without being pedantic.
 
 text-xs   → 12px
 
-text-sm   → 14px (UI controls optional for sage-tech.ai)
+text-sm   → 14px (UI controls optional)
 **text-base** → 16px
 text-xl   → 20px
 
