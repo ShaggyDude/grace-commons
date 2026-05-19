@@ -116,3 +116,68 @@ The demo's `actor` table has no mechanism for credential rotation. `credential_s
 is fixed at seed time. This is a demo simplification — the Actor Identity atom
 spec allows for credential update with an attestation record — but adding rotation
 would add UI surface that doesn't illuminate the composition's core properties.
+
+---
+
+## The duplicate-active-grant check enforces a property the spec does not promise
+
+`issue_grant` in `src/domain/composition.ts` runs a `SELECT 1 FROM grant WHERE
+subject_ref = ? AND action_scope = ? AND status = 'active'` *before* opening
+its `tx()` block (lines 62-65) and rejects with `duplicate-active-grant` if a
+row exists. The schema (`src/db/schema.sql`) backs this up with a
+`UNIQUE INDEX grant_active_unique ON grant(subject_ref, action_scope) WHERE
+status = 'active'`.
+
+**The spec does not require this.** Per
+`compositions/attributed-permissions-admin.md` §Edge cases → *Concurrent
+issuance of the same grant*: "Two simultaneous `issue_grant(subject_ref,
+action_scope, ...)` calls for the same `(subject_ref, action_scope)` pair
+from different grantors produce two distinct attestations and two distinct
+grants — Permissions' Edge case *Concurrent grant proliferation* allows
+this. The composition does not prevent it." Single-active-per-pair semantics
+is explicitly externalized to a composing pattern (Idempotent Reservation
+or a token-based dedupe layer).
+
+The implementation chose to enforce single-active-per-pair anyway. Two
+problems follow:
+
+1. **The application-layer check is non-atomic.** The SELECT runs before
+   `tx()`, so two concurrent actors can both pass it and race. The TLA+
+   model in `compositions/attributed-permissions-admin.tla` does not
+   model the SQL UNIQUE INDEX; in that model two concurrent
+   `IssueGrant` actions produce two active grants for the same pair —
+   which the spec allows, so no invariant is violated. With the UNIQUE
+   INDEX in place, the second SQL INSERT fails, the second transaction
+   rolls back, and the second `attest()` rolls back with it (no orphan
+   attestation produced — `attest` is inside the same `tx`). Net
+   production behaviour is single-active-per-pair *because of the
+   schema constraint*, not because of the application check.
+
+2. **The application-layer check is load-bearing for nothing.** Anything
+   the SELECT prevents would also be prevented by the schema UNIQUE
+   INDEX. Removing the SELECT entirely and catching the resulting
+   SQLITE_CONSTRAINT_UNIQUE error to surface `duplicate-active-grant`
+   would be equivalent — and more honest about which layer carries the
+   load.
+
+**Preference.** Either (a) drop the application-layer check and let the
+schema's UNIQUE INDEX surface the duplicate via a catch on
+`SQLITE_CONSTRAINT_UNIQUE`, renamed to `duplicate-active-grant` at the
+composition's boundary; or (b) move the SELECT inside the `tx()` block
+so the check and the writes share an atomic boundary (no race, no
+reliance on the schema constraint as the real enforcer). Doing both —
+keeping the non-atomic application-layer check *and* the schema
+constraint — is the current state and works in practice, but it makes
+the application layer's check look like it's doing real work when it
+isn't. The schema constraint is the only thing standing between this
+implementation and the spec's stated "concurrent grants are allowed"
+behaviour.
+
+**Why this is a CORNERS entry, not a spec finding.** The spec is
+internally consistent: §Edge cases names the behaviour the model
+verifies. The implementation does something stronger than the spec
+asks. That's a build choice, not a spec contradiction. If a deployment
+wanted single-active-per-pair as a guaranteed property (rather than an
+implementation incidentally provides it), the composition spec's
+*Concurrent issuance of the same grant* edge case names the right
+remedy: compose with Idempotent Reservation.

@@ -96,6 +96,18 @@ Then check the reference graph: every Friction links to a Flow step; every Decis
 
 ---
 
+## Formal models — the parallel verification surface
+
+The three passes above operate on structured English. They catch ambiguity, incompleteness, over-absorption, and hidden decisions — the classes of gap a careful reader can frame as a question. They cannot catch the class of gap *no reader thought to look for*. That class is what formal models exist to catch.
+
+A pattern may carry one or more formal-model siblings — `.als` for Alloy, `.tla` + `.cfg` for TLA+ — in the same directory as its canonical `.md`. Alloy checks structural invariants via bounded exhaustive search; TLA+ checks behavioural sequences via exhaustive interleaving under TLC. Both run at design time, before any implementation exists. Both treat the canonical English as the source — the formal artifact is a validator of the spec, not a replacement for it.
+
+Formal models complement the three passes; they do not replace them and they are not prerequisites for `grounded` status. When they exist they are first-class artifacts in their own right. The Alloy model for Attributed Permissions Admin surfaced Invariant 7 (Attestation Exclusivity) after sixteen prose-review findings had already closed, because no human reviewer thought to ask *could an attestation be used twice?* That is the load-bearing contribution: the formal layer asks questions the prose layer cannot frame.
+
+Findings from formal models are recorded in Lineage notes under a *Formal model* entry, in the same arc as Pass 1–3 findings. The entry must carry plain-English summary sufficient for a reader who does not know the tool — what the artifact is, where it lives, what invariants it checks (named, not by syntax), the bounds or scope used, any deliberate scope exclusions and why, and the result. See `CONTRIBUTING.md` §Formal-model artifacts for the full convention: location and tier discipline (spec-layer artifacts; not in `demos/` or build folders), base TLA+ as the default flavor (PlusCal only when intra-action protocol semantics genuinely warrant it, and defended in the Lineage entry where used), and the human-readability requirement (every formal construct annotated in plain English). The artifact-side annotation and the Lineage-entry summary together discharge the *minimum-formalism principle*'s accessibility contract — the formal layer is free to use the most expressive tool that earns its keep precisely because the canonical English carries the bridge to every other reader.
+
+---
+
 ## Defending each claim in-line
 
 The three passes are review tools — they catch gaps. Authoring well in the first place reduces what the passes find. The strongest writing discipline for architectural specs: **every claim is defended in-line by the same paragraph that introduces it.**
