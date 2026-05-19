@@ -11,6 +11,9 @@ const app = new Hono<{ Variables: AppVariables }>();
 // Static assets
 app.use("/styles.css", serveStatic({ path: "./public/styles.css" }));
 app.use("/htmx.min.js", serveStatic({ path: "./public/htmx.min.js" }));
+app.use("/manifest.json", serveStatic({ path: "./public/manifest.json" }));
+app.use("/sw.js", serveStatic({ path: "./public/sw.js" }));
+app.use("/icon.svg", serveStatic({ path: "./public/icon.svg" }));
 
 // Resolve current actor on every request
 app.use("*", currentActorMiddleware);

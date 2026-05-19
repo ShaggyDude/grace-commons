@@ -26,8 +26,15 @@ export const Layout: FC<LayoutProps> = ({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title}</title>
         <link rel="stylesheet" href="/styles.css" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <meta name="theme-color" content="#2CF200" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Alloy Demo" />
+        <link rel="apple-touch-icon" href="/icon.svg" />
         <script src="/htmx.min.js"></script>
         <script>htmx.config.useTemplateFragments = true;</script>
+        <script>{`if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');`}</script>
       </head>
       <body class="inks-gray-0 min-h-screen">
         <header class="raised sticky top-0 z-10 p-12 flex items-center justify-between">
