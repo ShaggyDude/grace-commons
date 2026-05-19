@@ -1,3 +1,8 @@
+---
+title: Discoveries
+nav_order: 999
+---
+
 # Discoveries
 
 Accidental findings during the build. Raw, dated, unpolished. Grant proposals and posts pull from here later.
