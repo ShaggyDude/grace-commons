@@ -5,9 +5,9 @@
     "jsr:@denosaurs/plug@1": "1.1.0",
     "jsr:@hono/hono@*": "4.12.19",
     "jsr:@std/assert@*": "1.0.19",
+    "jsr:@std/crypto@*": "1.1.0",
     "jsr:@std/encoding@1": "1.0.10",
     "jsr:@std/fmt@1": "1.0.10",
-    "jsr:@std/fs@*": "1.0.23",
     "jsr:@std/fs@1": "1.0.23",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/path@*": "1.1.4",
@@ -32,7 +32,7 @@
       "dependencies": [
         "jsr:@std/encoding",
         "jsr:@std/fmt",
-        "jsr:@std/fs@1",
+        "jsr:@std/fs",
         "jsr:@std/path@1"
       ]
     },
@@ -44,6 +44,9 @@
       "dependencies": [
         "jsr:@std/internal"
       ]
+    },
+    "@std/crypto@1.1.0": {
+      "integrity": "b8d6d0a6377a32b213af2661ed7bf1062d94feac0c57def5526a8e74a95c3ec8"
     },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"

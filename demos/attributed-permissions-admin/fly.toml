@@ -1,0 +1,27 @@
+# fly.toml — Attributed Permissions Admin demo
+# Deploy with: fly launch (first time) or fly deploy (subsequent)
+
+app = "grace-commons-alloy"
+primary_region = "sjc"
+
+[build]
+
+[env]
+  PORT = "8000"
+  DB_PATH = "/data/apa-demo.sqlite"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[mounts]]
+  source = "apa_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

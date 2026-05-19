@@ -1,0 +1,33 @@
+# flyctl launch added from .gitignore
+# Editor / OS
+**/.DS_Store
+**/.vscode/.server-controller-port.log
+
+# Private planning docs (NLnet proposal, project roadmap, TLA+ POC, grant context).
+# Lives locally in grace-commons/grants/ for convenience; not committed.
+**/grants
+
+# Demos — committed source, but exclude build artifacts and runtime data.
+**/demos/*/node_modules
+**/demos/*/.deno
+**/demos/*/data
+**/demos/*/public/styles.css
+
+# flyctl launch added from demos/attributed-permissions-admin/.gitignore
+# Build artifacts and runtime data (also matched by parent .gitignore, but
+# duplicated here so the demo is self-contained if extracted later).
+demos/attributed-permissions-admin/**/node_modules
+demos/attributed-permissions-admin/**/.deno
+demos/attributed-permissions-admin/**/data
+demos/attributed-permissions-admin/**/public/styles.css
+demos/attributed-permissions-admin/**/.DS_Store
+
+# flyctl launch added from demos/multi-party-approval/.gitignore
+# Build artifacts and runtime data (also matched by parent .gitignore, but
+# duplicated here so the demo is self-contained if extracted later).
+demos/multi-party-approval/**/node_modules
+demos/multi-party-approval/**/.deno
+demos/multi-party-approval/**/data
+demos/multi-party-approval/**/public/styles.css
+demos/multi-party-approval/**/.DS_Store
+fly.toml

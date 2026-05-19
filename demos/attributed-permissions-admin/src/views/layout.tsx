@@ -31,7 +31,7 @@ export const Layout: FC<LayoutProps> = ({
               APA Demo
             </a>
             <a href="/" class="text-sm text-ink-gray-600 hover:text-ink-gray-900">
-              Grants
+              Permission Grants
             </a>
             <a href="/orphans" class="text-sm text-ink-gray-600 hover:text-ink-gray-900">
               Orphan log
