@@ -27,3 +27,6 @@ markdown: kramdown
 
 exclude:
   - CLAUDE.md
+  - demos/
+  - grants/
+  - node_modules/
