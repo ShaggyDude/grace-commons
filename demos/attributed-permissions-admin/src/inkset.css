@@ -505,12 +505,6 @@
     @apply border border-ink-sage-500/40;
   }
 
-  section,
-  article {
-    background: oklch(from var(--ink-gray-0) l c h / .6);
-    box-shadow: 0 0 8rem 4rem oklch(from var(--ink-gray-0) l c h / .8);
-    border-radius: 3rem;
-  }
 
   .linkamation {
     @apply relative inline-block;

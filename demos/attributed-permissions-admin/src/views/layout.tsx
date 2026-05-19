@@ -5,15 +5,20 @@ type LayoutProps = {
   title?: string;
   currentActor?: Actor | null;
   actors?: Actor[];
+  path?: string;
   children?: unknown;
 };
 
 export const Layout: FC<LayoutProps> = ({
-  title = "APA Demo",
+  title = "Alloy Demo",
   currentActor,
   actors = [],
+  path = "",
   children,
 }) => {
+  const isGrants = path === "/" || path.startsWith("/grants");
+  const isOrphans = path === "/orphans";
+  const isVerify = path === "/verify";
   return (
     <html lang="en">
       <head>
@@ -25,24 +30,40 @@ export const Layout: FC<LayoutProps> = ({
         <script>htmx.config.useTemplateFragments = true;</script>
       </head>
       <body class="inks-gray-0 min-h-screen">
-        <header class="raised sticky top-0 z-10 px-10 py-5 flex items-center justify-between">
+        <header class="raised sticky top-0 z-10 p-12 flex items-center justify-between">
+          <a href="/" class="linkamation">
+            Alloy Demo
+          </a>
           <nav class="flex items-center gap-6">
-            <a href="/" class="font-semibold text-ink-gray-800 hover:text-ink-gray-600">
-              APA Demo
-            </a>
-            <a href="/" class="text-sm text-ink-gray-600 hover:text-ink-gray-900">
+            <a
+              href="/"
+              aria-current={isGrants ? "page" : undefined}
+              class="linkamation text-sm text-ink-gray-600"
+            >
               Permission Grants
             </a>
-            <a href="/orphans" class="text-sm text-ink-gray-600 hover:text-ink-gray-900">
+            <a
+              href="/orphans"
+              aria-current={isOrphans ? "page" : undefined}
+              class="linkamation text-sm text-ink-gray-600"
+            >
               Orphan log
             </a>
-            <a href="/verify" class="text-sm text-ink-gray-600 hover:text-ink-gray-900">
+            <a
+              href="/verify"
+              aria-current={isVerify ? "page" : undefined}
+              class="linkamation text-sm text-ink-gray-600"
+            >
               Verify Invariants
             </a>
           </nav>
 
           {actors.length > 0 && (
-            <form method="post" action="/act-as" class="flex items-center gap-2 text-sm">
+            <form
+              method="post"
+              action="/act-as"
+              class="flex items-center gap-2 text-sm"
+            >
               <span class="text-ink-gray-500">Acting as:</span>
               <select
                 name="actor_ref"
@@ -68,9 +89,7 @@ export const Layout: FC<LayoutProps> = ({
           )}
         </header>
 
-        <main class="max-w-5xl mx-auto px-6 py-8">
-          {children}
-        </main>
+        <main class="max-w-5xl mx-auto px-6 py-8">{children}</main>
       </body>
     </html>
   );

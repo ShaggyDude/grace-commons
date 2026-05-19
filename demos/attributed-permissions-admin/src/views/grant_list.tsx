@@ -14,7 +14,7 @@ export const GrantList: FC<Props> = ({ grants, currentActor, actors }) => {
   const revoked = grants.filter((g) => g.status === "revoked");
 
   return (
-    <Layout title="Grants — APA Demo" currentActor={currentActor} actors={actors}>
+    <Layout title="Grants — APA Demo" currentActor={currentActor} actors={actors} path="/">
       <div class="flex items-center justify-between mb-6">
         <h1 class="text-xl font-semibold text-ink-gray-900">Permission Grants</h1>
         <a

@@ -10,7 +10,7 @@ type Props = {
 };
 
 export const OrphanLog: FC<Props> = ({ orphans, currentActor, actors }) => (
-  <Layout title="Orphan log — APA Demo" currentActor={currentActor} actors={actors}>
+  <Layout title="Orphan log — APA Demo" currentActor={currentActor} actors={actors} path="/orphans">
     <h1 class="text-xl font-semibold text-ink-gray-900 mb-2">Orphan log</h1>
     <p class="text-sm text-ink-gray-500 mb-6">
       Attestations that were recorded in the Actor Identity atom but whose corresponding

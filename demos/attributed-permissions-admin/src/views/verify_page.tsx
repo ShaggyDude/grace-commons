@@ -24,7 +24,7 @@ type Props = {
 };
 
 export const VerifyPage: FC<Props> = ({ data, currentActor, actors }) => (
-  <Layout title="Verify — APA Demo" currentActor={currentActor} actors={actors}>
+  <Layout title="Verify — APA Demo" currentActor={currentActor} actors={actors} path="/verify">
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-xl">Invariant verification</h1>
       <span
@@ -56,7 +56,7 @@ export const VerifyPage: FC<Props> = ({ data, currentActor, actors }) => (
       {data.checks.map((c) => (
         <b
           key={c.name}
-          class={`rounded p-6${
+          class={`rounded p-6 ${
             c.ok ? " inks-sage-100 space-y-2" : "border-red-200 bg-red-50"
           }`}
         >
@@ -76,16 +76,26 @@ export const VerifyPage: FC<Props> = ({ data, currentActor, actors }) => (
       </h2>
       <p class="text-sm text-ink-gray-600">
         The formal model at{" "}
-        <code class="font-mono text-xs bg-ink-gray-100 px-1 rounded">
+        <a
+          href="https://github.com/scottromack/grace-commons/blob/main/demos/attributed-permissions-admin/alloy/attributed-permissions-admin.als"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="linkamation font-mono text-xs bg-ink-gray-100 px-1 rounded"
+        >
           alloy/attributed-permissions-admin.als
-        </code>{" "}
+        </a>{" "}
         contains 4 static structural checks and 6 dynamic LTL checks. Run with
         the Alloy Analyzer (v6) to reproduce the model-level verification. The
         three checks that intentionally produce counterexamples before Invariant
         7 is added as a fact are documented in{" "}
-        <code class="font-mono text-xs bg-ink-gray-100 px-1 rounded">
+        <a
+          href="https://github.com/scottromack/grace-commons/blob/main/demos/attributed-permissions-admin/CORNERS.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="linkamation font-mono text-xs bg-ink-gray-100 px-1 rounded"
+        >
           CORNERS.md
-        </code>
+        </a>
         .
       </p>
     </div>

@@ -9,7 +9,7 @@ type Props = {
 };
 
 export const NewGrant: FC<Props> = ({ currentActor, actors, error }) => (
-  <Layout title="Issue grant — APA Demo" currentActor={currentActor} actors={actors}>
+  <Layout title="Issue grant — APA Demo" currentActor={currentActor} actors={actors} path="/grants/new">
     <a href="/" class="text-sm underline text-ink-gray-500 mb-6 inline-block">← Grants</a>
     <h1 class="text-xl font-semibold text-ink-gray-900 mb-6">Issue a grant</h1>
 

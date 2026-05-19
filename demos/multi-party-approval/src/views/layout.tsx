@@ -49,7 +49,7 @@ export const Layout: FC<LayoutProps> = ({
               <select
                 name="actor_ref"
                 onchange="this.form.submit()"
-                class="border rounded px-2 py-1 text-sm bg-ink-gray-0 focus:outline-none focus:ring-1 focus:ring-ink-gray-400"
+                class="border rounded p-2 text-sm bg-ink-gray-0 focus:outline-none focus:ring-1 focus:ring-ink-gray-400"
               >
                 {actors
                   .filter((a) => a.kind === "human")

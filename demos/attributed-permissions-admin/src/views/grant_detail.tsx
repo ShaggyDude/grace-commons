@@ -12,7 +12,7 @@ type Props = {
 export const GrantDetail: FC<Props> = ({ result, currentActor, actors }) => {
   if (!result.ok) {
     return (
-      <Layout title="Grant not found — APA Demo" currentActor={currentActor} actors={actors}>
+      <Layout title="Grant not found — APA Demo" currentActor={currentActor} actors={actors} path="/grants">
         <p class="text-ink-gray-500">Grant {result.grant_id}: {result.reason}</p>
         <a href="/" class="text-sm underline text-ink-gray-500 mt-4 inline-block">← Grants</a>
       </Layout>
@@ -22,7 +22,7 @@ export const GrantDetail: FC<Props> = ({ result, currentActor, actors }) => {
   const { grant, issuance_attestation, issuance_verify_result, revocation_attestation, revocation_verify_result } = result;
 
   return (
-    <Layout title={`Grant ${grant.grant_id} — APA Demo`} currentActor={currentActor} actors={actors}>
+    <Layout title={`Grant ${grant.grant_id} — APA Demo`} currentActor={currentActor} actors={actors} path="/grants">
       <a href="/" class="text-sm underline text-ink-gray-500 mb-6 inline-block">← Grants</a>
 
       <h1 class="text-xl font-semibold text-ink-gray-900 mb-6">Grant detail</h1>
