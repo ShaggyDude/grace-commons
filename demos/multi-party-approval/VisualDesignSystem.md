@@ -1,5 +1,5 @@
 
-# **Complete Cognatix Typography + Spacing System**
+# **Typography + Spacing System**
 
 **Pure Tailwind defaults**
 
