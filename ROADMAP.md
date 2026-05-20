@@ -25,7 +25,7 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ## Current state — 2026-05-18
 
-Twenty atoms and eight compositions are `grounded`. Nothing is in-progress. The next move is one of the three remaining unblocked atoms (#7, #9, #10 below) or one of the unblocked compositions (any of C2, C3, C6, C7, C8, C9 — see compositions section).
+Twenty atoms and eight compositions are `grounded`. Nothing is in-progress. The next move is one of the seven remaining planned atoms (#7, #9, #10, #11–#14 below) or one of the six unblocked compositions (C2, C3, C6, C7, C8, C9 — see compositions section).
 
 **Atoms grounded:**
 
@@ -45,7 +45,7 @@ The healthcare atoms (Clinical Observation, Medication Order) are outside the co
 
 ## Remaining atoms — in draft order
 
-Three atoms remain on the planned-sequence list. They are sequenced by how many downstream compositions they unblock.
+Seven atoms remain on the planned-sequence list. They are sequenced by how many downstream compositions they unblock.
 
 ---
 
@@ -103,6 +103,78 @@ Three atoms remain on the planned-sequence list. They are sequenced by how many 
 
 ---
 
+### 11. Credential
+
+**Category:** `atoms/compliance/` *(provisional; candidate for a future `atoms/security/` or `atoms/identity/` category if the taxonomy refactor executes — see Open taxonomy question)*
+
+**Status:** Not started.
+
+**What it is.** An authentication primitive: a durable binding between a principal and a secret or token that the principal presents to prove they are who they claim to be. Credential models the registration of that binding, the verification of presented material against it, the rotation of the binding to a new secret while retiring the prior one, and the revocation of the binding entirely. Each credential record is tied to exactly one principal at registration and that binding is immutable; rotation produces a *new* credential record bound to the same principal, never a mutation of the prior one. The prior record transitions to the terminal state `Rotated`, preserving the full rotation history in the record store. Actions: `register`, `verify`, `rotate`, `revoke`.
+
+**Why it's next.** Credential retires the `Authentication *(forthcoming)*` debt in [`atoms/compliance/actor-identity.md`](./atoms/compliance/actor-identity.md) — Actor Identity verifies *who* an actor is; Credential is the mechanism by which that verification is operationalized as a bound secret the actor can present. The two atoms are distinct: Actor Identity is a persistent identity record; Credential is the authentication surface the identity record can bind. Of the four new atoms, Credential and Session are the highest-leverage pair: Credential strictly blocks C13 (Login), which wires Credential verification to Session issuance. It additionally enriches C16 (External Onboarding), where a credential is registered at the moment an invited party's identity is accepted.
+
+**Key invariants (anticipated).** `verify` returns `verified` only for the principal bound at registration — sole-holder verification is absolute. Once a credential transitions to `Revoked`, no future `verify` call returns `verified` — revocation is absorbing. Rotation never mutates the prior credential record; it produces a new record and transitions the prior record to `Rotated`. State machine: Active → Rotated | Revoked | Expired (three terminal states). The full rotation and revocation history is auditable from the record store alone.
+
+**Standards anchored.** NIST SP 800-63B (authenticator assurance levels — IAL/AAL tiers); OpenID Connect Core 1.0 (credential material exchange); RFC 7519 (JWT — credential token encoding); FIDO2/WebAuthn (phishing-resistant authenticator binding); PCI DSS Requirement 8 (credential management controls); ISO/IEC 27001 §A.9.4 (system and application access controls). Explicitly not citing NIST 800-63A — identity proofing belongs upstream to Party Identity.
+
+**Unlocks.** Strictly blocks C13 (Login — Credential + Session + Actor Identity). Additionally enriches C16 (External Onboarding — the credential registration step in the onboarding arc).
+
+---
+
+### 12. Session
+
+**Category:** `atoms/compliance/` *(provisional; candidate for `atoms/security/` or `atoms/identity/` if the taxonomy refactor executes)*
+
+**Status:** Not started.
+
+**What it is.** A time-limited authenticated channel primitive: a record attesting that a given principal was authenticated at a specific moment and that the authentication remains valid until the session expires or is explicitly revoked. Session does not perform authentication — that is Credential's surface. Session records the *result* of a successful authentication and makes it queryable by composing systems for the duration of its validity. Each session carries an `expires_at` timestamp set at issuance and never mutated; extension of a session produces a new session record, not a modification of the prior one. Actions: `issue`, `validate`, `expire`, `revoke`. State machine: Active → Expired | Revoked (two terminal states).
+
+**Why it's next.** Session is the time-bounding surface that Credential verification produces: a successful `verify` produces a short-lived authenticated channel; that channel is a Session. Without Session, Credential verification has no durable expression that composing systems can query — Login (C13) needs both. Session additionally unblocks Session-Gated Authorization (C14), which gates every permission check on session validity before the permission check runs.
+
+**Key invariants (anticipated).** A session is valid if and only if it has been issued, `now < expires_at`, and it has not been revoked — the validity bound is conjunctive. `validate(token)` returns `valid | invalid(expired | revoked | not-known)` — three first-class invalid outcomes, mirroring Actor Identity's `verify` discipline, never collapsed to a single `invalid`. Revocation is absorbing: a revoked session cannot be re-validated. `expires_at` is set at issue time and never mutated; a session that needs a longer lifetime is re-issued, not extended in place.
+
+**Standards anchored.** NIST SP 800-63B §7 (session management and reauthentication requirements); OWASP ASVS V3 (session management verification standard); RFC 6265 (HTTP state management — cookie-based session binding); SAML 2.0 §4.1.4 (session establishment and termination); RFC 6819 (OAuth 2.0 threat model, session-related threat mitigations); OIDC Session Management 1.0 (session lifecycle and logout across identity providers).
+
+**Unlocks.** Strictly blocks C13 (Login — Credential + Session + Actor Identity) and C14 (Session-Gated Authorization — Session + Permissions).
+
+---
+
+### 13. Capability
+
+**Category:** `atoms/compliance/` *(provisional; the object-capability literature anchors this as a security primitive — candidate for `atoms/security/` if the taxonomy refactor executes)*
+
+**Status:** Not started.
+
+**What it is.** A bearer-token authorization primitive: an unforgeable token that carries its own authorization to access a specific resource or perform a specific action. The defining property of a Capability is that possession of the token is sufficient authorization — the redeemer's identity is intentionally irrelevant at redemption time. Capability generalizes single-use links (a password-reset link), multi-use API tokens (a service credential scoped to a single resource), and pre-authorized action tokens under one structural pattern. Each capability carries a `remaining_redemptions` counter set at allocation (default 1) and decremented monotonically on each redemption; a capability with `remaining_redemptions = 0` is exhausted and terminal. Actions: `allocate`, `redeem`. State machine: Allocated → Redeemed | Expired | Revoked (three terminal states, with exhaustion via counter being the structural route to Redeemed).
+
+**Why it's next.** Capability is the library's forcing function for making the OCAP-vs-Permissions distinction explicit. Permissions is identity-keyed: a permission check gates on *who* is asking. Capability is bearer-keyed: the token gates on *what is being presented*, with no identity check at redemption time. The two atoms compose into structurally distinct patterns with different audit signatures. Without a Capability atom, a composing system is forced to model bearer-token semantics inside Permissions or an ad-hoc construct, hiding the architectural distinction the library exists to make visible. Capability strictly blocks C15 (Capability-Backed Sharing), the library's worked example of bearer-token semantics composing with regulated audit.
+
+**Key invariants (anticipated).** Redemption requires only possession of the token — no identity check at redemption time; the redeemer's identity is structurally irrelevant and intentionally so. The allocator's identity is recorded at allocation time and attestable via Actor Identity, producing an asymmetric audit record: allocator is known, redeemer is not. `remaining_redemptions` is set at allocation and decremented monotonically; it never increases. Exhaustion (counter at 0), expiry, and revocation are three structurally distinct terminal modes and are never conflated in the record or in validation logic.
+
+**Standards anchored.** Daniel Jackson, *Software Abstractions* — `Capability [Resource]` concept (the atom's structural core); Mark Miller and the object-capability (OCAP) literature (bearer-key authorization semantics); Levy (1984), *Capability-Based Computer Systems* (canonical reference for bearer-token capability semantics); Birgisson et al. (2014), *Macaroons* (context-limited bearer credentials — a constrained Capability variant); RFC 6749 §1.4 (OAuth 2.0 access tokens — cited with explicit caveats about OAuth's identity-bound conflations diverging from pure OCAP; this atom defines the pure OCAP surface, not the OAuth surface).
+
+**Unlocks.** Strictly blocks C15 (Capability-Backed Sharing — Capability + Selective Disclosure + Audit Trail substrate). The atom's primary value on EOS Pass 2 is forcing the OCAP-vs-Permissions distinction to be made explicit in the library.
+
+---
+
+### 14. Invitation
+
+**Category:** `atoms/compliance/` *(provisional; plausible future `atoms/identity/` candidate given that its core concern is onboarding an external entity into a system identity context, not compliance infrastructure per se)*
+
+**Status:** Not started.
+
+**What it is.** A lifecycle primitive for inviting an external entity to join a context: a durable record of the invitation event itself, from the moment the invitation is issued through its resolution — accepted, declined, expired, or revoked before resolution. The defining property of Invitation is that the invitee's identity may not be known or validatable at initiation time; the moment of acceptance is when an identity is bound. Actions: `initiate`, `accept`, `decline`, `revoke`, `expire`. State machine: Pending → Accepted | Declined | Expired | Revoked (four terminal states). `accept` carries an `accepting_identity_ref` argument — the identity is bound at the moment of acceptance and is immutable thereafter.
+
+**Why it's next.** Invitation is the library's mechanism for onboarding an unknown external entity into a system identity context. Party Identity (atom #6, grounded) models a persistent verifiable identity; Invitation is the gate through which an external party first enters the identity surface. Without Invitation, the library has no structured account of how an external party comes to exist in the system at all — C16 (External Onboarding) cannot be specified without it. Invitation also completes the Capability-vs-Invitation design question (see Open taxonomy question): both atoms use bearer-token transport; the distinction is that Invitation carries `Declined` as a first-class semantic outcome (a human decision, not a system event) and binds an identity at resolution — two properties Capability does not have.
+
+**Key invariants (anticipated).** Exactly one transition out of `Pending` — once an invitation has been accepted, declined, expired, or revoked, any subsequent action attempt returns `already-resolved(state)`. The `invitee_ref` at initiation may not resolve to a known system identity; it is not validated at initiate time and is not required to match the `accepting_identity_ref` at accept time — opaque invitee at initiation is structurally intentional. The identity bound at acceptance (`accepting_identity_ref`) is immutable once set; it cannot be rebound or updated after the accept transition.
+
+**Standards anchored.** GDPR Article 32 (security of processing — invitation tokens are credentials in transit and must be treated accordingly); HIPAA §164.312 (access control requirements — invitation-based provisioning is a covered access-granting mechanism); SCIM 2.0 (System for Cross-domain Identity Management — invitation-style user provisioning is adjacent to SCIM's `POST /Users` with an invite flow). Standards anchoring is lighter for Invitation than for Credential, Session, or Capability; the atom earns its keep on EOS Pass 2 conceptual independence rather than regulatory depth.
+
+**Unlocks.** Strictly blocks C16 (External Onboarding — Invitation + Party Identity + Credential + Audit Trail substrate).
+
+---
+
 ## Grounded atoms — short status (formerly atoms #1–#6, #8)
 
 The seven atoms below were on the planned sequence and have shipped. Detailed authoring notes are in the atom files themselves; the entries below are retained as roadmap-history.
@@ -119,7 +191,7 @@ The seven atoms below were on the planned sequence and have shipped. Detailed au
 
 ## Compositions — current state
 
-Compositions are sequenced by readiness. Of the twelve C-numbered compositions, three are grounded (C1, C4, C5); six are unblocked and not started (C2, C3, C6, C7, C8, C9); three are blocked on remaining atoms (C10 on Workflow / State Machine, C11 on Preference / Personalization, C12 on Provenance). Provenance also enriches three other compositions (C6, C7, C8) as an optional composing atom for chain-of-custody guarantees — those compositions remain unblocked without it, but gain emergent invariants when composed with it once it lands.
+Compositions are sequenced by readiness. Of the sixteen C-numbered compositions, three are grounded (C1, C4, C5); six are unblocked and not started (C2, C3, C6, C7, C8, C9); seven are blocked on remaining atoms (C10 on Workflow / State Machine, C11 on Preference / Personalization, C12 on Provenance, C13 on Credential and Session, C14 on Session, C15 on Capability, C16 on Invitation and Credential). Provenance also enriches three other compositions (C6, C7, C8) as an optional composing atom for chain-of-custody guarantees — those compositions remain unblocked without it, but gain emergent invariants when composed with it once it lands.
 
 ---
 
@@ -221,6 +293,38 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 **Standards anchored.** CAN-SPAM, TCPA, GDPR Article 7(3).
 
+#### C13. Login
+
+**Prerequisites:** Credential *(atom #11 — not started)* + Session *(atom #12 — not started)* + Actor Identity (grounded).
+
+**What it adds.** Credential verification wired to Session issuance, both attested under the verified principal. Login is the composition where a successful `verify` produces a record that persists the authentication result — the Session — rather than returning it as a transient signal. Emergent invariant: a Session is valid only if the Credential it was derived from remains Active; revocation of a Credential invalidates every Session derived from it — the cascade rule. The cascade lives in Login's emergent state (a derivation map from credential to issued sessions), not in either constituent atom, because neither atom alone knows the other exists. A composing system that revokes a Credential without cascading to sessions has produced a record set that violates the cascade invariant but not any invariant of either constituent atom alone — the gap is exactly the composition layer's job to close.
+
+**Standards anchored.** NIST SP 800-63B (authenticator verification producing a bound session); OIDC Core 1.0 (the authorization-code login flow producing an ID token and session); SAML 2.0 (SSO authentication producing a session assertion).
+
+#### C14. Session-Gated Authorization
+
+**Prerequisites:** Session *(atom #12 — not started)* + Permissions (grounded).
+
+**What it adds.** Every permission check gated on session validity — expired or revoked sessions reject all permission queries before the Permissions check runs. The gate is a pre-check at the composition boundary, not inside either constituent atom. Emergent invariant: no permission is exercised under a stale session. The load-bearing wiring decision: permission grants are checked against *current* session validity, not validity at the time the permission was originally granted — a session that has since expired or been revoked blocks the check even if the Permissions record still shows the grant. Without this composition, a composing system may propagate stale-session permission checks silently; Session-Gated Authorization makes the gate an explicit, recordable event.
+
+**Standards anchored.** NIST SP 800-63B §7 (session reauthentication requirements before elevated actions); OWASP ASVS V4 (access control verification — session state must be checked before each access decision).
+
+#### C15. Capability-Backed Sharing
+
+**Prerequisites:** Capability *(atom #13 — not started)* + Selective Disclosure (grounded) + Audit Trail substrate (grounded).
+
+**What it adds.** A capability token allocated to authorize disclosure of a record subset; redemption triggers the disclosure and the audit record in one wired step. The emergent invariant is the audit-subject asymmetry: the audit record reads "disclosed by bearer of capability X, allocated by actor Y at time T" — the allocator is identified (via the Capability atom's allocation provenance invariant), the redeemer is structurally not. This is the library's worked example of bearer-token semantics composing with regulated audit without breaking either: Selective Disclosure's invariants are satisfied (a disclosure record exists); Capability's bearer-key semantics are satisfied (no identity check at redemption); the Audit Trail records what was disclosed, by whom it was authorized, and that a bearer redeemed it. The load-bearing wiring decision: the audit-subject asymmetry is defended in-line in the composition because it is a property of the wiring, not of either constituent.
+
+**Standards anchored.** GDPR Article 32 (security of sharing — capability tokens as access-control mechanism for regulated disclosures); HIPAA §164.514 (minimum necessary standard — a Capability can carry a scope constraint limiting what subset is accessible); OCAP literature (bearer-key authorization semantics, as anchored in Capability atom #13).
+
+#### C16. External Onboarding
+
+**Prerequisites:** Invitation *(atom #14 — not started)* + Credential *(atom #11 — not started)* + Party Identity (grounded) + Audit Trail substrate (grounded).
+
+**What it adds.** The full arc of onboarding an external entity: invitation issued, accepted (binding an identity), Party Identity created in Unverified state, credential registered, all steps attested in the Audit Trail. Emergent invariant: a Party Identity reaches Verified only via an audit trail tracing back to a specific Invitation's Accepted transition; no Party Identity exists in the system without a named inviter in the audit record. The load-bearing wiring decision: identity binding happens at `accept`, not at `initiate`, which forces the composition to handle concurrent acceptance attempts via Invitation's single-resolution invariant — only one `accept` succeeds, producing exactly one bound identity; a second concurrent attempt returns `already-resolved(Accepted)`. The KYC overlap with C8 is addressed explicitly: KYC (C8) is about verifying an external party's identity against authoritative sources after they are in the system; External Onboarding (C16) is about binding an invited stranger to a system identity for the first time. KYC may follow External Onboarding; the two are structurally adjacent but distinct compositions with different emergent invariants.
+
+**Standards anchored.** GDPR Articles 6 and 7 (lawful basis for processing at the moment of invitation and acceptance — the Invitation record is the processing record); HIPAA §164.312 (access control — invitation-based provisioning as a covered access-granting event); KYC overlap with C8 addressed explicitly above.
+
 ---
 
 ## Summary table
@@ -243,6 +347,10 @@ These compositions have all their constituent atoms grounded. They are ready for
 | 8 | Capacity Constraint Enforcement | Atom | `grounded` 2026-05-15 | C9 |
 | 9 | Workflow / State Machine | Atom | Not started | C10; resolves workflow-category question |
 | 10 | Preference / Personalization | Atom | Not started | C11 |
+| 11 | Credential | Atom | Not started | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
+| 12 | Session | Atom | Not started | C13 (Login), C14 (Session-Gated Authorization) |
+| 13 | Capability | Atom | Not started | C15 (Capability-Backed Sharing) |
+| 14 | Invitation | Atom | Not started | C16 (External Onboarding) |
 | — | Undo History | Composition | `grounded` 2026-05-13 | Personal Todo + Event Log |
 | — | Idempotent Reservation | Composition | `grounded` 2026-05-13 | Provisional Commitment + Duplicate Prevention |
 | — | Audit Trail | Composition | `grounded` 2026-05-13 | Event Log + Actor Identity + Retention Window + Tamper Evidence |
@@ -260,6 +368,10 @@ These compositions have all their constituent atoms grounded. They are ready for
 | C10 | Stateful Workflow Execution | Composition | Blocked on atom #9 | Workflow / State Machine + Approval Step |
 | C12 | Chain of Custody | Composition | Blocked on atom #7 | Provenance + Actor Identity + Tamper Evidence + Retention Window + Audit Trail — cross-domain reference case (pharma + legal evidence = same atoms) |
 | C11 | Preference-Aware Notification Fanout | Composition | Blocked on atom #10 | Preference / Personalization |
+| C13 | Login | Composition | Blocked on atoms #11, #12 | Credential + Session + Actor Identity; cascade invariant: Credential revocation invalidates all derived Sessions |
+| C14 | Session-Gated Authorization | Composition | Blocked on atom #12 | Session + Permissions; session validity checked before every permission query |
+| C15 | Capability-Backed Sharing | Composition | Blocked on atom #13 | Capability + Selective Disclosure + Audit Trail; library's worked example of bearer-token semantics composing with regulated audit |
+| C16 | External Onboarding | Composition | Blocked on atoms #11, #14 | Invitation + Credential + Party Identity + Audit Trail; identity binding at accept, not initiate |
 
 ---
 
@@ -275,6 +387,8 @@ These are methodology-level items the library has accumulated and not yet resolv
 
 **4. Author-fatigue / round-count signal.** Capacity Constraint Enforcement required two Phase 4 rounds (11 + 9 findings closed across both) before clearing under the new threshold. The library's prior gate-clearing pattern (Party Identity) cleared in one round (6 findings). The two-round count for CCE is correlated with the atom's surface area — 14 invariants, four host obligations, two state machines, regulated overlay, eight composing patterns. The empirical pattern: more surface = more rounds, with diminishing structural-finding density per round. The threshold is what makes the loop terminate cleanly. No action required, but a useful data point for future rich-surface atoms (Workflow / State Machine and Provenance are likely candidates).
 
+**5. Compliance-folder sustainability under the #11–#14 cluster.** Atoms #11–#14 (Credential, Session, Capability, Invitation) are all provisionally placed in `atoms/compliance/`, but none is pure compliance infrastructure in the way Actor Identity, Retention Window, and Tamper Evidence are — atoms whose primary use case is regulatory compliance and which have no meaningful non-regulated application. Credential and Session are authentication and session-management primitives; Capability is an object-capability authorization primitive; Invitation is an onboarding lifecycle primitive. All four carry regulated surfaces (NIST 800-63B, PCI DSS, OWASP ASVS, GDPR), but that is because regulation touches authentication and access — not because the atoms are *of* compliance in the way the existing `compliance/` atoms are. If all four land in `atoms/compliance/` without the taxonomy refactor executing, the folder will contain twelve atoms, of which at most half are pure compliance infrastructure and the rest are regulated atoms from other conceptual domains. That is the forcing function the open taxonomy question has been waiting for: at that point, the correct response is a discrete refactor pass moving Credential, Session, Capability, and Invitation to `atoms/security/` or `atoms/identity/` as appropriate, with `regulated: true` carried as a frontmatter attribute rather than folder placement as the regulatory signal. The refactor should be executed as a single pass updating every reference across the library; it should not be done incrementally as atoms land.
+
 ---
 
 ## Open taxonomy question
@@ -282,6 +396,8 @@ These are methodology-level items the library has accumulated and not yet resolv
 The `workflow/` category currently holds one atom (Approval Step). The category will be on firmer footing once Workflow / State Machine (atom #9) lands as the second workflow-category atom; until then, the one-atom-category concern noted in [`CLAUDE.md`](./CLAUDE.md) remains open.
 
 The broader axial-split question across all categories (`productivity`, `temporal`, `resource-lifecycle`, `compliance`, `messaging`, `workflow`, `healthcare`) also remains open. The current categories mix conceptual axes — `healthcare` is domain-scoped while the others are concept-scoped; `compliance` mixes pure-compliance-infrastructure atoms with atoms-that-happen-to-be-regulated. The right axial split (potentially: domain as a frontmatter attribute rather than a folder; regulation as a `regulated: true` flag rather than a folder placement) will be forced by content as the catalog grows past the size where preemptive cuts are reasonable. Restructuring earlier would relocate the same confusion under different labels.
+
+**Capability-vs-Invitation bearer-token question.** Both Capability (atom #13) and Invitation (atom #14) use bearer-token transport: the holder of the token is authorized to take an action, with no identity check at the point of action. Both are time-bounded and both can be revoked. The argued distinction is that Capability is for *resource access* — the token authorizes access to a specific resource or action, and the redeemer's identity is permanently and intentionally irrelevant — while Invitation is for *identity onboarding* — the token authorizes a single entry event, and the resolution of that event binds an identity that is then permanently recorded. The structural difference is `Declined` as a first-class outcome: a Capability has no `declined` state because a bearer either redeems it or doesn't; an Invitation carries `Declined` as a named terminal state because a human's deliberate refusal is semantically distinct from non-use. The authoring discipline resolves this: draft Capability first (atom #13) and use it as the Pass 2 mirror when drafting Invitation. If Invitation cannot be specified as freestanding — if its specification must name Capability's structure to distinguish itself — the two collapse into one atom (bearer-token-with-lifecycle) and the distinction is carried as a mode or subtype rather than a separate atom.
 
 ---
 
