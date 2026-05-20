@@ -42,7 +42,7 @@ The second structural commitment is **session-gated exercise**: `exercise_access
 
 The third commitment is **single Audit Trail across all five stages**: approval chain events (from Multi-Party Approval), provisioning events (Capability allocation, attribution pairing), and access-exercise events are all recorded in the same Audit Trail instance, producing one tamper-evident chain from which the full arc is reconstructable. An auditor reading the Audit Trail can trace any access exercise backward to the Capability, to the provisioning event, to the Approved chain record, to the individual approver attestations, to the original request. There is no gap in the chain and no second store to correlate.
 
-The resulting arc has six states: `Pending` (request submitted, approval chain in progress), `Approved` (chain cleared, provisioning fired — transient), `Provisioned` (Capability token active), `Denied` (approval chain rejected), `Withdrawn` (request withdrawn before approval), `Revoked` (Capability revoked after provisioning). Expiry of the Capability is reflected in the Capability store rather than as a separate request state; a request in `Provisioned` state with an `Expired` Capability record is fully readable from the two stores together.
+The resulting arc has six states: `Pending` (request submitted, approval chain in progress), `Approved` (chain cleared, provisioning cascade firing — internal transient state, not externally stable; transitions to `Provisioned` or quarantined-failure atomically within the same action), `Provisioned` (Capability token active), `Denied` (approval chain rejected), `Withdrawn` (request withdrawn before approval), `Revoked` (Capability revoked after provisioning). Expiry of the Capability is reflected in the Capability store rather than as a separate request state; a request in `Provisioned` state with an `Expired` Capability record is fully readable from the two stores together.
 
 ---
 
@@ -93,13 +93,14 @@ The composition owns emergent state that wires the constituent atoms into one qu
 **`request_access(requestor_ref, resource_ref, access_scope, justification, approver_set, quorum_rule, ttl?, credential?) → request_id | rejected(invalid-request | permission-denied | credential-invalid | storage-failure)`**
 
 1. Validate: `requestor_ref`, `resource_ref`, `access_scope`, `justification` must be non-null and non-empty; `ttl` must be positive if supplied. Any violation: `invalid-request`.
-2. If `credential_check_on_request` is enabled: call `Credential.verify(credential, requestor_ref)` → if not `verified`, return `credential-invalid`.
-3. Allocate a fresh `request_id`. Record the request in `request_store` with `state = Pending`, `requested_at = now`, `expires_at = now + ttl` (or default).
-4. Call `MultiPartyApproval.initiate_chain(actor_ref=requestor_ref, subject_ref=request_id, scope=access_scope, approver_set, quorum_rule)` → `chain_id | rejected(...)`. On rejection, roll back the `request_store` write and surface `invalid-request` or `storage-failure` as appropriate.
-5. Record `request_to_chain[request_id] = chain_id`.
-6. Call `AuditTrail.record_action(action_ref=access_requested, actor_ref=requestor_ref, credential, data={request_id, resource_ref, access_scope, justification, approver_set, quorum_rule, expires_at}, retention_policy)`.
-7. If any write after step 3 fails, roll back and return `storage-failure`.
-8. Return `request_id`.
+2. Call `Permissions.permitted(requestor_ref, requests:initiate)` → if `denied`, return `permission-denied`.
+3. If `credential_check_on_request` is enabled: call `Credential.verify(credential, requestor_ref)` → if not `verified`, return `credential-invalid`.
+4. Allocate a fresh `request_id`. Record the request in `request_store` with `state = Pending`, `requested_at = now`, `expires_at = now + ttl` (or default).
+5. Call `MultiPartyApproval.initiate_chain(actor_ref=requestor_ref, subject_ref=request_id, scope=access_scope, approver_set, quorum_rule)` → `chain_id | rejected(...)`. On rejection, roll back the `request_store` write and surface `invalid-request` or `storage-failure` as appropriate.
+6. Record `request_to_chain[request_id] = chain_id`.
+7. Call `AuditTrail.record_action(action_ref=access_requested, actor_ref=requestor_ref, credential, data={request_id, resource_ref, access_scope, justification, approver_set, quorum_rule, expires_at}, retention_policy)`.
+8. If any write after step 4 fails, roll back and return `storage-failure`.
+9. Return `request_id`.
 
 **`approve_step(actor_ref, request_id, step_id, reason?, credential) → approved | rejected(invalid-request | not-known | not-pending | unauthorized | credential-invalid | recording-failure)`**
 
@@ -128,10 +129,11 @@ Mirrors `approve_step` steps 1–4 with `decision=rejected`. At step 5: if chain
 
 1. Call `Session.validate(session_token)` → `valid | invalid(expired | revoked | not-known)`. If not `valid`, return `rejected(session-invalid(reason))`. The session check is the first operation; a non-`valid` result returns immediately without touching the Capability.
 2. Look up `request_id` via inverse lookup on `request_to_capability`. If `capability_token` is not in the map, `not-known`.
-3. Call `Capability.redeem(capability_token)` → `redeemed | invalid(exhausted | expired | revoked | not-known)`. If not `redeemed`, return `rejected(capability-invalid(reason))`.
-4. Append to `session_access_log`: `{request_id, session_token, capability_token, exercised_at=now, result=redeemed}`.
-5. Call `AuditTrail.record_action(action_ref=access_exercised, actor_ref=application_actor_ref, data={request_id, capability_token, session_token, exercised_at})`.
-6. Return `exercised`.
+3. Call `Capability.redeem(capability_token)` → `redeemed | invalid(exhausted | expired | revoked | not-known)`.
+4. Append to `session_access_log` regardless of step 3's outcome: `{request_id, session_token, capability_token, exercised_at=now, result}` where `result` is `redeemed` on success or `capability-invalid(reason)` on failure. The log records every `exercise_access` call that reached the Capability step — including failed attempts — because a presented-but-exhausted, presented-but-expired, or presented-but-revoked token is itself an auditable event.
+5. If step 3 returned `invalid(reason)`, call `AuditTrail.record_action(action_ref=access_exercise_failed, actor_ref=application_actor_ref, data={request_id, capability_token, session_token, reason})` and return `rejected(capability-invalid(reason))`.
+6. Call `AuditTrail.record_action(action_ref=access_exercised, actor_ref=application_actor_ref, data={request_id, capability_token, session_token, exercised_at})`.
+7. Return `exercised`.
 
 Note: the Audit Trail entry records `session_token` but not the session's `principal_ref` — the composition does not look up the session's owner. The `session_token` is sufficient for an auditor who can cross-reference the Session store to recover the principal. This preserves the architecture's layering: the composition does not reach inside the Session atom to extract fields it was not given.
 
@@ -204,7 +206,7 @@ The composition defines these scopes for its Permissions instance:
 
 **Invariant 9 — Single Audit Trail instance.** The same Audit Trail instance receives events from Multi-Party Approval (approval chain events), from the provisioning cascade (`access_provisioned`), and from `exercise_access` and `revoke_access`. A deployment that routes these event classes to separate Audit Trail instances violates this invariant and fragments the arc — an auditor reading one instance will see an incomplete record.
 
-**Invariant 10 — Session-access-log durability.** Once written, entries in `session_access_log` are never modified or deleted. The log records every `exercise_access` call that reached the Capability step, regardless of outcome, and is the operational-audit surface for access-exercise frequency, session correlation, and capability exhaustion analysis.
+**Invariant 10 — Session-access-log durability.** Once written, entries in `session_access_log` are never modified or deleted. The log records every `exercise_access` call that reached the Capability step — including calls where `Capability.redeem` returned `invalid` — and is the operational-audit surface for access-exercise frequency, failed-presentation detection, session correlation, and capability exhaustion analysis. A log entry with `result = capability-invalid(revoked)` is evidence that someone presented a revoked token under a valid session; that signal is auditable from the log alone.
 
 ---
 
