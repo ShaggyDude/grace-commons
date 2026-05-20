@@ -69,10 +69,10 @@ Tokens are not reused after an invitation reaches a terminal state.
 **Actions:**
 
 - `initiate(inviter_ref, invitee_ref, context, ttl) → invitation_token | rejected(invalid-request | storage-failure)`
-- `accept(invitation_token, accepting_identity_ref) → accepted | rejected(invalid-request | already-resolved(state) | not-known)`
-- `decline(invitation_token) → declined | rejected(already-resolved(state) | not-known)`
-- `revoke(invitation_token, revoked_by_ref, reason) → revoked | rejected(invalid-request | already-resolved(state) | not-known)`
-- `expire(invitation_token) → expired | rejected(not-pending | not-known)`
+- `accept(invitation_token, accepting_identity_ref) → accepted | rejected(invalid-request | already-resolved(state) | not-known | storage-failure)`
+- `decline(invitation_token) → declined | rejected(already-resolved(state) | not-known | storage-failure)`
+- `revoke(invitation_token, revoked_by_ref, reason) → revoked | rejected(invalid-request | already-resolved(state) | not-known | storage-failure)`
+- `expire(invitation_token) → expired | rejected(invalid-request | not-pending | not-known | storage-failure)`
 
 **Inputs:**
 
@@ -154,28 +154,32 @@ Each invitation record carries:
 - Expiry check: if `status = Pending` and `now >= expires_at`, the atom treats the invitation as expired. It may lazily transition to `Expired` at this point and return `already-resolved(Expired)`.
 - `accepting_identity_ref` must be non-null and non-empty; otherwise `invalid-request`.
 - The transition to `Accepted` and the writes of `accepting_identity_ref` and `accepted_at` are atomic. Under concurrent `accept` calls, exactly one commits the transition; all others receive `already-resolved(Accepted)`.
+- If the store write fails, `storage-failure` is returned; the record remains `Pending`.
 - The atom does not validate that `accepting_identity_ref` matches `invitee_ref`. Whether the accepting identity was the intended invitee is the composing pattern's concern.
 
 **At `decline(invitation_token)`:**
 - The atom looks up the invitation by `invitation_token`. If no record, `not-known`.
-- If not `Pending`, `already-resolved(state)`. Expiry check applies as above.
-- The transition to `Declined` and the write of `declined_at` are atomic.
+- If not `Pending`, `already-resolved(state)`.
+- If `status = Pending` and `now >= expires_at`, the atom treats the invitation as expired. It may lazily transition to `Expired` at this point and return `already-resolved(Expired)`.
+- The transition to `Declined` and the write of `declined_at` are atomic. If the store write fails, `storage-failure`; the record remains `Pending`.
 - `decline` takes no identity argument: the declining actor's identity is not recorded. The deliberate refusal is recorded as a terminal state (`Declined`), not as an attribution record. Whether the declining actor is the intended invitee is not validated. Composing patterns that need to record who declined may do so in their own records.
 
 **At `revoke(invitation_token, revoked_by_ref, reason)`:**
 - The atom looks up the invitation by `invitation_token`. If no record, `not-known`.
 - If not `Pending`, `already-resolved(state)`.
+- A token whose `expires_at` has passed is treated as terminal: `revoke` returns `already-resolved(Expired)` and may lazily transition the record to `Expired`.
 - `revoked_by_ref` and `reason` must be non-null and non-empty; otherwise `invalid-request`.
-- The transition to `Revoked` and the writes of `revoked_at`, `revoked_by_ref`, and `revocation_reason` are atomic.
+- The transition to `Revoked` and the writes of `revoked_at`, `revoked_by_ref`, and `revocation_reason` are atomic. If the store write fails, `storage-failure`.
 
 **At `expire(invitation_token)`:**
 - The atom looks up the invitation by `invitation_token`. If no record, `not-known`.
 - If `status` is not `Pending`, `not-pending` — expiry is inapplicable to already-resolved invitations.
-- The transition to `Expired` and the write of `expired_at` are atomic.
+- If `now < expires_at`, the invitation has not yet reached its expiry window: `invalid-request`. Only an invitation whose `expires_at` has passed may be expired. A caller wishing to end a `Pending` invitation before its natural expiry should use `revoke`.
+- The transition to `Expired` and the write of `expired_at` are atomic. If the store write fails, `storage-failure`.
 
 ### Behavior
 
-- **Single-resolution is the atom's central invariant.** Every action that resolves an invitation — `accept`, `decline`, `revoke`, `expire` — checks the current status as its first operation. If the invitation is not `Pending`, the action returns `already-resolved(state)` without modifying any record. This check-and-commit must be atomic (see Invariant 2). An implementation that resolves the same invitation twice has violated the atom's core contract.
+- **Single-resolution is the atom's central invariant.** Every action that resolves an invitation — `accept`, `decline`, `revoke`, `expire` — checks the current status as its first operation. If the invitation is not `Pending`, the action returns `already-resolved(state)` without modifying any record. Lazy expiry extends this: if the invitation is `Pending` but `now >= expires_at`, the resolving action (`accept`, `decline`, or `revoke`) returns `already-resolved(Expired)` and may atomically write the `Expired` terminal transition as a housekeeping side-effect. This check-and-commit must be atomic (see Invariant 2). An implementation that resolves the same invitation twice has violated the atom's core contract.
 - **`accept` binds an identity; `decline` does not.** `accept` requires `accepting_identity_ref` and records it permanently. `decline` records only `declined_at`. This asymmetry is intentional: acceptance creates a system relationship (a new participant joined); declination closes the open invitation without creating a relationship. Whether to record who declined is a composing-pattern decision.
 - **Opaque invitee at initiation is a feature, not a gap.** The `invitee_ref` field is optional and the atom never validates it against the `accepting_identity_ref` at accept time. This accommodates the common real-world scenario where an invitation is sent to an email address that does not yet correspond to any system identity, and the identity is only created at acceptance time. The composing External Onboarding pattern (C16) decides what relationship between `invitee_ref` and `accepting_identity_ref` is required by the deployment.
 - **`Declined` is a named terminal state, not a fallback.** A declined invitation is not an expired invitation and is not a revoked invitation. It represents a deliberate act by a party who held the invitation token and chose to refuse. An implementation that maps `Declined` to `Expired` or to `Revoked` loses the structural distinction. The audit record should be able to distinguish "was never opened" (Expired), "was seen and refused" (Declined), and "was withdrawn by the inviter" (Revoked).
@@ -216,6 +220,8 @@ The invitation store is queryable. Per-record fields are observable to authorize
 **Invariant 9 — Every invitation has a finite lifetime.** `expires_at` is never null. Invitations that do not expire are not expressible; an implementation that initiates invitations without an `expires_at` violates this invariant.
 
 **Invariant 10 — Invitation durability.** Once `initiate` returns an `invitation_token`, the invitation record is durably persisted. A `storage-failure` rejection guarantees no partial record was written. The atom provides no deletion surface.
+
+**Invariant 11 — Token uniqueness.** No two invitation records share an `invitation_token` across the lifetime of the system. Tokens are not reused after an invitation reaches a terminal state. This guarantees lookup determinism: a token resolves to exactly one invitation record, and actions on that token are unambiguous.
 
 Invariants 2 and 3 together give the *onboarding integrity* property — the identity binding at acceptance is trustworthy because it is produced by exactly one atomic transition, never overwritten, and requires a non-null identity at call time. Invariant 4 (opaque invitee at initiation) is what makes Invitation usable before the invitee has a system identity. Invariant 5 (four distinct terminal states) is what makes the audit record informative: an external evaluator reading the invitation store can distinguish every possible resolution path.
 
@@ -347,7 +353,7 @@ A derived implementation of Invitation is *acceptable* — in the regulator-acce
 
 ## Status
 
-`draft` — first draft. All required structural elements present: identity model, action signatures with complete rejection and first-class outcome vocabulary, state machine (Pending → Accepted | Declined | Expired | Revoked), ten invariants, five examples (two happy path, one revocation path, two rejection paths), three regulated adversarial scenarios, five-check Generation acceptance. Awaiting three-pass pressure testing.
+`grounded on Final Critique 4` — three-pass pressure testing (Rounds 1–3, each with Pass 1 GRID structural / Pass 2 EOS conceptual independence / Pass 3 Linus adversarial) plus Final Critique (Round 4, Super Torvalds) complete. Four findings resolved across Round 1; one foundational finding resolved in Final Critique 4. Final Critique 4 closed clean.
 
 *Provisional placement note: this atom is filed in `atoms/compliance/` as the initial home for identity-onboarding lifecycle records. Invitation is not pure compliance infrastructure — it has meaningful non-regulated applications wherever invitation-based onboarding is used. A future taxonomy refactor may relocate it to `atoms/identity/`, carrying `regulated: true` as a frontmatter attribute for regulated deployments. See the Open taxonomy question in ROADMAP.md and Methodology debt #5.*
 
@@ -355,9 +361,47 @@ A derived implementation of Invitation is *acceptable* — in the regulator-acce
 
 ## Lineage notes
 
-First draft. No pressure-testing passes have run. Sections will be populated as passes complete.
-
 **Conventions inherited.** This atom is a regulated atom (provisional `atoms/compliance/` placement) and carries *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.
+
+---
+
+**Round 1 — Pass 1 (GRID structural).** Four findings.
+
+*F1 — `accept`, `decline`, and `revoke` missing `storage-failure`.* All three write to the store but their signatures and Decision points omitted `storage-failure`. Fixed: signatures updated to include `storage-failure`; Decision points for `accept`, `decline`, and `revoke` each gained a terminal clause — "If the store write fails, `storage-failure`; the record remains `Pending`."
+
+*F2 — `expire` missing `storage-failure`, `invalid-request`, and pre-expiry check.* `expire` wrote to the store (missing `storage-failure`) and had no guard against being called before `expires_at` has passed (missing `invalid-request`). Fixed: signature updated to `→ expired | rejected(invalid-request | not-pending | not-known | storage-failure)`; Decision points gained: "If `now < expires_at`, the invitation has not yet reached its expiry window: `invalid-request`. Only an invitation whose `expires_at` has passed may be expired. A caller wishing to end a `Pending` invitation before its natural expiry should use `revoke`."
+
+*F3 — Token uniqueness invariant missing.* No invariant stated that `invitation_token` values are globally unique across the system's lifetime and non-reusable after terminal resolution. Fixed: Invariant 11 added: "No two invitation records share an `invitation_token` across the lifetime of the system. Tokens are not reused after an invitation reaches a terminal state."
+
+*F4 — `revoke` Decision points inconsistent with State section on lazy expiry.* State section (line 112) stated that lazy expiry fires at `accept`, `decline`, or `revoke`, but `revoke`'s own Decision points omitted the expiry check. An implementer reading Decision points alone would not fire lazy expiry at `revoke`. Fixed: `revoke` Decision points gained: "A token whose `expires_at` has passed is treated as terminal: `revoke` returns `already-resolved(Expired)` and may lazily transition the record to `Expired`." Behavior section updated to state: "Lazy expiry extends this: if the invitation is `Pending` but `now >= expires_at`, the resolving action (`accept`, `decline`, or `revoke`) returns `already-resolved(Expired)` and may atomically write the `Expired` terminal transition as a housekeeping side-effect."
+
+**Round 1 — Pass 2 (EOS conceptual independence).** Clean. State, Behavior, and Invariants fully freestanding. Composition notes and Intent name other atoms for scope-delimitation only.
+
+**Round 1 — Pass 3 (Linus adversarial).** No additional findings beyond F1–F4.
+
+---
+
+**Round 2 — Pass 1 (GRID structural).** Clean. All nine MUSE nodes fully resolved after Round 1 fixes.
+
+**Round 2 — Pass 2 (EOS conceptual independence).** Clean.
+
+**Round 2 — Pass 3 (Linus adversarial).** Clean. No foundational gaps. One refining observation noted: Invariant 5 names which timestamp fields are non-null for each terminal state but does not explicitly state that the other terminal timestamp fields must remain null. Combined with Invariant 1 (resolution fields immutable once set) and Invariant 2 (single-resolution), the correctness is adequate; the gap is rhetorical, not structural.
+
+---
+
+**Round 3 — Pass 1 (GRID structural).** Clean.
+
+**Round 3 — Pass 2 (EOS conceptual independence).** Clean.
+
+**Round 3 — Pass 3 (Linus adversarial).** Clean.
+
+---
+
+**Final Critique (Round 4 — Super Torvalds).** One foundational finding.
+
+*FC1 — `decline` Decision points used implicit cross-reference for expiry check.* `decline`'s Decision points said "Expiry check applies as above" — a reference to `accept`'s expiry check. An auditor reading only `decline`'s Decision points received no expiry logic. Fixed: `decline` Decision points now state the check explicitly inline: "If `status = Pending` and `now >= expires_at`, the atom treats the invitation as expired. It may lazily transition to `Expired` at this point and return `already-resolved(Expired)`." The implicit cross-reference is removed.
+
+Final Critique 4 closed clean after FC1 fix.
 
 **Structural decisions made in draft.**
 
