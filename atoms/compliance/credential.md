@@ -57,16 +57,17 @@ The opaque-id model matters here for the same reason it matters in other atoms: 
 
 **Actions:**
 
-- `register(principal_ref, credential_material, credential_type) → credential_id | rejected(invalid-request | duplicate-active-credential | storage-failure)`
+- `register(principal_ref, credential_material, credential_type, expires_at?) → credential_id | rejected(invalid-request | duplicate-active-credential | storage-failure)`
 - `verify(principal_ref, credential_type, presented_material) → verified | failed-verification(material-mismatch | no-active-credential)`
 - `rotate(credential_id, new_credential_material) → new_credential_id | rejected(not-active | not-known | invalid-request | storage-failure)`
-- `revoke(credential_id, revoked_by_ref, reason) → revoked | rejected(invalid-request | already-terminal | not-known)`
+- `revoke(credential_id, revoked_by_ref, reason) → revoked | rejected(invalid-request | already-terminal | not-known | storage-failure)`
 
 **Inputs:**
 
 - `principal_ref` — an opaque reference to the principal whose credential is being managed. The atom treats this as opaque; it does not validate that the principal exists in any registry. That is the caller's responsibility.
 - `credential_material` — the raw secret or token the principal provides at registration. Consumed on `register`; never persisted. Non-null and non-empty required; minimum entropy and format constraints are deployment-configurable.
 - `credential_type` — a caller-supplied label identifying the kind of credential (e.g., `password`, `totp-secret`, `public-key`, `api-token`). Opaque to the atom; used only to enforce the one-active-per-`(principal_ref, credential_type)` uniqueness rule and to select the correct verifier derivation function.
+- `expires_at` — an optional timestamp (supplied to `register`) specifying when the credential expires. Null means no expiry; the credential remains Active until explicitly rotated or revoked. If supplied, must be a future timestamp at the time of the `register` call; a past or present value is rejected as `invalid-request`. If omitted, the deployment policy determines the default (no expiry or a configured default window). Immutable once set.
 - `presented_material` — the raw secret or token the principal presents at verification time. Consumed on `verify`; never persisted.
 - `credential_id` — references a specific credential record. Used by `rotate` and `revoke`.
 - `revoked_by_ref` — an opaque reference to the actor performing the revocation. Recorded on the revoked credential. Non-null and non-empty required.
@@ -91,10 +92,10 @@ Each credential record carries a `status` field. The state machine is:
 
 Transitions:
 
-- `register(principal_ref, credential_material, credential_type)` → a new record is created in `Active` with a fresh `credential_id`, the supplied `principal_ref` and `credential_type`, the derived verifier, and `registered_at = now`. Returns `credential_id`.
+- `register(principal_ref, credential_material, credential_type, expires_at?)` → a new record is created in `Active` with a fresh `credential_id`, the supplied `principal_ref`, `credential_type`, and `expires_at` (or the deployment-policy default if not supplied), the derived verifier, and `registered_at = now`. Returns `credential_id`.
 - `rotate(credential_id, new_credential_material)` → atomically: (1) a new record is created in `Active` for the same `(principal_ref, credential_type)` pair, with a fresh `credential_id` and `registered_at = now`; (2) the prior record's `status` transitions from `Active` to `Rotated`, and `rotated_at = now` and `successor_credential_id = new_credential_id` are recorded on the prior record. The prior record's other fields are never changed.
 - `revoke(credential_id, revoked_by_ref, reason)` → the record's `status` transitions from `Active` to `Revoked`; `revoked_at = now`, `revoked_by_ref`, and `revocation_reason` are recorded. No other fields change.
-- Clock advance past `expires_at` → `status` transitions from `Active` to `Expired`. May be triggered eagerly by a scheduled process or lazily at the next `verify` call; both are conformant. No other fields change.
+- Clock advance past `expires_at` → `status` transitions from `Active` to `Expired`. May be triggered eagerly by a scheduled process or lazily at the next `verify`, `rotate`, or `revoke` call that encounters the credential; both are conformant. No other fields change.
 - *(no transitions out of Rotated, Revoked, or Expired)*
 
 Each credential record carries:
@@ -114,41 +115,42 @@ Each credential record carries:
 
 ### Flow
 
-1. **Composing pattern establishes a new principal and needs to bind credential material to them.** Calls `register(principal_ref, credential_material, credential_type)`. The atom derives the verifier, records the credential, and returns a `credential_id`. The composing pattern stores the `credential_id` alongside the principal's record if needed; the atom retains the binding internally.
+1. **Composing pattern establishes a new principal and needs to bind credential material to them.** Calls `register(principal_ref, credential_material, credential_type, expires_at?)`. The atom derives the verifier, records the credential, and returns a `credential_id`. The composing pattern stores the `credential_id` alongside the principal's record if needed; the atom retains the binding internally.
 2. **Time passes; the principal attempts to authenticate.** The composing pattern collects the principal's identity claim (`principal_ref`) and presented material. Calls `verify(principal_ref, credential_type, presented_material)`. The atom finds the `Active` credential for this `(principal_ref, credential_type)` pair, derives the verifier from presented_material, and compares. Returns `verified` or `failed-verification(reason)`.
 3. **The principal rotates their credential** (e.g., a periodic password change or key rotation policy). Composing pattern calls `rotate(credential_id, new_credential_material)`. The atom creates a new `Active` record, transitions the prior record to `Rotated`, and returns the new `credential_id`.
 4. **A credential is revoked** (e.g., compromise suspected, account closure, administrative action). Composing pattern calls `revoke(credential_id, revoked_by_ref, reason)`. The atom records who revoked it, when, and why, and transitions the credential to `Revoked`.
-5. **A credential expires.** Either a background scheduler detects `expires_at < now` and transitions the credential to `Expired`, or the next `verify` call detects expiry and returns `failed-verification(no-active-credential)` while the transition occurs lazily. Both paths produce the same observable outcome: no further `verify` succeeds for an expired credential.
+5. **A credential expires.** Either a background scheduler detects `expires_at < now` and transitions the credential to `Expired`, or the next call that touches the credential — `verify`, `rotate`, or `revoke` — detects expiry and applies the lazy transition before returning. All paths produce the same observable outcome: no further `verify` succeeds for an expired credential, and neither `rotate` nor `revoke` proceeds against one.
 
 ### Decision points
 
-**At `register(principal_ref, credential_material, credential_type)`:**
+**At `register(principal_ref, credential_material, credential_type, expires_at?)`:**
 - `principal_ref`, `credential_material`, and `credential_type` must be non-null and non-empty; otherwise `invalid-request`.
+- If `expires_at` is supplied, it must be a strictly future timestamp at the time of the call; a past or present value is `invalid-request`.
 - The atom checks for an existing `Active` credential for `(principal_ref, credential_type)`. If one exists, `duplicate-active-credential` — the caller must `rotate` the existing credential rather than registering a new one.
 - The verifier is derived from `credential_material` using the derivation function registered for this `credential_type`. The derivation function is deployment-configured (see Configuration in Composition logic of composing patterns); the atom does not mandate a specific cryptographic mechanism beyond the one-way constraint. Raw material is consumed and discarded after derivation.
 - If the store write fails after verifier derivation, `storage-failure` is returned with no partial record in the store.
 
 **At `verify(principal_ref, credential_type, presented_material)`:**
 - The atom finds the `Active` credential for `(principal_ref, credential_type)`. If none exists — because no credential was ever registered, or all credentials for this pair are in terminal states — `failed-verification(no-active-credential)`. This result does not distinguish between "never registered" and "was rotated/revoked/expired," preventing enumeration of the reason no Active credential exists.
+- Expiry check: if the found credential's `expires_at` is non-null and `now >= expires_at`, the credential is treated as expired. The atom may lazily transition it to `Expired` at this point; regardless, `failed-verification(no-active-credential)` is returned. The lazy transition is a housekeeping side-effect that does not change the observable result; it does not constitute modification of substantive verification state.
 - The atom derives the verifier from `presented_material` using the same derivation function used at `register`. It compares the derived value against the stored verifier. If they do not match, `failed-verification(material-mismatch)`.
-- `verify` does not modify state and does not update any record. It is a pure read-only query over the credential store plus the derivation function.
-- Expiry check: if the Active credential's `expires_at` is non-null and `now >= expires_at`, the credential is treated as expired. The atom may lazily transition it to `Expired` at this point; regardless, `failed-verification(no-active-credential)` is returned.
 
 **At `rotate(credential_id, new_credential_material)`:**
 - `credential_id` must reference a known record; otherwise `not-known`.
-- The referenced credential's status must be `Active`; otherwise `not-active`. A `Rotated`, `Revoked`, or `Expired` credential cannot be rotated.
+- The referenced credential's status must be `Active`; otherwise `not-active`. A `Rotated`, `Revoked`, or `Expired` credential cannot be rotated. A credential whose `expires_at` has passed is treated as terminal for the purpose of this check — `rotate` returns `not-active` and may lazily transition the record to `Expired`.
 - `new_credential_material` must be non-null and non-empty; otherwise `invalid-request`.
 - The two writes — new record creation and prior record status update — are atomic. If the store write fails, `storage-failure` is returned with neither write committed.
 
 **At `revoke(credential_id, revoked_by_ref, reason)`:**
 - `credential_id` must reference a known record; otherwise `not-known`.
-- The referenced credential's status must be `Active`; otherwise `already-terminal`. A credential already in `Rotated`, `Revoked`, or `Expired` state cannot be revoked.
+- The referenced credential's status must be `Active`; otherwise `already-terminal`. A credential already in `Rotated`, `Revoked`, or `Expired` state cannot be revoked. A credential whose `expires_at` has passed is treated as terminal for the purpose of this check — `revoke` returns `already-terminal` and may lazily transition the record to `Expired`.
 - `revoked_by_ref` and `reason` must be non-null and non-empty; otherwise the call is rejected as `invalid-request`. (This keeps revocation attribution and reason mandatory — a revocation without an identified revoker or a stated reason is a finding, not a valid record.)
+- If the store write fails after all preconditions pass, `storage-failure` is returned with no state change committed. The credential record remains as it was before the call.
 
 ### Behavior
 
 - **Verifier storage, not material storage.** The atom stores the output of a one-way derivation function applied to the raw credential material. The raw material is never stored — not in any field, not in a log, not in a temporary record. This holds for both `register` (where the raw material arrives as input) and `verify` (where the presented material arrives for comparison). An implementation that stores raw credential material has violated this behavioral commitment regardless of whether any invariant could detect it from the record store alone.
-- **`verify` is a pure read.** No record is written, no counter is incremented, no state is changed as a result of a `verify` call. The atom does not implement rate limiting, lockout, or failed-attempt tracking — those are composing-pattern concerns.
+- **`verify` does not modify substantive state.** No record's verification-relevant fields are changed as a result of a `verify` call; the atom does not implement rate limiting, lockout, or failed-attempt tracking — those are composing-pattern concerns. The one exception is lazy expiry: when `verify` encounters a credential whose `expires_at` has passed but whose `status` is still `Active`, the atom may lazily transition it to `Expired` as a housekeeping side-effect before returning `failed-verification(no-active-credential)`. This side-effect does not change the observable verification result; it merely reflects a transition that clock advance had already caused.
 - **Rotation is a create-then-transition, not a mutate.** The new credential record is a fresh document with its own `credential_id`. The prior record's `verifier` field is never overwritten; the prior record's `principal_ref` and `credential_type` fields are never changed. The only change to the prior record on rotation is the `status` field (Active → Rotated), `rotated_at`, and `successor_credential_id`. This is what makes the rotation history auditable.
 - **Revocation records the revoking actor.** `revoked_by_ref` is recorded on the revoked credential. This is the mechanism by which an auditor can determine who revoked a credential and when, from the records alone. The atom does not validate that `revoked_by_ref` is a valid or currently active principal; it is opaque to the atom.
 - **`no-active-credential` does not distinguish sub-cases.** Whether there is no record for this `(principal_ref, credential_type)` pair, or whether all records are terminal, the `verify` result is the same: `failed-verification(no-active-credential)`. Distinguishing between "never registered" and "was revoked" at the `verify` surface leaks state to callers who should not know the reason a credential is unavailable. Composing patterns that need to distinguish these cases (e.g., an administrative surface) may query the credential store directly.
@@ -158,7 +160,7 @@ Each credential record carries:
 Each successful action produces an observable, measurable change:
 
 - After `register` — a new credential record appears in `Active` status with a fresh `credential_id`, `principal_ref`, `credential_type`, `registered_at`, and (if specified) `expires_at`. Total record count increases by one.
-- After `verify` — no state change. Returns `verified` or `failed-verification(reason)`.
+- After `verify` — returns `verified` or `failed-verification(reason)`. No substantive state change. If an expired credential was encountered, a lazy `Expired` transition may have fired as a side-effect (see Behavior); the observable verification result is unchanged.
 - After `rotate` — two observable changes: a new credential record appears in `Active` status with a fresh `credential_id`; the prior record's `status` transitions to `Rotated` with `rotated_at` and `successor_credential_id` set.
 - After `revoke` — the target credential record's `status` transitions to `Revoked` with `revoked_at`, `revoked_by_ref`, and `revocation_reason` set.
 
@@ -170,9 +172,9 @@ The credential store is queryable. Per-record fields (credential_id, principal_r
 
 The following invariants constitute the verification surface of the pattern:
 
-**Invariant 1 — Registration immutability.** Once a credential record is created, `principal_ref`, `credential_type`, `verifier`, `credential_type`, and `registered_at` never change. The only mutable field after registration is `status` (and its associated timestamp fields set when a terminal transition fires).
+**Invariant 1 — Registration immutability.** Once a credential record is created, `credential_id`, `principal_ref`, `credential_type`, `verifier`, and `registered_at` never change. The only mutable field after registration is `status` (and its associated timestamp fields set when a terminal transition fires).
 
-**Invariant 2 — Active uniqueness.** At most one credential record per `(principal_ref, credential_type)` pair is in `Active` status at any time. The `rotate` action's atomicity guarantee (new record Active, prior record Rotated, both committed together) is the mechanism that maintains this invariant under concurrent operations.
+**Invariant 2 — Active uniqueness.** At most one credential record per `(principal_ref, credential_type)` pair is in `Active` status at any time. Two mechanisms maintain this invariant. For `rotate`: the two writes (new record Active, prior record Rotated) are committed together atomically, so the pair never has two Active records in the transition window. For `register`: the duplicate-active-credential check and the new record write must be executed under a storage-level uniqueness constraint (e.g., a unique partial index on `(principal_ref, credential_type)` where `status = Active`) so that two concurrent `register` calls for the same pair cannot both succeed — the second write is rejected by the constraint, and the caller receives `duplicate-active-credential`.
 
 **Invariant 3 — Sole-holder verification.** `verify(principal_ref, credential_type, presented_material)` returns `verified` only when `presented_material` was derived from the same original material registered at `register` for this `(principal_ref, credential_type)` pair. A presented material that does not match never produces `verified`, regardless of the caller's identity.
 
@@ -190,7 +192,9 @@ The following invariants constitute the verification surface of the pattern:
 
 **Invariant 10 — Credential durability.** Once `register` returns a `credential_id`, the credential record is durably persisted. A `storage-failure` rejection guarantees no partial record was written. The record count is monotonically non-decreasing; the atom provides no deletion surface. Cascading deletion under a retention policy is the composing application's responsibility, not the atom's.
 
-Invariants 2 and 3 together give the *authentication integrity* property — a principal's `verify` call is answered by exactly the credential they registered, and only them. Invariants 4 and 5 give the *terminal finality* property — the system cannot be tricked into verifying against a revoked or rotated credential via race conditions or state-reversion. Invariants 6 and 7 give the *rotation auditability* property — the full history of how a principal's credential evolved over time is reconstructable without consulting source code or runbooks.
+**Invariant 11 — Expiry absorbing.** Once a credential record's status is `Expired`, no subsequent `verify` call returns `verified` via that record. Because at most one `Active` record exists per pair (Invariant 2), expiry of the Active record means no `verified` result is possible until a new credential is registered. This invariant is the expiry analog of Invariant 4 (Revocation absorbing); both are structural consequences of terminal finality (Invariant 5) combined with active uniqueness (Invariant 2), made explicit here so the verification surface is symmetrically stated across all terminal states that preclude further verification.
+
+Invariants 2 and 3 together give the *authentication integrity* property — a principal's `verify` call is answered by exactly the credential they registered, and only them. Invariants 4, 5, and 11 give the *terminal finality* property — the system cannot be tricked into verifying against a revoked, rotated, or expired credential via race conditions or state-reversion. Invariants 6 and 7 give the *rotation auditability* property — the full history of how a principal's credential evolved over time is reconstructable without consulting source code or runbooks.
 
 ---
 
@@ -302,15 +306,13 @@ This is the generator's contract: any implementation derived from this atom must
 
 ## Status
 
-`draft` — first draft. All required structural elements present: identity model, action signatures with fully-named rejection and outcome reasons, state machine (Active → Rotated | Revoked | Expired), ten invariants, four examples (two happy path, two rejection path), three regulated adversarial scenarios, six-check Generation acceptance. Awaiting three-pass pressure testing.
+`grounded on Final Critique 4` — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 complete. Eight findings total; all resolved in-pattern. Final Critique 4 closed clean (foundational findings: zero; refining findings: one documented, not blocking).
 
 *Provisional placement note: this atom is filed in `atoms/compliance/` as the initial home for authentication and credential-management infrastructure. Credential is not pure compliance infrastructure (it has meaningful non-regulated applications wherever authentication is required). A future taxonomy refactor may relocate it to `atoms/security/` or `atoms/identity/`, carrying `regulated: true` as a frontmatter attribute. See the Open taxonomy question in ROADMAP.md and Methodology debt #5.*
 
 ---
 
 ## Lineage notes
-
-First draft. No pressure-testing passes have run. Sections will be populated as passes complete.
 
 **Conventions inherited.** This atom is a regulated atom (provisional `atoms/compliance/` placement) and carries *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.
 
@@ -322,3 +324,56 @@ First draft. No pressure-testing passes have run. Sections will be populated as 
 - *`revoked_by_ref` and `reason` are mandatory on `revoke`.* A revocation without attribution and stated reason is a compliance finding, not a valid record. Making them mandatory at the action boundary prevents partial revocation records from entering the store.
 
 **Forthcoming-link resolution.** This atom retires the `Authentication *(forthcoming)*` debt in [`atoms/compliance/actor-identity.md`](./actor-identity.md). That atom's Composition notes read: *"Authentication *(forthcoming)* — produces the credential the atom consumes."* With Credential grounded, that link resolves. The update to actor-identity.md's Composition notes is a separate task.
+
+---
+
+**Round 1.**
+
+*Pass 1 — GRID structural.* One finding. **F1 — Invariant 1 typo:** The immutable-fields list read "`principal_ref`, `credential_type`, `verifier`, `credential_type`, and `registered_at`" — `credential_type` duplicated and `credential_id` absent despite being stated immutable in the Identity Model. Fixed in-pattern: list now reads `credential_id`, `principal_ref`, `credential_type`, `verifier`, `registered_at`. Eight other GRID nodes clean.
+
+*Pass 2 — EOS conceptual independence.* Clean. Atom is freestanding; no other atom named in the specification. All four actions (register, verify, rotate, revoke) belong to Credential's own concern. All deferred concerns (session, multi-factor, authorization, rate limiting, identity proofing, recovery) correctly named as out-of-scope. No over-absorption detected.
+
+*Pass 3 — Linus adversarial.* Four findings, all closed in-pattern.
+
+- **F2 — `register` signature missing `expires_at?`:** The State section stated `expires_at` could be "caller-supplied at registration time," but the action signature `register(principal_ref, credential_material, credential_type)` offered no parameter for it. Fixed: signature updated to `register(principal_ref, credential_material, credential_type, expires_at?)`; `expires_at` added to Inputs with future-timestamp validation; Decision points updated.
+- **F3 — `revoke` missing `storage-failure`:** `revoke` writes to the store (status, revoked_at, revoked_by_ref, revocation_reason) but its rejection vocabulary stopped at `invalid-request | already-terminal | not-known`, unlike `register` and `rotate` which both include `storage-failure`. Fixed: `storage-failure` added to `revoke` signature and Decision points.
+- **F4 — Lazy expiry interacts silently with `rotate` and `revoke`:** The lazy-expiry mechanism fires only in `verify`. A credential whose `expires_at` passed but whose `status` was still technically `Active` (lazy transition not yet fired) could be successfully `rotate`d or `revoke`d — an undocumented decision. Fixed: `rotate` and `revoke` Decision points now state that a credential whose `expires_at` has passed is treated as terminal; `rotate` returns `not-active` and `revoke` returns `already-terminal`, and both may lazily transition the record to `Expired`.
+- **F5 — Invariant 2 concurrent `register` unaddressed:** Invariant 2 named only `rotate`'s atomicity as the uniqueness mechanism. Two simultaneous `register` calls for the same `(principal_ref, credential_type)` could both pass the duplicate-active-credential check and both write, violating Active uniqueness. Fixed: Invariant 2 updated to name both mechanisms — `rotate` atomicity (commit-together) and `register` storage-level unique constraint (unique partial index on `(principal_ref, credential_type)` where `status = Active`).
+
+Round 1 closed. Five findings; all resolved in-pattern; none deferred.
+
+---
+
+**Round 2.**
+
+*Pass 1 — GRID structural.* One finding. **F6 — Flow step 5 and State transition inconsistent with F4 fix:** Both stated that lazy expiry fires "at the next `verify` call" only — but Round 1's F4 fix added lazy-expiry detection to `rotate` and `revoke` Decision points as well. Fixed: State transition and Flow step 5 now say lazy expiry may fire at the next `verify`, `rotate`, or `revoke` call that encounters the credential.
+
+*Pass 2 — EOS conceptual independence.* Clean. No new concerns introduced by Round 1 fixes.
+
+*Pass 3 — Linus adversarial.* One finding. **F7 — Behavior section and Feedback section contradicted lazy expiry at `verify`:** The Behavior section stated "`verify` is a pure read. No record is written, no counter is incremented, no state is changed" — a direct contradiction of the lazy-expiry side-effect that fires when `verify` encounters an expired-but-not-transitioned credential. The Feedback section also said "After `verify` — no state change." Fixed: Behavior section updated to "verify does not modify substantive state" with an explicit carve-out for the housekeeping lazy-expiry side-effect; Feedback section updated to acknowledge the possible lazy transition.
+
+Round 2 closed. Two findings; both resolved in-pattern; none deferred.
+
+---
+
+**Round 3.**
+
+*Pass 1 — GRID structural.* Clean. All nine nodes consistent after Round 1 and Round 2 fixes.
+
+*Pass 2 — EOS conceptual independence.* Clean.
+
+*Pass 3 — Linus adversarial.* One finding. **F8 — `verify` Decision points internal contradiction and expiry-check ordering:** The third bullet said "`verify` does not modify state and does not update any record. It is a pure read-only query" — directly contradicted by the fourth bullet describing the lazy expiry side-effect. The F7 fix (Round 2) corrected Behavior and Feedback but left Decision points self-contradictory. Additionally, the expiry check was ordered after the verifier comparison — logically it belongs first (no point deriving a verifier for an already-expired credential). Fixed: removed the "pure read-only query" bullet; moved expiry check before verifier comparison; expiry carve-out now clearly scoped as a housekeeping side-effect that does not constitute substantive state modification.
+
+Round 3 closed. One finding; resolved in-pattern; none deferred. Baseline complete (Rounds 1–3). Proceeding to Final Critique.
+
+---
+
+**Final Critique 4 (Super Torvalds).**
+
+One foundational finding; one refining finding.
+
+**FC1 — Missing "Expiry absorbing" invariant (foundational, fixed in-pattern).** Invariant 4 (Revocation absorbing) explicitly stated that a `Revoked` credential never produces `verified` via that record. The analogous property for `Expired` was only implicitly derivable — by chaining Invariant 2 (active uniqueness) + Invariant 5 (terminal absorbing for transitions) + Decision points logic. The asymmetry with Invariant 4 is a structural gap: a reader auditing the invariant set sees "Revocation absorbing" and correctly asks where the expiry analog is. Fixed: added Invariant 11 — "Expiry absorbing" — mirroring Invariant 4's language. Updated the closing property summary paragraph to include Invariant 11 in the *terminal finality* cluster. Note: Invariant 11 is a runtime invariant enforceable by the implementation; like Invariant 3 (sole-holder verification), it cannot be verified from records alone, and accordingly no additional Generation acceptance check was added. The existing check 6 (terminal state finality) is the closest auditable proxy.
+
+**FC2 — Generation acceptance has no check for Invariant 1 (registration immutability) (refining, documented, not blocking).** The six-check Generation acceptance covers Invariants 2, 5, 7, 8, 9, 10 but has no check corresponding to Invariant 1 (non-status fields — `credential_id`, `principal_ref`, `credential_type`, `verifier`, `registered_at` — never change post-creation). An immutability check is only expressible from the store schema (no UPDATE surface permitted) or from an audit log of write operations, not from records alone. Because the Generation acceptance is scoped to what an auditor can verify from the record store alone, this gap is not closeable within that scope. Leaving as a noted observation: deployments should constrain the credential store schema to prevent UPDATE operations on non-status fields; this is a store-design requirement, not a record-content check.
+
+Final Critique 4 closed clean. Foundational findings: zero remaining. Refining findings: one (FC2), documented, not blocking. Credential is `grounded on Final Critique 4`.
