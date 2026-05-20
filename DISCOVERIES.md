@@ -46,3 +46,9 @@ Writing a precise English specification is not formal verification itself, but i
 Alloy and TLA+ then provide exhaustive, machine-assisted validation of that specification.
 
 When the specification is precise enough, formal verification becomes an optional, mechanical extension of the same thinking rather than a separate discipline.
+
+---
+
+### 2026-05-20 — Healthcare application target
+
+A specific healthcare application idea is in view as a future Grace Commons target. Not captured in detail yet at the author's request — noted here so it doesn't get lost. The library already has Clinical Observation and Medication Order as grounded worked examples of the methodology applied to HIPAA / 21 CFR Part 11 domains. The healthcare app would extend into composition territory beyond those two atoms. Detail to be filled in when the idea is ready to specify.
