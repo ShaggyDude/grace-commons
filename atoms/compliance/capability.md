@@ -12,8 +12,8 @@ toc: true
 <details markdown="block">
   <summary>Table of contents</summary>
   {: .text-delta }
-1. TOC
-{:toc}
+    1. TOC
+  {:toc}
 </details>
 
 
@@ -39,7 +39,7 @@ Capability is the compliance atom (a freestanding pattern spec — one that does
 
 Each capability record carries a `remaining_redemptions` counter set to `max_redemptions` on `allocate` and decremented by exactly one on each successful `redeem`. This counter is the only mutable field in the record between allocation and terminal transition; all other fields (`allocator_ref`, `scope`, `max_redemptions`, `allocated_at`, `expires_at`) are immutable. When `remaining_redemptions` reaches zero, the capability transitions atomically to the `Redeemed` terminal state on the same call that brought it there. A capability with `max_redemptions = 1` (the default) is single-use: exactly one successful `redeem` exhausts it.
 
-`redeem(capability_token)` is the atom's primary action surface. It returns one of four structurally distinct outcomes:
+`redeem(capability_token)` is the atom's primary action surface. It returns one of five structurally distinct outcomes:
 
 - `redeemed(scope, allocator_ref)` — the capability is Allocated, not yet expired, not revoked, and has remaining redemptions. The caller receives the scope (what they are authorized to do) and who allocated the capability. The `remaining_redemptions` counter is decremented; if it reaches zero, the capability transitions to `Redeemed`.
 - `invalid(exhausted)` — the capability's `remaining_redemptions` is already zero; status is `Redeemed`.
@@ -71,7 +71,7 @@ Tokens are not reused after a capability reaches a terminal state.
 
 - `allocate(allocator_ref, scope, max_redemptions, ttl) → capability_token | rejected(invalid-request | storage-failure)`
 - `redeem(capability_token) → redeemed(scope, allocator_ref) | invalid(exhausted | expired | revoked | not-known)`
-- `revoke(capability_token, revoked_by_ref, reason) → revoked | rejected(invalid-request | already-terminal | not-known)`
+- `revoke(capability_token, revoked_by_ref, reason) → revoked | rejected(invalid-request | already-terminal | not-known | storage-failure)`
 
 **Inputs:**
 
@@ -87,7 +87,7 @@ Tokens are not reused after a capability reaches a terminal state.
 
 - The current set of capability records. For each: `capability_token`, `allocator_ref`, `scope`, `max_redemptions`, `remaining_redemptions`, `allocated_at`, `expires_at`, `status`, `redeemed_at` (set when status transitions to Redeemed; null otherwise), `revoked_at` (nullable), `revoked_by_ref` (nullable), `revocation_reason` (nullable).
 - `allocate` returns a new `capability_token` on success, or a rejection.
-- `redeem` returns `redeemed(scope, allocator_ref)` on success, or `invalid(reason)`. Note: `redeem` is not a rejection-based action — all four outcomes (`redeemed`, `invalid(exhausted)`, `invalid(expired)`, `invalid(revoked)`, `invalid(not-known)`) are first-class results, not errors.
+- `redeem` returns `redeemed(scope, allocator_ref)` on success, or `invalid(reason)`. Note: `redeem` is not a rejection-based action — all five outcomes (`redeemed`, `invalid(exhausted)`, `invalid(expired)`, `invalid(revoked)`, `invalid(not-known)`) are first-class results, not errors. The caller is expected to handle all five.
 - `revoke` returns `revoked` on success, or a rejection.
 
 ### State
@@ -104,7 +104,7 @@ Transitions:
 - `allocate(allocator_ref, scope, max_redemptions, ttl)` → a new capability record is created in `Allocated` status with a fresh `capability_token`, the supplied `allocator_ref` and `scope`, `max_redemptions` (or 1 if null), `remaining_redemptions = max_redemptions`, `allocated_at = now`, and `expires_at = now + ttl` (or `now + default_ttl` if ttl is null). Returns `capability_token`.
 - `redeem(capability_token)` when `Allocated` and `remaining_redemptions > 1` → `remaining_redemptions` is decremented by 1. Status remains `Allocated`. Returns `redeemed(scope, allocator_ref)`.
 - `redeem(capability_token)` when `Allocated` and `remaining_redemptions = 1` → `remaining_redemptions` is decremented to 0; status transitions atomically from `Allocated` to `Redeemed`; `redeemed_at = now` is recorded. Returns `redeemed(scope, allocator_ref)`. This is the exhaustion transition.
-- Clock advance past `expires_at` → status transitions from `Allocated` to `Expired`. May be triggered eagerly by a background scheduler or lazily at the next `redeem` call that detects `now >= expires_at`. Both paths are conformant.
+- Clock advance past `expires_at` → status transitions from `Allocated` to `Expired`. May be triggered eagerly by a background scheduler or lazily at the next `redeem` or `revoke` call that detects `now >= expires_at`. Both paths are conformant.
 - `revoke(capability_token, revoked_by_ref, reason)` → status transitions from `Allocated` to `Revoked`; `revoked_at = now`, `revoked_by_ref`, and `revocation_reason` are recorded.
 - *(no transitions out of Redeemed, Expired, or Revoked)*
 
@@ -129,7 +129,7 @@ Each capability record carries:
 2. **Bearer presents the token.** The bearer's system calls `redeem(capability_token)`. The atom finds the record, checks status and expiry, decrements `remaining_redemptions`, and returns `redeemed(scope, allocator_ref)`. The calling pattern receives the scope and acts on it.
 3. **Bearer continues to use a multi-use capability.** Each subsequent `redeem(capability_token)` decrements `remaining_redemptions` further. The capability remains in `Allocated` status as long as `remaining_redemptions > 0` and `expires_at` has not passed.
 4. **Capability exhausts.** The `redeem` call that brings `remaining_redemptions` to zero atomically transitions the capability to `Redeemed`. The same call returns `redeemed(scope, allocator_ref)` — the last redemption succeeds. All future `redeem` calls for this token return `invalid(exhausted)`.
-5. **Capability expires before exhaustion.** Either a background scheduler detects `now >= expires_at` and transitions the capability to `Expired`, or the next `redeem` call detects expiry lazily and returns `invalid(expired)`. Remaining redemptions are forfeit; the `remaining_redemptions` counter is not decremented by expiry.
+5. **Capability expires before exhaustion.** Either a background scheduler detects `now >= expires_at` and transitions the capability to `Expired`, or the next call that touches the capability — `redeem` (returning `invalid(expired)`) or `revoke` (returning `already-terminal`) — detects expiry lazily. Remaining redemptions are forfeit; the `remaining_redemptions` counter is not decremented by expiry.
 6. **Allocating actor revokes the capability.** Calls `revoke(capability_token, revoked_by_ref, reason)`. The atom transitions the capability to `Revoked` and records the attribution. Future `redeem` calls return `invalid(revoked)`.
 
 ### Decision points
@@ -143,6 +143,7 @@ Each capability record carries:
 
 **At `redeem(capability_token)`:**
 - The atom looks up the capability by `capability_token`. If no record is found, `invalid(not-known)`.
+- If the record is found and `status = Redeemed`, `invalid(exhausted)`. The capability's redemption counter reached zero on a prior `redeem` call; no further redemptions are possible.
 - If the record is found and `status = Revoked`, `invalid(revoked)`.
 - If the record is found and (`status = Expired` OR `now >= expires_at`), `invalid(expired)`. In the lazy-expiry path, the atom may atomically write the `Expired` status transition at this point.
 - If the record is found, `status = Allocated`, `now < expires_at`, and `remaining_redemptions > 0`:
@@ -153,9 +154,9 @@ Each capability record carries:
 
 **At `revoke(capability_token, revoked_by_ref, reason)`:**
 - `capability_token` must reference a known record; otherwise `not-known`.
-- The referenced capability's `status` must be `Allocated`; otherwise `already-terminal`.
+- The referenced capability's `status` must be `Allocated`; otherwise `already-terminal`. A capability whose `expires_at` has passed is treated as terminal for the purpose of this check — `revoke` returns `already-terminal` and may lazily transition the record to `Expired`.
 - `revoked_by_ref` and `reason` must be non-null and non-empty; otherwise `invalid-request`.
-- The transition to `Revoked` and the writes of `revoked_at`, `revoked_by_ref`, and `revocation_reason` are atomic.
+- The transition to `Revoked` and the writes of `revoked_at`, `revoked_by_ref`, and `revocation_reason` are atomic. If the store write fails after all preconditions pass, `storage-failure` is returned with no state change committed.
 
 ### Behavior
 
@@ -171,7 +172,7 @@ Each successful action produces an observable, measurable change:
 
 - After `allocate` — a new capability record appears in `Allocated` status with a fresh `capability_token`, `allocator_ref`, `scope`, `max_redemptions`, `remaining_redemptions = max_redemptions`, `allocated_at`, and `expires_at`. Total record count increases by one. The token is returned to the caller.
 - After `redeem` (succeeding) — `remaining_redemptions` decrements by 1. If `remaining_redemptions` reaches 0, `status` transitions to `Redeemed` and `redeemed_at` is set. Returns `redeemed(scope, allocator_ref)`.
-- After `redeem` (failing) — no state change. Returns `invalid(exhausted | expired | revoked | not-known)`.
+- After `redeem` (failing) — returns `invalid(exhausted | expired | revoked | not-known)`. No state change, except: when the lazy-expiry path fires (`status = Allocated` and `now >= expires_at`), the atom atomically writes the `Expired` status transition as a housekeeping side-effect before returning `invalid(expired)`.
 - After `revoke` — `status` transitions to `Revoked`; `revoked_at`, `revoked_by_ref`, and `revocation_reason` are set.
 
 The capability store is queryable. Per-record fields (all listed above) are observable to authorized administrative surfaces. Composing patterns may query capabilities by `allocator_ref` or by `status` to support audit and administrative operations.
@@ -200,7 +201,9 @@ The capability store is queryable. Per-record fields (all listed above) are obse
 
 **Invariant 11 — Capability durability.** Once `allocate` returns a `capability_token`, the capability record is durably persisted. A `storage-failure` rejection guarantees no partial record was written. The atom provides no deletion surface.
 
-Invariants 1 and 3 together give the *authorization envelope* property — the capability's full authorization is readable from a single immutable record, and no identity check contaminates the bearer semantics. Invariants 2 and 4 give the *redemption integrity* property — the counter decrements exactly once per redemption, even under concurrency, and the exhaustion transition is atomic. Invariants 5 and 6 give the *audit clarity* property — the audit record for a capability always answers "who allocated it and what it authorized" and never answers "who redeemed it," and the terminal state is always unambiguous.
+**Invariant 12 — Capability token uniqueness.** No two capability records share a `capability_token` across the lifetime of the system. Tokens are not reused after a capability reaches a terminal state. This invariant requires that the token generation mechanism produce values with negligible collision probability; the deployment must configure appropriate entropy (see Configuration in composing patterns). Without this invariant, `redeem(capability_token)` lookup semantics are undefined when two records share a token.
+
+Invariants 1 and 3 together give the *authorization envelope* property — the capability's full authorization is readable from a single immutable record, and no identity check contaminates the bearer semantics. Invariants 2 and 4 give the *redemption integrity* property — the counter decrements exactly once per redemption, even under concurrency, and the exhaustion transition is atomic. Invariants 5 and 6 give the *audit clarity* property — the audit record for a capability always answers "who allocated it and what it authorized" and never answers "who redeemed it," and the terminal state is always unambiguous. Invariant 12 gives the *lookup determinism* property — `redeem` always resolves to exactly one record or none.
 
 ---
 
@@ -321,22 +324,20 @@ A derived implementation of Capability is *acceptable* — in the regulator-acce
 - **Confirm the redemption counter invariant.** For every record, confirm that `remaining_redemptions >= 0` and `remaining_redemptions <= max_redemptions`. Confirm that for records with `status = Redeemed`, `remaining_redemptions = 0` and `redeemed_at` is non-null. Confirm that for records with `status = Allocated`, `remaining_redemptions > 0`. Invariants 2 and 4 are the structural guarantees.
 - **Confirm no redeemer identity is present in any record.** Inspect all fields of all records and confirm that no field records information identifying a redeemer. The absence of a `redeemer_ref`, `redeemed_by`, or equivalent field is the behavioral commitment of Invariant 3. An implementation that adds a redeemer identity field — even as an optional or informational field — has violated the bearer-key semantics the atom is built on.
 - **Confirm the three terminal modes are structurally distinct.** Verify that `Redeemed` records have `redeemed_at` non-null and `remaining_redemptions = 0`; that `Expired` records have `expires_at` in the past; that `Revoked` records have `revoked_at`, `revoked_by_ref`, and `revocation_reason` non-null. No two terminal states should be indistinguishable from the record alone. Invariant 6 is the structural guarantee.
-- **Confirm terminal state finality.** For any record in a terminal state (`Redeemed`, `Expired`, `Revoked`), confirm that `remaining_redemptions` is not decremented after the terminal transition — that no successful `redeem` call occurs after exhaustion, expiry, or revocation. Invariant 7 is the guarantee; a record showing `remaining_redemptions` change after terminal transition is evidence of an implementation defect.
+- **Confirm terminal state finality.** For records with `status = Redeemed`: confirm that `remaining_redemptions = 0` and `redeemed_at` is non-null, and that no further decrement of `remaining_redemptions` below zero is present — the exhaustion transition is the terminal event, and the counter cannot go lower. For records with `status = Expired` or `status = Revoked`: confirm that `remaining_redemptions` retains whatever value it held at the time of the terminal transition (expiry and revocation forfeit remaining redemptions without decrementing the counter). Note that whether any `redeem` call was *attempted* after terminal transition is not auditable from the record store alone — failing `redeem` calls leave no trace in the record. Terminal finality for `Expired` and `Revoked` records is enforced by the implementation (Invariant 7), not reconstructable from records.
 - **Confirm revocation attribution completeness.** For every record with `status = Revoked`, confirm that `revoked_at`, `revoked_by_ref`, and `revocation_reason` are all non-null. Invariant 9 is the guarantee.
 
 ---
 
 ## Status
 
-`draft` — first draft. All required structural elements present: identity model, action signatures with fully-named rejection and first-class outcome vocabulary, state machine (Allocated → Redeemed | Expired | Revoked), eleven invariants, five examples (two happy path, two rejection path, one Capability-Backed Sharing walkthrough in Regulated adversarial scenarios), three regulated adversarial scenarios, six-check Generation acceptance. Awaiting three-pass pressure testing.
+`grounded on Final Critique 4` — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 complete. Seven findings total; all resolved in-pattern. Final Critique 4 closed clean (foundational findings: zero; refining findings: one documented, not blocking).
 
 *Provisional placement note: this atom is filed in `atoms/compliance/` as the initial home for security and authorization primitives. Capability is not pure compliance infrastructure — it has significant non-regulated applications wherever bearer-token authorization is needed. A future taxonomy refactor may relocate it to `atoms/security/`, carrying `regulated: true` as a frontmatter attribute for regulated deployments. See the Open taxonomy question in ROADMAP.md and Methodology debt #5.*
 
 ---
 
 ## Lineage notes
-
-First draft. No pressure-testing passes have run. Sections will be populated as passes complete.
 
 **Conventions inherited.** This atom is a regulated atom (provisional `atoms/compliance/` placement) and carries *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.
 
@@ -348,3 +349,51 @@ First draft. No pressure-testing passes have run. Sections will be populated as 
 - *Five `redeem` outcomes, not two.* `redeemed(scope, allocator_ref)`, `invalid(exhausted)`, `invalid(expired)`, `invalid(revoked)`, `invalid(not-known)` — all first-class. Collapsing terminal modes into a single `invalid` would destroy the audit-clarity property (Invariant 6) that makes the Regulated adversarial scenarios answerable from records alone.
 - *`expires_at` is never null.* Capabilities without a finite lifetime are not expressible. Same design decision as Session, same rationale: "never expires" is not an auditable statement; "expires in 10 years" is. The deployment configures the default TTL; the atom enforces that one exists.
 - *EOS Pass 2 boundary with Invitation.* The Capability-vs-Invitation design question is resolved by the `Declined` state and the identity-binding-at-acceptance that Invitation carries and Capability does not. Capability's `redeem` binds no identity and has no `declined` terminal state; Invitation's `accept` binds an identity and `decline` is a named terminal state representing a human decision. These are structurally distinct concepts. The authoring discipline: if Invitation's spec cannot be written without naming Capability's structure to distinguish itself, they collapse into one atom. The drafter of Invitation reads this spec as the Pass 2 mirror.
+
+---
+
+**Round 1.**
+
+*Pass 1 — GRID structural.* One finding. **F1 — `revoke` missing `storage-failure`:** `revoke` writes four fields atomically (status, revoked_at, revoked_by_ref, revocation_reason) but its rejection vocabulary did not include `storage-failure`, unlike `allocate`. Fixed: `storage-failure` added to `revoke` signature and Decision points.
+
+*Pass 2 — EOS conceptual independence.* Clean. Atom is freestanding; no other atom named in the structural elements.
+
+*Pass 3 — Linus adversarial.* Two findings. **F2 — `redeem` Decision points missing the `Redeemed` case:** The Decision points checked not-known → revoked → expired → success path, but `status = Redeemed` was never explicitly handled. A caller presenting a token for an exhausted capability would match no case. Fixed: added explicit "`status = Redeemed` → `invalid(exhausted)`" check after the not-known case. **F3 — `revoke` on a capability past `expires_at` but `status = Allocated`:** A capability past its `expires_at` that had not yet undergone the lazy expiry transition could be successfully revoked, producing a `Revoked` record for a capability that was already effectively dead. Consistent with Credential F4 and Session F3. Fixed: `revoke` Decision points now treat a capability whose `expires_at` has passed as terminal; `revoke` returns `already-terminal` and may lazily transition the record to `Expired`.
+
+Round 1 closed. Three findings; all resolved in-pattern; none deferred.
+
+---
+
+**Round 2.**
+
+*Pass 1 — GRID structural.* One finding. **F4 — Summary and Outputs note said "four" `redeem` outcomes; five are listed:** The Summary said "one of four structurally distinct outcomes" but enumerated five (`redeemed`, `invalid(exhausted)`, `invalid(expired)`, `invalid(revoked)`, `invalid(not-known)`). The Outputs note had the same off-by-one. Fixed: both updated to "five."
+
+*Pass 2 — EOS conceptual independence.* Clean.
+
+*Pass 3 — Linus adversarial.* One finding. **F5 — State section and Flow step 5 said lazy expiry fires only at `redeem`; inconsistent with F3 fix:** F3 added lazy-expiry detection to `revoke`, but State and Flow still named only `redeem` as the lazy-expiry trigger. Fixed: both updated to say lazy expiry fires at the next `redeem` or `revoke` call.
+
+Round 2 closed. Two findings; both resolved in-pattern; none deferred.
+
+---
+
+**Round 3.**
+
+*Pass 1 — GRID structural.* Clean. All nine nodes consistent after Round 1 and Round 2 fixes.
+
+*Pass 2 — EOS conceptual independence.* Clean.
+
+*Pass 3 — Linus adversarial.* One finding. **F6 — Feedback section said "no state change" for failing `redeem`; contradicted lazy expiry side-effect:** The Feedback section said "After `redeem` (failing) — no state change." But when `redeem` detects `now >= expires_at` on an Allocated capability, it fires the lazy Expired transition — a state change. Same class as Credential F7 and Session's equivalent correction. Fixed: Feedback updated to acknowledge the lazy Expired transition as a possible housekeeping side-effect when expiry is detected.
+
+Round 3 closed. One finding; resolved in-pattern; none deferred. Baseline complete (Rounds 1–3). Proceeding to Final Critique.
+
+---
+
+**Final Critique 4 (Super Torvalds).**
+
+One foundational finding fixed; one refining finding fixed for correctness.
+
+**FC1 — Missing `capability_token` uniqueness invariant (foundational, fixed in-pattern).** The Identity Model stated "Tokens are not reused after a capability reaches a terminal state" — addressing only temporal reuse. There was no invariant asserting that no two capability records ever share a `capability_token`. Without this, `redeem(capability_token)` lookup semantics are undefined in the event of a collision, however negligible the probability. Session had an explicit token-uniqueness invariant (Session Invariant 7); Capability lacked the analog. Fixed: added Invariant 12 — "Capability token uniqueness" — mirroring Session Invariant 7's language. Updated the closing property summary to add "lookup determinism" to the property cluster.
+
+**FC2 — Generation acceptance check 5 overstated what records can prove (refining, fixed for correctness).** Check 5 claimed to confirm "that no successful `redeem` call occurs after exhaustion, expiry, or revocation." For `Redeemed` records this is auditable (`remaining_redemptions = 0`, `redeemed_at` set). For `Expired` and `Revoked` records it is not — failing `redeem` calls leave no trace in the record store. The check overstated the auditor's power for two of the three terminal states. Fixed: check 5 rephrased to scope the auditable portions correctly — counter inspection for `Redeemed`, counter-value retention for `Expired`/`Revoked`, and an explicit note that post-terminal `redeem` attempt detection is not auditable from records alone.
+
+Final Critique 4 closed clean. Foundational findings: zero remaining. Refining findings: none outstanding. Capability is `grounded on Final Critique 4`.
