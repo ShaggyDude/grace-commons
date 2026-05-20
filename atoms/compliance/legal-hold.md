@@ -277,7 +277,7 @@ Legal Hold is the preservation primitive the library has held open since Retenti
 
 ## Status
 
-`grounded — 2026-05-13` — foundation round (Pass 1 + 2 + 3 author-led), Refinement round 1 (human), and two AI-conducted adversarial rounds complete: Refinement round 2 (Sonnet, batched with Consent and Soft Delete) and Refinement round 3 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
+`grounded — 2026-05-20` — foundation round (Pass 1 + 2 + 3 author-led), Refinement round 1 (human), and two AI-conducted adversarial rounds complete: Refinement round 2 (Sonnet, batched with Consent and Soft Delete) and Refinement round 3 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
 
 ---
 
@@ -358,3 +358,5 @@ All nine GRID nodes resolved.
 - *`read` Decision point ambiguous on null/empty filter parameters.* The original wording — *"a syntactically invalid `hold_id` (non-null, non-empty)"* — left a reader unable to tell whether null or empty filter values were rejected or accepted as degenerate filters. Fixed: `read` action and Decision point now state explicitly that null, empty, or whitespace-only filter values on `hold_id`, `record_ref`, `placed_by`, and `case_ref` are `invalid-query`. Strict over silent — silent-ignore would return a result set inconsistent with the caller's intent.
 
 - *Unknown filter keys in `read` not specified, and `case_ref` filter on absent-case_ref holds not specified.* The spec listed supported filter axes but did not say what happened if a caller passed an unknown axis name, or how a positive `case_ref` filter handled holds without `case_ref`. Fixed: `read` action and Decision point now reject unknown filter keys as `invalid-query` (strict rather than silent-ignore) and state that a positive `case_ref` filter excludes holds without `case_ref`. A "find holds with no `case_ref`" predicate is named as out-of-scope; deployments needing it add it in the composing layer.
+
+**Scheduled rescan: 2026-05-20 — clean.**

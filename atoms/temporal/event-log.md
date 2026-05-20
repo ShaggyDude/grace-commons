@@ -150,6 +150,19 @@ Every credit, debit, transfer, and adjustment is appended as an event in the jou
 
 The mechanic is identical across all four. What differs: payload schema, query patterns, and the composing patterns that derive views (current todo list, audit report, current chart, current balance) from the underlying log.
 
+### Rejection paths
+
+A single sequence exercising all three rejection reasons:
+
+- `append(65_000_bytes_of_data)` → rejected `invalid-payload` (payload exceeds the default 64 KB cap; configurable per instance).
+- `append({type: "deposit", amount: 500})` → accepted; returns `event_id e1` with `sequence_number 1`.
+- `read({sequence_range: [-1, 5]})` → rejected `invalid-query` (negative sequence number is not a well-formed range parameter).
+- `read({sequence_range: [1, 1]})` → returns `[e1]`; `sequence_number 1` matches, ordered ascending.
+- Underlying store becomes temporarily unavailable. `append({type: "withdrawal", amount: 100})` → rejected `storage-failure`; event does not land; caller must treat the rejection as definitive. A sequence number may have been consumed; subsequent successful appends receive a strictly higher number, producing a gap in the dense sequence (see Edge cases — *Sequence-number gaps on storage failure*).
+- Store recovers. `append({type: "withdrawal", amount: 100})` → accepted; returns `event_id e2` with a sequence number strictly greater than 1.
+
+All three rejection reasons (`invalid-payload`, `invalid-query`, `storage-failure`) exercised in one thread.
+
 ---
 
 ## Edge cases and explicit non-goals
@@ -213,7 +226,7 @@ It inherits from:
 
 ## Status
 
-`grounded — 2026-05-13` — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
+`grounded — 2026-05-20` — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
 
 ---
 
@@ -240,3 +253,5 @@ The pattern is `grounded — 2026-05-13` after one round.
 - *Feedback section missing `storage-failure`.* The enumeration of rejection reasons listed `invalid-payload` and `invalid-query` only. Resolved: `storage-failure` added to the enumeration.
 - *Storage-failure not addressed in Decision points.* Resolved: `append` Decision point extended — storage-failure path, the consequence (event did not land), and the sequence-number allocation note added.
 - *Sequence-number gap on storage failure not addressed.* Implementations that allocate a sequence number before the write attempt may consume that number on `storage-failure`, creating a gap in the sequence. Invariant 4 is not violated (it holds over successfully appended events only), but consumers expecting a dense sequence may misinterpret the gap. Resolved: new Edge case — *Sequence-number gaps on storage failure* — added with guidance for gap-free implementations.
+
+**Scheduled rescan: 2026-05-20.** Pass 1 clean. Pass 2 clean. Pass 3 — one refining finding: examples covered only happy-path append sequences across four domains; no example exercised the rejection paths (`invalid-payload`, `invalid-query`, `storage-failure`). All three rejection reasons were named in Decision points and Feedback but not demonstrated with concrete values. Resolved: fifth example — *Rejection paths* — added, walking all three rejection reasons in a single thread including the sequence-number gap consequence of a `storage-failure`. Round closes clean.

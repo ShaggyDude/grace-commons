@@ -366,7 +366,7 @@ Party Identity is freestanding and is the external-party identity contract that 
 
 ## Status
 
-`grounded — 2026-05-14` — foundation round complete (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus all run; findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2) ran against the foundation draft, surfaced six findings, and returned clean after all six were closed in-pattern. The gate also served as the closing AI adversarial round (Phase 3) given the gate's fresh-reader, full-three-pass coverage.
+`grounded — 2026-05-20` — foundation round complete (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus all run; findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2) ran against the foundation draft, surfaced six findings, and returned clean after all six were closed in-pattern. The gate also served as the closing AI adversarial round (Phase 3) given the gate's fresh-reader, full-three-pass coverage.
 
 ---
 
@@ -415,3 +415,5 @@ The clearance gate ran with fresh-reader discipline: full pass question sets and
 - *F6 — Invariant 7 conflicted with Retention Window anonymization.* Invariant 7 declared enrollment fields immutable while Composition notes and Edge cases named Retention Window as the composition permitted to anonymize personal data under GDPR Article 17 or post-retention obligations. Anonymization of `name`, `date_of_birth`, or `document_ref` would mutate fields the invariant declared immutable. Resolved: Invariant 7 qualified to "immutable under the atom's action contract"; the surviving audit-identifier set (`party_id`, `enrolled_at`, `enrolling_actor_ref`) named explicitly; Retention Window's authorization to scrub identifiable fields stated in both Invariant 7 and the "Retention of party records" edge case; the Attribute Update / Retention Window distinction surfaced in "Identity attribute updates" so the two compositions' audit semantics are not conflated.
 
 Gate re-run after the six fixes returned clean across all three passes. Status promoted from `partially resolved` to `grounded` with rescan date 2026-05-14.
+
+**Scheduled rescan: 2026-05-20 — clean.**

@@ -253,7 +253,7 @@ Clinical Observation composes naturally with the existing library:
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-13` — foundation passes complete (Pass 1, Pass 2, Pass 3), two human refinement rounds complete (Refinement rounds 1 and 2), and one AI-conducted adversarial round complete (Refinement round 3, Torvalds X2 posture, Claude Opus 4.7). All nine GRID nodes resolved, all concerns conceptually independent, all known adversarial gaps closed or named as explicit out-of-scope.
+`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-20` — foundation passes complete (Pass 1, Pass 2, Pass 3), two human refinement rounds complete (Refinement rounds 1 and 2), and one AI-conducted adversarial round complete (Refinement round 3, Torvalds X2 posture, Claude Opus 4.7). All nine GRID nodes resolved, all concerns conceptually independent, all known adversarial gaps closed or named as explicit out-of-scope.
 
 ---
 
@@ -314,3 +314,5 @@ One regulator-audit-scenario wording candidate was considered and dropped — th
 Pass 2 was clean. The amendment-chain extraction question was steelmanned one more time at maximum pressure — a parameterized "Supersession Chain" atom taking immutable-fields and correctable-fields at instantiation, applying chain logic generically — and the extraction still loses: the fields operated on are host-specific (no generic record_id, no generic patient_ref/observation_type), the immutability invariants name specific fields, and composing a generic chain over a generic Record type inverts the dependency direction. After four examinations across four rounds with the same answer, this judgment is documented as **settled**; future rounds need not re-litigate it unless new evidence — a second concrete host atom that would benefit from the same mechanic — emerges. The state-machine extraction question was also examined and similarly resolved as host-specific; once Workflow / State Machine (roadmap atom #9) lands, the Composition notes will mention that this atom's state model can be specified as a Workflow instance, but the state machine remains inlined here for the same definitional reasons.
 
 The AI-conducted round closed the gaps a sympathetic human reviewer would have rationalized past — the unconditional Invariant 7 framing, the exclusive-"or" Outputs description, the bad Invariant 2 citation, the unspecified rejection priority, the silent unknown-`observation_type` behavior. Each finding was a real semantic gap or a real precision failure; none was paraphrased-back commentary. The pattern is stronger because the AI pass had no investment in the prior choices.
+
+**Scheduled rescan: 2026-05-20 — clean.**

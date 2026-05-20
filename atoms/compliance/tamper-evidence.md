@@ -97,7 +97,7 @@ Transitions:
 
 ### Decision points
 
-- **At `seal(record_set_ref, mechanism_credential)`** — `record_set_ref` and `mechanism_credential` must be well-formed and non-empty; otherwise `invalid-request`. The mechanism must be able to compute a proof against the record set; otherwise `mechanism-failure(reason)` — for example, the underlying records are unreadable, the keying material does not satisfy the mechanism's preconditions, or an external anchor service is unreachable for a mechanism that requires synchronous anchoring. The credential is *consumed*, never stored. If the seal store write fails after the proof is computed, the atom returns `rejected(storage-failure)` — no seal is recorded, and the computed proof is discarded. Durability of the seal store is implementation-owned.
+- **At `seal(record_set_ref, mechanism_credential)`** — `record_set_ref` must contain at least one non-whitespace character; `mechanism_credential` must be present (may be empty for unkeyed mechanisms, but must not be absent entirely); otherwise `invalid-request`. The mechanism must be able to compute a proof against the record set; otherwise `mechanism-failure(reason)` — for example, the underlying records are unreadable, the keying material does not satisfy the mechanism's preconditions, or an external anchor service is unreachable for a mechanism that requires synchronous anchoring. The credential is *consumed*, never stored. If the seal store write fails after the proof is computed, the atom returns `rejected(storage-failure)` — no seal is recorded, and the computed proof is discarded. Durability of the seal store is implementation-owned.
 - **At `verify(evidence_id, original_record_set)`** — `evidence_id` must reference a recorded seal; otherwise `not-known`. (This is a lookup miss, distinct from verification failure.) The presented `original_record_set` must refer to the same record set the seal was made over; otherwise `failed-verification(record-set-mismatch)`. The mechanism's verification function, run over the presented record set against the stored `proof`, must check out; otherwise `failed-verification(proof-invalid)` — the structural signal of tampering. If the mechanism's verification function requires an external service (e.g., an RFC 3161 TSA's published certificate chain) that is unavailable at verify time, the atom returns `failed-verification(mechanism-verification-unavailable)` — a transient failure; the verifier may retry when the service becomes available. This is distinct from `proof-invalid` (tampering detected) and from `record-set-mismatch` (wrong records presented). Like Actor Identity's `verify`, this call has three first-class outcomes, not a success-or-rejection pair, and composing patterns should treat each distinctly.
 
 ### Behavior
@@ -165,6 +165,33 @@ A law firm timestamps an executed contract via a qualified Time-Stamp Authority.
 A payment processor seals each day's cardholder-data access log: `seal(pan_access_log_2026-05-10, processor_key) → evidence_p41`. The mechanism is an HMAC-SHA-256 chain — each entry's MAC includes the previous entry's MAC and the entry's content. PCI DSS Requirement 10.5 mandates audit-log integrity; the seal is the structural form. A QSA's annual assessment runs `verify` over the prior year's daily logs; any tampering — whether to hide a cardholder-data exfiltration or to forge access for a fraudulent dispute — is detected from the logs themselves.
 
 The mechanic is identical across all five. What differs: the mechanism family (hash chain, Merkle tree, qualified timestamp), the frequency of sealing (per-commit, per-amendment, per-document, per-day), the anchoring story (none, RFC 3161 TSA, blockchain), and the composing patterns active around it (Actor Identity for authored seals, Trusted Timestamping for qualified anchors, External Anchoring for tamper-proof reach).
+
+### Rejection and verification-failure paths
+
+**Tampering detected — proof-invalid.** An incident response team queries a transaction journal seal and presents the journal as it exists now — after a discovered alteration:
+
+```
+verify(evidence_id: "evidence_a91", original_record_set: journal_2026-05-10_altered)
+→ failed-verification(proof-invalid)
+```
+
+The proof no longer matches the altered record set. The team then presents the prior day's backup copy of the journal:
+
+```
+verify(evidence_id: "evidence_a91", original_record_set: journal_2026-05-10_backup)
+→ verified
+```
+
+`verified` confirms the backup matches what was sealed; `proof-invalid` on the altered version confirms the alteration occurred after `sealed_at`. The forensic window is bounded by the two seal timestamps.
+
+**Wrong record set presented — record-set-mismatch.** A verifier accidentally presents the wrong day's journal to a seal:
+
+```
+verify(evidence_id: "evidence_a91", original_record_set: journal_2026-05-11)
+→ failed-verification(record-set-mismatch)
+```
+
+The presented record set does not match the `record_set_ref` the seal was made over. This is not a tampering signal — it is a caller error, structurally distinguishable from `proof-invalid`.
 
 ### Regulated adversarial scenarios
 
@@ -254,7 +281,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded — 2026-05-13` — all required structural elements resolved; identity model explicit; action signatures with fully-named rejection taxonomies including `storage-failure` and `mechanism-verification-unavailable`; nine invariants including seal store durability (Invariant 9) and mechanism-soundness qualification on Invariant 2; five cross-domain examples; regulated adversarial scenarios; eleven edge cases. Third entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
+`grounded — 2026-05-20` — all required structural elements resolved; identity model explicit; action signatures with fully-named rejection taxonomies including `storage-failure` and `mechanism-verification-unavailable`; nine invariants including seal store durability (Invariant 9) and mechanism-soundness qualification on Invariant 2; five cross-domain examples plus `proof-invalid` and `record-set-mismatch` verification-failure examples; regulated adversarial scenarios; eleven edge cases. Third entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
 
 ---
 
@@ -297,3 +324,5 @@ The three passes together exercise the architecture as designed: GRID catches st
 - *No seal store durability invariant (Pass 3).* The single-state model implies seals are permanent, but no invariant said so explicitly. Resolved: Invariant 9 (*Seal store durability*) added, naming the monotonically non-decreasing seal count, the absent deletion surface, the `storage-failure` consistency guarantee, and the specific reason the seal must survive its originating records (it is the audit evidence of their existence and integrity up to seal time).
 
 Pass 2 was clean: no new over-absorptions. All four fixes are in-pattern.
+
+**Scheduled rescan: 2026-05-20.** Pass 1 clean. Pass 2 clean. Pass 3: one foundational finding and one refining finding, both closed in-pattern. (1) *Foundational — `mechanism_credential` precondition contradicted Inputs.* Decision points stated "`record_set_ref` and `mechanism_credential` must be well-formed and non-empty," but the Inputs section explicitly states that for unkeyed mechanisms the credential "may be empty or a configuration handle." These two passages directly contradict each other — an implementer following Decision points would reject empty credentials that Inputs says are valid. Resolved: Decision points updated to distinguish the two fields — `record_set_ref` must contain at least one non-whitespace character; `mechanism_credential` must be present but may be empty for unkeyed mechanisms. (2) *Refining — no `failed-verification` rejection-path example.* All five domain examples showed `seal` → `verify → verified`. The `proof-invalid` and `record-set-mismatch` outcomes were named in Decision points and adversarial scenarios but never walked through with concrete action call syntax. Resolved: two verification-failure examples added — one showing `proof-invalid` when a tampered record set is presented (with the backup copy confirming `verified`), one showing `record-set-mismatch` when the wrong record set is presented. All nine GRID nodes confirmed resolved; no over-absorptions identified; foundational finding closed. **Scheduled rescan: 2026-05-20 — clean.**

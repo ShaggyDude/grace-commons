@@ -91,6 +91,18 @@ The derived Personal Todo state at any moment is computed as follows:
 
 Replay assumes events were recorded only on successful actions, which guarantees Personal Todo's preconditions hold at every replay step.
 
+### The load-bearing wiring decision
+
+The decision the composition exists to enforce: **identity preservation across delete and undo is achieved through replay of the original event sequence rather than through state restoration from a snapshot**.
+
+*Principle.* When a user undoes a `delete`, the deleted unit must be restored at its original `id`, with its original `added_at`, `last_edited_at` (if any), and state intact — not as a fresh unit with a new id and reset timestamps. This identity preservation is the property users expect from undo and the property that makes the composition useful as a building block for audit-trail-adjacent applications.
+
+*Likely objection.* "Couldn't the `delete` action save a snapshot and `undo` restore from it?" Per-action snapshots (the Memento pattern) restore state but produce a new copy of the unit — a fresh `add` against Personal Todo would issue a new id, resetting timestamps and losing the unit's historical identity.
+
+*Mechanism.* The composition makes Personal Todo event-sourced: it never calls Personal Todo's native `delete` directly on state and stores no separate state. The Event Log is the source of truth; the derived state is a projection. Undoing a delete appends a compensating event and rereplays the log skipping that event — the original `add` event is still in the log, so the unit is reconstructed at its original `id` with its original timestamps. Personal Todo's own `delete` is terminal and irreversible; the composition circumvents this by operating at the log level rather than the state level.
+
+*Result.* Identity preservation across delete/undo (Invariant 6) falls out of the replay mechanism as an emergent property — it is not designed in as a special case. The constituent atoms are unchanged; the composition is entirely in the wiring.
+
 ---
 
 ## Composition-level invariants
@@ -129,6 +141,16 @@ A user adds *"buy milk"* (id `m1`), completes `m1`, deletes `m1`. The Event Log 
 
 A user later asks *"what did I do this week?"* The application calls `read_history({recorded_at: last_7_days})` and returns the full sequence including undos. Same Event Log instance, no additional atoms required. If the user later wants the history protected for compliance, composing this application's Event Log with [Audit Trail](./audit-trail.md) adds attribution, retention, and tamper-evidence without changing the composition above.
 
+### Rejection paths
+
+A user starts fresh:
+
+1. `add("buy milk")` → `t1`. State: `t1` Pending.
+2. `undo()` → returns `"add"`. Log appends `undo(add(t1))`. State: empty.
+3. `undo()` → `rejected(nothing-to-undo)`. The log has one forward event (`add(t1)`) and one undo event referencing it. Every forward event is already in the undone set; there is nothing left to undo. Log and state are unchanged.
+
+Storage failure path: the user calls `add("walk dog")` and Event Log's `append` returns `rejected(storage-failure)`. The composition returns `storage-failure` to the caller; the derived state is not updated. No partial state is visible; the action did not happen. The same pattern applies for `undo`: if the compensating-event append fails, `undo` returns `storage-failure` and the derived state is not recomputed.
+
 ---
 
 ## Edge cases and explicit non-goals
@@ -164,7 +186,7 @@ The two atoms it composes carry their own standards inheritance — Personal Tod
 
 ## Status
 
-`grounded — 2026-05-13` — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
+`grounded — 2026-05-20` — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
 
 ---
 
@@ -190,3 +212,8 @@ The application is `grounded — 2026-05-13` after one round.
 - *Action signatures used `rejected(reason)` placeholders; `storage-failure` absent from all five.* All five actions had placeholder rejection forms. Resolved: forward action signatures expanded with named reason taxonomies sourced from Personal Todo's precondition rejections (`not-known`, `not-pending`, `invalid-request`, `duplicate-active`) plus `storage-failure` from Event Log's `append`; `undo` signature expanded to `rejected(nothing-to-undo | storage-failure)`. The full Personal Todo rejection taxonomy will be confirmed against Personal Todo's own refinement round.
 - *`read_history` omitted its rejection form.* The signature showed only the success path. `read_history` is a passthrough to Event Log's `read`, which carries `rejected(invalid-query)`. Resolved: signature updated to `read_history(query) → ordered_sequence_of_events | rejected(invalid-query)`.
 - *Action wiring missing the `append` storage-failure path.* Every action appends to the Event Log; none of the wiring descriptions specified what happens if `append` returns `rejected(storage-failure)`. This is load-bearing for Invariant 1 (Log faithfulness): the converse of "every successful action appends an event" is "if the append fails, the action is not successful." Without the failure path, an implementation might update the derived state even when the event didn't land, violating State equivalence (Invariant 2). Resolved: each action's wiring extended — if the `append` returns `rejected(storage-failure)`, the caller receives `storage-failure` and the derived state is not updated.
+
+**Scheduled rescan: 2026-05-20.** Pass 1 GRID clean — constituent API spot-check confirmed: Personal Todo retains eight invariants and the `not-editable` rejection in `edit`; Event Log retains seven invariants. Pass 2 EOS clean. Pass 3 Linus (fresh-reader) — two refining findings, both closed in-pattern.
+
+- *No "load-bearing wiring decision" subsection (refining).* The canonical composition shape (SPEC_FORMAT.md) requires a named subsection defending the key architectural decision in-line with the four-part rubric. The decision — identity preservation via replay rather than per-action snapshot — was implicit across the Replay semantics section and Invariant 6, but not stated and defended as a standalone subsection. Resolved: "The load-bearing wiring decision" subsection added to Composition logic, defending event-sourced replay as the structural mechanism that makes identity preservation an emergent property rather than a special case.
+- *No rejection-path example for `nothing-to-undo` (refining).* The Examples section covered the happy path and delete/undo identity preservation; `undo()` returning `rejected(nothing-to-undo)` was not exercised. The storage-failure path was similarly unexercised with concrete values. Resolved: "Rejection paths" example added walking both `nothing-to-undo` (all forward events already undone) and the `storage-failure` propagation pattern. Round closes clean.

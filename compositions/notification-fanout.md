@@ -59,6 +59,25 @@ None. Notification Fanout has no persistent state of its own beyond its constitu
 
 If a system needs to record that a particular event triggered a particular fanout — for audit, replay, or deduplication — it composes Event Log or Duplicate Prevention alongside this composition. Those concerns do not belong to the bare fanout mechanism.
 
+### Primitive policies
+
+Composition-boundary validation for `fanout`'s two inputs:
+
+- **`event_scope`** — must be non-null and non-empty string (rejection: `invalid-request`). The atom treats the scope value as opaque; no normalization, no case folding, no length cap imposed at this layer. Comparison is exact-match when passed to `Subscription.subscribers_for`. Validated before any id is generated or constituent called.
+- **`payload`** — must be non-null (rejection: `invalid-request`). Content is opaque and passed to each `Notification.create` call unchanged. Schema validation, size limits, and content restrictions belong to the composing system before calling `fanout`.
+
+### The load-bearing wiring decision
+
+The decision the composition exists to enforce: **when a fanout invocation fails for some subscribers, the invocation continues for the remaining subscribers and names the failures in its result rather than aborting.**
+
+*Principle.* A subscriber fanout is a parallel operation: each recipient's delivery record is independent. The composition must choose between all-or-nothing (abort on first failure, guarantee consistency) and continue-and-name-failures (deliver to the reachable set, surface the unreachable set). The composition chooses the latter.
+
+*Likely objection.* "Shouldn't a regulated notification fanout guarantee every subscriber was reached, or none?" The all-or-nothing design would guarantee no subscriber receives a notification when the store is briefly unavailable for any single subscriber — regardless of the event's stakes. This is almost never the right tradeoff: it trades guaranteed delivery to the reachable majority for consistency with the unreachable minority.
+
+*Mechanism.* Parallel composition carries no rollback guarantee. Each `Notification.create` call is independently committed. The composition has no transactional boundary spanning the N creates; providing one would require distributed transaction semantics and would serialize what is fundamentally a parallel operation. The `failed` list is the pressure valve: it makes the tradeoff explicit rather than silent. The composing system receives the failure information and applies its own policy — accept-the-loss for low-stakes events, retry or escalate for high-stakes ones.
+
+*Result.* Fanout coverage (Invariant 1) guarantees that every subscriber is accounted for in `created` or `failed`. No subscriber is silently missed. The composition's job is mechanism; policy lives in the caller. For regulated deployments, the `failed` list combined with Event Log and Audit Trail gives the auditor a complete, attributed record of which subscribers were reached and which were not — the structural answer a regulator can verify from records alone.
+
 ### Action wiring
 
 The composition exposes a single action:
@@ -195,13 +214,22 @@ An auditor later asks: *was every subscribed compliance officer notified of poli
 
 ## Generation acceptance
 
-A derived implementation of Notification Fanout is *acceptable* when an external auditor, given the subscription store and notification store, can do all of the following without recourse to source code, runbooks, or developer narration:
+A derived implementation of Notification Fanout is *acceptable* when an external auditor, given the subscription store and notification store, can do all of the following without recourse to source code, runbooks, or developer narration.
+
+### Record-clearable checks
+
+These checks can be answered by reading the composition's stored records (subscription store, notification store, and Event Log where composed in):
 
 - **Confirm fanout coverage for any recorded fanout.** Event Log composition is required for reliable fanout-coverage audits. The recommended Event Log entry shape — one entry per `fanout` invocation — is `{fanout_id, event_scope, payload_digest, created: [notification_id, ...], failed: [subscriber_ref, ...], fired_at}`. `fanout_id` is the durable invocation identity when Event Log is composed in; the caller passes the `fanout_id` returned by the fanout action as the log entry's reference field, binding the invocation record to its complete subscriber list and created notification_ids. Given an Event Log entry of this shape, the auditor can: (a) read the entry's `event_scope` and `fired_at`; (b) reconstruct the Active subscriber set at `fired_at` using Subscription's historical-state filter (`subscribed_at ≤ fired_at` AND (`status = active` OR `cancelled_at > fired_at`)); (c) verify every reconstructed Active subscriber appears either in `created` (each `notification_id` mapped via `Notification.status_of` to confirm the record exists with matching `recipient_ref`) or in `failed`; (d) confirm `|created| + |failed|` equals the size of the reconstructed Active set, satisfying Invariant 1 from records. Without a composed Event Log carrying these fields, fanout grouping by `created_at` clustering on the notification store is unreliable — concurrent creates across a measurable time span produce different timestamps, and concurrent unrelated fanouts on the same scope produce overlapping ones; `fanout_id` alone is insufficient without the log because the composition does not persist it.
 - **Confirm payload consistency.** All Notification records produced by a single fanout carry the same payload. Identifying the fanout group requires the same Event Log entry as check 1 — the `created: [notification_id, ...]` list keyed by `fanout_id` is the authoritative grouping; without it, grouping by payload similarity is ambiguous when multiple concurrent fanouts share the same payload structure. Given the group, the auditor inspects the `payload` field of each record and confirms identity across all members.
 - **Verify each Notification record independently.** Each record passes Notification's five Generation acceptance checks: full delivery history present, timeline reconstructable, terminal exclusivity confirmed, timestamp-status match confirmed, composing patterns identifiable.
 - **Confirm no cross-notification coupling.** A terminal state on one notification record in the fanout group does not correlate with the terminal state on another. Each record's delivery outcome is independent.
-- **Identify the composing patterns active in this deployment** — whether Event Log, Duplicate Prevention, Actor Identity, and Tamper Evidence are wired alongside the bare fanout mechanism, and with what configuration.
+
+### Externally-clearable checks
+
+These questions arise around the composition but require deployment configuration or external evidence to answer:
+
+- **Identify the composing patterns active in this deployment** — whether Event Log, Duplicate Prevention, Actor Identity, and Tamper Evidence are wired alongside the bare fanout mechanism, and with what configuration. The presence and configuration of these composing patterns is a deployment-level fact; the auditor must obtain this from the deployment configuration record or the operator, not from the subscription or notification stores alone.
 
 ---
 
@@ -222,7 +250,7 @@ It inherits from:
 
 ## Status
 
-`grounded — 2026-05-13` — three foundation passes complete; Opus adversarial pass (26 findings, all resolved); architectural decisions applied (Event Log optional, fanout_id ephemeral correlation handle with Event Log as durable identity when composed, subscribers-unavailable treated as explicit error).
+`grounded — 2026-05-20` — three foundation passes complete; Opus adversarial pass (26 findings, all resolved); architectural decisions applied (Event Log optional, fanout_id ephemeral correlation handle with Event Log as durable identity when composed, subscribers-unavailable treated as explicit error).
 
 ---
 
@@ -276,3 +304,9 @@ The fan-out decomposition model was formalized in [`EXECUTION_CONTRACT.md`](../E
 - *`fanout_time` vs `fired_at` inconsistency (Pass 3).* Regulated adversarial scenario 1 referenced the fanout timestamp as `fanout_time` — the field name used in the intermediate Event Log entry shape introduced in the adversarial rerun. Generation acceptance check 1 uses `fired_at` as the canonical field name in the final entry shape. Resolved: scenario 1 updated to use `fired_at` consistently with the canonical entry shape.
 
 **Post-grounding addition — `failed` list policy/mechanism split.** The `{failed}` list design was never defended in-line: the spec named the return value and told the caller to inspect it, but never stated *why the mechanism returns `{failed}` rather than aborting* — a load-bearing architectural decision left implicit. Resolved: new edge case entry "Caller disposition on the `failed` list: transient failures vs. structural inconsistencies" added, which (a) defends the abort-vs-continue choice (policy/mechanism separation; delivery to the reachable majority is worth more than consistency with the unreachable minority), (b) distinguishes transient `storage-failure` entries (retry-eligible) from structural `invalid-request` entries (retry will fail; persistent failure is the diagnostic), (c) names two concrete caller dispositions — accept-the-loss for low-stakes events, escalate-to-secondary-delivery or log-to-Audit-Trail for regulated events — and explicitly names Audit Trail as the composition for recording a delivery gap with attribution and timestamp in the high-stakes case.
+
+**Scheduled rescan: 2026-05-20.** Pass 1 GRID — three refining structural gaps, all closed in-pattern. Constituent API spot-check confirmed: Subscription retains nine invariants; Notification retains nine invariants; both invariant counts in the composition's Invariants section are accurate. Pass 2 EOS clean. Pass 3 Linus (fresh-reader) clean.
+
+- *No Primitive policies subsection (refining).* `event_scope` and `payload` validation rules were stated inline in Action wiring step 1 but not collected in a Primitive policies subsection. SPEC_FORMAT requires the subsection for composition-boundary input validation. Resolved: Primitive policies subsection added naming `event_scope` (non-null, non-empty, opaque, exact-match, validated before any constituent call) and `payload` (non-null, opaque, content restrictions delegated to composing system).
+- *No "load-bearing wiring decision" subsection (refining).* The key architectural decision — continue-on-failure rather than abort-on-first-failure — was present in prose (Action wiring, Edge cases "Caller disposition") but not stated and defended as a canonical named subsection per SPEC_FORMAT. Resolved: "The load-bearing wiring decision" subsection added to Composition logic, defending the continue-and-name-failures design with the four-part rubric.
+- *Generation acceptance not split into record-clearable / externally-clearable (refining).* SPEC_FORMAT requires compositions to split Generation acceptance checks. The five prior checks were record-clearable except check 5 ("Identify composing patterns active"), which requires deployment configuration. Resolved: Generation acceptance restructured into "Record-clearable checks" (four checks) and "Externally-clearable checks" (one check — composing-pattern configuration identification). Round closes clean.

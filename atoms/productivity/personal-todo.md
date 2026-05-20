@@ -251,7 +251,7 @@ A formal-methods version of a similar concept exists in [concept-catalog](https:
 
 ## Status
 
-`grounded — 2026-05-13` — all required structural elements resolved; identity model explicit; description policy explicit; rejection paths exercised in examples; deferred concerns (concurrency, atomicity, clock semantics) named as out-of-scope. The pattern is freestanding and composable. Extensions (recency guard, history, priority, dependencies, recurrence, reopening, concurrency resolution) are separate concepts, listed in Composition notes.
+`grounded — 2026-05-20` — all required structural elements resolved; identity model explicit; description policy explicit; rejection paths exercised in examples; deferred concerns (concurrency, atomicity, clock semantics) named as out-of-scope. The pattern is freestanding and composable. Extensions (recency guard, history, priority, dependencies, recurrence, reopening, concurrency resolution) are separate concepts, listed in Composition notes.
 
 ---
 
@@ -286,3 +286,5 @@ The two passes together exercise the architecture as designed: GRID's nine nodes
 - *Action signatures used `rejected(reason)` placeholders; `storage-failure` absent from all four.* All four signatures named `rejected(reason)` with the reason taxonomy living only in Feedback and Decision points prose. Resolved: signatures expanded — `add` returns `rejected(invalid-description | duplicate-active | storage-failure)`, `edit` returns `rejected(not-known | not-pending | not-editable | invalid-description | duplicate-active | storage-failure)`, `complete` returns `rejected(not-known | not-pending | storage-failure)`, `delete` returns `rejected(not-known | storage-failure)`. Feedback updated to include `storage-failure`.
 - *`storage-failure` missing from Decision points.* All four actions write to state; none previously named the write-failure path. Resolved: each Decision point extended. `add` — no unit created on storage-failure. `edit` — unit unchanged; the no-op case (normalized new description equals current) produces no write and cannot storage-fail. `complete` — unit remains in Pending. `delete` — unit unchanged. Decision points for `edit`, `complete`, and `delete` also restructured to separate the `not-known` check as the first gate before state-specific checks.
 - *Cross-file consistency gap triggered by this refinement.* Undo History and Shared Todo both used `invalid-request` for Personal Todo's description-validation rejection during their earlier refinement rounds — the correct reason, confirmed here, is `invalid-description`. Undo History's `edit` signature also omitted `not-editable`. Resolved: both files corrected retroactively in the same pass.
+
+**Scheduled rescan: 2026-05-20 — clean.**

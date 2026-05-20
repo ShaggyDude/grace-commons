@@ -44,7 +44,7 @@ The most common uses are payment authorization flows where retries must not prod
 
 ## Composes
 
-- **[Provisional Commitment](../atoms/resource-lifecycle/provisional-commitment.md)** — provides the underlying lifecycle (Held → Confirmed | Released | Expired) and the nine invariants every commitment satisfies. The application maintains exactly one Provisional Commitment instance.
+- **[Provisional Commitment](../atoms/resource-lifecycle/provisional-commitment.md)** — provides the underlying lifecycle (Held → Confirmed | Released | Expired) and the ten invariants every commitment satisfies. The application maintains exactly one Provisional Commitment instance.
 - **[Duplicate Prevention](../atoms/temporal/duplicate-prevention.md)** — provides the temporally-bounded recency guard against repeated tokens. The application maintains exactly one Duplicate Prevention instance, configured with the idempotency window and token-equality matching.
 
 ---
@@ -58,6 +58,21 @@ The application owns one piece of emergent state that neither constituent atom c
 - **`token_results`** — a map from `idempotency_token` to a recorded outcome: `(action_type, parameters_digest, result)`. `action_type` is one of `place_hold`, `confirm`, `release`, `expire`. `parameters_digest` is a deterministic, collision-resistant digest (a compact fingerprint of the call parameters, used to detect if a retry carries different parameters than the original call) of the non-token call parameters — computed over a stable serialization of the parameters in a canonical order (e.g., sorted key-value pairs encoded with a length prefix). The digest function and serialization format are implementation-specified but must be consistent across all instances sharing the `token_results` store; inconsistency across replicas or versions causes legitimate retries to be misclassified as `token-collision`. `result` is the original response — either the produced `id` (for `place_hold`) or `ok`, or the rejection reason — exactly as returned to the caller on the first call.
 
 The map's lifetime is governed by the Duplicate Prevention window. Entries are evicted when their token leaves Duplicate Prevention's `recorded` set, by the eventual-expiry invariant of that atom.
+
+### Configuration
+
+Deployment-settable knobs:
+
+- **`idempotency_window`** — the duration of the Duplicate Prevention window; passed to the Duplicate Prevention instance at initialization. Default: 60 seconds for HTTP retry envelopes; 5–10 minutes for client-side replay scenarios; 24 hours for slow payment-rail reconciliation. Regulated deployments (PCI DSS, ISO 20022) must select a window long enough to cover the slowest legitimate retry cycle for the most critical action. Window-size selection considerations are elaborated in Edge cases.
+- **`token_max_length`** — the maximum byte length of a well-formed `idempotency_token`. Default: 256 bytes. Must be large enough to accommodate the token format used by the caller (IETF idempotency-key draft recommends at least 16 bytes of randomness; UUIDs are 36 characters; composed keys may be longer).
+- **`digest_function`** — the hash function and serialization convention used to compute `parameters_digest`. Must be specified and consistent across all instances sharing the `token_results` store; inconsistency across replicas or versions causes legitimate retries to be misclassified as `token-collision`.
+
+### Primitive policies
+
+Composition-boundary validation for string-typed inputs:
+
+- **`idempotency_token`** — must be non-null and non-empty (rejection: `invalid-request`); must not exceed `token_max_length` bytes (rejection: `invalid-request`). The atom treats the token as opaque — no whitespace normalization, no Unicode normalization, no case folding. Comparison is byte-exact. Validation occurs at the composition layer before the Duplicate Prevention check; a malformed token is rejected before any constituent is consulted.
+- **`resource`, `requester`, `duration`** — validated by Provisional Commitment's own preconditions; failures propagate as `invalid-request` from Provisional Commitment and are cached against the token (unless the token itself was malformed, in which case there is no token to cache against).
 
 ### Action wiring
 
@@ -93,7 +108,7 @@ These invariants emerge from the composition. None of them belong to a single co
 - **Invariant 2 — Idempotent state transitions within the window.** Same property holds for `confirm`, `release`, and `expire`. A retry within the window returns the cached response; the constituent atom is not invoked a second time.
 - **Invariant 3 — Token-to-commitment one-to-one within the window.** At most one commitment id is bound to any given `idempotency_token` while that token is in the window. Two distinct commitments cannot share a token.
 - **Invariant 4 — Token-action binding.** Each `idempotency_token` is bound to one logical operation. Reusing the same token for a different `action_type` or with a different `parameters_digest` is rejected as `token-collision`.
-- **Invariant 5 — Provisional Commitment's invariants preserved.** All nine invariants from Provisional Commitment hold over the underlying instance. The application never bypasses preconditions; the constituent's rejections (`resource-unavailable`, `not-held`, `window-elapsed`, etc.) flow through unchanged and are cached against the token.
+- **Invariant 5 — Provisional Commitment's invariants preserved.** All ten invariants from Provisional Commitment hold over the underlying instance. The application never bypasses preconditions; the constituent's rejections (`resource-unavailable`, `not-held`, `window-elapsed`, etc.) flow through unchanged and are cached against the token.
 - **Invariant 6 — Duplicate Prevention's invariants preserved.** All four invariants from Duplicate Prevention hold. The application calls `record` exactly once per first invocation of each token; subsequent retries do not extend the window (single-recording invariant).
 - **Invariant 7 — Token expiry releases the binding.** After Duplicate Prevention's eventual-expiry invariant elapses the token, `token_results[token]` is evicted in the same step. A subsequent call with the same token is treated as a fresh request and may produce a new commitment id. The critical eviction ordering constraint: a `token_results` entry must never be evicted while its corresponding token remains in Duplicate Prevention's recorded set — that would cause `check → seen` with no result to return, a defect. The safe direction is the reverse: a stale `token_results` entry for an already-evicted token is a memory leak but not a correctness failure, because the action wiring only consults `token_results` when `check → seen`.
 - **Invariant 8 — Exactly-once effect within the window.** For any state change the caller intends — placing one hold, confirming one commitment, releasing one commitment, expiring one — the underlying Provisional Commitment instance observes exactly one corresponding action invocation regardless of retry count, as long as all retries use the same token within the window.
@@ -182,21 +197,30 @@ It inherits from:
 
 ## Generation acceptance
 
-A derived implementation of Idempotent Reservation is *acceptable* — in the regulator-acceptance sense — when an external auditor, given the application's `token_results` store plus the underlying Provisional Commitment and Duplicate Prevention instances, can do all of the following without recourse to source code, runbooks, or developer narration:
+A derived implementation of Idempotent Reservation is *acceptable* — in the regulator-acceptance sense — when an external auditor, given the application's `token_results` store plus the underlying Provisional Commitment and Duplicate Prevention instances, can do all of the following without recourse to source code, runbooks, or developer narration.
+
+### Record-clearable checks
+
+These checks can be answered by reading the composition's stored records directly:
 
 - **Reconstruct the lifecycle of any commitment.** Through the underlying Provisional Commitment instance, as specified by that atom's Generation acceptance.
 - **Verify all eight application-level invariants over the record set.** Idempotent place_hold, idempotent state transitions, token-to-commitment one-to-one, token-action binding, Provisional Commitment invariants preserved, Duplicate Prevention invariants preserved, token expiry releases binding, exactly-once effect.
 - **Trace every commitment to its originating idempotency token** (within the window), and verify no two distinct commitments share a token (Invariant 3).
 - **Verify the cache-the-failure rule.** Every recorded `token_results` entry contains the original outcome, success or rejection; retries within the window do not invoke the underlying Provisional Commitment.
-- **Identify the composing atoms active in this deployment** and their configurations (window duration, token format, digest function).
 
-This is the generator's contract: any code generated from this application must produce records and a runtime surface that pass the five checks above. The bar is the regulator's question — *"can you prove no duplicate state change occurred?"* — answered structurally, not procedurally.
+### Externally-clearable checks
+
+These questions arise around the composition but require deployment configuration or external evidence to answer:
+
+- **Identify the composing atoms active in this deployment** and their configurations (window duration, token format, digest function). The window duration, digest function, and token max-length are deployment-settable; the auditor must obtain these from the deployment configuration record or the operator, not from the commitment or token-results stores alone.
+
+This is the generator's contract: any code generated from this application must produce records and a runtime surface that pass the four record-clearable checks above. The bar is the regulator's question — *"can you prove no duplicate state change occurred?"* — answered structurally, not procedurally.
 
 ---
 
 ## Status
 
-`grounded — 2026-05-13` — composition logic specified; emergent state (`token_results`) named with explicit `parameters_digest` specification requirements; action wiring covers all four state-changing surfaces with fully-named rejection taxonomies and explicit `action_type` check for all three transition actions; eight application-level invariants with Invariant 7 extended to address eviction ordering; walkthrough plus four cross-domain examples and four adversarial scenarios (token-collision added); edge cases enumerate deployment-shaped concerns. Second entry in `compositions/`. Survived one foundation pass and one refinement round.
+`grounded — 2026-05-20` — composition logic specified; emergent state (`token_results`) named with explicit `parameters_digest` specification requirements; action wiring covers all four state-changing surfaces with fully-named rejection taxonomies and explicit `action_type` check for all three transition actions; eight application-level invariants with Invariant 7 extended to address eviction ordering; walkthrough plus four cross-domain examples and four adversarial scenarios (token-collision added); edge cases enumerate deployment-shaped concerns. Second entry in `compositions/`. Survived one foundation pass and one refinement round.
 
 ---
 
@@ -227,3 +251,10 @@ The three passes together exercise the architecture as designed: GRID checks str
 - *`token-collision` path not exercised in examples (Pass 3).* The walkthrough and the three adversarial scenarios showed only the happy path, the window-expiry path, and the replay-attack path. No example showed a caller accidentally reusing a token across two distinct operations. Resolved: fourth adversarial scenario added — *Token reuse collision* — walking the `action_type` mismatch case and naming Invariant 4 as the structural guarantee.
 
 Pass 2 was clean: no new over-absorptions surfaced. All five fixes are in-pattern.
+
+**Scheduled rescan: 2026-05-20.** Pass 1 GRID — one foundational cross-reference drift finding and three refining structural gaps, all closed in-pattern. Pass 2 EOS clean. Pass 3 Linus (fresh-reader) clean.
+
+- *Invariant 5 stale: "nine" should be "ten" (foundational — cross-reference drift).* Provisional Commitment gained Invariant 10 (Commitment store durability) during its own refinement round. Invariant 5 of this composition said "All nine invariants from Provisional Commitment hold" — now incorrect. Resolved: updated to "All ten invariants." This is the third instance of the invariant-count cross-reference staleness hazard in the library (after Shared Todo's nine-vs-ten on Assignment and Notification Fanout's eight-vs-nine on Subscription); the library-wide concern of dropping numeric counts in favour of "all invariants" remains open.
+- *No Configuration subsection (refining).* `idempotency_window` and `token_max_length` are deployment-settable knobs referenced in prose (Edge cases, Examples) but not collected in a Configuration subsection. SPEC_FORMAT requires the subsection. Resolved: Configuration subsection added naming `idempotency_window`, `token_max_length`, and `digest_function` with their defaults and regulated-deployment obligations.
+- *No Primitive policies subsection (refining).* `idempotency_token` validation ("non-empty, within length") was stated inline in Action wiring step 1 but not in a Primitive policies subsection. Resolved: Primitive policies subsection added with byte-exact comparison discipline, `invalid-request` rejection mapping, and the note that token validation occurs before any constituent is consulted.
+- *Generation acceptance not split into record-clearable / externally-clearable (refining).* SPEC_FORMAT requires compositions to split Generation acceptance checks into record-clearable and externally-clearable subsections. The five prior checks were all record-clearable except check 5 (deployment configurations), which requires external evidence. Resolved: Generation acceptance restructured into "Record-clearable checks" (four checks) and "Externally-clearable checks" (one check — deployment configuration identification).

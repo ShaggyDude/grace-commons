@@ -163,6 +163,12 @@ A developer at an FDA-cleared medical-device company pushes a commit signed with
 
 The mechanic is identical across all five. What differs: the credential mechanism (smart card, software key, qualified signature instrument, hardware token, chip-card secure element), the verification frequency (every action vs. on dispute vs. on audit), the regulatory consequence of `failed-verification`, and the composing patterns active around it (two-factor for prescriptions, witness signatures for some legal contracts, MFA for high-value wires).
 
+### Rejection paths
+
+**`verify` — `failed-verification(proof-invalid)`:** An auditor reviewing a batch of wire authorizations calls `verify(attestation_a17)`. The actor's key has been rotated since the attestation was recorded, and the registry's current public material for `actor_ref: supervisor_s12` no longer matches the stored proof. The atom returns `failed-verification(proof-invalid)`. The auditor notes the failure; the composing audit workflow escalates for manual review. The attestation record is unchanged — Invariant 1 prevents modification; the failure is a verification-time result, not a record defect.
+
+**`verify` — `not-known`:** A composing pattern references an `attestation_id` that was never written (a partial-failure scenario where `attest` returned `storage-failure` and the composing pattern cached the id before confirming success). `verify(attestation_a_unknown)` returns `not-known` — the id is not in the attestation store. This is structurally distinct from `failed-verification`: the id does not reference any attestation. The composing pattern must treat `not-known` as a missing record (requiring re-attestation) rather than a verification failure.
+
 ### Regulated adversarial scenarios
 
 Three scenarios the atom must survive in regulated contexts:
@@ -255,7 +261,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded — 2026-05-13` — all required structural elements resolved; identity model explicit; attest and verify action signatures with fully-named rejection and outcome reasons; nine invariants including attestation durability (Invariant 9); five cross-domain examples spanning banking, healthcare, payments, legal, and source control; regulated adversarial scenarios cover regulator audit, disputed transaction, and compromised credential; fifteen edge cases including certificate revocation status and attestation store durability (named in refinement round 1). First entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
+`grounded — 2026-05-20` — all required structural elements resolved; identity model explicit; attest and verify action signatures with fully-named rejection and outcome reasons; nine invariants including attestation durability (Invariant 9); five cross-domain examples spanning banking, healthcare, payments, legal, and source control; regulated adversarial scenarios cover regulator audit, disputed transaction, and compromised credential; fifteen edge cases including certificate revocation status and attestation store durability (named in refinement round 1). First entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
 
 ---
 
@@ -300,3 +306,5 @@ The three passes together exercise the architecture as designed: GRID catches st
 - *No attestation durability invariant (Pass 3).* The State section's single-state model implied records are permanent but no formal invariant stated it. The atom's design provides no deletion surface — this is a structural guarantee worth formalizing, analogous to Notification's Invariant 9 added in its second pass. Resolved: Invariant 9 (*Attestation durability*) added; it names the monotonically non-decreasing record count, the absence of a deletion surface, and the consistency guarantee between `storage-failure` responses and the absence of partial records.
 
 Pass 2 was clean: no new over-absorptions surfaced. All six fixes are in-pattern resolutions or new edge-case entries.
+
+**Scheduled rescan: 2026-05-20.** Pass 1 clean. Pass 2 clean. Pass 3 surfaced one refining finding: the main Examples section contained five domain examples showing only successful `attest` + `verify → verified` paths; no concrete example showed `verify → failed-verification` or `verify → not-known`. The regulated adversarial scenarios section covered the adversarial paths conceptually (disputed transaction and compromised credential), but without a concrete action-call-and-result walkthrough of the failure outcomes. Resolved: two rejection-path examples added to the Examples section — `verify → failed-verification(proof-invalid)` (key rotation scenario) and `verify → not-known` (missing attestation id from a storage-failure scenario). No foundational findings. Status date updated to 2026-05-20.

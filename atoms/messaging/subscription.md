@@ -245,7 +245,7 @@ Subscription is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-13` — structure and invariants specified; four examples including rejection path and regulated adversarial scenarios; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. First entry in `atoms/messaging/`.
+`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-20` — structure and invariants specified; four examples including rejection path and regulated adversarial scenarios; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. First entry in `atoms/messaging/`.
 
 ---
 
@@ -289,3 +289,5 @@ This atom is the first entry in the `messaging/` category, drafted alongside Not
 
 - **Closed-action vs. open-audit tension.** Per-pattern fix landed (audit-surface preamble); the canonical statement of the distinction belongs in `PRESSURE_TESTING.md` or `CONTRIBUTING.md` so future patterns inherit the convention rather than re-derive it.
 - **"Non-empty for opaque references" check semantics.** Per-pattern fix landed (null, undefined, empty string); a canonical statement belongs in a shared document.
+
+**Scheduled rescan: 2026-05-20 — clean.**

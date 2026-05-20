@@ -103,7 +103,7 @@ Transitions:
 
 ### Decision points
 
-- **At `place_under_retention(record_ref, policy_ref)`** — `record_ref` and `policy_ref` must be well-formed and non-empty; otherwise `invalid-request`. The `policy_ref` must resolve to a known policy in the policy registry; otherwise `policy-not-found`. The resolved policy's `duration` must be positive and `max_purge_delay` must be non-negative; otherwise `invalid-policy`. If the retention store write fails after all preconditions pass, the atom returns `rejected(storage-failure)` — no retention is recorded. The host system is responsible for ensuring the `record_ref` refers to an existing record; the atom does not validate against the host's record store.
+- **At `place_under_retention(record_ref, policy_ref)`** — `record_ref` and `policy_ref` must each contain at least one non-whitespace character; otherwise `invalid-request`. The `policy_ref` must resolve to a known policy in the policy registry; otherwise `policy-not-found`. The resolved policy's `duration` must be positive and `max_purge_delay` must be non-negative; otherwise `invalid-policy`. If the retention store write fails after all preconditions pass, the atom returns `rejected(storage-failure)` — no retention is recorded. The host system is responsible for ensuring the `record_ref` refers to an existing record; the atom does not validate against the host's record store.
 - **At `purge(retention_id)`** — `retention_id` must reference a retention currently in Retained; otherwise `not-retained` (already Purged) or `not-known` (no such id). `now ≥ retention_until` must hold; otherwise `retention-period-not-elapsed`. The atom does *not* reject purges that arrive past `purge_deadline` — at that point the regulator expects purge to have happened, and refusing the late purge would compound the overshoot. The lateness is observable in `purged_at` relative to `purge_deadline`; the audit names it. If the Retained → Purged transition fails to persist, the atom returns `rejected(storage-failure)` — the retention remains in Retained and the underlying record is not destroyed. The caller must retry; see *Purge persistence failure* in Edge cases.
 
 ### Behavior
@@ -169,6 +169,26 @@ A registered broker-dealer places every business communication (email, chat, voi
 ### Legal — contract retention beyond contract term
 
 A company places each executed contract under retention with policy = max(contract duration + 6 years, statute-of-limitations for relevant claim types). The retention extends past the operational life of the contract because the contract's audit obligations outlive its commercial life. Litigation hold composes by suspending purge eligibility during pending litigation (a Legal Hold composition; out of scope for the atom).
+
+### Rejection paths
+
+**Premature purge attempt.** A records-management system attempts to purge a transaction record four years into a seven-year SOX retention period:
+
+```
+purge(retention_id: "ret-0047")
+→ rejected(retention-period-not-elapsed)
+```
+
+`retention_until` has not been reached; the atom rejects the purge outright. No state change occurs; the record remains in Retained. The rejection is the structural enforcement of Invariant 7 — early purge is not just refused, it is structurally impossible.
+
+**Policy reference not resolvable.** A host system calls `place_under_retention` with a policy reference that does not resolve to a known policy:
+
+```
+place_under_retention(record_ref: "txn-1188", policy_ref: "policy-obsolete-v1")
+→ rejected(policy-not-found)
+```
+
+No retention is created. The host system must supply a valid, resolvable policy reference before any retention can be placed.
 
 ### Regulated adversarial scenarios
 
@@ -262,7 +282,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded — 2026-05-13` — all required structural elements resolved; identity model explicit; transition preconditions with fully-named rejection taxonomies including `policy-not-found` and `storage-failure`; ten invariants including retention store durability (Invariant 10) and clock-qualified Invariant 8; five cross-domain examples; regulated adversarial scenarios; fourteen edge cases including concurrent retentions for the same record, purge persistence failure, and divergence between retention state and underlying record destruction (all added in refinement round 1). Second entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
+`grounded — 2026-05-20` — all required structural elements resolved; identity model explicit; transition preconditions with fully-named rejection taxonomies including `policy-not-found` and `storage-failure`; ten invariants including retention store durability (Invariant 10) and clock-qualified Invariant 8; five cross-domain examples plus two rejection-path examples; regulated adversarial scenarios; fourteen edge cases including concurrent retentions for the same record, purge persistence failure, and divergence between retention state and underlying record destruction (all added in refinement round 1). Second entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
 
 ---
 
@@ -299,3 +319,5 @@ The three passes together exercise the architecture as designed: GRID checks str
 - *Three additional edge cases (Pass 3).* Three operational gaps were unnamed: (a) multiple simultaneous Retained retentions for the same `record_ref` — the atom allows it, but the composing system must select the governing policy and purge all of them; (b) purge persistence failure — `storage-failure` from `purge` leaves the record Retained and the underlying data undestroyed, requiring retry; (c) divergence between the retention record state and the actual underlying record destruction — if the storage layer fails to destroy the record after the retention moves to Purged, the audit says "purged" but the data still exists. All three named and resolved in Edge cases.
 
 Pass 2 was clean: no new over-absorptions. All six fixes are in-pattern.
+
+**Scheduled rescan: 2026-05-20.** Pass 1 clean. Pass 2 clean. Pass 3: two refining findings closed in-pattern. (1) Decision points used "well-formed and non-empty" for `record_ref` and `policy_ref` — inconsistent with the canonical library wording. Resolved: reworded to "must each contain at least one non-whitespace character." (2) Examples exercised only happy paths and adversarial scenarios — no rejection-path example showed `rejected(retention-period-not-elapsed)` or `rejected(policy-not-found)`. Resolved: two rejection-path examples added showing a premature purge attempt and a policy-not-found response, using concrete field values. All nine GRID nodes confirmed resolved; no over-absorptions identified; no foundational findings. **Scheduled rescan: 2026-05-20 — clean.**

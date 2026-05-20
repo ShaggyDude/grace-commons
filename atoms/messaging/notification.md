@@ -198,6 +198,10 @@ Supervisor_s later asks *"was I notified about the queue-9 escalation?"* — `pe
 
 An administrator broadcasts a policy update. Three compliance officers each receive a notification: `create(officer_a, {type: "policy:updated", policy_id: p7}) → notif_101`, similarly for officers b and c. Officer_a's email bounces: `fail(notif_101)`. Officers b and c are delivered successfully. `status_of(notif_101)` shows `failed_at`; `status_of(notif_102)` and `status_of(notif_103)` show `delivered_at`. An operator queries `pending_for` for each officer — empty for all three. The notification store shows: two Delivered, one Failed; the composing system creates a retry for officer_a or escalates to a secondary channel.
 
+### Rejection path — invalid create
+
+A composing system attempts to create a notification with an empty recipient reference: `create(recipient_ref: "", payload: {type: "task:assigned", task_id: "t1"})` → `rejected(invalid-request)`. No `notification_id` is issued; no record enters the store. The composing system must supply a non-empty recipient reference before the notification can be created.
+
 ### Regulated adversarial scenarios
 
 Three scenarios the notification store must survive in regulated contexts:
@@ -273,7 +277,7 @@ Notification is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-13` — structure and invariants specified; `status_of` query added after Pass 2 identified the missing read surface; Invariant 8 corrected to conditional-per-state form after Pass 1 identified the set-notation error; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. Second entry in `atoms/messaging/`.
+`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-20` — structure and invariants specified; `status_of` query added after Pass 2 identified the missing read surface; Invariant 8 corrected to conditional-per-state form after Pass 1 identified the set-notation error; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. Second entry in `atoms/messaging/`.
 
 ---
 
@@ -323,3 +327,7 @@ This atom is the second entry in the `messaging/` category, drafted alongside Su
 - *Forthcoming-link cleanup.* Composition notes still marked Notification Fanout as `*(forthcoming)*` after the composition had landed. Per workflow step 5 in `CLAUDE.md`, the marker is removed and the reference linked.
 
 *Library-wide concerns surfaced but not resolved in this round* — same set Subscription's refinement round surfaced (audit-surface convention, opaque-ref empty-check semantics). Per-pattern fixes landed; canonical statements belong in a shared document.
+
+**Scheduled rescan: 2026-05-20.** One refining finding; closed in-pattern.
+
+- *Rejection-path example absent (Pass 3).* Subscription's Examples section includes a dedicated "Rejection path" subsection showing `rejected(already-subscribed)`; Notification's Examples section had no analogous rejection-path example for `create`. The `create` rejection reasons (`invalid-request`) are clearly stated in Decision points, but peer-pattern parity and fresh-reader completeness favor a worked example. Resolved: rejection-path example added showing `create(recipient_ref: "", payload: {...}) → rejected(invalid-request)` with the consequence (no `notification_id` issued, no record created).

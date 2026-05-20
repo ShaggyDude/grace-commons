@@ -310,7 +310,7 @@ Consent is the data subject's authorization primitive — the complement to Perm
 
 ## Status
 
-`grounded — 2026-05-13` — foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Soft Delete) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
+`grounded — 2026-05-20` — foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Soft Delete) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
 
 ---
 
@@ -387,3 +387,5 @@ All nine GRID nodes resolved.
 - *No Concurrency edge case.* Legal-hold carries a Concurrency edge case naming the concurrent-`release` race; consent's parallel scenario was unaddressed, leaving the concurrent-`revoke` race and the lazy-expiry write race unspecified. Fixed: Concurrency edge case added covering concurrent `revoke` (serialize; first succeeds, second receives `already-revoked`), concurrent lazy-expiry writes (serialize so the Expired write occurs at most once), and concurrent `grant` for the same (subject, purpose) (no race — independent records by design).
 
 - *Intent claim "recoverable from the records alone" overstated without naming Tamper Evidence.* The Intent paragraph asserted that the full consent history is "recoverable from the records alone" without qualifying that cryptographic protection against post-hoc modification is provided by Tamper Evidence composition. The Edge case *"Tamper Evidence"* conceded the same point. Fixed: Intent paragraph rewritten to claim that the history is carried in the records and immutable by specification, and to name Tamper Evidence as the composition that adds cryptographic protection for court-admissible and regulator-admissible evidence.
+
+**Scheduled rescan: 2026-05-20 — clean.**
