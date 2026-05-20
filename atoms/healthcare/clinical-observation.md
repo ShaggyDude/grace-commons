@@ -253,7 +253,7 @@ Clinical Observation composes naturally with the existing library:
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— last full rescan: 2026-05-13` — foundation passes complete (Pass 1, Pass 2, Pass 3), two human refinement rounds complete (Refinement rounds 1 and 2), and one AI-conducted adversarial round complete (Refinement round 3, Torvalds X2 posture, Claude Opus 4.7). All nine GRID nodes resolved, all concerns conceptually independent, all known adversarial gaps closed or named as explicit out-of-scope.
+`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-13` — foundation passes complete (Pass 1, Pass 2, Pass 3), two human refinement rounds complete (Refinement rounds 1 and 2), and one AI-conducted adversarial round complete (Refinement round 3, Torvalds X2 posture, Claude Opus 4.7). All nine GRID nodes resolved, all concerns conceptually independent, all known adversarial gaps closed or named as explicit out-of-scope.
 
 ---
 

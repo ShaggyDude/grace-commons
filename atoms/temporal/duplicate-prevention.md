@@ -165,7 +165,7 @@ It inherits from:
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — concept is freestanding, composable, and carries a verifiable invariant set. Examples cover four distinct domains. Ready for composition with Personal Todo and other patterns.
+`grounded — 2026-05-13` — concept is freestanding, composable, and carries a verifiable invariant set. Examples cover four distinct domains. Ready for composition with Personal Todo and other patterns.
 
 ---
 
@@ -202,7 +202,7 @@ This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.
 - *Clock semantics not addressed.* Already implicit under "wall-time" framing throughout; the underlying mechanism assumes a non-adversarial clock. Composing patterns that need monotonic guarantees should compose with a Logical Clock pattern (forthcoming) rather than expect this concept to provide it.
 - *Concurrent calls between `record` and `check` from different callers.* Already named under distributed coordination as out-of-scope. Serialization is the implementation's responsibility; the spec assumes serialized access within one instance.
 
-The pattern is `grounded — last full rescan: 2026-05-13` after one round.
+The pattern is `grounded — 2026-05-13` after one round.
 
 **Refinement round 1.** Three findings, all closed as Edge cases. Conventions inherited from the methodology directly.
 

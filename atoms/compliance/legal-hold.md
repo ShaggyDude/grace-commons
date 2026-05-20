@@ -277,7 +277,7 @@ Legal Hold is the preservation primitive the library has held open since Retenti
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — foundation round (Pass 1 + 2 + 3 author-led), Refinement round 1 (human), and two AI-conducted adversarial rounds complete: Refinement round 2 (Sonnet, batched with Consent and Soft Delete) and Refinement round 3 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
+`grounded — 2026-05-13` — foundation round (Pass 1 + 2 + 3 author-led), Refinement round 1 (human), and two AI-conducted adversarial rounds complete: Refinement round 2 (Sonnet, batched with Consent and Soft Delete) and Refinement round 3 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
 
 ---
 
@@ -341,7 +341,7 @@ All nine GRID nodes resolved.
 
 - *Intent overclaimed verifiability without naming Tamper Evidence.* The Intent paragraph asserted *"verify from the records alone"* without qualifying that cryptographic protection against post-hoc modification is provided by Tamper Evidence composition. The Edge case *"Tamper-evidence"* contradicted the Intent. Fixed: Intent paragraph rewritten to claim only that the chain is present in the records and immutable by specification, and to name Tamper Evidence as the composition that adds cryptographic protection for court-admissible evidence.
 
-- *Status mis-categorized as `unresolved`.* Per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md), patterns that have completed human refinement but not the AI round declare `partially resolved`; `unresolved` is the label for "nothing done." Fixed: with this Opus round complete and all findings closed, Status advances to `grounded — last full rescan: 2026-05-13` per the same methodology section.
+- *Status mis-categorized as `unresolved`.* Per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md), patterns that have completed human refinement but not the AI round declare `partially resolved`; `unresolved` is the label for "nothing done." Fixed: with this Opus round complete and all findings closed, Status advances to `grounded — 2026-05-13` per the same methodology section.
 
 - *AI adversarial round (Sonnet) not recorded in Lineage notes.* The methodology requires AI rounds be recorded as such, named with the model, for reproducibility. The prior Sonnet round was named only in Status. Fixed: Refinement round 2 entry added above, recording the Sonnet round as a clean AI round and naming the batched-attention caveat that motivated the Opus follow-up.
 

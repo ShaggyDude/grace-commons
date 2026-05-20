@@ -264,7 +264,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 ## Status
 
-`grounded (passed all required review passes and is stable enough to generate from) — last full rescan: 2026-05-13` — foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Consent) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
+`grounded (passed all required review passes and is stable enough to generate from) — 2026-05-13` — foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Consent) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
 
 ---
 
@@ -330,7 +330,7 @@ All nine GRID nodes resolved.
 
 - *No Concurrency edge case.* Legal-hold carries a Concurrency edge case naming the concurrent-`release` race; consent carries one for concurrent `revoke`; soft-delete's parallel scenarios (concurrent `soft_delete`, `restore`, `purge` on the same `record_id`) were unaddressed. Fixed: Concurrency edge case added covering all three write actions and the serialization requirement on a given `record_id`.
 
-- *Status mis-categorized as `unresolved`.* Per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md), patterns that have completed human refinement but not the AI round declare `partially resolved`; `unresolved` is the label for "nothing done." Fixed: with this Opus round complete and all findings closed, Status advances to `grounded — last full rescan: 2026-05-13`.
+- *Status mis-categorized as `unresolved`.* Per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md), patterns that have completed human refinement but not the AI round declare `partially resolved`; `unresolved` is the label for "nothing done." Fixed: with this Opus round complete and all findings closed, Status advances to `grounded — 2026-05-13`.
 
 - *AI adversarial round (Sonnet) not recorded in Lineage notes.* Methodology requires AI rounds be recorded with model identification for reproducibility. The Sonnet round was named only in Status. Fixed: Refinement round 1 entry added above, recording the Sonnet round as a clean AI round and naming the batched-attention caveat that motivated the Opus follow-up.
 

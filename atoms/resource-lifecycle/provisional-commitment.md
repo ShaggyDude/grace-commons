@@ -271,7 +271,7 @@ This is the *generator's contract*: any code generated from this atom must produ
 
 ## Status
 
-`grounded (passed all required review passes and is stable enough to generate from) — last full rescan: 2026-05-13` — all required structural elements resolved; identity model explicit; transition preconditions explicit; rejection paths enumerated; five cross-domain examples covering banking, healthcare, retail, hospitality, airline; deferred concerns (idempotency under retry, full audit trail, aggregate capacity, partial release, renewal, retroactive cancellation, resource availability semantics, concurrency, clock semantics, eager vs. lazy expiry, the business meaning of confirmation) named as out-of-scope with composing patterns where applicable. Ready for composition with Duplicate Prevention, Event Log, Capacity Constraint Enforcement, and Reversal.
+`grounded (passed all required review passes and is stable enough to generate from) — 2026-05-13` — all required structural elements resolved; identity model explicit; transition preconditions explicit; rejection paths enumerated; five cross-domain examples covering banking, healthcare, retail, hospitality, airline; deferred concerns (idempotency under retry, full audit trail, aggregate capacity, partial release, renewal, retroactive cancellation, resource availability semantics, concurrency, clock semantics, eager vs. lazy expiry, the business meaning of confirmation) named as out-of-scope with composing patterns where applicable. Ready for composition with Duplicate Prevention, Event Log, Capacity Constraint Enforcement, and Reversal.
 
 ---
 

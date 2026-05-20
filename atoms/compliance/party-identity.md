@@ -366,7 +366,7 @@ Party Identity is freestanding and is the external-party identity contract that 
 
 ## Status
 
-`grounded — last full rescan: 2026-05-14` — foundation round complete (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus all run; findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2) ran against the foundation draft, surfaced six findings, and returned clean after all six were closed in-pattern. The gate also served as the closing AI adversarial round (Phase 3) given the gate's fresh-reader, full-three-pass coverage.
+`grounded — 2026-05-14` — foundation round complete (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus all run; findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2) ran against the foundation draft, surfaced six findings, and returned clean after all six were closed in-pattern. The gate also served as the closing AI adversarial round (Phase 3) given the gate's fresh-reader, full-three-pass coverage.
 
 ---
 

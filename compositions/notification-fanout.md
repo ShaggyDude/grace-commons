@@ -222,7 +222,7 @@ It inherits from:
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — three foundation passes complete; Opus adversarial pass (26 findings, all resolved); architectural decisions applied (Event Log optional, fanout_id ephemeral correlation handle with Event Log as durable identity when composed, subscribers-unavailable treated as explicit error).
+`grounded — 2026-05-13` — three foundation passes complete; Opus adversarial pass (26 findings, all resolved); architectural decisions applied (Event Log optional, fanout_id ephemeral correlation handle with Event Log as durable identity when composed, subscribers-unavailable treated as explicit error).
 
 ---
 

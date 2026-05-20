@@ -255,7 +255,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — all required structural elements resolved; identity model explicit; attest and verify action signatures with fully-named rejection and outcome reasons; nine invariants including attestation durability (Invariant 9); five cross-domain examples spanning banking, healthcare, payments, legal, and source control; regulated adversarial scenarios cover regulator audit, disputed transaction, and compromised credential; fifteen edge cases including certificate revocation status and attestation store durability (named in refinement round 1). First entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
+`grounded — 2026-05-13` — all required structural elements resolved; identity model explicit; attest and verify action signatures with fully-named rejection and outcome reasons; nine invariants including attestation durability (Invariant 9); five cross-domain examples spanning banking, healthcare, payments, legal, and source control; regulated adversarial scenarios cover regulator audit, disputed transaction, and compromised credential; fifteen edge cases including certificate revocation status and attestation store durability (named in refinement round 1). First entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
 
 ---
 

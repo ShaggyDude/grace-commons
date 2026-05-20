@@ -213,7 +213,7 @@ It inherits from:
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
+`grounded — 2026-05-13` — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
 
 ---
 
@@ -231,7 +231,7 @@ This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.
 - *Query DSL ambiguity.* Already named explicitly as implementation policy. The atom guarantees only that any well-formed query returns events in `sequence_number` order; the predicate language is intentionally deferred to composing patterns and implementations.
 - *Append/read concurrency.* Already addressed under Decision points (appends serialized by the underlying implementation) and under durability in Edge cases.
 
-The pattern is `grounded — last full rescan: 2026-05-13` after one round.
+The pattern is `grounded — 2026-05-13` after one round.
 
 **Refinement round 1.** Five findings, all closed in-pattern. Conventions inherited from the methodology directly.
 

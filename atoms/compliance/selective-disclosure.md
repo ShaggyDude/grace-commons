@@ -376,7 +376,7 @@ Selective Disclosure is the disclosure accountability primitive that regulated d
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (Pass 1 + Pass 2 + Pass 3, AI-conducted, claude-sonnet-4-6), and Round 3 (Pass 1 + Pass 2 + Pass 3, AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. Audit gaps that cannot be cleared from this atom's records alone — authority legitimacy, Invariant 5 conformance, and backdating detection — are named explicitly in the *Audit gaps* subsection of Generation acceptance and in Edge cases, with the composing patterns that surface each unclearable question.
+`grounded — 2026-05-13` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (Pass 1 + Pass 2 + Pass 3, AI-conducted, claude-sonnet-4-6), and Round 3 (Pass 1 + Pass 2 + Pass 3, AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. Audit gaps that cannot be cleared from this atom's records alone — authority legitimacy, Invariant 5 conformance, and backdating detection — are named explicitly in the *Audit gaps* subsection of Generation acceptance and in Edge cases, with the composing patterns that surface each unclearable question.
 
 ---
 

@@ -245,7 +245,7 @@ Subscription is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— last full rescan: 2026-05-13` — structure and invariants specified; four examples including rejection path and regulated adversarial scenarios; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. First entry in `atoms/messaging/`.
+`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-13` — structure and invariants specified; four examples including rejection path and regulated adversarial scenarios; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. First entry in `atoms/messaging/`.
 
 ---
 

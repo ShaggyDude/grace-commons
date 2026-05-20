@@ -313,7 +313,7 @@ Approval Step is the approval-gate primitive that Multi-Party Approval and State
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— last full rescan: 2026-05-13` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (AI-conducted, claude-sonnet-4-6), and Round 3 (AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. First entry in `atoms/workflow/`.
+`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-13` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (AI-conducted, claude-sonnet-4-6), and Round 3 (AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. First entry in `atoms/workflow/`.
 
 ---
 

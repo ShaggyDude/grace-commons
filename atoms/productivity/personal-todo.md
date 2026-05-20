@@ -251,7 +251,7 @@ A formal-methods version of a similar concept exists in [concept-catalog](https:
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — all required structural elements resolved; identity model explicit; description policy explicit; rejection paths exercised in examples; deferred concerns (concurrency, atomicity, clock semantics) named as out-of-scope. The pattern is freestanding and composable. Extensions (recency guard, history, priority, dependencies, recurrence, reopening, concurrency resolution) are separate concepts, listed in Composition notes.
+`grounded — 2026-05-13` — all required structural elements resolved; identity model explicit; description policy explicit; rejection paths exercised in examples; deferred concerns (concurrency, atomicity, clock semantics) named as out-of-scope. The pattern is freestanding and composable. Extensions (recency guard, history, priority, dependencies, recurrence, reopening, concurrency resolution) are separate concepts, listed in Composition notes.
 
 ---
 
