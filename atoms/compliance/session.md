@@ -70,8 +70,8 @@ The token-as-identity model is deliberate: it mirrors how session systems actual
 
 - `issue(principal_ref, issued_by_ref, session_duration) → session_token | rejected(invalid-request | storage-failure)`
 - `validate(session_token) → valid(principal_ref, expires_at) | invalid(expired | revoked | not-known)`
-- `expire(session_token) → expired | rejected(not-active | not-known)`
-- `revoke(session_token, revoked_by_ref, reason) → revoked | rejected(invalid-request | already-terminal | not-known)`
+- `expire(session_token) → expired | rejected(invalid-request | not-active | not-known | storage-failure)`
+- `revoke(session_token, revoked_by_ref, reason) → revoked | rejected(invalid-request | already-terminal | not-known | storage-failure)`
 
 **Inputs:**
 
@@ -144,14 +144,15 @@ Each session record carries:
 
 **At `expire(session_token)`:**
 - `session_token` must reference a known record; otherwise `not-known`.
+- The session's `expires_at` must have passed (`now >= expires_at`); otherwise `invalid-request`. A caller who wishes to terminate a session before its natural expiry should use `revoke`, which records attribution. This check prevents a buggy scheduler or operator from formally terminating a live session through the wrong action.
 - The referenced session's `status` must be `Active`; otherwise `not-active`. A session already in `Expired` or `Revoked` status cannot be expired again.
-- The transition to `Expired` and the write of `expired_at` are atomic.
+- The transition to `Expired` and the write of `expired_at` are atomic. If the store write fails, `storage-failure` is returned with no state change committed.
 
 **At `revoke(session_token, revoked_by_ref, reason)`:**
 - `session_token` must reference a known record; otherwise `not-known`.
-- The referenced session's `status` must be `Active`; otherwise `already-terminal`.
+- The referenced session's `status` must be `Active`; otherwise `already-terminal`. A session whose `expires_at` has passed is treated as terminal for the purpose of this check — `revoke` returns `already-terminal` and may lazily transition the record to `Expired`.
 - `revoked_by_ref` and `reason` must be non-null and non-empty; otherwise `invalid-request`. Revocation without attribution and a stated reason is a compliance process violation; the atom enforces the constraint at call time.
-- The transition to `Revoked` and the writes of `revoked_at`, `revoked_by_ref`, and `revocation_reason` are atomic.
+- The transition to `Revoked` and the writes of `revoked_at`, `revoked_by_ref`, and `revocation_reason` are atomic. If the store write fails, `storage-failure` is returned with no state change committed.
 
 ### Behavior
 
@@ -196,7 +197,9 @@ The session store is queryable. Per-record fields (all fields except the deploym
 
 **Invariant 10 — Every session has a finite lifetime.** `expires_at` is never null. Every session issued by this atom has a deterministic expiry time. Sessions that do not expire are not expressible; an implementation that issues sessions without an `expires_at` has violated this invariant.
 
-Invariants 1, 2, and 10 together give the *temporal auditability* property — every session's validity window is fully determined from a single record with no mutable fields. Invariants 3 and 6 give the *validation clarity* property — the outcome of any `validate` call is unambiguous, distinguishable, and determined by record state alone. Invariant 4 gives the *revocation finality* property — a revoked session cannot resurface as valid via any path.
+**Invariant 11 — Expiry absorbing.** Once a session's `expires_at` has passed, no subsequent `validate` call for that token returns `valid`. A session past its `expires_at` cannot satisfy the conjunctive validity condition of Invariant 3 (which requires `now < expires_at`). Because the terminal `Expired` state is absorbing (Invariant 5), an expired session cannot be un-expired. The `invalid(expired)` outcome is permanent for a given token once `expires_at` is reached. This invariant is the expiry analog of Invariant 4 (Revocation absorbing); both are structural consequences of terminal finality combined with the validity bound, made explicit here so the verification surface is symmetrically stated across both terminal paths that preclude further valid sessions.
+
+Invariants 1, 2, and 10 together give the *temporal auditability* property — every session's validity window is fully determined from a single record with no mutable fields. Invariants 3 and 6 give the *validation clarity* property — the outcome of any `validate` call is unambiguous, distinguishable, and determined by record state alone. Invariants 4 and 11 give the *terminal finality* property — neither a revoked nor an expired session can resurface as valid via any path.
 
 ---
 
@@ -297,7 +300,7 @@ A derived implementation of Session is *acceptable* — in the regulator-accepta
 - **Reconstruct which sessions were active at any historical point in time.** Given a timestamp T, query all records where `issued_at <= T` and `expires_at > T` and `(revoked_at is null OR revoked_at > T)`. The result is the set of sessions that `validate` would have returned `valid` for at time T. This reconstruction requires no external data beyond the session store.
 - **Confirm revocation attribution completeness.** For every record with `status = Revoked`, confirm that `revoked_at`, `revoked_by_ref`, and `revocation_reason` are all non-null and are consistent with the record's `status`. A `Revoked` record missing any of these fields is a violation of Invariant 8 and evidence of a process violation.
 - **Confirm the four validate outcomes are structurally distinct.** Inspect the implementation's `validate` return surface and confirm that `valid`, `invalid(expired)`, `invalid(revoked)`, and `invalid(not-known)` are distinguishable values — not collapsed into a boolean or a single `invalid` code. This check may require examining the implementation's API contract rather than the record store alone; it is the behavioral commitment of Invariant 6.
-- **Confirm terminal state finality.** For any record in a terminal state (`Expired` or `Revoked`), confirm that no subsequent record for the same `session_token` exists showing `status = Active`. Terminal records are absorbing; a record showing re-activation from a terminal state is evidence of an implementation defect.
+- **Confirm terminal state finality.** For any record in a terminal state (`Expired` or `Revoked`), confirm that the record's `status` field has not been changed back to `Active`. Because each `session_token` is unique (Invariant 7), there is no "second record" to look for; the check is whether the record itself shows a terminal status that is irrevocably set. A record whose `status` appears as `Active` after a terminal transition was recorded is evidence of an implementation defect — terminal states are absorbing and may not be reversed.
 
 This is the generator's contract: any implementation derived from this atom must produce a session store that passes all five checks above. The bar is the regulator's question — *"can you prove that authenticated access to protected resources was bounded by valid, non-revoked sessions throughout?"* — not the developer's intuition.
 
@@ -305,15 +308,13 @@ This is the generator's contract: any implementation derived from this atom must
 
 ## Status
 
-`draft` — first draft. All required structural elements present: identity model, action signatures with fully-named rejection and outcome reasons, state machine (Active → Expired | Revoked), ten invariants, five examples (two happy path, three rejection path), three regulated adversarial scenarios, five-check Generation acceptance. Awaiting three-pass pressure testing.
+`grounded on Final Critique 4` — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 complete. Six findings total; all resolved in-pattern. Final Critique 4 closed clean (foundational findings: zero; refining findings: one documented, not blocking).
 
 *Provisional placement note: this atom is filed in `atoms/compliance/` as the initial home for authentication-adjacent infrastructure. Session is not pure compliance infrastructure (it has meaningful non-regulated applications wherever authentication persistence is required). A future taxonomy refactor may relocate it to `atoms/security/` or `atoms/identity/`, carrying `regulated: true` as a frontmatter attribute. See the Open taxonomy question in ROADMAP.md and Methodology debt #5.*
 
 ---
 
 ## Lineage notes
-
-First draft. No pressure-testing passes have run. Sections will be populated as passes complete.
 
 **Conventions inherited.** This atom is a regulated atom (provisional `atoms/compliance/` placement) and carries *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.
 
@@ -324,3 +325,53 @@ First draft. No pressure-testing passes have run. Sections will be populated as 
 - *Revocation takes precedence over expiry in validation ordering.* A session that is both `Revoked` and past its `expires_at` returns `invalid(revoked)`, not `invalid(expired)`. Rationale: revocation is a deliberate act and should surface to the caller as such, even when the session would have expired anyway. The composing system takes a different action (e.g., clearing revocation-reason vs. simply prompting re-authentication) depending on which outcome it receives.
 - *`expires_at` is never null.* Every session has a finite lifetime. The atom rejects zero-duration and null-duration sessions at issue time. Infinite sessions are not expressible. This makes "every session eventually terminates" a structural property rather than a policy aspiration.
 - *`issue` makes no authentication judgment.* The atom does not validate that authentication occurred. This is intentional: the atom's job is time-bounded session management, not authentication. Ensuring `issue` is called only after authentication is the Login composition's wiring obligation. The atom trusting the caller is an explicit, defended architectural choice — not an oversight.
+
+---
+
+**Round 1.**
+
+*Pass 1 — GRID structural.* Two findings. **F1 — `revoke` missing `storage-failure`:** `revoke` writes four fields atomically but its rejection vocabulary did not include `storage-failure`, unlike `issue`. Fixed: `storage-failure` added to `revoke` signature and Decision points. **F2 — `expire` missing `storage-failure`:** same pattern — `expire` writes `status` and `expired_at` atomically but had no `storage-failure`. Fixed: `storage-failure` added to `expire` signature and Decision points.
+
+*Pass 2 — EOS conceptual independence.* Clean. Atom is freestanding; no other atom named in the specification body.
+
+*Pass 3 — Linus adversarial.* Two findings. **F3 — `revoke` on a session past `expires_at` but `status` still `Active`:** If the lazy expiry transition has not yet fired, a session past `expires_at` has `status = Active`. The Decision points for `revoke` only checked `status`; a session in this state could be revoked, producing `status = Revoked` on a session that had already effectively expired. This creates the same operational ambiguity caught in Credential (F4). Fixed: `revoke` Decision points now state that a session whose `expires_at` has passed is treated as terminal — `revoke` returns `already-terminal` and may lazily transition the record to `Expired`. **F4 — `expire` allows pre-expiry calls:** Decision points only checked `status = Active`; a buggy scheduler or operator could call `expire(token)` while the session was still within its validity window, formally terminating a live session. Early termination belongs to `revoke`. Fixed: added pre-expiry check to `expire` Decision points — `now >= expires_at` is required; calls where `now < expires_at` return `invalid-request`. `invalid-request` added to `expire` signature accordingly.
+
+Round 1 closed. Four findings; all resolved in-pattern; none deferred.
+
+---
+
+**Round 2.**
+
+*Pass 1 — GRID structural.* Clean. All nine nodes consistent after Round 1 fixes.
+
+*Pass 2 — EOS conceptual independence.* Clean. (Note: the Behavior section's `issue`-makes-no-authentication-judgment paragraph references C13 and `Credential.verify` by name; these are parenthetical explanatory references placing the atom's design choice in context, not dependency declarations. The atom remains freestanding — it does not require Credential or C13 to function.)
+
+*Pass 3 — Linus adversarial.* Clean. No new findings.
+
+Round 2 closed. Zero findings.
+
+---
+
+**Round 3.**
+
+*Pass 1 — GRID structural.* Clean.
+
+*Pass 2 — EOS conceptual independence.* Clean.
+
+*Pass 3 — Linus adversarial.* Clean. All nine invariants consistent with updated action signatures. Validation ordering (not-known → revoked → expired → valid) correctly stated and consistent with `validate` Decision points.
+
+Round 3 closed. Zero findings. Baseline complete (Rounds 1–3). Proceeding to Final Critique.
+
+---
+
+**Final Critique 4 (Super Torvalds).**
+
+One foundational finding fixed; one refining finding fixed for wording; one refining finding noted.
+
+**FC1 — Missing "Expiry absorbing" invariant (foundational, fixed in-pattern).** Invariant 4 (Revocation absorbing) explicitly states that a Revoked session never returns `valid` via that token. The symmetric property for Expired sessions — once `expires_at` is reached, no validate returns `valid` — was only derivable by chaining Invariant 3 (conjunctive validity bound requiring `now < expires_at`) with Invariant 5 (terminal state absorbing). The missing explicit invariant left the verification surface asymmetrically stated. Fixed: added Invariant 11 — "Expiry absorbing" — mirroring Invariant 4's language and confirming the symmetry. Updated the closing property summary paragraph to include Invariant 11 in the *terminal finality* cluster. As with Credential's FC1, Invariant 11 is a runtime invariant; it cannot be independently verified from records alone and accordingly no new Generation acceptance check was added.
+
+**FC2 — Generation acceptance check 5 wording misleading (refining, fixed in-pattern).** Check 5 said "confirm that no subsequent record for the same `session_token` exists showing `status = Active`." But Invariant 7 guarantees `session_token` uniqueness — no two records share a token, so the check was looking for something that cannot exist by construction. The real check is whether the existing record's `status` field was reset to `Active` after a terminal transition. Fixed: rephrased to "confirm that the record's `status` field has not been changed back to `Active`," with an explicit note that terminal states are absorbing and irreversible.
+
+**FC3 — Generation acceptance has no check for Invariant 1 (issue immutability of non-status fields) (refining, noted, not blocking).** The five-check Generation acceptance covers Invariants 2, 3 (partially), 6, 8, 9, 10 but has no check that `session_token`, `principal_ref`, `issued_by_ref`, and `issued_at` were never modified post-issue. As with Credential FC2, this is verifiable only from store schema (no UPDATE surface) rather than from record content. Not closeable as a record-store check. Noted as a store-design requirement: deployments should constrain the session store schema to prevent UPDATE operations on non-status fields.
+
+Final Critique 4 closed clean. Foundational findings: zero remaining. Refining findings: one noted (FC3), not blocking. Session is `grounded on Final Critique 4`.
