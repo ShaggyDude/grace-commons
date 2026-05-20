@@ -205,6 +205,11 @@ The capability store is queryable. Per-record fields (all listed above) are obse
 
 Invariants 1 and 3 together give the *authorization envelope* property — the capability's full authorization is readable from a single immutable record, and no identity check contaminates the bearer semantics. Invariants 2 and 4 give the *redemption integrity* property — the counter decrements exactly once per redemption, even under concurrency, and the exhaustion transition is atomic. Invariants 5 and 6 give the *audit clarity* property — the audit record for a capability always answers "who allocated it and what it authorized" and never answers "who redeemed it," and the terminal state is always unambiguous. Invariant 12 gives the *lookup determinism* property — `redeem` always resolves to exactly one record or none.
 
+Two emergent properties — not stated as numbered invariants but entailed by the combination of the above — confirmed by the formal model (`formal/capability.als`):
+
+- **Zero counter implies Redeemed.** `remaining_redemptions = 0` is only reachable via the exhaustion transition, which atomically sets `status = Redeemed` (Invariants 2 and 4). `expire` and `revoke` do not decrement the counter. Therefore `remaining_redemptions = 0` and `status ≠ Redeemed` is an unreachable configuration. An implementation that reaches this state has violated Invariant 4.
+- **Revoked records always have `remaining_redemptions > 0`.** `revoke` requires `status = Allocated` (hence `remaining_redemptions > 0`, by Invariant 4's structural half) and preserves the counter. Terminal states are absorbing (Invariant 7). Therefore a `Revoked` record with `remaining_redemptions = 0` is unreachable; it would require a revoke-after-exhaustion path that the action wiring disallows.
+
 ---
 
 ## Examples
@@ -397,3 +402,22 @@ One foundational finding fixed; one refining finding fixed for correctness.
 **FC2 — Generation acceptance check 5 overstated what records can prove (refining, fixed for correctness).** Check 5 claimed to confirm "that no successful `redeem` call occurs after exhaustion, expiry, or revocation." For `Redeemed` records this is auditable (`remaining_redemptions = 0`, `redeemed_at` set). For `Expired` and `Revoked` records it is not — failing `redeem` calls leave no trace in the record store. The check overstated the auditor's power for two of the three terminal states. Fixed: check 5 rephrased to scope the auditable portions correctly — counter inspection for `Redeemed`, counter-value retention for `Expired`/`Revoked`, and an explicit note that post-terminal `redeem` attempt detection is not auditable from records alone.
 
 Final Critique 4 closed clean. Foundational findings: zero remaining. Refining findings: none outstanding. Capability is `grounded on Final Critique 4`.
+
+---
+
+**Formal verification pass — Alloy structural model.**
+
+Model: `atoms/compliance/capability.als` (twin file). Python bounded model checker: `atoms/compliance/capability_check.py`. Run (162 valid records generated; stores up to size 3; integer bound 4).
+
+All 16 assertions passed — no counterexample found within scope:
+
+- Structural: `A_CounterNonNeg`, `A_CounterNotExceedsMax`, `A_AllocHasRem`, `A_RedeemedExhausted`, `A_ZeroMeansRedeemed`, `A_RevokedHasAttrib`, `A_NonRevokedNoAttrib`, `A_TokenUniqueness`.
+- Transition: `A_ExhaustionSetsRedeemed`, `A_PartialRedeemStaysAlloc`, `A_RedeemDecByOne`, `A_RedeemNonNeg`, `A_RevokePreservesCounter`, `A_RevokedRemPositive`, `A_ExpirePreservesCounter`, `A_TerminalAbsorbing`.
+
+All 8 satisfiability runs found instances — model is not over-constrained. All four statuses (`Allocated`, `Redeemed`, `Expired`, `Revoked`) are reachable. Exhaustion, partial-redeem, revoke, and expire transitions all produce valid post-states.
+
+Two emergent properties confirmed by the model and surfaced to the Invariants section:
+- **Zero counter implies Redeemed** (entailed by I2 + I4 + I7).
+- **Revoked records always have `remaining_redemptions > 0`** (entailed by revoke precondition + counter-preservation + I7).
+
+No spec findings. The twelve named invariants are mutually consistent and together entail both emergent properties.

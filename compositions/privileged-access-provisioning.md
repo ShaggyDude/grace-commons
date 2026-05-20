@@ -413,3 +413,21 @@ Pre-test fixes (applied before Round 1 from GPT peer review): exercise_access lo
 - *Session token (not principal identity) in the access-exercise audit record.* `access_exercised` records `session_token` rather than the session's `principal_ref`. Rationale: the composition does not look inside the Session atom to extract fields it was not given; the `session_token` is sufficient for an auditor who can cross-reference the Session store. This preserves the layering discipline: each atom owns its own field surface.
 
 - *Credential.verify on every approver step.* The approver's Credential is verified immediately before each step decision. This ensures that approval decisions are only recorded against Active credentials. A decision from a recently-revoked approver is not accepted. The cost is one Credential.verify call per step decision; the benefit is that every recorded decision in the Audit Trail is backed by a verified Credential at decision time.
+
+---
+
+**Formal verification pass — TLA+ behavioral model.**
+
+Model: `compositions/privileged-access-provisioning.tla` (twin file). Python bounded model checker: `compositions/privileged_access_provisioning_check.py`. BFS over all reachable states within scope (RequestIDs={"r1","r2"}, ApproverIDs={"a1","a2","a3"}, CapTokens={"cap1","cap2"}, QuorumSize=2).
+
+841 states explored. All safety invariants held across every reachable state — no counterexample found:
+
+- `ApprovalGatesProvisioning` — every token in `request_to_cap` corresponds to a chain in `Approved` state. No provisioning bypass reachable.
+- `MapInverseConsistency` — `request_to_capability` and `capability_to_request` are strict inverses in all reachable states. No asymmetry introduced by any action interleaving.
+- `NoPendingRequestHasToken` — no Pending request ever holds a capability token.
+- `TokensAllocatedOnlyForProvisioned` — every allocated token has an owner in `Provisioned` or `Revoked` state.
+- `ExhaustedSubsetAllocated` — every exhausted token was allocated.
+
+The trailing-decision re-fire guard (F4, Round 1) was the primary interleaving concern. The BFS confirmed that under concurrent `approve_step` calls racing on the same chain, the cascade fires exactly once — the idempotency guard on `request_store[request_id].state` correctly blocks re-fire in all explored interleavings.
+
+No spec findings from the formal pass.
