@@ -236,7 +236,7 @@ The classification is the reviewer's call. The Lineage notes per-finding format 
 
 **Status line format.** The Status section of every grounded pattern carries a rescan date:
 
-> `` `grounded — last full rescan: YYYY-MM-DD` `` — [description of what was resolved]
+> `` `grounded — YYYY-MM-DD` `` — [description of what was resolved]
 
 The date is the date of the most recent complete three-pass round. It is updated every time a touch triggers a re-pass. A pattern whose rescan date is significantly older than the current date — particularly one that predates atoms it now composes with — is a candidate for the next scheduled sweep.
 

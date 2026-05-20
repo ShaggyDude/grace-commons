@@ -72,7 +72,7 @@ Reference examples: [`atoms/productivity/personal-todo.md`](./atoms/productivity
 
 17. **Standards references.** The regulatory or industry standards the atom's invariants satisfy or contribute toward, with section anchors where applicable. Cite only standards that genuinely apply at this layer; frame standards that belong to a composing pattern as the composing pattern's obligation.
 
-18. **Status.** A one-line status indicator (`grounded — last full rescan: YYYY-MM-DD` for a grounded atom, `partially resolved` for an atom that has not completed all required passes, or `draft` for a freshly authored atom). See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the status taxonomy.
+18. **Status.** A one-line status indicator (`grounded — YYYY-MM-DD` for a grounded atom, `partially resolved` for an atom that has not completed all required passes, or `draft` for a freshly authored atom). See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the status taxonomy.
 
 19. **Lineage notes.** The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Pass 1 GRID findings, Pass 2 EOS extractions, Pass 3 Linus fixes, and any Round 2 / Round 3 / scheduled-rescan entries — what was found, what was closed in-pattern, what was deferred as explicit out-of-scope. The Lineage notes section is the evidence the atom has been pressure-tested; an absence here is not necessarily a problem but a rich Lineage section is provably evidence-bearing.
 
@@ -188,4 +188,4 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 
 ## Status
 
-`grounded — last full rescan: 2026-05-13` — first version of the canonical spec format reference. Enumerates the three shapes (atom, composition, regulated overlay) as they have been used across the library's eighteen atoms and seven compositions through Defensible Retention's Round 3. Future refinements will land via the standard scheduled-rescan and touch-triggered re-pass disciplines.
+`grounded — 2026-05-20` — first version of the canonical spec format reference. Enumerates the three shapes (atom, composition, regulated overlay) as they have been used across the library's twenty atoms and eight compositions through Defensible Retention's Round 3. Future refinements will land via the standard scheduled-rescan and touch-triggered re-pass disciplines.
