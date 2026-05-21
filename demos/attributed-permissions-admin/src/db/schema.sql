@@ -205,3 +205,70 @@ CREATE INDEX IF NOT EXISTS grant_by_subject
 
 CREATE INDEX IF NOT EXISTS attestation_by_actor
   ON attestation(actor_ref, attested_at);
+
+-- ---------------------------------------------------------------------------
+-- credential — Credential atom store (login surface)
+--
+-- Distinct from actor.credential_secret (attest key / Actor Identity surface).
+-- Each row binds a principal_ref to a stored verifier (SHA-256 hash of
+-- salt:password). At most one active credential per (principal_ref, type).
+-- See CORNERS.md §Cross-atom identity surface aliasing for the separation
+-- rationale.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS credential (
+  credential_id   TEXT  PRIMARY KEY,
+  principal_ref   TEXT  NOT NULL  REFERENCES actor(actor_ref),
+  credential_type TEXT  NOT NULL  DEFAULT 'password',
+  credential_hash TEXT  NOT NULL,
+  credential_salt TEXT  NOT NULL,
+  status          TEXT  NOT NULL  DEFAULT 'active',
+  registered_at   TEXT  NOT NULL,
+  CHECK (status IN ('active', 'revoked')),
+  CHECK (TRIM(credential_id) <> ''),
+  CHECK (TRIM(principal_ref) <> ''),
+  CHECK (TRIM(credential_hash) <> '')
+);
+
+-- At most one active credential per (principal_ref, credential_type)
+CREATE UNIQUE INDEX IF NOT EXISTS credential_active_unique
+  ON credential(principal_ref, credential_type) WHERE status = 'active';
+
+-- Terminal absorption: revoked status is final
+CREATE TRIGGER IF NOT EXISTS credential_terminal_absorption
+BEFORE UPDATE OF status ON credential
+WHEN OLD.status = 'revoked' AND NEW.status <> 'revoked'
+BEGIN
+  SELECT RAISE(ABORT, 'credential terminal absorption: revoked status is final');
+END;
+
+-- ---------------------------------------------------------------------------
+-- session — Session atom store
+--
+-- Each row is one authenticated session. Issued by the login route after
+-- Credential.verify succeeds. Validated by currentActorMiddleware on every
+-- request. State machine: active → expired | revoked (two terminal states).
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS session (
+  session_id    TEXT  PRIMARY KEY,
+  principal_ref TEXT  NOT NULL  REFERENCES actor(actor_ref),
+  issued_at     TEXT  NOT NULL,
+  expires_at    TEXT  NOT NULL,
+  status        TEXT  NOT NULL  DEFAULT 'active',
+  revoked_at    TEXT  NULL,
+  CHECK (status IN ('active', 'expired', 'revoked')),
+  CHECK (TRIM(session_id) <> ''),
+  CHECK (TRIM(principal_ref) <> '')
+);
+
+-- Terminal absorption: expired/revoked → active is forbidden
+CREATE TRIGGER IF NOT EXISTS session_terminal_absorption
+BEFORE UPDATE OF status ON session
+WHEN OLD.status IN ('expired', 'revoked') AND NEW.status = 'active'
+BEGIN
+  SELECT RAISE(ABORT, 'session terminal absorption: terminal status is final');
+END;
+
+CREATE INDEX IF NOT EXISTS session_by_principal
+  ON session(principal_ref, status);

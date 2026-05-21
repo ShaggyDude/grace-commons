@@ -8,12 +8,6 @@
 export const SYSTEM_ACTOR_REF = "system@apa-demo";
 
 /**
- * Default actor when no cookie is present (demo convenience).
- * Lets the app boot straight to a usable state without a login flow.
- */
-export const DEFAULT_ACTOR_REF = "ciso_reyes";
-
-/**
  * Port the development server listens on.
  */
 export const PORT = parseInt(Deno.env.get("PORT") ?? "8000", 10);

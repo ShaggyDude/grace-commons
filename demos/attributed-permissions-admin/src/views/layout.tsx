@@ -12,7 +12,6 @@ type LayoutProps = {
 export const Layout: FC<LayoutProps> = ({
   title = "Alloy Demo",
   currentActor,
-  actors = [],
   path = "",
   children,
 }) => {
@@ -65,34 +64,23 @@ export const Layout: FC<LayoutProps> = ({
             </a>
           </nav>
 
-          {actors.length > 0 && (
-            <form
-              method="post"
-              action="/act-as"
-              class="flex items-center gap-2 text-sm"
-            >
-              <span class="text-ink-gray-500">Acting as:</span>
-              <select
-                name="actor_ref"
-                onchange="this.form.submit()"
-                class="border rounded px-2 py-1 text-sm bg-ink-gray-0 focus:outline-none focus:ring-1 focus:ring-ink-gray-400"
-              >
-                {actors.map((a) => (
-                  <option
-                    value={a.actor_ref}
-                    selected={currentActor?.actor_ref === a.actor_ref}
-                  >
-                    {a.display_name}
-                  </option>
-                ))}
-              </select>
-            </form>
-          )}
-
-          {actors.length === 0 && (
-            <span class="text-sm text-ink-gray-400 italic">
-              {currentActor ? currentActor.display_name : "No actor selected"}
-            </span>
+          {currentActor && (
+            <div class="flex items-center gap-3 text-sm">
+              <span class="text-ink-gray-500">
+                Signed in as{" "}
+                <span class="font-medium text-ink-gray-800">
+                  {currentActor.display_name}
+                </span>
+              </span>
+              <form method="post" action="/logout">
+                <button
+                  type="submit"
+                  class="text-ink-gray-400 hover:text-ink-gray-700 underline text-xs"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
           )}
         </header>
 

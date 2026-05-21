@@ -9,6 +9,7 @@
 
 import { db, tx } from "./client.ts";
 import { issue_grant, revoke_grant } from "../domain/composition.ts";
+import { register_login } from "../domain/credential_store.ts";
 
 const now = new Date().toISOString();
 
@@ -87,6 +88,38 @@ if (existingActors === 0) {
   console.log(`  Actors: ${actors.length}`);
 } else {
   console.log(`  Actors: (already seeded — ${existingActors}, skipping)`);
+}
+
+// ---------------------------------------------------------------------------
+// Login credentials (idempotent — skip if any credentials exist)
+//
+// Password convention: short first-name-style strings, clearly distinct from
+// the long HMAC key strings in the Actor Identity attest surface.
+// See CORNERS.md §Cross-atom identity surface aliasing for the separation
+// rationale.
+// ---------------------------------------------------------------------------
+
+const loginPasswords: Record<string, string> = {
+  "system@apa-demo":      "system",
+  "ciso_reyes":           "reyes",
+  "controller_morgan":    "morgan",
+  "cfo_park":             "park",
+  "privacy_officer_wu":   "wu",
+  "attending_patel":      "patel",
+  "security_admin_kim":   "kim",
+};
+
+const existingCredentials = (
+  db.prepare("SELECT COUNT(*) as n FROM credential").get() as { n: number }
+).n;
+
+if (existingCredentials === 0) {
+  for (const a of actors) {
+    await register_login(a.actor_ref, loginPasswords[a.actor_ref]);
+  }
+  console.log(`  Credentials: ${actors.length}`);
+} else {
+  console.log(`  Credentials: (already seeded — ${existingCredentials}, skipping)`);
 }
 
 // ---------------------------------------------------------------------------
