@@ -23,13 +23,13 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ---
 
-## Current state — 2026-05-18
+## Current state — 2026-05-20
 
-Twenty atoms and eight compositions are `grounded`. Nothing is in-progress. The next move is one of the seven remaining planned atoms (#7, #9, #10, #11–#14 below) or one of the six unblocked compositions (C2, C3, C6, C7, C8, C9 — see compositions section).
+Twenty-four atoms and ten compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the nine unblocked compositions (C2, C3, C6, C7, C8, C9, C14, C15, C16 — see compositions section). C14, C15, and C16 are newly unblocked by the grounding of atoms #11–#14 in the 2026-05-19/20 session.
 
 **Atoms grounded:**
 
-- `atoms/compliance/` (8): Actor Identity, Consent, Legal Hold, Party Identity, Permissions, Retention Window, Selective Disclosure, Tamper Evidence
+- `atoms/compliance/` (12): Actor Identity, Capability, Consent, Credential, Invitation, Legal Hold, Party Identity, Permissions, Retention Window, Selective Disclosure, Session, Tamper Evidence
 - `atoms/healthcare/` (2): Clinical Observation, Medication Order
 - `atoms/messaging/` (2): Notification, Subscription
 - `atoms/productivity/` (2): Assignment, Personal Todo
@@ -37,7 +37,7 @@ Twenty atoms and eight compositions are `grounded`. Nothing is in-progress. The 
 - `atoms/temporal/` (2): Duplicate Prevention, Event Log
 - `atoms/workflow/` (1): Approval Step
 
-**Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, Idempotent Reservation, Multi-Party Approval, Notification Fanout, Shared Todo, Undo History.
+**Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, Idempotent Reservation, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Shared Todo, Undo History.
 
 The healthcare atoms (Clinical Observation, Medication Order) are outside the core dependency-ordered sequence — they were authored as worked examples of the methodology applied to a domain where the regulatory surface is HIPAA and 21 CFR Part 11 rather than the BSA/AML/GDPR/SOX cluster the compliance atoms anchor. They are grounded and composable; their downstream compositions (e.g., a Clinical Trial Data Capture composition, a Medication Administration Record composition) are not on this roadmap yet because the worked-example value is in the atoms themselves rather than in any specific composition the library is committed to delivering next.
 
@@ -295,7 +295,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 #### C13. Login
 
-**Prerequisites:** Credential *(atom #11 — not started)* + Session *(atom #12 — not started)* + Actor Identity (grounded).
+**Prerequisites:** Credential (atom #11 — `grounded` 2026-05-19) + Session (atom #12 — `grounded` 2026-05-19) + Audit Trail substrate (grounded). **Status: `grounded` 2026-05-20.**
 
 **What it adds.** Credential verification wired to Session issuance, both attested under the verified principal. Login is the composition where a successful `verify` produces a record that persists the authentication result — the Session — rather than returning it as a transient signal. Emergent invariant: a Session is valid only if the Credential it was derived from remains Active; revocation of a Credential invalidates every Session derived from it — the cascade rule. The cascade lives in Login's emergent state (a derivation map from credential to issued sessions), not in either constituent atom, because neither atom alone knows the other exists. A composing system that revokes a Credential without cascading to sessions has produced a record set that violates the cascade invariant but not any invariant of either constituent atom alone — the gap is exactly the composition layer's job to close.
 
@@ -347,16 +347,18 @@ These compositions have all their constituent atoms grounded. They are ready for
 | 8 | Capacity Constraint Enforcement | Atom | `grounded` 2026-05-15 | C9 |
 | 9 | Workflow / State Machine | Atom | Not started | C10; resolves workflow-category question |
 | 10 | Preference / Personalization | Atom | Not started | C11 |
-| 11 | Credential | Atom | Not started | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
-| 12 | Session | Atom | Not started | C13 (Login), C14 (Session-Gated Authorization) |
-| 13 | Capability | Atom | Not started | C15 (Capability-Backed Sharing) |
-| 14 | Invitation | Atom | Not started | C16 (External Onboarding) |
+| 11 | Credential | Atom | `grounded` 2026-05-19 | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
+| 12 | Session | Atom | `grounded` 2026-05-19 | C13 (Login), C14 (Session-Gated Authorization) |
+| 13 | Capability | Atom | `grounded` 2026-05-19 | C15 (Capability-Backed Sharing) |
+| 14 | Invitation | Atom | `grounded` 2026-05-19 | C16 (External Onboarding) |
 | — | Undo History | Composition | `grounded` 2026-05-13 | Personal Todo + Event Log |
 | — | Idempotent Reservation | Composition | `grounded` 2026-05-13 | Provisional Commitment + Duplicate Prevention |
 | — | Audit Trail | Composition | `grounded` 2026-05-13 | Event Log + Actor Identity + Retention Window + Tamper Evidence |
 | — | Shared Todo | Composition | `grounded` 2026-05-13 | Personal Todo + Permissions + Assignment |
 | — | Notification Fanout | Composition | `grounded` 2026-05-13 | Subscription + Notification |
 | — | Attributed Permissions Admin | Composition | `grounded` 2026-05-18 | Permissions + Actor Identity; first two-compliance-atom composition; ships with dynamic Alloy trace model |
+| — | Privileged Access Provisioning | Composition | `grounded` 2026-05-20 | Multi-Party Approval + Credential + Session + Capability + Audit Trail; approval-gates-provisioning invariant; session-gated exercise; TLA+ behavioral model ships alongside |
+| — | Login | Composition | `grounded` 2026-05-20 | Credential + Session + Audit Trail; cascade invariant: Credential revocation invalidates all derived Sessions; `credential_to_sessions` map is the cascade mechanism |
 | C1 | Defensible Retention | Composition | `grounded` 2026-05-13 | Legal Hold + Audit Trail + Retention Window |
 | C2 | Consent & Preference Management | Composition | Unblocked; not started | Consent (grounded) |
 | C3 | Forensic Recovery | Composition | Unblocked; not started | Soft Delete (grounded) |
@@ -368,10 +370,10 @@ These compositions have all their constituent atoms grounded. They are ready for
 | C10 | Stateful Workflow Execution | Composition | Blocked on atom #9 | Workflow / State Machine + Approval Step |
 | C12 | Chain of Custody | Composition | Blocked on atom #7 | Provenance + Actor Identity + Tamper Evidence + Retention Window + Audit Trail — cross-domain reference case (pharma + legal evidence = same atoms) |
 | C11 | Preference-Aware Notification Fanout | Composition | Blocked on atom #10 | Preference / Personalization |
-| C13 | Login | Composition | Blocked on atoms #11, #12 | Credential + Session + Actor Identity; cascade invariant: Credential revocation invalidates all derived Sessions |
-| C14 | Session-Gated Authorization | Composition | Blocked on atom #12 | Session + Permissions; session validity checked before every permission query |
-| C15 | Capability-Backed Sharing | Composition | Blocked on atom #13 | Capability + Selective Disclosure + Audit Trail; library's worked example of bearer-token semantics composing with regulated audit |
-| C16 | External Onboarding | Composition | Blocked on atoms #11, #14 | Invitation + Credential + Party Identity + Audit Trail; identity binding at accept, not initiate |
+| C13 | Login | Composition | `grounded` 2026-05-20 | Credential + Session + Audit Trail; cascade invariant: Credential revocation invalidates all derived Sessions via `credential_to_sessions` map |
+| C14 | Session-Gated Authorization | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Session + Permissions; session validity checked before every permission query |
+| C15 | Capability-Backed Sharing | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Capability + Selective Disclosure + Audit Trail; library's worked example of bearer-token semantics composing with regulated audit |
+| C16 | External Onboarding | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Invitation + Credential + Party Identity + Audit Trail; identity binding at accept, not initiate |
 
 ---
 
