@@ -25,7 +25,7 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ## Current state — 2026-05-20
 
-Twenty-four atoms and ten compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the nine unblocked compositions (C2, C3, C6, C7, C8, C9, C14, C15, C16 — see compositions section). C14, C15, and C16 are newly unblocked by the grounding of atoms #11–#14 in the 2026-05-19/20 session.
+Twenty-four atoms and eleven compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the eight unblocked compositions (C2, C3, C6, C7, C8, C9, C15, C16 — see compositions section). C15 and C16 are newly unblocked by the grounding of atoms #11–#14 in the 2026-05-19/20 session.
 
 **Atoms grounded:**
 
@@ -303,11 +303,11 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 #### C14. Session-Gated Authorization
 
-**Prerequisites:** Session *(atom #12 — not started)* + Permissions (grounded).
+**Prerequisites:** Session (atom #12 — `grounded` 2026-05-19) + Permissions (grounded). **Status: `grounded` 2026-05-20.**
 
-**What it adds.** Every permission check gated on session validity — expired or revoked sessions reject all permission queries before the Permissions check runs. The gate is a pre-check at the composition boundary, not inside either constituent atom. Emergent invariant: no permission is exercised under a stale session. The load-bearing wiring decision: permission grants are checked against *current* session validity, not validity at the time the permission was originally granted — a session that has since expired or been revoked blocks the check even if the Permissions record still shows the grant. Without this composition, a composing system may propagate stale-session permission checks silently; Session-Gated Authorization makes the gate an explicit, recordable event.
+**What it adds.** Every permission check gated on session validity — expired or revoked sessions reject all permission queries before the Permissions check runs. The gate is a pre-check at the composition boundary, not inside either constituent atom. Principal binding is the load-bearing emergent invariant: the `principal_ref` passed to `Permissions.permitted` is always the principal extracted from the validated session — never a caller-supplied value. A caller cannot interrogate permissions for an arbitrary principal by presenting an arbitrary session token. The composition introduces no cross-atom state; the gate is a sequencing constraint. Forensic coverage of individual authorization decisions requires [Audit Trail](../atoms/compliance/event-log.md) composed in as a substrate. Four emergent invariants: session gates authorization, principal binding, denial is not rejection, default deny. Grounded on Final Critique 4; three rounds of findings (GA two-tier restructure, implementation-boundary bypass edge case, Permissions fail-safe assumption named).
 
-**Standards anchored.** NIST SP 800-63B §7 (session reauthentication requirements before elevated actions); OWASP ASVS V4 (access control verification — session state must be checked before each access decision).
+**Standards anchored.** NIST SP 800-53 AC-3 (Access Enforcement); NIST SP 800-53 AC-12 (Session Termination); NIST SP 800-63B §7 (session management); OWASP ASVS V3.3 (session expiry enforced at the resource level); PCI DSS Requirement 7 + 8; HIPAA §164.312(a)(1) + §164.312(d); ISO/IEC 27001 §A.9.4.1.
 
 #### C15. Capability-Backed Sharing
 
@@ -371,7 +371,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 | C12 | Chain of Custody | Composition | Blocked on atom #7 | Provenance + Actor Identity + Tamper Evidence + Retention Window + Audit Trail — cross-domain reference case (pharma + legal evidence = same atoms) |
 | C11 | Preference-Aware Notification Fanout | Composition | Blocked on atom #10 | Preference / Personalization |
 | C13 | Login | Composition | `grounded` 2026-05-20 | Credential + Session + Audit Trail; cascade invariant: Credential revocation invalidates all derived Sessions via `credential_to_sessions` map |
-| C14 | Session-Gated Authorization | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Session + Permissions; session validity checked before every permission query |
+| C14 | Session-Gated Authorization | Composition | `grounded` 2026-05-20 | Session + Permissions; principal binding as emergent invariant — session-extracted principal gates every permission query |
 | C15 | Capability-Backed Sharing | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Capability + Selective Disclosure + Audit Trail; library's worked example of bearer-token semantics composing with regulated audit |
 | C16 | External Onboarding | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Invitation + Credential + Party Identity + Audit Trail; identity binding at accept, not initiate |
 
