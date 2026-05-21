@@ -23,9 +23,9 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ---
 
-## Current state — 2026-05-20
+## Current state — 2026-05-21
 
-Twenty-four atoms and twelve compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the seven unblocked compositions (C2, C3, C6, C7, C8, C9, C15 — see compositions section).
+Twenty-four atoms and twelve compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the eight unblocked compositions (C2, C3, C6, C7, C8, C9, C15, C17 — see compositions section).
 
 **Atoms grounded:**
 
@@ -191,7 +191,7 @@ The seven atoms below were on the planned sequence and have shipped. Detailed au
 
 ## Compositions — current state
 
-Compositions are sequenced by readiness. Of the sixteen C-numbered compositions, six are grounded (C1, C4, C5, C13, C14, C16); seven are unblocked and not started (C2, C3, C6, C7, C8, C9, C15); three are blocked on remaining atoms (C10 on Workflow / State Machine, C11 on Preference / Personalization, C12 on Provenance). Provenance also enriches three other compositions (C6, C7, C8) as an optional composing atom for chain-of-custody guarantees — those compositions remain unblocked without it, but gain emergent invariants when composed with it once it lands.
+Compositions are sequenced by readiness. Of the seventeen C-numbered compositions, six are grounded (C1, C4, C5, C13, C14, C16); eight are unblocked and not started (C2, C3, C6, C7, C8, C9, C15, C17); three are blocked on remaining atoms (C10 on Workflow / State Machine, C11 on Preference / Personalization, C12 on Provenance). Provenance also enriches three other compositions (C6, C7, C8) as an optional composing atom for chain-of-custody guarantees — those compositions remain unblocked without it, but gain emergent invariants when composed with it once it lands.
 
 ---
 
@@ -258,6 +258,16 @@ These compositions have all their constituent atoms grounded. They are ready for
 **Standards anchored.** Booking and ticketing systems; financial settlement (credit limit enforcement); supply chain and inventory.
 
 **Newly unblocked.** This composition was blocked on Capacity Constraint Enforcement through 2026-05-14; it is unblocked as of 2026-05-15.
+
+#### C17. Authenticated Actor
+
+**Prerequisites:** Credential (atom #11 — `grounded` 2026-05-19) + Actor Identity (grounded). Both grounded; unblocked as of 2026-05-21.
+
+**What it adds.** The formal relationship between a principal's authentication credential and their attestation key — two identity surfaces the individual atoms define independently but whose relationship they leave unspecified. Three emergent invariants the individual atoms do not own: (1) **Revocation cascade** — whether `Credential.revoke` must cascade to invalidate the Actor Identity attest surface, closing the gap where a principal whose login is revoked can still sign attestations; (2) **Secret surface separation** — whether the same cryptographic material may serve both as the Credential verifier and the Actor Identity attest key, or whether the surfaces must be distinct; (3) **Namespace binding** — how `principal_ref` (Credential's identity key) and `actor_ref` (Actor Identity's identity key) are formally bound to the same human or system principal, preventing an audit record attributed to a different identity surface than the session record it corresponds to. Implementation-discovered gap: see `demos/attributed-permissions-admin/CORNERS.md` §Cross-atom identity surface aliasing.
+
+**Standards anchored.** NIST SP 800-63B §5.2 (verifier requirements — separation of authentication secrets from signing keys); NIST SP 800-57 Part 1 (key management — key separation by purpose); PCI DSS Requirement 8.6 (management of system and application accounts and authentication factors — distinct credential surfaces for distinct purposes); FIPS 140-3 (cryptographic module separation requirements).
+
+**Newly unblocked.** Both constituent atoms grounded as of 2026-05-19. The gap was surfaced by implementation pressure on the Attributed Permissions Admin demo on 2026-05-21.
 
 ---
 
@@ -374,6 +384,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 | C14 | Session-Gated Authorization | Composition | `grounded` 2026-05-20 | Session + Permissions; principal binding as emergent invariant — session-extracted principal gates every permission query |
 | C15 | Capability-Backed Sharing | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Capability + Selective Disclosure + Audit Trail; library's worked example of bearer-token semantics composing with regulated audit |
 | C16 | External Onboarding | Composition | `grounded` 2026-05-21 | Invitation + Credential + Party Identity + Audit Trail; invitation-gates-enrollment as load-bearing invariant; actor credential pre-check before Invitation.accept |
+| C17 | Authenticated Actor | Composition | Unblocked; not started — **newly unblocked 2026-05-21** | Credential + Actor Identity; owns revocation cascade, secret surface separation, and principal_ref / actor_ref namespace binding. Implementation-discovered gap via APA demo. |
 
 ---
 

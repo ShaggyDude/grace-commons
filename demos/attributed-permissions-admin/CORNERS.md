@@ -181,3 +181,68 @@ wanted single-active-per-pair as a guaranteed property (rather than an
 implementation incidentally provides it), the composition spec's
 *Concurrent issuance of the same grant* edge case names the right
 remedy: compose with Idempotent Reservation.
+
+---
+
+## Cross-atom identity surface aliasing
+
+**The demo uses a single `credential_secret` field in the `actor` table
+to serve two structurally distinct purposes: as the Actor Identity attest
+key (used for HMAC-signing attestation records in APA operations) and as
+the login credential (used for session establishment via the Login
+composition, C13).**
+
+The Credential atom (atom #11) defines authentication credentials — the
+material a principal presents at login to prove identity and issue a
+session. The Actor Identity atom defines attest keys — the material used
+to sign action records, producing attribution-stamped proof that a
+specific actor authorized a specific operation. The two credential
+surfaces are specified independently and correctly as freestanding atoms.
+Neither atom's spec says anything about the other's credential material.
+
+Three questions the spec does not answer:
+
+**1. Revocation cascade.** If a principal's Credential is revoked (via
+`Credential.revoke`), does that affect their Actor Identity attest
+capability? The Login composition (C13) cascades Credential revocation
+to Sessions via the `credential_to_sessions` map. No composition
+cascades Credential revocation to Actor Identity. A principal whose
+login credential is revoked can still produce valid attestations in the
+current library.
+
+**2. Secret interchangeability.** Can the same secret material serve as
+both the Credential atom's `credential_material` and Actor Identity's
+`credential_public/secret` pair? The specs don't prohibit it. The demo
+conflates them. In practice, a password hash is not a signing key — the
+credential types are not interchangeable for real cryptographic
+operations — but the spec is silent on whether this conflation is a
+conforming shortcut or a violation of a constraint that hasn't been
+written yet.
+
+**3. Audit identity unification.** Attestations are attributed to
+`actor_ref`. Sessions are issued to `principal_ref`. The Login
+composition binds these in the happy path (a successful login produces a
+session for the `principal_ref` whose Credential record was verified,
+which must correspond to an `actor_ref` in Actor Identity). But neither
+atom requires that `actor_ref` and `principal_ref` occupy the same
+identity namespace. A deployment where they diverge would produce audit
+records attributed to a different identity surface than the session
+record — a forensic reconstruction problem the spec currently cannot
+detect.
+
+**The missing composition.** These three questions are each emergent
+concerns that arise only when Credential and Actor Identity co-exist for
+the same principal. In Grace Commons terms, that relationship belongs to
+a composition — tentatively "Authenticated Actor" (Credential + Actor
+Identity) — that would state whether the revocation cascade is required,
+whether the credential surfaces must be distinct, and how the two
+`principal_ref` / `actor_ref` namespaces are bound. That composition
+does not exist yet; it is the spec-level artifact this implementation
+finding points at.
+
+**Preference.** Use the same `credential_secret` for both purposes in
+the demo. Name the shortcut here and in seed data comments. A production
+deployment would issue separate key material for each surface (e.g., a
+bcrypt-hashed password for login and an HMAC key for attestation) and
+would define the cascade behavior via the "Authenticated Actor"
+composition. Post-demo spec work.
