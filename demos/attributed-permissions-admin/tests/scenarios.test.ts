@@ -7,6 +7,10 @@
 //   1. SOX financial controls — issue and verify attribution
 //   2. HIPAA EHR access — grant and revoke with attribution
 //   3. PCI DSS admin access — full lifecycle with verify endpoint
+//
+// Auth: tests bypass the login route by calling issue_session() directly.
+// This is the correct approach — login-flow correctness belongs in an auth
+// test; scenario tests cover business logic assuming a valid session exists.
 
 import { assertEquals } from "@std/assert";
 
@@ -16,6 +20,7 @@ const { db } = await import("../src/db/client.ts");
 const migrateModule = await import("../src/db/migrate.ts");
 void migrateModule;
 const { app } = await import("../src/app.ts");
+const { issue_session } = await import("../src/domain/session_store.ts");
 
 function seedActor(actor_ref: string, secret: string, display_name = actor_ref) {
   db.prepare(`
@@ -30,6 +35,9 @@ const PRIV = { ref: "privacy_officer_test", secret: "privacy_officer_test_32b_mi
 seedActor(CISO.ref, CISO.secret, "CISO Test");
 seedActor(PRIV.ref, PRIV.secret, "Privacy Officer Test");
 
+const cisoToken = issue_session(CISO.ref);
+const privToken = issue_session(PRIV.ref);
+
 // --- SOX scenario: issue grant → GET / shows it ---
 
 Deno.test("SOX: POST /grants issues a grant and redirects to detail", async () => {
@@ -41,7 +49,7 @@ Deno.test("SOX: POST /grants issues a grant and redirects to detail", async () =
   const req = new Request("http://localhost/grants", {
     method: "POST",
     body: form,
-    headers: { Cookie: `actor_ref=${CISO.ref}` },
+    headers: { Cookie: `session_token=${cisoToken}` },
   });
   const res = await app.fetch(req);
   assertEquals(res.status, 302);
@@ -59,13 +67,13 @@ Deno.test("SOX: GET /grants/:id returns detail page with attribution", async () 
   const issueRes = await app.fetch(new Request("http://localhost/grants", {
     method: "POST",
     body: form,
-    headers: { Cookie: `actor_ref=${CISO.ref}` },
+    headers: { Cookie: `session_token=${cisoToken}` },
   }));
   const location = issueRes.headers.get("location") ?? "";
   const grant_id = location.replace("/grants/", "");
 
   const res = await app.fetch(new Request(`http://localhost/grants/${grant_id}`, {
-    headers: { Cookie: `actor_ref=${CISO.ref}` },
+    headers: { Cookie: `session_token=${cisoToken}` },
   }));
   assertEquals(res.status, 200);
   const body = await res.text();
@@ -83,7 +91,7 @@ Deno.test("HIPAA: issue grant then revoke returns revocation attestation", async
   const issueRes = await app.fetch(new Request("http://localhost/grants", {
     method: "POST",
     body: issue,
-    headers: { Cookie: `actor_ref=${PRIV.ref}` },
+    headers: { Cookie: `session_token=${privToken}` },
   }));
   const grantId = (issueRes.headers.get("location") ?? "").replace("/grants/", "");
 
@@ -93,13 +101,13 @@ Deno.test("HIPAA: issue grant then revoke returns revocation attestation", async
   const revokeRes = await app.fetch(new Request(`http://localhost/grants/${grantId}/revoke`, {
     method: "POST",
     body: revoke,
-    headers: { Cookie: `actor_ref=${PRIV.ref}` },
+    headers: { Cookie: `session_token=${privToken}` },
   }));
   assertEquals(revokeRes.status, 302);
 
   // Verify detail shows revoked with both attestations
   const detail = await app.fetch(new Request(`http://localhost/grants/${grantId}`, {
-    headers: { Cookie: `actor_ref=${PRIV.ref}` },
+    headers: { Cookie: `session_token=${privToken}` },
   }));
   const body = await detail.text();
   assertEquals(body.includes("revoked"), true);
@@ -109,7 +117,7 @@ Deno.test("HIPAA: issue grant then revoke returns revocation attestation", async
 
 Deno.test("GET /verify returns 200 with invariant check results", async () => {
   const res = await app.fetch(new Request("http://localhost/verify", {
-    headers: { Cookie: `actor_ref=${CISO.ref}` },
+    headers: { Cookie: `session_token=${cisoToken}` },
   }));
   assertEquals(res.status, 200);
   const body = await res.text();
@@ -119,7 +127,7 @@ Deno.test("GET /verify returns 200 with invariant check results", async () => {
 
 Deno.test("GET /verify.json returns structured check data", async () => {
   const res = await app.fetch(new Request("http://localhost/verify/json", {
-    headers: { Cookie: `actor_ref=${CISO.ref}` },
+    headers: { Cookie: `session_token=${cisoToken}` },
   }));
   assertEquals(res.status, 200);
   const data = await res.json() as { overall: boolean; checks: Array<{ name: string; ok: boolean }> };
@@ -134,7 +142,7 @@ Deno.test("GET /verify.json returns structured check data", async () => {
 
 Deno.test("GET /orphans returns 200", async () => {
   const res = await app.fetch(new Request("http://localhost/orphans", {
-    headers: { Cookie: `actor_ref=${CISO.ref}` },
+    headers: { Cookie: `session_token=${cisoToken}` },
   }));
   assertEquals(res.status, 200);
 });
@@ -143,6 +151,7 @@ Deno.test("GET /orphans returns 200", async () => {
 
 Deno.test("POST /grants: duplicate active grant returns 400", async () => {
   seedActor("pci_admin_test", "pci_admin_test_32b_min!!!!!!!", "PCI Admin Test");
+  const pciToken = issue_session("pci_admin_test");
 
   const form1 = new FormData();
   form1.append("subject_ref", "kim@payments.corp");
@@ -151,7 +160,7 @@ Deno.test("POST /grants: duplicate active grant returns 400", async () => {
   await app.fetch(new Request("http://localhost/grants", {
     method: "POST",
     body: form1,
-    headers: { Cookie: "actor_ref=pci_admin_test" },
+    headers: { Cookie: `session_token=${pciToken}` },
   }));
 
   const form2 = new FormData();
@@ -161,7 +170,7 @@ Deno.test("POST /grants: duplicate active grant returns 400", async () => {
   const res2 = await app.fetch(new Request("http://localhost/grants", {
     method: "POST",
     body: form2,
-    headers: { Cookie: "actor_ref=pci_admin_test" },
+    headers: { Cookie: `session_token=${pciToken}` },
   }));
   assertEquals(res2.status, 400, "Duplicate active grant should return 400");
 });

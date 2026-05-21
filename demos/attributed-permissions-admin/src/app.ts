@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/deno";
 import { currentActorMiddleware, type AppVariables } from "./middleware/current_actor.ts";
-import { auth } from "./routes/auth.ts";
+import { auth } from "./routes/auth.tsx";
 import { grants } from "./routes/grants.tsx";
 import { verify } from "./routes/verify.tsx";
 import { orphans } from "./routes/orphans.tsx";

@@ -4,6 +4,7 @@
     "setup": "deno run --allow-net --allow-write scripts/setup.ts",
     "dev": "deno task build:css --watch & deno run -A --watch src/main.ts",
     "build:css": "deno run -A npm:@tailwindcss/cli -i app.css -o public/styles.css",
+    "start": "deno run -A src/main.ts",
     "migrate": "deno run -A src/db/migrate.ts",
     "seed": "deno run -A src/db/seed.ts",
     "test": "deno test --allow-read --allow-write --allow-net --allow-env --allow-ffi tests/"
