@@ -166,13 +166,13 @@
   }
 
   :root {
-    --root-scale: .9375;
+    --root-scale: 1;
     font-size: calc(16px * var(--root-scale));
   }
 
   @media (max-width: 640px) {
     :root {
-      --root-scale: 1;
+      --root-scale: 0.75;
       transition: font-size 0.25s ease-in-out;
     }
   }
