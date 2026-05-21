@@ -172,7 +172,7 @@
 
   @media (max-width: 640px) {
     :root {
-      --root-scale: 0.75;
+      --root-scale: 1;
       transition: font-size 0.25s ease-in-out;
     }
   }
