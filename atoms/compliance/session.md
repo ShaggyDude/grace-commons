@@ -270,7 +270,7 @@ Session is freestanding. It is named by Login (C13) and Session-Gated Authorizat
 - **[Tamper Evidence](./tamper-evidence.md)** — for regulated deployments, the session store (including the revocation attribution history) should be hash-chained and externally anchored.
 - **[Login](../../compositions/login.md)** — wires Credential verification to Session issuance, both attested under the verified principal. Carries the cascade invariant: revocation of the underlying Credential invalidates every Session derived from it — a property of the Login composition's emergent state, not of either constituent atom alone.
 - **[Session-Gated Authorization](../../compositions/session-gated-authorization.md)** — gates every Permissions check on Session validity. The pre-check fires before the Permissions call; a stale or revoked session rejects the check before Permissions is consulted.
-- **External Onboarding** *(C16 — not started)* — may issue an initial session as the final step of onboarding, once the invited principal's credential is registered. Whether it does so is a deployment configuration of C16.
+- **[External Onboarding](../../compositions/external-onboarding.md)** — registers the principal's credential during onboarding; the principal then calls [Login](../../compositions/login.md) with that credential to establish their first session. External Onboarding is the identity admission gate; Login is the first-session issuance step. Session is not a constituent of External Onboarding — it enters the picture via Login in the step immediately following a successful `onboard` call.
 
 ---
 

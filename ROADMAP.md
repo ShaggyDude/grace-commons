@@ -37,7 +37,7 @@ Twenty-four atoms and twelve compositions are `grounded`. The next move is one o
 - `atoms/temporal/` (2): Duplicate Prevention, Event Log
 - `atoms/workflow/` (1): Approval Step
 
-**Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, Idempotent Reservation, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Shared Todo, Undo History.
+**Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, External Onboarding, Idempotent Reservation, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Session-Gated Authorization, Shared Todo, Undo History.
 
 The healthcare atoms (Clinical Observation, Medication Order) are outside the core dependency-ordered sequence — they were authored as worked examples of the methodology applied to a domain where the regulatory surface is HIPAA and 21 CFR Part 11 rather than the BSA/AML/GDPR/SOX cluster the compliance atoms anchor. They are grounded and composable; their downstream compositions (e.g., a Clinical Trial Data Capture composition, a Medication Administration Record composition) are not on this roadmap yet because the worked-example value is in the atoms themselves rather than in any specific composition the library is committed to delivering next.
 
@@ -191,7 +191,7 @@ The seven atoms below were on the planned sequence and have shipped. Detailed au
 
 ## Compositions — current state
 
-Compositions are sequenced by readiness. Of the sixteen C-numbered compositions, three are grounded (C1, C4, C5); six are unblocked and not started (C2, C3, C6, C7, C8, C9); seven are blocked on remaining atoms (C10 on Workflow / State Machine, C11 on Preference / Personalization, C12 on Provenance, C13 on Credential and Session, C14 on Session, C15 on Capability, C16 on Invitation and Credential). Provenance also enriches three other compositions (C6, C7, C8) as an optional composing atom for chain-of-custody guarantees — those compositions remain unblocked without it, but gain emergent invariants when composed with it once it lands.
+Compositions are sequenced by readiness. Of the sixteen C-numbered compositions, six are grounded (C1, C4, C5, C13, C14, C16); seven are unblocked and not started (C2, C3, C6, C7, C8, C9, C15); three are blocked on remaining atoms (C10 on Workflow / State Machine, C11 on Preference / Personalization, C12 on Provenance). Provenance also enriches three other compositions (C6, C7, C8) as an optional composing atom for chain-of-custody guarantees — those compositions remain unblocked without it, but gain emergent invariants when composed with it once it lands.
 
 ---
 

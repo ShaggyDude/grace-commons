@@ -397,7 +397,7 @@ An implementation of External Onboarding is accepted if an external auditor can 
 
 **Relationship to Session-Gated Authorization (C14).** Once the onboarded principal has an active session (from Login), runtime authorization queries flow through Session-Gated Authorization: `check_permitted(session_token, action_scope)` gates every permission check on session validity. External Onboarding is the entry point; Session-Gated Authorization is the access-time gate.
 
-**Relationship to Attributed Permissions Admin (C13 in library).** Once onboarded, the principal appears as a subject in Permissions. An authorized actor calls `Attributed Permissions Admin.grant(subject_ref=party_id, action_scope, ...)` to grant the newly onboarded party access to specific scopes. The `party_id` produced by External Onboarding becomes the `subject_ref` in Permissions grants.
+**Relationship to Attributed Permissions Admin.** Once onboarded, the principal appears as a subject in Permissions. An authorized actor calls `Attributed Permissions Admin.grant(subject_ref=party_id, action_scope, ...)` to grant the newly onboarded party access to specific scopes. The `party_id` produced by External Onboarding becomes the `subject_ref` in Permissions grants.
 
 **Forthcoming-link resolution.** The Invitation atom's *Composition notes* listed "External Onboarding *(C16 — not started)*" as a forthcoming composition. That link is now live.
 
