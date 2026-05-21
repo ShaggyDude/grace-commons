@@ -25,7 +25,7 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ## Current state — 2026-05-20
 
-Twenty-four atoms and eleven compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the eight unblocked compositions (C2, C3, C6, C7, C8, C9, C15, C16 — see compositions section). C15 and C16 are newly unblocked by the grounding of atoms #11–#14 in the 2026-05-19/20 session.
+Twenty-four atoms and twelve compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the seven unblocked compositions (C2, C3, C6, C7, C8, C9, C15 — see compositions section).
 
 **Atoms grounded:**
 
@@ -319,11 +319,11 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 #### C16. External Onboarding
 
-**Prerequisites:** Invitation *(atom #14 — not started)* + Credential *(atom #11 — not started)* + Party Identity (grounded) + Audit Trail substrate (grounded).
+**Prerequisites:** Invitation (atom #14 — `grounded` 2026-05-19) + Credential (atom #11 — `grounded` 2026-05-19) + Party Identity (grounded) + Audit Trail substrate (grounded). **Status: `grounded` 2026-05-21.**
 
-**What it adds.** The full arc of onboarding an external entity: invitation issued, accepted (binding an identity), Party Identity created in Unverified state, credential registered, all steps attested in the Audit Trail. Emergent invariant: a Party Identity reaches Verified only via an audit trail tracing back to a specific Invitation's Accepted transition; no Party Identity exists in the system without a named inviter in the audit record. The load-bearing wiring decision: identity binding happens at `accept`, not at `initiate`, which forces the composition to handle concurrent acceptance attempts via Invitation's single-resolution invariant — only one `accept` succeeds, producing exactly one bound identity; a second concurrent attempt returns `already-resolved(Accepted)`. The KYC overlap with C8 is addressed explicitly: KYC (C8) is about verifying an external party's identity against authoritative sources after they are in the system; External Onboarding (C16) is about binding an invited stranger to a system identity for the first time. KYC may follow External Onboarding; the two are structurally adjacent but distinct compositions with different emergent invariants.
+**What it adds.** The full arc of admitting an external entity: invitation issued by an authorized actor, accepted (binding the invitee's external identity reference at accept time, not initiate time), Party Identity enrolled in Unverified state, credential registered, every step attested in the Audit Trail. Load-bearing emergent invariant: invitation-gates-enrollment — no Party Identity is created unless `Invitation.accept` precedes it in the same `onboard` call, and the `onboarding.completed` Audit Trail event names invitation token, accepting identity reference, party record, and credential in one tamper-evident entry. The actor credential pre-check fires before `Invitation.accept` so unauthenticated callers cannot probe invitation validity. Five emergent invariants. Three rounds of findings resolved in-pattern (audit-first step ordering, invitation-state probing prevention, `duplicate-active-credential` vs `storage-failure` distinction, Invariant 4 qualifier for background-scheduler expiry). Grounded on Final Critique 4.
 
-**Standards anchored.** GDPR Articles 6 and 7 (lawful basis for processing at the moment of invitation and acceptance — the Invitation record is the processing record); HIPAA §164.312 (access control — invitation-based provisioning as a covered access-granting event); KYC overlap with C8 addressed explicitly above.
+**Standards anchored.** GDPR Articles 6–7; HIPAA §164.312(a)(1) + §164.312(d); SOC 2 CC6.2; NIST SP 800-63A; SCIM 2.0 RFC 7644; FATF Recommendations 10–12 (enrollment record as the CDD starting point; verification is C8's concern).
 
 ---
 
@@ -373,7 +373,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 | C13 | Login | Composition | `grounded` 2026-05-20 | Credential + Session + Audit Trail; cascade invariant: Credential revocation invalidates all derived Sessions via `credential_to_sessions` map |
 | C14 | Session-Gated Authorization | Composition | `grounded` 2026-05-20 | Session + Permissions; principal binding as emergent invariant — session-extracted principal gates every permission query |
 | C15 | Capability-Backed Sharing | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Capability + Selective Disclosure + Audit Trail; library's worked example of bearer-token semantics composing with regulated audit |
-| C16 | External Onboarding | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Invitation + Credential + Party Identity + Audit Trail; identity binding at accept, not initiate |
+| C16 | External Onboarding | Composition | `grounded` 2026-05-21 | Invitation + Credential + Party Identity + Audit Trail; invitation-gates-enrollment as load-bearing invariant; actor credential pre-check before Invitation.accept |
 
 ---
 
