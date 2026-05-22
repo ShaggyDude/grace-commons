@@ -1,0 +1,23 @@
+# Database
+data/
+*.db
+*.db-journal
+
+# Static assets (built)
+static/
+
+# Node/Deno dependencies
+node_modules/
+deno.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# OS
+Thumbs.db

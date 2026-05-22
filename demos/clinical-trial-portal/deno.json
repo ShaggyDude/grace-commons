@@ -1,0 +1,22 @@
+{
+  "tasks": {
+    "migrate": "deno run -A scripts/migrate.ts",
+    "seed":    "deno run -A scripts/seed.ts",
+    "css":     "deno run -A scripts/build_css.ts",
+    "start":   "deno run -A main.ts",
+    "verify":  "deno run -A scripts/verify.ts",
+    "test":    "deno test -A",
+    "all":     "deno task migrate && deno task seed && deno task css && deno task start"
+  },
+  "imports": {
+    "hono":     "jsr:@hono/hono@^4",
+    "hono/":    "jsr:@hono/hono@^4/",
+    "sqlite":   "jsr:@db/sqlite@^0.12",
+    "argontwo": "jsr:@denosaurs/argontwo@^0.2",
+    "std/":     "jsr:@std/"
+  },
+  "compilerOptions": {
+    "jsx": "precompile",
+    "jsxImportSource": "hono/jsx"
+  }
+}
