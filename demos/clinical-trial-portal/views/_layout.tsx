@@ -37,38 +37,40 @@ export const Layout: FC<
         <link rel="stylesheet" href="/static/styles.css" />
         <script src="https://unpkg.com/htmx.org@2.0.2" defer></script>
       </head>
-      <body class="min-h-screen">
+      <body class="min-h-screen inks-gray-0">
         <header class="raised sticky top-0 z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-6">
           {/* Left — brand */}
-          <a href="/dashboard" class="linkamation text-sm justify-self-start">Beacon</a>
+          <a href="/dashboard" class="linkamation text-sm justify-self-start">
+            Beacon
+          </a>
 
           {/* Centre — primary nav (only when logged in) */}
-          {props.actor
-            ? (
-              <nav class="flex items-center gap-4">
-                {navLink("/people",   "People & Permissions", isPeople)}
-                {navLink("/subjects", "Subjects",             isSubjects)}
-                {navLink("/audit",    "Audit Trail",          isAudit)}
-              </nav>
-            )
-            : <span />}
+          {props.actor ? (
+            <nav class="flex items-center gap-4">
+              {navLink("/people", "People & Permissions", isPeople)}
+              {navLink("/subjects", "Subjects", isSubjects)}
+              {navLink("/audit", "Audit Trail", isAudit)}
+            </nav>
+          ) : (
+            <span />
+          )}
 
           {/* Right — user info */}
-          {props.actor
-            ? (
-              <div class="flex items-center gap-4 text-sm justify-self-end">
-                <span class="opacity-50 text-xs">{props.actor.display_name}</span>
-                <form method="POST" action="/logout">
-                  <button
-                    type="submit"
-                    class="opacity-40 hover:opacity-80 underline text-xs"
-                  >
-                    Sign out
-                  </button>
-                </form>
-              </div>
-            )
-            : <span />}
+          {props.actor ? (
+            <div class="flex items-center gap-4 text-sm justify-self-end">
+              <span class="opacity-60">{props.actor.display_name}</span>
+              <form method="POST" action="/logout">
+                <button
+                  type="submit"
+                  class="opacity-60 hover"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
+          ) : (
+            <span />
+          )}
         </header>
         <main class="mx-auto max-w-5xl px-6 py-8">{props.children}</main>
       </body>

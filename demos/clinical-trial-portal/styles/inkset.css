@@ -279,6 +279,10 @@
     color: var(--fg);
   }
 
+  button {
+    @apply cursor-pointer
+  }
+
   .raised {
     @apply border border-ink-gray-500/12 p-10 backdrop-blur-sm backdrop-saturate-150;
     background: linear-gradient(

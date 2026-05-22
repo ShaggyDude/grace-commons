@@ -160,7 +160,7 @@ export const PeoplePage: FC<{
           <label class="block text-xs font-medium mb-1">Role</label>
           <input name="intended_role" type="text" required placeholder="coordinator" class="border rounded px-3 py-1.5 text-sm w-32" />
         </div>
-        <button type="submit" class="inks-gray-1000 px-4 py-1.5 rounded text-sm font-medium hover:opacity-80">
+        <button type="submit" class="inks-gray-900 px-4 py-1.5 rounded text-sm">
           Send invitation
         </button>
       </form>

@@ -7,6 +7,7 @@
 // can remain a .ts file — JSX syntax is only needed in the .tsx view files.
 
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { AppEnv } from "../lib/env.ts";
 import * as sessions from "../domain/sessions.ts";
@@ -54,16 +55,16 @@ authRouter.post("/login", async (c) => {
   return c.redirect("/dashboard");
 });
 
-authRouter.get("/logout", (c) => {
+const logoutHandler = (c: Context<AppEnv>) => {
   const db = c.get("db");
   const token = getCookie(c, SESSION_COOKIE);
   if (token) {
-    try {
-      sessions.revokeByToken(db, token);
-    } catch {
-      // Best-effort revocation — clear cookie regardless
-    }
+    try { sessions.revokeByToken(db, token); } catch { /* best-effort */ }
   }
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
   return c.redirect("/");
-});
+};
+
+// Accept both GET (direct link) and POST (form submit from nav).
+authRouter.get("/logout", logoutHandler);
+authRouter.post("/logout", logoutHandler);

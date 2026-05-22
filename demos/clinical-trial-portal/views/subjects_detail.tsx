@@ -14,18 +14,27 @@ export const SubjectsDetailPage: FC<{
   flash?: string | null;
   error?: string | null;
 }> = ({ actor, subject, visits, canRecord, flash, error }) => (
-  <Layout title={`Subject ${subject.subject_code}`} actor={actor} path="/subjects">
+  <Layout
+    title={`Subject ${subject.subject_code}`}
+    actor={actor}
+    path="/subjects"
+  >
     <div class="mb-6">
-      <a href="/subjects" class="text-sm opacity-50 hover:opacity-100">← Subjects</a>
+      <a href="/subjects" class="text-sm opacity-50 hover:opacity-100">
+        ← Subjects
+      </a>
     </div>
 
     <div class="flex items-start justify-between mb-6">
       <div>
         <h1 class="text-2xl font-semibold font-mono">{subject.subject_code}</h1>
         <p class="text-sm opacity-50 mt-0.5">
-          Status: <strong>{subject.status}</strong> · Enrolled {subject.enrolled_at.slice(0, 10)}
+          Status: <strong>{subject.status}</strong> · Enrolled{" "}
+          {subject.enrolled_at.slice(0, 10)}
         </p>
-        {subject.notes && <p class="text-sm opacity-60 mt-1">{subject.notes}</p>}
+        {subject.notes && (
+          <p class="text-sm opacity-60 mt-1">{subject.notes}</p>
+        )}
       </div>
     </div>
 
@@ -38,30 +47,38 @@ export const SubjectsDetailPage: FC<{
     {/* ── Visit history ───────────────────────────────────────── */}
     <section class="mb-8">
       <h2 class="text-base font-semibold mb-3">Visit History</h2>
-      {visits.length === 0
-        ? <p class="text-sm opacity-50">No visits recorded yet.</p>
-        : (
-          <div class="raised rounded overflow-hidden p-0">
-            <table class="w-full text-sm">
-              <thead>
-                <tr>
-                  <th class="text-left px-4 py-2 font-medium opacity-50">Visit</th>
-                  <th class="text-left px-4 py-2 font-medium opacity-50">Recorded</th>
-                  <th class="text-left px-4 py-2 font-medium opacity-50">Notes</th>
+      {visits.length === 0 ? (
+        <p class="text-sm opacity-50">No visits recorded yet.</p>
+      ) : (
+        <div class="raised rounded overflow-hidden p-0">
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-left px-4 py-2 font-medium opacity-50">
+                  Visit
+                </th>
+                <th class="text-left px-4 py-2 font-medium opacity-50">
+                  Recorded
+                </th>
+                <th class="text-left px-4 py-2 font-medium opacity-50">
+                  Notes
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {visits.map((v) => (
+                <tr class="border-t">
+                  <td class="px-4 py-2 font-mono">{v.visit_kind}</td>
+                  <td class="px-4 py-2 opacity-50 text-xs">
+                    {v.recorded_at.slice(0, 16).replace("T", " ")}
+                  </td>
+                  <td class="px-4 py-2 opacity-50 text-xs">{v.notes ?? "—"}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {visits.map((v) => (
-                  <tr class="border-t">
-                    <td class="px-4 py-2 font-mono">{v.visit_kind}</td>
-                    <td class="px-4 py-2 opacity-50 text-xs">{v.recorded_at.slice(0, 16).replace("T", " ")}</td>
-                    <td class="px-4 py-2 opacity-50 text-xs">{v.notes ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
 
     {/* ── Record visit ────────────────────────────────────────── */}
@@ -80,14 +97,19 @@ export const SubjectsDetailPage: FC<{
         >
           <div>
             <label class="block text-xs font-medium mb-1">Visit type</label>
-            <select name="visit_kind" class="border rounded px-2 py-1.5 text-sm">
+            <select
+              name="visit_kind"
+              class="border rounded px-2 py-1.5 text-sm"
+            >
               {VISIT_KINDS.map((k) => (
                 <option value={k}>{k.replace(/_/g, " ")}</option>
               ))}
             </select>
           </div>
           <div>
-            <label class="block text-xs font-medium mb-1">Notes (optional)</label>
+            <label class="block text-xs font-medium mb-1">
+              Notes (optional)
+            </label>
             <input
               name="notes"
               type="text"
@@ -95,7 +117,10 @@ export const SubjectsDetailPage: FC<{
               class="border rounded px-3 py-1.5 text-sm w-64"
             />
           </div>
-          <button type="submit" class="inks-gray-1000 px-4 py-1.5 rounded text-sm font-medium hover:opacity-80">
+          <button
+            type="submit"
+            class="px-4 py-1.5 rounded text-sm inks-sage-100"
+          >
             Record visit
           </button>
         </form>
