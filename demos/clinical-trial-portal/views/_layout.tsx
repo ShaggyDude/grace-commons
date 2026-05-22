@@ -9,16 +9,21 @@ export const Layout: FC<PropsWithChildren<{ title: string; actor?: { display_nam
       <link rel="stylesheet" href="/static/styles.css" />
       <script src="https://unpkg.com/htmx.org@2.0.2" defer></script>
     </head>
-    <body class="bg-gray-50 text-gray-900 antialiased">
-      <header class="border-b bg-white">
-        <div class="mx-auto max-w-5xl flex items-center justify-between px-6 py-3">
-          <a href="/" class="font-semibold tracking-tight">Beacon</a>
-          {props.actor && (
-            <span class="text-sm text-gray-600">
-              {props.actor.display_name} · <a href="/logout" class="underline">log out</a>
+    <body class="inks-gray-0 min-h-screen">
+      <header class="raised sticky top-0 z-10 flex items-center justify-between">
+        <a href="/dashboard" class="linkamation text-sm">Beacon</a>
+        {props.actor && (
+          <div class="flex items-center gap-3 text-sm">
+            <span class="opacity-50">
+              {props.actor.display_name}
             </span>
-          )}
-        </div>
+            <form method="POST" action="/logout">
+              <button type="submit" class="opacity-40 hover:opacity-80 underline text-xs">
+                Sign out
+              </button>
+            </form>
+          </div>
+        )}
       </header>
       <main class="mx-auto max-w-5xl px-6 py-8">{props.children}</main>
     </body>

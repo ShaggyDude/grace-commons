@@ -10,7 +10,7 @@ export const AcceptInvitationPage: FC<{
   <Layout title="Set up your account">
     <div class="max-w-sm mx-auto mt-12">
       <h1 class="text-2xl font-semibold mb-2">Set up your account</h1>
-      <p class="text-sm text-gray-500 mb-6">
+      <p class="text-sm opacity-50 mb-6">
         You're joining as <strong>{intended_role}</strong> with email <strong>{email}</strong>.
         Choose a password to complete your account.
       </p>
@@ -29,7 +29,7 @@ export const AcceptInvitationPage: FC<{
             required
             autofocus
             minlength={8}
-            class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+            class="w-full border rounded px-3 py-2 text-sm focus:outline-none"
           />
         </div>
         <div>
@@ -40,13 +40,10 @@ export const AcceptInvitationPage: FC<{
             type="password"
             required
             minlength={8}
-            class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+            class="w-full border rounded px-3 py-2 text-sm focus:outline-none"
           />
         </div>
-        <button
-          type="submit"
-          class="w-full bg-gray-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-800"
-        >
+        <button type="submit" class="inks-gray-1000 w-full px-4 py-2 rounded text-sm font-medium hover:opacity-80">
           Create account &amp; log in
         </button>
       </form>

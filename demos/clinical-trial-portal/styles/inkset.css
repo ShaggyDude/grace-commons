@@ -22,8 +22,8 @@
 }
 
 /* === INKset: ========== auto darkmode for Tailwind ===>
-  Ink  = pigment (single resolved color)
-  Inkset = bg + fg pairing
+  Ink  = pigment (single resolved color — WITH BOTH light/dark pair)
+  Inkset = bg + fg pairing — WITH BOTH light/dark pair
   Inks = shorthand for Inkset
 */
 

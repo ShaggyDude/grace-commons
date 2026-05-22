@@ -16,14 +16,12 @@ export interface InvitationRow extends Invitation {
   email: string;
 }
 
-const Badge: FC<{ label: string; color?: "green" | "yellow" | "gray" }> = (
-  { label, color = "gray" },
-) => {
+const Badge: FC<{ label: string; color?: "green" | "yellow" | "gray" }> = ({ label, color = "gray" }) => {
   const cls = color === "green"
     ? "bg-green-100 text-green-800"
     : color === "yellow"
     ? "bg-yellow-100 text-yellow-800"
-    : "bg-gray-100 text-gray-700";
+    : "border opacity-60";
   return (
     <span class={`inline-block px-2 py-0.5 text-xs rounded-full font-medium ${cls}`}>
       {label}
@@ -50,34 +48,30 @@ export const PeoplePage: FC<{
     {/* ── Actors ─────────────────────────────────────────────── */}
     <section class="mb-8">
       <h2 class="text-base font-semibold mb-3">Actors</h2>
-      <div class="border rounded bg-white overflow-hidden">
+      <div class="raised rounded overflow-hidden p-0">
         <table class="w-full text-sm">
-          <thead class="bg-gray-50">
+          <thead>
             <tr>
-              <th class="text-left px-4 py-2 font-medium text-gray-600">Name</th>
-              <th class="text-left px-4 py-2 font-medium text-gray-600">Email</th>
-              <th class="text-left px-4 py-2 font-medium text-gray-600">Permissions</th>
-              <th class="text-left px-4 py-2 font-medium text-gray-600">Actions</th>
+              <th class="text-left px-4 py-2 font-medium opacity-50">Name</th>
+              <th class="text-left px-4 py-2 font-medium opacity-50">Email</th>
+              <th class="text-left px-4 py-2 font-medium opacity-50">Permissions</th>
+              <th class="text-left px-4 py-2 font-medium opacity-50">Actions</th>
             </tr>
           </thead>
           <tbody>
             {actorRows.map((row) => (
               <tr class="border-t">
                 <td class="px-4 py-2">{row.display_name}</td>
-                <td class="px-4 py-2 text-gray-500">{row.email}</td>
+                <td class="px-4 py-2 opacity-50">{row.email}</td>
                 <td class="px-4 py-2">
                   <div class="flex flex-wrap gap-1">
                     {row.activeGrants.length === 0
-                      ? <span class="text-gray-400 text-xs">none</span>
+                      ? <span class="text-xs opacity-40">none</span>
                       : row.activeGrants.map((g) => (
                         <span class="inline-flex items-center gap-1">
                           <Badge label={g.permission_code} color="green" />
                           <form method="POST" action={`/grants/${g.id}/revoke`} class="inline">
-                            <button
-                              type="submit"
-                              class="text-xs text-red-500 hover:text-red-700"
-                              title={`Revoke ${g.permission_code}`}
-                            >
+                            <button type="submit" class="text-xs text-red-500 hover:text-red-700" title={`Revoke ${g.permission_code}`}>
                               ✕
                             </button>
                           </form>
@@ -86,13 +80,9 @@ export const PeoplePage: FC<{
                   </div>
                 </td>
                 <td class="px-4 py-2">
-                  {/* Inline grant form */}
                   <form method="POST" action="/grants" class="flex items-center gap-1">
                     <input type="hidden" name="grantee_actor_id" value={String(row.id)} />
-                    <select
-                      name="permission_id"
-                      class="border rounded px-1 py-1 text-xs"
-                    >
+                    <select name="permission_id" class="border rounded px-1 py-1 text-xs">
                       {permissions.map((p) => (
                         <option value={String(p.id)}>{p.code}</option>
                       ))}
@@ -101,10 +91,7 @@ export const PeoplePage: FC<{
                       <option value="all">all</option>
                       <option value="own">own</option>
                     </select>
-                    <button
-                      type="submit"
-                      class="text-xs bg-gray-800 text-white px-2 py-1 rounded hover:bg-gray-700"
-                    >
+                    <button type="submit" class="inks-gray-1000 text-xs px-2 py-1 rounded hover:opacity-80">
                       Grant
                     </button>
                   </form>
@@ -120,42 +107,33 @@ export const PeoplePage: FC<{
     <section class="mb-8">
       <h2 class="text-base font-semibold mb-3">Pending Invitations</h2>
       {pendingInvitations.length === 0
-        ? <p class="text-sm text-gray-500">No pending invitations.</p>
+        ? <p class="text-sm opacity-50">No pending invitations.</p>
         : (
-          <div class="border rounded bg-white overflow-hidden">
+          <div class="raised rounded overflow-hidden p-0">
             <table class="w-full text-sm">
-              <thead class="bg-gray-50">
+              <thead>
                 <tr>
-                  <th class="text-left px-4 py-2 font-medium text-gray-600">Email</th>
-                  <th class="text-left px-4 py-2 font-medium text-gray-600">Role</th>
-                  <th class="text-left px-4 py-2 font-medium text-gray-600">Expires</th>
-                  <th class="text-left px-4 py-2 font-medium text-gray-600">Accept link</th>
-                  <th class="text-left px-4 py-2 font-medium text-gray-600"></th>
+                  <th class="text-left px-4 py-2 font-medium opacity-50">Email</th>
+                  <th class="text-left px-4 py-2 font-medium opacity-50">Role</th>
+                  <th class="text-left px-4 py-2 font-medium opacity-50">Expires</th>
+                  <th class="text-left px-4 py-2 font-medium opacity-50">Accept link</th>
+                  <th class="text-left px-4 py-2 font-medium opacity-50"></th>
                 </tr>
               </thead>
               <tbody>
                 {pendingInvitations.map((inv) => (
                   <tr class="border-t">
                     <td class="px-4 py-2">{inv.email}</td>
+                    <td class="px-4 py-2"><Badge label={inv.intended_role} color="yellow" /></td>
+                    <td class="px-4 py-2 opacity-50 text-xs">{inv.expires_at.slice(0, 10)}</td>
                     <td class="px-4 py-2">
-                      <Badge label={inv.intended_role} color="yellow" />
-                    </td>
-                    <td class="px-4 py-2 text-gray-500 text-xs">
-                      {inv.expires_at.slice(0, 10)}
-                    </td>
-                    <td class="px-4 py-2">
-                      <code class="text-xs bg-gray-100 px-1 rounded break-all">
+                      <code class="text-xs bg-black/5 px-1 rounded break-all">
                         /invitations/accept/{inv.token}
                       </code>
                     </td>
                     <td class="px-4 py-2">
                       <form method="POST" action={`/invitations/${inv.id}/revoke`}>
-                        <button
-                          type="submit"
-                          class="text-xs text-red-500 hover:text-red-700"
-                        >
-                          Revoke
-                        </button>
+                        <button type="submit" class="text-xs text-red-500 hover:text-red-700">Revoke</button>
                       </form>
                     </td>
                   </tr>
@@ -169,45 +147,20 @@ export const PeoplePage: FC<{
     {/* ── Issue Invitation ──────────────────────────────────── */}
     <section>
       <h2 class="text-base font-semibold mb-3">Invite someone</h2>
-      <form
-        method="POST"
-        action="/invitations"
-        class="border rounded bg-white p-4 flex flex-wrap items-end gap-3"
-      >
+      <form method="POST" action="/invitations" class="raised rounded flex flex-wrap items-end gap-3">
         <div>
           <label class="block text-xs font-medium mb-1">Email</label>
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="new@example.com"
-            class="border rounded px-3 py-1.5 text-sm w-52"
-          />
+          <input name="email" type="email" required placeholder="new@example.com" class="border rounded px-3 py-1.5 text-sm w-52" />
         </div>
         <div>
           <label class="block text-xs font-medium mb-1">Display name</label>
-          <input
-            name="display_name"
-            type="text"
-            required
-            placeholder="Jane Smith"
-            class="border rounded px-3 py-1.5 text-sm w-40"
-          />
+          <input name="display_name" type="text" required placeholder="Jane Smith" class="border rounded px-3 py-1.5 text-sm w-40" />
         </div>
         <div>
           <label class="block text-xs font-medium mb-1">Role</label>
-          <input
-            name="intended_role"
-            type="text"
-            required
-            placeholder="coordinator"
-            class="border rounded px-3 py-1.5 text-sm w-32"
-          />
+          <input name="intended_role" type="text" required placeholder="coordinator" class="border rounded px-3 py-1.5 text-sm w-32" />
         </div>
-        <button
-          type="submit"
-          class="bg-gray-900 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-gray-800"
-        >
+        <button type="submit" class="inks-gray-1000 px-4 py-1.5 rounded text-sm font-medium hover:opacity-80">
           Send invitation
         </button>
       </form>
