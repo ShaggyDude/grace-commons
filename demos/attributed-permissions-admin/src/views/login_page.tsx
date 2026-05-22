@@ -16,7 +16,7 @@ export const LoginPage: FC<Props> = ({ error }) => (
       <link rel="stylesheet" href="/styles.css" />
       <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     </head>
-    <body class="inks-gray-0 min-h-screen flex items-center justify-center">
+    <body class="min-h-screen flex items-center justify-center">
       <div class="w-full max-w-sm mx-auto px-6">
         <div class="mb-8 text-center">
           <span class="linkamation text-xl">Alloy Demo</span>

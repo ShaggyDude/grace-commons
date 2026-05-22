@@ -7,7 +7,7 @@ export type VerifyResult =
   | { ok: false; at: number; expected: string; found: string };
 
 export const AuditVerifyPage: FC<{ actor: Actor; result: VerifyResult }> = ({ actor, result }) => (
-  <Layout title="Chain Verification" actor={actor}>
+  <Layout title="Chain Verification" actor={actor} path="/audit">
     <div class="mb-6">
       <a href="/audit" class="text-sm opacity-50 hover:opacity-100">← Audit Trail</a>
     </div>

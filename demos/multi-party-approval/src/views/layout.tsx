@@ -24,7 +24,7 @@ export const Layout: FC<LayoutProps> = ({
         <script src="/htmx.min.js"></script>
         <script>htmx.config.useTemplateFragments = true;</script>
       </head>
-      <body class="inks-gray-0 min-h-screen">
+      <body class="min-h-screen">
         {/* Top bar */}
         <header class="raised sticky top-0 z-10 px-10 py-5 flex items-center justify-between">
           <nav class="flex items-center gap-6">

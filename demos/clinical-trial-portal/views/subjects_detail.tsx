@@ -14,7 +14,7 @@ export const SubjectsDetailPage: FC<{
   flash?: string | null;
   error?: string | null;
 }> = ({ actor, subject, visits, canRecord, flash, error }) => (
-  <Layout title={`Subject ${subject.subject_code}`} actor={actor}>
+  <Layout title={`Subject ${subject.subject_code}`} actor={actor} path="/subjects">
     <div class="mb-6">
       <a href="/subjects" class="text-sm opacity-50 hover:opacity-100">← Subjects</a>
     </div>

@@ -10,6 +10,8 @@ import { requireSession } from "../middleware/require_session.ts";
 import { requirePermission } from "../middleware/require_permission.ts";
 import * as eventLog from "../domain/event_log.ts";
 import * as retentionPolicy from "../domain/retention_policy.ts";
+import { appendEvent } from "../domain/event_log.ts";
+import { withTx } from "../lib/db.ts";
 import { AuditListPage } from "../views/audit_list.tsx";
 import { AuditVerifyPage } from "../views/audit_verify.tsx";
 import type { AuditFilters } from "../views/audit_list.tsx";
@@ -48,6 +50,25 @@ auditRouter.get("/audit", requireSession, canViewAudit, (c) => {
     events = events.filter((e) => e.occurred_at >= cutoffISO);
   }
 
+  // Emit audit.viewed — under Part 11, viewing the regulated record is itself
+  // a regulated act. This event is recorded after the query so the row count
+  // is known; it will not appear in the current page render (already fetched).
+  withTx(ctx, (tx) => {
+    appendEvent(tx, {
+      action: "audit.viewed",
+      target_kind: "audit",
+      payload: {
+        filters: {
+          action: filters.action ?? null,
+          from_date: filters.from_date ?? null,
+          to_date: filters.to_date ?? null,
+          scope,
+        },
+        result_count: events.length,
+      },
+    });
+  });
+
   return c.html(AuditListPage({ actor, events, filters, policy, scope: scope as "all" | "own" }));
 });
 
@@ -70,23 +91,41 @@ auditRouter.get("/audit/export.csv", requireSession, canViewAudit, (c) => {
   };
   const events = eventLog.listFiltered(db, domainFilters).reverse(); // oldest first
 
+  // RFC 4180: wrap every field in double-quotes, escape inner quotes as "".
+  const csvField = (v: string | number | null | undefined): string => {
+    const s = v == null ? "" : String(v);
+    return '"' + s.replace(/"/g, '""') + '"';
+  };
+
   const header =
     "id,occurred_at,actor_id,session_id,action,target_kind,target_id,payload_json,prev_hash,this_hash\n";
 
   const rows = events.map((e) =>
     [
-      e.id,
-      e.occurred_at,
-      e.actor_id ?? "",
-      e.session_id ?? "",
-      e.action,
-      e.target_kind ?? "",
-      e.target_id ?? "",
-      JSON.stringify(e.payload_json),
-      e.prev_hash,
-      e.this_hash,
+      csvField(e.id),
+      csvField(e.occurred_at),
+      csvField(e.actor_id),
+      csvField(e.session_id),
+      csvField(e.action),
+      csvField(e.target_kind),
+      csvField(e.target_id),
+      csvField(e.payload_json),   // already a JSON string — do NOT re-serialize
+      csvField(e.prev_hash),
+      csvField(e.this_hash),
     ].join(",")
   ).join("\n");
+
+  // Emit audit.exported — exporting the audit log is itself a regulated act.
+  withTx(ctx, (tx) => {
+    appendEvent(tx, {
+      action: "audit.exported",
+      target_kind: "audit",
+      payload: {
+        row_count: events.length,
+        scope,
+      },
+    });
+  });
 
   const ts = new Date().toISOString().slice(0, 10);
   return new Response(header + rows, {

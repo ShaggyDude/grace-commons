@@ -19,7 +19,7 @@ export const Layout: FC<LayoutProps> = ({
   const isOrphans = path === "/orphans";
   const isVerify = path === "/verify";
   return (
-    <html lang="en">
+    <html lang="en" class="inks-gray-0">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -35,7 +35,7 @@ export const Layout: FC<LayoutProps> = ({
         <script>htmx.config.useTemplateFragments = true;</script>
         <script>{`if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');`}</script>
       </head>
-      <body class="inks-gray-0 min-h-screen">
+      <body class="min-h-screen">
         <header class="raised sticky top-0 z-10 p-12 flex items-center justify-between">
           <a href="/" class="linkamation">
             Alloy Demo

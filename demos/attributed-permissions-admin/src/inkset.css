@@ -144,7 +144,7 @@
   --color-ink-gray-1000: var(--ink-gray-1000);
 
   /* SEMANTIC */
-  --color-border: oklch(from var(--ink-gray-500) l c h / 0.20);
+  --color-border: oklch(from var(--ink-gray-500) l c h / 0.25);
 }
 
 @property --bg {
@@ -325,6 +325,8 @@
 }
 
 @layer components {
+
+
   /* ===   INKS CLASSES   Usage: <b class="inkset-sage-500">auto contrast</b> */
   [class^="inkset-"],
   [class*=" inkset-"],

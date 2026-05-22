@@ -91,6 +91,7 @@ export function issueInvitation(
       target_kind: "invitation",
       target_id: invitation.id,
       payload: {
+        display_name: input.display_name,
         email: input.email,
         intended_role: input.intended_role,
         expires_at,
@@ -152,6 +153,26 @@ export async function acceptInvitation(
         target_kind: "invitation",
         target_id: inv.id,
         payload: { intended_role: inv.intended_role },
+      });
+
+      appendEvent(tx, {
+        action: "actor.enrolled",
+        target_kind: "actor",
+        target_id: actor.id,
+        payload: { party_id: inv.party_id, via_invitation_id: inv.id },
+      });
+
+      appendEvent(tx, {
+        action: "credential.created",
+        target_kind: "credential",
+        payload: { kind: "password" },
+      });
+
+      appendEvent(tx, {
+        action: "session.opened",
+        target_kind: "session",
+        target_id: session.id,
+        payload: { actor_id: actor.id, via: "onboard" },
       });
 
       return { actor, session };
@@ -221,7 +242,7 @@ export async function login(
     withTx(ctx, (tx) => {
       appendEvent(tx, {
         action: "login.failed",
-        payload: { reason: "unknown_email" },
+        payload: { email: input.email, reason: "unknown_email" },
       });
     });
     return { ok: false, reason: "invalid_credentials" };
@@ -232,7 +253,7 @@ export async function login(
     withTx(ctx, (tx) => {
       appendEvent(tx, {
         action: "login.failed",
-        payload: { reason: "no_actor" },
+        payload: { email: input.email, party_id: party.id, reason: "no_actor" },
       });
     });
     return { ok: false, reason: "invalid_credentials" };
@@ -243,7 +264,7 @@ export async function login(
     withTx(ctx, (tx) => {
       appendEvent(tx, {
         action: "login.failed",
-        payload: { reason: "no_credential" },
+        payload: { email: input.email, party_id: party.id, reason: "no_credential" },
       });
     });
     return { ok: false, reason: "invalid_credentials" };
@@ -256,7 +277,7 @@ export async function login(
     withTx(ctx, (tx) => {
       appendEvent(tx, {
         action: "login.failed",
-        payload: { reason: "bad_password" },
+        payload: { email: input.email, party_id: party.id, reason: "bad_password" },
       });
     });
     return { ok: false, reason: "invalid_credentials" };

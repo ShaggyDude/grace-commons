@@ -111,6 +111,7 @@ const PI_GRANTS: Array<{ code: keyof typeof permMap; scope: "all" | "own" }> = [
   { code: "invite_actor", scope: "all" },
   { code: "grant_permission", scope: "all" },
   { code: "enroll_subject", scope: "all" },
+  { code: "record_visit", scope: "all" },
   { code: "view_audit", scope: "all" },
 ];
 for (const g of PI_GRANTS) {
@@ -187,7 +188,7 @@ console.log(`
 
   Accounts:
     PI  — anya@beacon.clinical   / demo-pi
-          permissions: invite_actor, grant_permission, enroll_subject, view_audit
+          permissions: invite_actor, grant_permission, enroll_subject, record_visit, view_audit
 
     CRA — jordan@beacon.clinical / demo-cra
           permissions: view_audit (scope=all)

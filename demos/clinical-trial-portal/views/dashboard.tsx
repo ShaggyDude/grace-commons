@@ -12,7 +12,7 @@ const Tile: FC<{ href: string; title: string; desc: string }> = ({ href, title, 
 export const DashboardPage: FC<{ actor: Actor; permissions: string[] }> = (
   { actor, permissions },
 ) => (
-  <Layout title="Dashboard" actor={actor}>
+  <Layout title="Dashboard" actor={actor} path="/dashboard">
     <h1 class="text-2xl font-semibold mb-1">Welcome, {actor.display_name}</h1>
     <p class="text-sm opacity-50 mb-8">Beacon Clinical Research Portal</p>
 

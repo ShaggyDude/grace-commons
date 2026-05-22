@@ -36,7 +36,7 @@ export const PeoplePage: FC<{
   permissions: Permission[];
   flash?: string | null;
 }> = ({ actor, actorRows, pendingInvitations, permissions, flash }) => (
-  <Layout title="People &amp; Permissions" actor={actor}>
+  <Layout title="People &amp; Permissions" actor={actor} path="/people">
     <h1 class="text-2xl font-semibold mb-6">People &amp; Permissions</h1>
 
     {flash && (

@@ -9,7 +9,7 @@ export const SubjectsNewPage: FC<{
   nextCode: string;
   error?: string | null;
 }> = ({ actor, study, nextCode, error }) => (
-  <Layout title="Enroll Subject" actor={actor}>
+  <Layout title="Enroll Subject" actor={actor} path="/subjects">
     <div class="mb-6">
       <a href="/subjects" class="text-sm opacity-50 hover:opacity-100">← Subjects</a>
     </div>

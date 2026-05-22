@@ -25,7 +25,7 @@ export const SubjectsListPage: FC<{
   subjects: Subject[];
   canEnroll: boolean;
 }> = ({ actor, study, subjects, canEnroll }) => (
-  <Layout title="Subjects" actor={actor}>
+  <Layout title="Subjects" actor={actor} path="/subjects">
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-semibold">Subjects</h1>

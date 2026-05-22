@@ -17,7 +17,7 @@ export const AuditListPage: FC<{
   policy: RetentionPolicy | null;
   scope: "all" | "own";
 }> = ({ actor, events, filters, policy, scope }) => (
-  <Layout title="Audit Trail" actor={actor}>
+  <Layout title="Audit Trail" actor={actor} path="/audit">
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-semibold">Audit Trail</h1>

@@ -10,7 +10,7 @@ export const LoginPage: FC<{ error?: string | null }> = ({ error }) => (
       <title>Sign In — Beacon Clinical Research</title>
       <link rel="stylesheet" href="/static/styles.css" />
     </head>
-    <body class="inks-gray-0 min-h-screen flex items-center justify-center">
+    <body class="min-h-screen flex items-center justify-center">
       <div class="w-full max-w-sm mx-auto px-6">
 
         <div class="mb-8 text-center">
