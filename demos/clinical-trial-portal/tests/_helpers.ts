@@ -49,6 +49,23 @@ export function withTestDb(fn: (ctx: Ctx) => void): void {
 }
 
 /**
+ * Async variant of withTestDb for composition tests that call async functions
+ * (acceptInvitation, login) before or after the synchronous withTx boundary.
+ */
+export async function withTestDbAsync(
+  fn: (ctx: Ctx) => Promise<void>,
+): Promise<void> {
+  const db = openDb(":memory:");
+  db.exec(MIGRATION_SQL);
+  const ctx: Ctx = { db, actor: null, session: null };
+  try {
+    await fn(ctx);
+  } finally {
+    db.close();
+  }
+}
+
+/**
  * Override sha256hex to throw an error on its next invocation.
  * Returns a restore function — always call it in a finally block.
  *
