@@ -7,7 +7,7 @@
     "start":   "deno run -A main.ts",
     "verify":  "deno run -A scripts/verify.ts",
     "test":    "deno test -A",
-    "dev":     "deno task css --watch & deno run -A --watch main.ts",
+    "dev":     "deno task migrate && deno task seed && (deno task css --watch & deno run -A --watch main.ts)",
     "all":     "deno task migrate && deno task seed && deno task css && deno task start"
   },
   "imports": {
