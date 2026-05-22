@@ -1,4 +1,93 @@
-// views/subjects_list.tsx
-//
-// Subject list view
-// TODO: Phase 4 — Implement subject listing with status
+import type { FC } from "hono/jsx";
+import { Layout } from "./_layout.tsx";
+import type { Actor } from "../lib/db.ts";
+import type { Subject } from "../domain/subjects.ts";
+import type { Study } from "../domain/studies.ts";
+
+const StatusBadge: FC<{ status: Subject["status"] }> = ({ status }) => {
+  const cls = status === "enrolled"
+    ? "bg-green-100 text-green-800"
+    : status === "screening"
+    ? "bg-yellow-100 text-yellow-800"
+    : status === "completed"
+    ? "bg-blue-100 text-blue-800"
+    : "bg-gray-100 text-gray-700"; // withdrawn
+  return (
+    <span class={`inline-block px-2 py-0.5 text-xs rounded-full font-medium ${cls}`}>
+      {status}
+    </span>
+  );
+};
+
+export const SubjectsListPage: FC<{
+  actor: Actor;
+  study: Study;
+  subjects: Subject[];
+  canEnroll: boolean;
+}> = ({ actor, study, subjects, canEnroll }) => (
+  <Layout title="Subjects" actor={actor}>
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-semibold">Subjects</h1>
+        <p class="text-sm text-gray-500 mt-0.5">{study.protocol_number} — {study.title}</p>
+      </div>
+      {canEnroll && (
+        <a
+          href="/subjects/new"
+          class="bg-gray-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-800"
+        >
+          Enroll subject
+        </a>
+      )}
+    </div>
+
+    {subjects.length === 0
+      ? (
+        <p class="text-sm text-gray-500">
+          No subjects enrolled yet.
+          {canEnroll && (
+            <>{" "}<a href="/subjects/new" class="underline">Enroll the first subject.</a></>
+          )}
+        </p>
+      )
+      : (
+        <div class="border rounded bg-white overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="text-left px-4 py-2 font-medium text-gray-600">Code</th>
+                <th class="text-left px-4 py-2 font-medium text-gray-600">Status</th>
+                <th class="text-left px-4 py-2 font-medium text-gray-600">Enrolled</th>
+                <th class="text-left px-4 py-2 font-medium text-gray-600">Notes</th>
+                <th class="px-4 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {subjects.map((s) => (
+                <tr class="border-t">
+                  <td class="px-4 py-2 font-mono font-medium">{s.subject_code}</td>
+                  <td class="px-4 py-2">
+                    <StatusBadge status={s.status} />
+                  </td>
+                  <td class="px-4 py-2 text-gray-500 text-xs">
+                    {s.enrolled_at.slice(0, 10)}
+                  </td>
+                  <td class="px-4 py-2 text-gray-500 text-xs max-w-xs truncate">
+                    {s.notes ?? "—"}
+                  </td>
+                  <td class="px-4 py-2 text-right">
+                    <a
+                      href={`/subjects/${s.id}`}
+                      class="text-xs text-gray-600 hover:text-gray-900 underline"
+                    >
+                      View →
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+  </Layout>
+);

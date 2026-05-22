@@ -2,116 +2,121 @@
  * Beacon Clinical Research — Hono server entrypoint
  *
  * Usage: deno run -A main.ts
- * (Normally invoked via `deno task start`)
+ * (Normally invoked via `deno task start` after `deno task migrate` and `deno task seed`)
  *
- * Serves on 127.0.0.1:8000.
- * Auto-migrates on startup if database doesn't exist.
+ * Architecture:
+ *   Global middleware → opens SQLite db per request, sets c.var.db, closes after.
+ *   requireSession   → validates session cookie, sets c.var.ctx.
+ *   requirePermission → checks grant, sets c.var.granted_scope.
+ *   Route handlers   → read ctx / db from context; call composition functions.
  */
 
 import { Hono } from "hono";
 import { openDb } from "./lib/db.ts";
-import { Layout } from "./views/_layout.tsx";
+import type { AppEnv } from "./lib/env.ts";
+import { authRouter } from "./routes/auth.ts";
+import { invitationsRouter } from "./routes/invitations.ts";
+import { dashboardRouter } from "./routes/dashboard.ts";
+import { peopleRouter } from "./routes/people.ts";
+import { subjectsRouter } from "./routes/subjects.ts";
+import { auditRouter } from "./routes/audit.ts";
 
 const HOST = "127.0.0.1";
 const PORT = 8000;
 const DB_PATH = "./data/dev.db";
 
-// Ensure database directory and migrations are applied
-async function ensureDb() {
-  try {
-    await Deno.mkdir("./data", { recursive: true });
-  } catch {
-    // May already exist
-  }
+// ---------------------------------------------------------------------------
+// Startup checks
+// ---------------------------------------------------------------------------
 
+async function ensureDb() {
+  await Deno.mkdir("./data", { recursive: true }).catch(() => {});
   try {
     await Deno.stat(DB_PATH);
-    // DB exists, assume it's migrated
   } catch {
-    // DB doesn't exist, run migration
-    console.log("Database not found. Running migrations...");
-    try {
-      const migrationSql = await Deno.readTextFile("./migrations/0001_init.sql");
-      const db = openDb(DB_PATH);
-      db.exec(migrationSql);
-      db.close();
-      console.log("✓ Migration complete.");
-    } catch (err) {
-      console.error("Migration failed:", err);
-      throw err;
-    }
+    console.log("Database not found — running migrations…");
+    const sql = await Deno.readTextFile("./migrations/0001_init.sql");
+    const db = openDb(DB_PATH);
+    db.exec(sql);
+    db.close();
+    console.log("✓ Migration complete. Run `deno task seed` to seed accounts.");
   }
 }
 
-// Ensure static directory and CSS exist
 async function ensureStatic() {
-  try {
-    await Deno.mkdir("./static", { recursive: true });
-  } catch {
-    // May already exist
-  }
-
+  await Deno.mkdir("./static", { recursive: true }).catch(() => {});
   try {
     await Deno.stat("./static/styles.css");
-    // CSS exists
   } catch {
-    // CSS doesn't exist, create fallback
-    console.log("CSS not found. Creating fallback styles...");
-    const fallbackCss = `/* Beacon Clinical Research — Tailwind CSS (fallback) */
-:root { color-scheme: light dark; }
-body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
-`;
-    await Deno.writeTextFile("./static/styles.css", fallbackCss);
-    console.log("✓ CSS ready (fallback).");
+    console.log("CSS not found — writing minimal fallback…");
+    await Deno.writeTextFile(
+      "./static/styles.css",
+      "/* Beacon fallback — run: deno task css */\n",
+    );
   }
 }
 
 await ensureDb();
 await ensureStatic();
 
-const app = new Hono();
+// ---------------------------------------------------------------------------
+// App
+// ---------------------------------------------------------------------------
 
-// Middleware: attach db to context
-app.use("*", (c, next) => {
+const app = new Hono<AppEnv>();
+
+// ── Global: open db per request, close after ──────────────────────────────
+app.use("*", async (c, next) => {
   const db = openDb(DB_PATH);
   c.set("db", db);
-  return next();
-});
-
-// Serve static files (CSS)
-app.get("/static/styles.css", async (c) => {
   try {
-    const css = await Deno.readTextFile("./static/styles.css");
-    return c.text(css, 200, { "Content-Type": "text/css" });
-  } catch {
-    return c.text("Not found", 404);
+    await next();
+  } finally {
+    db.close();
   }
 });
 
-// Landing page
-const LandingPage = () => (
-  <Layout title="Home">
-    <div class="text-center space-y-6 py-12">
-      <h1 class="text-4xl font-bold">Beacon Clinical Research</h1>
-      <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-        A Phase II oncology trial portal demonstrating Grace Commons compositions in a regulated clinical research system.
-      </p>
-      <p class="text-sm text-gray-500">
-        Coming soon. Phase 0 scaffold ready for Phase 1 development.
-      </p>
-      <div class="mt-8">
-        <a href="/login" class="inline-block bg-gray-900 text-white px-6 py-3 rounded hover:bg-gray-800">
-          Log in
-        </a>
-      </div>
-    </div>
-  </Layout>
-);
+// ── Static files ──────────────────────────────────────────────────────────
+app.get("/static/:file{.+}", async (c) => {
+  const file = c.req.param("file");
+  // Only allow files under ./static/ — no path traversal
+  if (file.includes("..")) return c.text("Not Found", 404);
+  try {
+    const body = await Deno.readFile(`./static/${file}`);
+    const ext = file.split(".").pop() ?? "";
+    const mime = ext === "css" ? "text/css" : ext === "js" ? "text/javascript" : "application/octet-stream";
+    return new Response(body, { headers: { "Content-Type": mime } });
+  } catch {
+    return c.text("Not Found", 404);
+  }
+});
 
-app.get("/", (c) => c.html(<LandingPage />));
+// ── Landing page ──────────────────────────────────────────────────────────
+app.get("/", (c) => c.redirect("/login"));
 
-// 404 fallback
+// ── Route modules ─────────────────────────────────────────────────────────
+app.route("/", authRouter);
+app.route("/", invitationsRouter);
+app.route("/", dashboardRouter);
+app.route("/", peopleRouter);
+app.route("/", subjectsRouter);
+app.route("/", auditRouter);
+
+// ── 404 fallback ──────────────────────────────────────────────────────────
 app.notFound((c) => c.text("Not Found", 404));
 
+// ── Error handler ─────────────────────────────────────────────────────────
+app.onError((err, c) => {
+  console.error("Unhandled error:", err);
+  return c.text("Internal Server Error", 500);
+});
+
+// ---------------------------------------------------------------------------
+// Start
+// ---------------------------------------------------------------------------
+
 console.log(`✓ Beacon server starting on http://${HOST}:${PORT}`);
+console.log("  PI:  anya@beacon.clinical  / demo-pi");
+console.log("  CRA: jordan@beacon.clinical / demo-cra");
+
 Deno.serve({ hostname: HOST, port: PORT }, app.fetch);

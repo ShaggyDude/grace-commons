@@ -1,18 +1,32 @@
 // middleware/require_session.ts
 //
-// C14: Session-Gated Authorization — session lookup middleware
-// SPEC: <atom or composition name> — to be quoted from library in Phase 1/2
+// C14: Session-Gated Authorization — session lookup middleware.
 //
-// Usage: Applied to all authenticated routes. Looks up session by cookie token,
-// checks it is not expired or revoked, and attaches ctx.actor.
-// Unauthenticated → redirect to /login.
+// Reads the session token from the HttpOnly "session" cookie, validates it
+// against the sessions table (not expired, not revoked), loads the associated
+// actor, and attaches a fully-formed Ctx to the Hono context for downstream
+// handlers. Redirects to /login on any failure.
 
-import type { Context, Next } from "hono";
+import type { MiddlewareHandler } from "hono";
+import { getCookie } from "hono/cookie";
+import * as sessions from "../domain/sessions.ts";
+import * as actors from "../domain/actors.ts";
+import type { AppEnv } from "../lib/env.ts";
 
-// TODO: Phase 3 — Implement:
-//   - Look up session from cookie
-//   - Verify not expired (expires_at > now)
-//   - Verify not revoked (revoked_at is null)
-//   - Load associated actor
-//   - Attach ctx.actor
-//   - Redirect to /login on failure
+export const SESSION_COOKIE = "session";
+
+export const requireSession: MiddlewareHandler<AppEnv> = async (c, next) => {
+  const db = c.get("db");
+  const token = getCookie(c, SESSION_COOKIE);
+
+  if (!token) return c.redirect("/login");
+
+  const session = sessions.getActive(db, token);
+  if (!session) return c.redirect("/login");
+
+  const actor = actors.getById(db, session.actor_id);
+  if (!actor) return c.redirect("/login");
+
+  c.set("ctx", { db, actor, session });
+  await next();
+};
