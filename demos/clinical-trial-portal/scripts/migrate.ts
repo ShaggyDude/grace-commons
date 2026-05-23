@@ -9,11 +9,12 @@
 
 import { openDb } from "../lib/db.ts";
 
-const DB_PATH = "./data/dev.db";
+const DB_PATH = Deno.env.get("DB_PATH") ?? "./data/dev.db";
 
 // Ensure data directory exists
+const DB_DIR = DB_PATH.substring(0, DB_PATH.lastIndexOf("/")) || ".";
 try {
-  await Deno.mkdir("./data", { recursive: true });
+  await Deno.mkdir(DB_DIR, { recursive: true });
 } catch {
   // directory may already exist
 }

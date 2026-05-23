@@ -21,10 +21,11 @@ import * as permissions from "../domain/permissions.ts";
 import * as studies from "../domain/studies.ts";
 import * as retentionPolicy from "../domain/retention_policy.ts";
 
-const DB_PATH = "./data/dev.db";
+const DB_PATH = Deno.env.get("DB_PATH") ?? "./data/dev.db";
 
 // Ensure directory exists
-await Deno.mkdir("./data", { recursive: true }).catch(() => {});
+const DB_DIR = DB_PATH.substring(0, DB_PATH.lastIndexOf("/")) || ".";
+await Deno.mkdir(DB_DIR, { recursive: true }).catch(() => {});
 
 const db = openDb(DB_PATH);
 

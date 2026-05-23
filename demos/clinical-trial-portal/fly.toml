@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for grace-commons-clinical-trial3 on 2026-05-22T20:55:37-05:00
+# fly.toml app configuration file generated for grace-commons-clinical-trial3-rosy-orchard-3313 on 2026-05-22T21:02:55-05:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'grace-commons-clinical-trial3'
+app = 'grace-commons-clinical-trial3-rosy-orchard-3313'
 primary_region = 'sjc'
 
 [build]
@@ -25,5 +25,6 @@ primary_region = 'sjc'
 
 [[vm]]
   memory = '512mb'
+  cpu_kind = 'shared'
   cpus = 2
   memory_mb = 512
