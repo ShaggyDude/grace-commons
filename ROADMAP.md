@@ -25,7 +25,7 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ## Current state — 2026-05-21
 
-Twenty-four atoms and twelve compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the eight unblocked compositions (C2, C3, C6, C7, C8, C9, C15, C17 — see compositions section).
+Twenty-four atoms and twelve compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the nine unblocked compositions (C2, C3, C6, C7, C8, C9, C15, C17, C18 — see compositions section).
 
 **Atoms grounded:**
 
@@ -271,6 +271,18 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 ---
 
+#### C18. Actor Suspension
+
+**Prerequisites:** Actor Identity (grounded) + Permissions (grounded) + Session (grounded — via C13 Login) + Audit Trail (grounded). All grounded; unblocked at this entry's creation date. Optionally composes Credential (grounded) where policy requires deactivating the actor's credentials alongside their grants and sessions.
+
+**What it adds.** Coordinated deactivation of an actor's authorization and authentication surfaces in one transactional boundary, with a single tamper-evident `actor.suspended` Audit Trail event naming the full scope of what was revoked. Three emergent invariants the individual atoms do not own: (1) **Atomicity of multi-surface revocation** — after `suspend_actor` returns success, the actor holds zero active grants in Permissions and zero active sessions in Session, all written under one transaction; a partial state (grants revoked but sessions still active, or vice versa) is not a reachable post-state. (2) **Audit completeness of revocation scope** — the `actor.suspended` event enumerates every `grant_id` and `session_token` revoked by the call, so an auditor can reconstruct from records alone which surfaces were taken offline at suspension time; a revocation that touches a grant or session whose id is not in the event payload is a finding. (3) **Suspension cascade ordering** — Actor Identity's status transition (Active → Suspended) is the precondition for the cascade; the cascade reads Actor Identity status as the gate, the same way Login's `revoke_sessions_for_credential` reads credential status. An attempted cascade against an already-Suspended actor is a no-op return with `{grants_revoked: 0, sessions_revoked: 0}`, not an error. The composition's Pass-3-shaped TOCTOU concern mirrors Login's FC1: one constituent revocation succeeds, another storage-fails, actor is now in a partial state. The default discipline is all-or-nothing under a single transaction boundary (matching Login's atomic-action commit pattern); a best-effort variant with partial-state attestation is named as a deployment-policy alternative.
+
+**Standards anchored.** NIST SP 800-53 AC-2(3) (account management — disable accounts when no longer required) + AC-6(5) (least privilege — revoke unnecessary privileges); SOX §404 (internal controls over user access); HIPAA §164.308(a)(3)(ii)(C) (termination procedures — terminate access when employment ends); PCI DSS Requirement 8.1.3 (immediately revoke access for terminated users); ISO/IEC 27001 §A.9.2.6 (removal or adjustment of access rights).
+
+**Newly unblocked.** All four constituent atoms grounded as of 2026-05-21. Named as a stretch item for the Clinical Trial Portal demo (`compositions/Demo2-plan.md` §Phase 7 — "soft-revoke pattern" for coordinated revocation of an actor's grants and sessions in one transaction emitting `actor.suspended`).
+
+---
+
 ### Blocked on remaining atoms
 
 #### C12. Chain of Custody
@@ -385,6 +397,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 | C15 | Capability-Backed Sharing | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Capability + Selective Disclosure + Audit Trail; library's worked example of bearer-token semantics composing with regulated audit |
 | C16 | External Onboarding | Composition | `grounded` 2026-05-21 | Invitation + Credential + Party Identity + Audit Trail; invitation-gates-enrollment as load-bearing invariant; actor credential pre-check before Invitation.accept |
 | C17 | Authenticated Actor | Composition | Unblocked; not started — **newly unblocked 2026-05-21** | Credential + Actor Identity; owns revocation cascade, secret surface separation, and principal_ref / actor_ref namespace binding. Implementation-discovered gap via APA demo. |
+| C18 | Actor Suspension | Composition | Unblocked; not started — **newly unblocked 2026-05-23** | Actor Identity + Permissions + Session + Audit Trail; emergent invariants: atomicity of multi-surface revocation under one transaction, audit completeness over revocation scope, and suspension cascade ordering. Outbound-side counterpart to C13 Login's inbound credential cascade. Named as Demo2 Phase 7 stretch item. |
 
 ---
 
