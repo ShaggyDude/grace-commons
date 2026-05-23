@@ -159,8 +159,10 @@ sig Grant {
 -- gate_principal is a free field here — no binding to
 -- resolved_session.principal is imposed by the sig declaration.
 -- Invariant 2 (principal binding) is a separate fact added later.
--- This lets Principal_Binding_Without_Invariant2 (below) document
--- the attack surface before the fact closes it.
+-- The DOCUMENTATION block below names the attack surface that
+-- the fact closes; an executable demonstration check was tried
+-- and dropped in Round 6 (Alloy facts are file-global, see
+-- R5F1 in compositions/session-gated-authorization.md).
 -- ==============================================================
 
 sig CheckPermittedCall {
@@ -256,36 +258,33 @@ fact Outcome_Coherence {
 
 
 -- ==============================================================
--- CHECK: Principal-binding attack is possible without Invariant 2
--- EXPECTED: COUNTEREXAMPLE FOUND
+-- DOCUMENTATION: Principal-binding attack surface (no executable
+-- demonstration check in this single-file model; see Round 6 below)
 --
 -- Invariant 2 (principal binding) says gate_principal must equal
 -- the principal extracted from resolved_session — never a value
--- separately supplied by the caller.
+-- separately supplied by the caller. Without Invariant 2 a non-
+-- conforming implementation could call
+-- Permissions.permitted(caller_ref, scope) instead of
+-- Permissions.permitted(session.principal, scope), letting a
+-- caller probe any principal's grants regardless of which
+-- principal the session was issued for. That is the
+-- authorization-bypass attack the invariant closes.
 --
--- At this point Invariant 2 is NOT yet a fact. Alloy can therefore
--- construct a world where gate_principal ≠ resolved_session.principal:
--- the gate cleared (session Valid) but the permission check ran
--- against a different principal than the session's own.
---
--- This models the authorization bypass: a non-conforming
--- implementation calls Permissions.permitted(caller_ref, scope)
--- instead of Permissions.permitted(session.principal, scope),
--- letting a caller probe any principal's grants regardless of
--- which principal the session was issued for.
---
--- Expected result: COUNTEREXAMPLE FOUND.
--- After fact Invariant2_Principal_Binding is added below, the
--- same assert passes clean — the attack world is unreachable.
+-- The original model staged an "EXPECTED: COUNTEREXAMPLE FOUND"
+-- check here to demonstrate the attack surface before adding
+-- `fact Invariant2_Principal_Binding`. Round 6 (2026-05-23)
+-- dropped that check: Alloy facts are file-global, so the later
+-- fact gates every check in the file regardless of textual
+-- order, and the "without" framing collapses to the same
+-- proposition as Principal_Binding_Holds below. The attack
+-- surface is preserved as documentation here; an executable
+-- demonstration would require splitting the model into two .als
+-- files (one without, one with the invariant), which is deferred
+-- as not worth the cost-benefit for one structurally redundant
+-- check. See compositions/session-gated-authorization.md
+-- §Round 5 R5F1.
 -- ==============================================================
-
-assert Principal_Binding_Without_Invariant2 {
-    all c : CheckPermittedCall |
-        (some c.resolved_session and some c.gate_principal) implies
-            c.gate_principal = c.resolved_session.principal
-}
-
-check Principal_Binding_Without_Invariant2 for 4
 
 
 -- ==============================================================
@@ -295,8 +294,11 @@ check Principal_Binding_Without_Invariant2 for 4
 -- the principal_ref extracted from the validated session — never
 -- a value the caller supplies independently.
 --
--- With this fact, Principal_Binding_Without_Invariant2 passes
--- clean. Without it (see above), the attack world exists.
+-- With this fact, the principal-binding attack surface documented
+-- above is structurally unreachable: Principal_Binding_Holds
+-- (the check below this fact) discharges clean. The original
+-- "Without_Invariant2" check was removed in Round 6 — see
+-- compositions/session-gated-authorization.md §Round 5 R5F1.
 -- ==============================================================
 
 fact Invariant2_Principal_Binding {
@@ -799,7 +801,17 @@ run dyn_trace_with_revocation for 3 but 1..6 steps
 -- ==============================================================
 
 pred dyn_trace_permitted_then_revoked {
-    (some rec : DynCallRecord |
+    -- Round 6 fix (R5F2, 2026-05-23): wrap the first conjunct in
+    -- `eventually`. The original predicate evaluated the first
+    -- conjunct at the initial state, where dyn_init requires
+    -- `no DynSystem.dyn_call_log` — so the conjunction was
+    -- structurally unsatisfiable at step 0 and Alloy reported the
+    -- predicate as inconsistent. Both conjuncts now express
+    -- temporal-existence claims, which is what the predicate's
+    -- prose intent ("a Permitted call followed by a Revocation")
+    -- actually requires. See compositions/session-gated-authorization.md
+    -- §Round 5 R5F2.
+    eventually (some rec : DynCallRecord |
         rec in DynSystem.dyn_call_log and
         rec.rec_outcome = Permitted)
     and
