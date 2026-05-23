@@ -21,16 +21,17 @@ import { peopleRouter } from "./routes/people.ts";
 import { subjectsRouter } from "./routes/subjects.ts";
 import { auditRouter } from "./routes/audit.ts";
 
-const HOST = "127.0.0.1";
-const PORT = 8000;
-const DB_PATH = "./data/dev.db";
+const HOST = "0.0.0.0";
+const PORT = parseInt(Deno.env.get("PORT") ?? "8000", 10);
+const DB_PATH = Deno.env.get("DB_PATH") ?? "./data/dev.db";
 
 // ---------------------------------------------------------------------------
 // Startup checks
 // ---------------------------------------------------------------------------
 
 async function ensureDb() {
-  await Deno.mkdir("./data", { recursive: true }).catch(() => {});
+  const dir = DB_PATH.substring(0, DB_PATH.lastIndexOf("/")) || ".";
+  await Deno.mkdir(dir, { recursive: true }).catch(() => {});
   try {
     await Deno.stat(DB_PATH);
   } catch {
