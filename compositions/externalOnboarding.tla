@@ -1,4 +1,4 @@
----- MODULE ExternalOnboarding ----
+---- MODULE externalOnboarding ----
 \* Grace Commons — External Onboarding composition.
 \* Spec-level formal sibling of compositions/external-onboarding.md.
 \* Grounded on Final Critique 4.

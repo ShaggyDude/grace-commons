@@ -418,7 +418,7 @@ Pre-test fixes (applied before Round 1 from GPT peer review): exercise_access lo
 
 **Formal verification pass — TLA+ behavioral model.**
 
-Model: `compositions/privileged-access-provisioning.tla` (twin file). Python bounded model checker: `compositions/privileged_access_provisioning_check.py`. BFS over all reachable states within scope (RequestIDs={"r1","r2"}, ApproverIDs={"a1","a2","a3"}, CapTokens={"cap1","cap2"}, QuorumSize=2).
+Model: `compositions/privilegedAccessProvisioning.tla` (twin file). Python bounded model checker: `compositions/privileged_access_provisioning_check.py`. BFS over all reachable states within scope (RequestIDs={"r1","r2"}, ApproverIDs={"a1","a2","a3"}, CapTokens={"cap1","cap2"}, QuorumSize=2).
 
 841 states explored. All safety invariants held across every reachable state — no counterexample found:
 

@@ -1,4 +1,4 @@
----- MODULE Login ----
+---- MODULE login ----
 \* Grace Commons — Login composition TLA+ model.
 \* Spec-level formal sibling of compositions/login.md.
 \*

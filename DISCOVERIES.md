@@ -77,6 +77,26 @@ The correct sequencing is: ground the spec first, then apply formal tools. The f
 
 ---
 
+### 2026-05-23 — TLA+ filename↔module rule forces a camelCase exception for .tla files
+
+Discovered when the first CLI-driven TLC run hit `login.tla` and SANY rejected it: TLA+ requires every `.tla` file to declare `MODULE <name>` where `<name>` is the file's basename, and TLA+ identifiers cannot contain hyphens (`-` is the subtraction operator). A file named `external-onboarding.tla` cannot declare `MODULE external-onboarding` (lexer error) or any matching-but-hyphen-free module name without violating the filename-must-match rule.
+
+All four `.tla` files in `compositions/` had the same mismatch — kebab-case filename, CamelCase or snake_case module name. The TLA+ Toolbox GUI papers over this via internal resolution; the `tlc` CLI does not. CLI reproducibility is the bar a grant reviewer or external contributor will hit on first try.
+
+### Resolution
+
+Rename the four `.tla` files to lower-camelCase to match their MODULE declarations: `login.tla`, `externalOnboarding.tla`, `attributedPermissionsAdmin.tla`, `privilegedAccessProvisioning.tla`. Paired `.cfg` files follow the same names. Every other file type — `.md`, `.als`, atom names, directory names — stays kebab-case. The exception is scoped narrowly to the file type whose parser refuses to negotiate.
+
+### Future work — adapter
+
+A short build step could restore the kebab-case convention as the canonical surface: a pre-flight script creates a temporary directory of correctly-named symlinks or copies, invokes TLC against the temporary tree, and reports results back through the original kebab-case names. Worth doing once the build pipeline justifies a single canonical adapter location, or once a contributor wants a `.tla` file more readable than camelCase allows.
+
+### Principle
+
+The English spec and the formal-methods sibling are two expressions of the same discipline (2026-05-19 discovery), but the formal tool brings its own constraints. Accept the constraint where it is mechanical and unavoidable; defer the elegance of a unified surface to a build step rather than letting it bleed into the source filenames.
+
+---
+
 ### 2026-05-20 — Healthcare application target
 
 A specific healthcare application idea is in view as a future Grace Commons target. Not captured in detail yet at the author's request — noted here so it doesn't get lost. The library already has Clinical Observation and Medication Order as grounded worked examples of the methodology applied to HIPAA / 21 CFR Part 11 domains. The healthcare app would extend into composition territory beyond those two atoms. Detail to be filled in when the idea is ready to specify.

@@ -1,4 +1,4 @@
----- MODULE privileged_access_provisioning ----
+---- MODULE privilegedAccessProvisioning ----
 (*
   TLA+ model for compositions/privileged-access-provisioning.md
   Grounded on Final Critique 4.
