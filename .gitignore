@@ -6,6 +6,9 @@
 # Lives locally in grace-commons/grants/ for convenience; not committed.
 grants/
 
+# TLC model-checker on-disk metadata (created on every CLI run; not a spec artifact).
+compositions/states/
+
 # Demos — committed source, but exclude build artifacts and runtime data.
 demos/*/node_modules/
 demos/*/.deno/

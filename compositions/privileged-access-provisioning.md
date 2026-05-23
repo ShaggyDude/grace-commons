@@ -346,7 +346,7 @@ A derived implementation of Privileged Access Provisioning is *acceptable* — i
 
 ## Status
 
-`grounded on Final Critique 4` — three-pass baseline (Rounds 1–3) plus Final Critique (Round 4) complete. Thirteen findings total across all rounds, all resolved. No foundational findings open. See Lineage notes for full finding-and-resolution record.
+`grounded on Final Critique 4` — three-pass baseline (Rounds 1–3) plus Final Critique (Round 4) complete. Thirteen findings across Rounds 1–4, all resolved. Round 5 (touch-triggered re-pass, 2026-05-23): one foundational finding open (R5-F1 — `request_to_chain` declared in `vars` but not initialized in `Init`, TLA+ model unrunnable via CLI). See Lineage notes for full finding-and-resolution record.
 
 ---
 
@@ -431,3 +431,21 @@ Model: `compositions/privilegedAccessProvisioning.tla` (twin file). Python bound
 The trailing-decision re-fire guard (F4, Round 1) was the primary interleaving concern. The BFS confirmed that under concurrent `approve_step` calls racing on the same chain, the cascade fires exactly once — the idempotency guard on `request_store[request_id].state` correctly blocks re-fire in all explored interleavings.
 
 No spec findings from the formal pass.
+
+---
+
+**Formal model re-verification — Python BFS re-run + TLC attempt (precipitating touch for Round 5).** Re-run 2026-05-23 after the cross-cutting rename of all four `.tla` files in `compositions/` from kebab-case to lower-camelCase to satisfy SANY's filename↔module-name rule — recorded in [`DISCOVERIES.md`](../DISCOVERIES.md) §2026-05-23. The rename constituted an effective touch under `PRESSURE_TESTING.md` §Touch triggers re-pass and triggered Round 5. Two verification paths were exercised:
+
+*Python BFS re-run.* `compositions/privileged_access_provisioning_check.py` re-run at scope `RequestIDs={"r1","r2"}`, `ApproverIDs={"a1","a2","a3"}`, `CapTokens={"cap1","cap2"}`, `QuorumSize=2`. Result: 841 states explored, all safety invariants hold. Confirmed identical to the original formal verification pass result.
+
+*TLC CLI attempt.* `compositions/privilegedAccessProvisioning.cfg` created (INVARIANT list: TypeOK, ApprovalGatesProvisioning, MapInverseConsistency, CascadeFiresAtMostOnce, TokensAllocatedOnlyForProvisioned, NoPendingRequestHasToken, ExhaustedSubsetAllocated; ACTION_CONSTRAINT: TerminalAbsorbingAction; CONSTANTS at the same scope as the Python BFS). TLC 2.19 failed on the initial state: "current state is not a legal state." Root cause: `request_to_chain` is declared in the `vars` tuple (line 74, 90 of `privilegedAccessProvisioning.tla`) but is not initialized in `Init` and is not referenced in any action or invariant. The TLA+ semantics of `Spec == Init /\ [][Next]_vars` require every variable in `vars` to be assigned a value in `Init`; the omission makes the initial state undefined in TLC's evaluation. The Python checker works because it does not model `request_to_chain` (the checker's state representation covers only the variables that appear in the TLA+ actions). This is an implementation-discovered finding — logged below per `CLAUDE.md` §Implementation-discovered findings.
+
+**Pass 1 — Structural completeness (GRID), Round 5 (touch-triggered re-pass, 2026-05-23).** *Complete.* No new GRID findings. The `.cfg` addition (new file) and the Python BFS re-run are touch events, not spec body changes.
+
+**Pass 2 — Conceptual independence (EOS), Round 5.** *Complete.* No new EOS findings. The TLA+ artifact and the Python checker do not introduce new concepts requiring extraction.
+
+**Pass 3 — Adversarial scrutiny (Linus mode), Round 5.** *One finding.*
+
+- **R5-F1 — `request_to_chain` declared in `vars` but never initialized in `Init` and never used — TLA+ model unrunnable via CLI (foundational → open).** `request_to_chain` appears in the `VARIABLES` section and in the `vars` tuple but has no corresponding assignment in `Init` and no reference in any action (`ApproveStep`, `RejectStep`, `WithdrawRequest`, `ExerciseAccess`, `RevokeAccess`, `ProvisioningFailed`), no role in any invariant, and no mention in TypeOK. The TLA+ `Spec == Init /\ [][Next]_vars` semantics require every variable in `vars` to receive a value in `Init`; TLC 2.19 reports "current state is not a legal state" and halts before evaluating any invariant. The Python BFS checker abstracts over `request_to_chain` and runs clean at 841 states, confirming the English spec and the action-level model are correct; the TLA+ formal model artifact has a dead-variable deficiency that prevents CLI-driven TLC verification. Per `CLAUDE.md` §Implementation-discovered findings, this is a contradiction inside the formal model artifact (not a preference): `vars` claims membership but `Init` does not provide the variable's initial value. The spec and the Python checker are unaffected; the TLA+ `.tla` file requires a corrective review pass to either initialize `request_to_chain` in `Init` with the natural value `[r \in RequestIDs |-> r]` (matching the comment "here: same as request_id for simplicity") or remove it from `vars` and the `VARIABLES` declaration if it was left in by oversight. The resolution path is a future review round; the formal model is not edited mid-build. Open.
+
+Round 5 does not close clean. Foundational finding: one open (R5-F1). Privileged Access Provisioning remains at `grounded on Final Critique 4` pending resolution of R5-F1.
