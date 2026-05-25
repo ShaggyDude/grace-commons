@@ -16,7 +16,7 @@ export const DashboardPage: FC<{ actor: Actor; permissions: string[] }> = (
     <h1 class="text-2xl font-semibold mb-1">Welcome, {actor.display_name}</h1>
     <p class="text-sm opacity-50 mb-8">Beacon Clinical Research Portal</p>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-1 md:grid-cols-3">
       {permissions.includes("invite_actor") && (
         <Tile href="/people" title="People &amp; Permissions" desc="Invite coordinators, manage access grants" />
       )}

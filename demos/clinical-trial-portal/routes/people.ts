@@ -13,6 +13,7 @@ import * as invitations from "../domain/invitations.ts";
 import * as permissions from "../domain/permissions.ts";
 import * as parties from "../domain/parties.ts";
 import * as composition from "../composition.ts";
+import { sendInvitationEmail } from "../lib/mailer.ts";
 import { PeoplePage } from "../views/people.tsx";
 import type { ActorRow, InvitationRow } from "../views/people.tsx";
 
@@ -45,9 +46,10 @@ peopleRouter.get("/people", requireSession, canManagePeople, (c) => {
 
   const allPermissions = permissions.listAll(db);
   const flash = c.req.query("flash") ?? null;
+  const inviteLink = c.req.query("inviteLink") ?? null;
 
   return c.html(
-    PeoplePage({ actor, actorRows, pendingInvitations: pendingRows, permissions: allPermissions, flash }),
+    PeoplePage({ actor, actorRows, pendingInvitations: pendingRows, permissions: allPermissions, flash, inviteLink }),
   );
 });
 
@@ -65,12 +67,30 @@ peopleRouter.post(
     if (!email || !display_name || !intended_role) {
       return c.redirect("/people?flash=Missing+required+fields.");
     }
+
+    let invitation;
     try {
-      composition.issueInvitation(ctx, { email, display_name, intended_role });
-      return c.redirect("/people?flash=Invitation+sent.");
+      invitation = composition.issueInvitation(ctx, { email, display_name, intended_role });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       return c.redirect(`/people?flash=${encodeURIComponent(msg)}`);
+    }
+
+    const baseUrl = c.get("baseUrl");
+    const acceptUrl = `${baseUrl}/invitations/accept/${invitation.token}`;
+    const result = await sendInvitationEmail({ to: email, displayName: display_name, acceptUrl });
+
+    if (result.status === "sent") {
+      return c.redirect(`/people?flash=${encodeURIComponent(`Invitation emailed to ${email}.`)}`);
+    } else if (result.status === "skipped") {
+      return c.redirect(
+        `/people?flash=${encodeURIComponent("Invitation created. SMTP not configured — share the link below.")}&inviteLink=${encodeURIComponent(acceptUrl)}`,
+      );
+    } else {
+      console.error("[people] Email delivery failed:", result.error);
+      return c.redirect(
+        `/people?flash=${encodeURIComponent("Invitation created, but email delivery failed. Share the link below manually.")}&inviteLink=${encodeURIComponent(acceptUrl)}`,
+      );
     }
   },
 );

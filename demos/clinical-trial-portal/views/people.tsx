@@ -35,7 +35,8 @@ export const PeoplePage: FC<{
   pendingInvitations: InvitationRow[];
   permissions: Permission[];
   flash?: string | null;
-}> = ({ actor, actorRows, pendingInvitations, permissions, flash }) => (
+  inviteLink?: string | null;
+}> = ({ actor, actorRows, pendingInvitations, permissions, flash, inviteLink }) => (
   <Layout title="People &amp; Permissions" actor={actor} path="/people">
     <h1 class="text-2xl font-semibold mb-6">People &amp; Permissions</h1>
 
@@ -43,6 +44,15 @@ export const PeoplePage: FC<{
       <p class="mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
         {flash}
       </p>
+    )}
+
+    {inviteLink && (
+      <div class="mb-4 bg-yellow-50 border border-yellow-200 rounded px-3 py-2 text-sm">
+        <p class="font-medium text-yellow-800 mb-1">Invite link — copy and share this with the invitee:</p>
+        <code class="block break-all text-xs bg-white border border-yellow-200 rounded px-2 py-1.5 select-all text-yellow-900">
+          {inviteLink}
+        </code>
+      </div>
     )}
 
     {/* ── Actors ─────────────────────────────────────────────── */}

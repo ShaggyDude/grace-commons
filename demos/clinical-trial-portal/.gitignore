@@ -1,3 +1,6 @@
+# Environment — never commit real credentials
+.env
+
 # Database
 data/
 *.db

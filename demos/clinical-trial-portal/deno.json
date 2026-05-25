@@ -19,6 +19,7 @@
     "hono/jsx/jsx-runtime":    "jsr:@hono/hono@^4/jsx/jsx-runtime",
     "hono/jsx/jsx-dev-runtime":"jsr:@hono/hono@^4/jsx/jsx-dev-runtime",
     "hono/":                   "jsr:@hono/hono@^4/",
+    "nodemailer":              "npm:nodemailer@^6",
     "sqlite":                  "jsr:@db/sqlite@^0.12",
     "argontwo":                "jsr:@denosaurs/argontwo@^0.2",
     "std/":                    "jsr:@std/"

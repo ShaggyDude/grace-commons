@@ -98,7 +98,8 @@ atoms/
 │   └── party-identity           — persistent verifiable identity record for an external party with Unverified → Verified → Suspended → Closed lifecycle (grounded)
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
-│   └── notification             — delivery record for a single notification to a single recipient
+│   ├── notification             — delivery record for a single notification to a single recipient
+│   └── preference               — per-principal delivery-shaping record: channels, frequency, quiet hours, format (partially resolved)
 ├── workflow/
 │   └── approval-step            — Pending → Approved | Rejected | Withdrawn; named-approver gate (grounded)
 └── healthcare/

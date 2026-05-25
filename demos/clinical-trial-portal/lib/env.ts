@@ -16,5 +16,11 @@ export type AppEnv = {
      * Optional — only present on routes guarded by requirePermission.
      */
     granted_scope?: "all" | "own";
+    /**
+     * Absolute base URL for constructing links in emails.
+     * Set once in the global middleware from BASE_URL env var.
+     * Falls back to http://localhost:8000 when env var is absent.
+     */
+    baseUrl: string;
   };
 };

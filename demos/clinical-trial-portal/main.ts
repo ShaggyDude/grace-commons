@@ -24,6 +24,7 @@ import { auditRouter } from "./routes/audit.ts";
 const HOST = "0.0.0.0";
 const PORT = parseInt(Deno.env.get("PORT") ?? "8000", 10);
 const DB_PATH = Deno.env.get("DB_PATH") ?? "./data/dev.db";
+const BASE_URL = Deno.env.get("BASE_URL") ?? `http://localhost:${PORT}`;
 
 // ---------------------------------------------------------------------------
 // Startup checks
@@ -65,6 +66,12 @@ await ensureStatic();
 // ---------------------------------------------------------------------------
 
 const app = new Hono<AppEnv>();
+
+// ── Global: set baseUrl (stable across requests) ──────────────────────────
+app.use("*", (c, next) => {
+  c.set("baseUrl", BASE_URL);
+  return next();
+});
 
 // ── Global: open db per request, close after ──────────────────────────────
 app.use("*", async (c, next) => {

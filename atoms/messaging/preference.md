@@ -1,0 +1,439 @@
+---
+title: Preference
+parent: Messaging
+grand_parent: Atomic Concepts
+nav_order: 3
+has_toc: true
+toc: true
+---
+
+# Preference
+
+<details markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
+> A messaging primitive: a per-principal record of how that principal wants delivery shaped — which channels are preferred, what frequency limits apply, what quiet hours are in force, what format is preferred. Each record has an opaque immutable id; the principal reference and the preference values are immutable properties set at create time. The atom records *how delivery should be shaped when a notification is otherwise permitted*. Whether the principal has subscribed to the relevant topic, and whether the system may communicate with the principal at all, are answered by separate concepts and are not this atom's concerns.
+
+---
+
+## Intent
+
+Every system that pushes information to people accumulates two kinds of question over time. The first is *should this person receive this class of information at all?* — a topic-subscription question, and separately, a legal-permission question. The second is the question this atom answers: *given that the first kind has resolved in favor of delivery, how should the delivery be shaped?* A principal may want email but not SMS. They may want at most five notifications a day. They may want silence between 10pm and 7am. They may want plain text rather than rich HTML. None of these is a question about whether to deliver; all are questions about how.
+
+Preference records the answers. The atom owns the per-principal record of delivery-shaping values — channels, frequency limits, quiet hours, format — and the lifecycle of that record from creation through suspension or deletion. The composing fanout pattern reads the record at the moment a notification is queued and shapes the delivery accordingly. The atom does not deliver, it does not consult subscriptions, it does not evaluate legal permission, and it does not interpret the meaning of any preference value beyond enforcing structural constraints (the at-most-one-currently-in-effect-per-principal rule, the channel-must-be-declared rule, immutability of recorded values).
+
+The atom's three semantic states are distinct because each answers a different operational question. **Active**: *the principal has stated delivery preferences and delivery should proceed under them*. **Suspended**: *the principal has paused delivery without modifying their preferences; subsequent fanout calls observe the suspension and suppress delivery*. **Deleted**: *the principal's preference record is no longer in effect — either because it was superseded by a new `set` call (the principal updated their preferences) or because the principal explicitly deleted it*. Suspended is a first-class state distinct from "Active with empty channel preferences" — suspending a record does not modify any preference value, so a later resumption (via a fresh `set` call carrying the prior values) does not require the principal to re-enter their choices. Deleted is the terminal state; once a record is Deleted, no transition restores it; the principal who wants their preferences back creates a new record.
+
+Updates are not retroactive in the operational sense the atom commits to: a new `set` call produces a new record, the prior record transitions to Deleted, and the prior record's preference values are unchanged. A composing fanout pattern that captured a prior record's values at the moment a notification was queued continues to deliver that notification under the captured values — the atom does not push updates into already-queued work and does not modify any caller's captured copy of a prior record's values. The atom records sufficient timestamps (`set_at` on creation, `deleted_at` on supersession) for any composing pattern to determine which record was currently in effect at any past moment.
+
+This is a freestanding concept in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state (the preference record set), its own actions (`set`, `suspend`, `delete`, `current_for`, `read`), and its own operational principles (one currently-in-effect record per principal; immutability of preference values; supersession on update; suspension preserves values; terminal Deleted; no record is ever removed from the store). It does not implement notification routing, subscription evaluation, legal-permission evaluation, delivery transport, or interpretation of preference values' semantics. Each is a separate composable pattern; see Composition notes.
+
+---
+
+## Summary
+
+Preference is the atom that records, per principal, how delivery should be shaped — the channels the principal prefers, the frequency limits they have set, the quiet hours during which they want silence, the format they want their notifications in. It does not record whether the principal wants the information (that is a different concept), and it does not record whether the system is legally permitted to communicate with the principal (that is another different concept). It records, given that those other questions have resolved in favor of delivery, the *envelope* the principal wants the delivery to come in.
+
+The atom's job is narrow: maintain a durable (persisted to storage, survives system restarts) record of each principal's preferences, support updates via supersession (a new preference record replaces the prior one; the prior record is retained in history as audit evidence), support suspension (the principal pauses delivery without removing the preference values, so a later resumption is one action away), and support deletion (the principal's preferences are explicitly removed from currently-in-effect status). The store is append-only — no preference record is ever removed; the full history of every principal's preferences is queryable for the lifetime of the system.
+
+Two queries are the primary runtime operations. `current_for(principal_ref)` returns the principal's currently-in-effect preference record (the one in Active or Suspended state) or `none` if no such record exists — this is the query a composing fanout pattern uses at the moment a notification is queued, to determine the delivery shape. `read(preference_id)` returns the full record for any preference id, in any state, including Deleted — this is the query an audit, a data-subject access request, or a compliance review uses to trace the history.
+
+The atom enforces three structural commitments load-bearingly. **At most one currently-in-effect record per principal** prevents conflicting preference signals — a principal who has set preferences twice has the second set governing, and the first set is retained as history rather than as an active alternative. **Channel preferences must reference declared channels** prevents records from referencing channels the deployment does not actually support — the declared channel set is named at instance creation, and `set` calls referencing channels outside the declared set are rejected. **Suspension preserves preference values** keeps the suspend-resume cycle cheap for users — suspending a record does not modify its channel preferences, frequency limit, quiet hours, or format; a later `set` call that mirrors the suspended record's values returns the principal to Active without any vocabulary loss.
+
+The atom does not interpret preference values beyond enforcing the structural rules above. What "preferred" or "opt-out" means at the channel level, how a frequency limit is shaped (per-hour? per-day? per-topic?), how quiet hours encode timezone — all are deployment vocabulary. The atom stores the values as opaque payloads against a declared channel set; the composing fanout pattern interprets and applies them.
+
+The most common uses are: implementing user-facing notification preference pages (web app, mobile app, account settings); honoring opt-out and frequency obligations under marketing regulations (CAN-SPAM, TCPA); satisfying the GDPR Article 7(3) easy-withdrawal-of-consent expectation by making preference changes one action away (a new `set` call is the same surface as the original); building the audit trail of how delivery shaping evolved for each principal over time. The atom is the third entry in the `messaging/` category.
+
+---
+
+## Structure
+
+### Store instance model
+
+The Preference atom operates against a named store instance. A `store_name` identifies the instance; multiple instances coexist in real systems — one per product line, jurisdiction, or principal namespace. `preference_id` values are unique within an instance; uniqueness across instances is a composing concern. `principal_ref` uniqueness is enforced within the instance for the at-most-one-currently-in-effect rule; a principal known to two different instances is two distinct principals at the atom level. Calls implicitly target a single routed instance; instance selection is a deployment-routing concern.
+
+Each instance carries a **declared channel set** — the named delivery surfaces that records in this instance may reference. The set is declared at instance creation (e.g., `["email", "sms", "push", "in-app"]`) and is part of the instance's deployment configuration. The atom does not define what channel names are valid in the abstract; it enforces only that channel names appearing in a record are members of the declared set. Adding a channel to or removing a channel from the declared set is a deployment-level operation outside this atom's surface; impact on existing records (e.g., a removed channel still appearing in a Deleted historical record) is the composing layer's concern.
+
+### Identity model
+
+Every preference record known to the system has a **`preference_id`** — an opaque, immutable, system-generated identifier produced by `set`. The id is the record's identity; the principal reference and the preference values are immutable *properties* of the record, not its identity.
+
+The opaque-id model follows the same discipline used across the library. Identifying a record by `principal_ref` alone would collapse the principal's update history into a single mutable record, defeating the audit story — a principal who updates their preferences three times has three records, each with its own id, each independently queryable. Identifying by `(principal_ref, set_at)` would entangle identity with timestamps, which the at-most-one-currently-in-effect rule (Invariant 3) already polices on a different axis. Opaque ids preserve one-record-one-id discipline.
+
+The atom uses *principal* rather than *recipient* or *subscriber* as the entity term because preferences are recorded against an identity — independent of whether the principal has yet been the target of any notification or has subscribed to any topic. A principal may hold a preference record without ever being subscribed to anything; a principal subscribed to many topics holds at most one currently-in-effect preference record across all of them.
+
+Ids are not reused after a record reaches Deleted.
+
+### Inputs
+
+- A principal reference identifying *who* the preferences belong to. Opaque — the principal registry is a separate concern. The atom requires only that principal references support equality testing (so `current_for` can locate the currently-in-effect record and the at-most-one-currently-in-effect rule can be enforced); it does not parse, normalize, or otherwise interpret their contents.
+- A `channel_preferences` value (optional): a map (or equivalent structure) from declared channel name to opaque per-channel preference value. The atom enforces that every key is a member of the instance's declared channel set; the per-channel preference value is opaque and is stored unchanged. Whether `"preferred"`, `"backup"`, `"opt-out"`, a numeric priority, or a structured record is the right shape for the preference value is the deployment's vocabulary call.
+- A `frequency_limit` value (optional): an opaque, deployment-shaped value capturing the principal's frequency cap (e.g., `{per_day: 5}`, `{per_hour: 1, per_day: 10}`). The atom does not interpret the shape; the composing fanout pattern does.
+- A `quiet_hours` value (optional): an opaque, deployment-shaped value capturing the windows during which delivery should be suppressed (e.g., `{start: "22:00", end: "07:00", timezone: "America/Los_Angeles"}`). The atom does not interpret the shape.
+- A `format` value (optional): an opaque, deployment-shaped value capturing format preferences (e.g., `"html"` vs `"plain"`, density, locale). The atom does not interpret the shape.
+- A `metadata` value (optional): an opaque payload the atom stores unchanged. Carries deployment-specific context (the form version through which preferences were collected, the user-agent string, the consent-flow identifier). The atom does not parse or validate it.
+- Actions:
+  - `set(principal_ref, channel_preferences?, frequency_limit?, quiet_hours?, format?, metadata?) → preference_id | rejected(reason)`
+  - `suspend(preference_id) → ok | rejected(reason)`
+  - `delete(preference_id) → ok | rejected(reason)`
+  - `current_for(principal_ref) → preference_record | none`
+  - `read(preference_id) → preference_record | not-known`
+- An implicit clock providing wall-time timestamps.
+
+### Outputs
+
+- The current set of preference records (Active, Suspended, and Deleted).
+- For each record: `preference_id`, `principal_ref`, `channel_preferences` (if supplied), `frequency_limit` (if supplied), `quiet_hours` (if supplied), `format` (if supplied), `metadata` (if supplied), `set_at`, `status`, and the applicable lifecycle timestamps (`suspended_at` if the record has ever been Suspended; `deleted_at` if Deleted).
+- `set` returns the new `preference_id` on success, or a rejection naming the failed precondition.
+- `suspend` and `delete` return `ok` on success, or a rejection naming the failed precondition.
+- `current_for` returns one of two first-class outcomes: the full preference record (all stored fields for the principal's currently-in-effect record), or `none` if no Active or Suspended record exists for the principal. Both are answers to the query, not success-failure pairs.
+- `read` returns one of two first-class outcomes: the full preference record for the queried id, or `not-known` if no record with that id exists. A Deleted record is returned in full by `read`; deletion is a state, not a removal.
+
+### State
+
+A preference record occupies one of three named states:
+
+- **Active** — the principal's preferences are in force; the record's values shape any delivery the composing fanout pattern attempts. There is at most one Active or Suspended record per principal at any time (Invariant 3).
+- **Suspended** — the principal has paused delivery; the record's preference values are retained unchanged, but a composing fanout pattern observing the Suspended state suppresses delivery. There is at most one Active or Suspended record per principal at any time.
+- **Deleted** — the record is no longer in effect. Terminal. A record reaches Deleted by being superseded (a new `set` call for the same principal) or by explicit deletion. Deleted records are retained in the store as audit evidence; they are returned by `read(preference_id)` but excluded from `current_for(principal_ref)`.
+
+Each record carries:
+
+- **`preference_id`** — opaque, immutable, system-generated. Set on `set`. Never changes.
+- **`principal_ref`** — opaque reference to the principal whose preferences are recorded. Set on `set`. Never changes.
+- **`channel_preferences`** — map from declared channel name to opaque per-channel preference value. Set on `set` if supplied. Never changes; absence is also immutable.
+- **`frequency_limit`** — opaque value if supplied. Set on `set`. Never changes; absence is also immutable.
+- **`quiet_hours`** — opaque value if supplied. Set on `set`. Never changes; absence is also immutable.
+- **`format`** — opaque value if supplied. Set on `set`. Never changes; absence is also immutable.
+- **`metadata`** — opaque value if supplied. Set on `set`. Never changes; absence is also immutable.
+- **`set_at`** — wall-time when the record was created. Set on `set`. Never changes.
+- **`status`** — `active`, `suspended`, or `deleted`. Set to `active` on `set`; transitions per the rules below.
+- **`suspended_at`** — wall-time when the record was suspended. Absent on records that have never been Suspended; set on the transition to Suspended; never changes after set. If a record went Active → Suspended → Deleted, `suspended_at` is present and `deleted_at` is also present.
+- **`deleted_at`** — wall-time when the record reached Deleted. Absent unless status is `deleted`; set on the transition to Deleted; never changes after set.
+
+Transitions:
+
+- `set(principal_ref, ...)` → a new record is recorded in Active with a fresh `preference_id`, the supplied `principal_ref`, the supplied preference fields, and `set_at = now`. If the principal has a currently-in-effect record (Active or Suspended) at the moment of the call, that prior record's `status` transitions to `deleted` and its `deleted_at` is set to `now` as part of the same operation (Invariant 4 — supersession). Returns the new `preference_id`. Rejected per the Decision points for `set`.
+- `suspend(preference_id)` → the record at `preference_id` moves Active → Suspended; `suspended_at = now`. Returns `ok`. If `preference_id` is not known, returns `rejected(not-known)`. If the record is not in Active, returns `rejected(not-active)`. State is unchanged on rejection.
+- `delete(preference_id)` → the record at `preference_id` moves Active → Deleted or Suspended → Deleted; `deleted_at = now`. Returns `ok`. If `preference_id` is not known, returns `rejected(not-known)`. If the record is already Deleted, returns `rejected(already-deleted)`. State is unchanged on rejection.
+- `current_for(principal_ref)` → read-only query; no state change. Returns the unique record for which `record.principal_ref = principal_ref` and `record.status ∈ {active, suspended}`, or `none` if no such record exists. Invariant 3 guarantees uniqueness.
+- `read(preference_id)` → read-only query; no state change. Returns the full record for the given id, or `not-known` if no record exists for that id.
+
+### Flow
+
+1. **A principal expresses preferences; the composing layer creates a record.** A preferences UI (web settings page, mobile app, API) collects the principal's choices and calls `set(principal_ref, channel_preferences, ...)`. The atom records the preference set in Active and returns the id. If a prior record was currently-in-effect, it transitions to Deleted atomically with the new record's creation.
+2. **The composing fanout pattern reads the record at delivery time.** When a notification is queued for `principal_ref`, the fanout pattern calls `current_for(principal_ref)`. The atom returns the currently-in-effect record (Active or Suspended) or `none`. The fanout pattern uses the returned record (or its absence) to shape — or suppress — the delivery.
+3. **The principal updates, suspends, or deletes their preferences.** Exactly one of three transitions applies at the principal's next action:
+   - 3a. The principal updates: `set(principal_ref, new_values)` → a new record is created in Active; the prior record transitions to Deleted (Invariant 4).
+   - 3b. The principal pauses: `suspend(preference_id)` → the record moves Active → Suspended; subsequent `current_for` queries return the Suspended record, and the composing fanout pattern suppresses delivery.
+   - 3c. The principal explicitly removes: `delete(preference_id)` → the record moves to Deleted; subsequent `current_for(principal_ref)` returns `none` (until a new `set` is called).
+4. **Audit and recovery queries.** An auditor, DSAR processor, or compliance review queries `read(preference_id)` for any record (Active, Suspended, or Deleted) or `current_for(principal_ref)` for the principal's currently-in-effect record. Deleted records are returned by `read` for the lifetime of the store.
+
+### Decision points
+
+- **At `set(principal_ref, channel_preferences?, frequency_limit?, quiet_hours?, format?, metadata?)`** — `principal_ref` must be non-empty — specifically, not null, undefined, or the empty string; otherwise `invalid-request`. The atom does not parse or interpret the opaque value beyond this presence check. At least one of `channel_preferences`, `frequency_limit`, `quiet_hours`, or `format` must be supplied — a `set` call carrying no preference field has nothing to record and is rejected as `invalid-request`. (The atom records the *absence* of preferences as the absence of a record, not as an empty record.) If `channel_preferences` is supplied, every channel name appearing as a key must be a member of the instance's declared channel set; a reference to an undeclared channel is `invalid-request`. The per-channel preference value, the `frequency_limit` value, the `quiet_hours` value, the `format` value, and `metadata` are opaque — the atom does not parse, validate, or interpret their contents. There is no uniqueness constraint on the preference values themselves: two principals may hold identical preferences. All four rejection cases produce `invalid-request`; the implementation is free to choose which to report first in error messages or telemetry, but the rejection code is invariant across them — the caller branches on the code, not the priority.
+
+- **At `suspend(preference_id)`** — `preference_id` must reference a known record; otherwise `not-known`. The record must be in Active; suspending a Suspended or Deleted record is rejected as `not-active`.
+
+- **At `delete(preference_id)`** — `preference_id` must reference a known record; otherwise `not-known`. The record must not already be in Deleted; deleting an already-Deleted record is rejected as `already-deleted`. A Suspended record may be deleted; the transition is Suspended → Deleted.
+
+- **At `current_for(principal_ref)`** — no precondition. Empty or malformed `principal_ref` returns `none` — no record has an empty principal_ref, so the result is structurally `none`. Both `none` and a returned record are first-class outcomes; neither is a rejection.
+
+- **At `read(preference_id)`** — no precondition. Empty or malformed `preference_id` returns `not-known` — no record has an empty id, so the result is structurally `not-known`. Both `not-known` and the full record are first-class outcomes; neither is a rejection.
+
+### Behavior
+
+Observed behavior, derived from how user-preference systems are actually deployed:
+
+- **Suspended is a first-class state, distinct from "channel preferences set to empty."** The likely objection: "if the principal wants no delivery, they can set every channel to `opt-out` — why a separate state?" The mechanism: a Suspended record retains the prior preference values unchanged; the principal can return to Active delivery by calling `set` with the same (or any new) values, with no need to remember and re-enter their prior choices. A record with channel preferences set to opt-out, by contrast, loses the prior preferred-channel information — the principal who wants to resume delivery must re-state every channel preference. The audit story is also distinct: a Suspended record represents the principal's "pause" intent; a record with all-opt-out channels represents the principal's "modify" intent. Collapsing the two loses recoverable signal about what the principal meant. The result: suspending is cheap to reverse and audit-distinct from preference-modification; the principal's intent (pause vs. modify) is recoverable from the records.
+
+- **Updates are not retroactive.** The likely objection: "shouldn't the most-recent preferences govern all in-flight notifications, including ones already queued under prior preferences?" The mechanism: a new `set` call does not modify any prior record; it creates a new record in Active and transitions the prior record to Deleted with a `deleted_at` timestamp. The composing fanout pattern is expected to capture the preference record's values at the moment a notification is queued (its operational read time), not at the moment delivery is attempted. The atom records sufficient timestamps (`set_at`, `deleted_at`) for any composing pattern to determine which record was currently in effect at any past moment, supporting both queue-time-capture and delivery-time-re-evaluation policies. The result: a fanout pattern with queue-time-capture semantics delivers already-queued notifications under prior preferences; the next `set` does not retroactively re-shape them; the audit trail shows which preference record governed each notification.
+
+- **Frequency limits and quiet hours are preference fields, not separate atoms.** The likely objection: "rate-limiting and time-windowing recur across many domains — surely they deserve their own atoms?" The mechanism: rate-limiting recurs in the abstract as a class of concern, but the values stored here as `frequency_limit` and `quiet_hours` are *stored preference values* — opaque payloads with no state machine of their own, no lifecycle independent of the preference record that carries them, and no meaning until interpreted by the composing fanout pattern at delivery time. A separate Rate-Limit atom would have its own identity, state, and actions; what this atom carries is a parameter, not a concept. The result: frequency limits and quiet hours stay in the preference record as opaque deployment-vocabulary fields; the composing layer interprets them at delivery time.
+
+- **Channels are deployment-declared, not atom-defined.** The atom does not enumerate valid channel names. The declared channel set is named at instance creation and is part of the deployment's configuration. The atom's commitment is structural: a record's `channel_preferences` keys must be from the declared set at the moment of record creation. What channels mean operationally (email transport, SMS gateway, push service) is the composing system's responsibility.
+
+- **At most one currently-in-effect record per principal.** A `set` call for a principal who has an Active or Suspended record creates a new record and atomically transitions the prior record to Deleted. The two transitions (new record's creation, prior record's transition) are part of the same operation; an external observer never sees a moment in which the principal has two Active-or-Suspended records.
+
+- **Authorization is capability-based.** The atom does not enforce who may call `set`, `suspend`, or `delete`. Any caller with a `principal_ref` may set preferences for that principal; any caller with a `preference_id` may suspend or delete the record. Composing systems that need richer authorization — the principal must consent to a third party setting their preferences, the deletion must be co-signed by a privacy admin — wrap the bare actions with Permissions or Actor Identity. The bare atom enforces something specific and useful (capability gating on ids) and the layering story for richer models is clean.
+
+- **The atom does not consult, re-check, or override the legality of communicating with the principal.** Whether legal permission exists to deliver any notification to this principal at all is a separate concept, evaluated outside this atom. A composing fanout pattern that finds a currently-in-effect Active preference record does not, on the strength of that record alone, possess permission to deliver; the composing layer must sequence permission-evaluation before reading preferences. The atom's commitment is conditional: *given that delivery is permitted, here is the principal's stated shape for it.* A revocation of legal permission, by the separate concept that owns it, makes the preference record operationally irrelevant — the composing layer is responsible for sequencing permission-evaluation before reading preferences. The atom does not detect or react to permission revocation; the records remain unchanged. A composing system that reads preferences without first re-checking permission has made a sequencing error, not an atom-conformance error.
+
+- **The atom does not consult or evaluate topic subscriptions.** Whether this principal is subscribed to the topic of any particular notification is a separate concept. A composing fanout pattern that finds a currently-in-effect record does not, on the strength of that record alone, know that the notification falls within a topic the principal follows. The composing layer must sequence subscription-evaluation alongside preference-reading.
+
+- **Absent preference fields signal no-preference, not opt-in or opt-out.** A record with `channel_preferences` supplied but `frequency_limit` absent signals "the principal has stated channel preferences but no frequency cap"; the composing fanout pattern applies its deployment default for the absent dimension. The same holds for each preference field. This is structurally distinct from a `channel_preferences` that includes a channel with an explicit `"opt-out"` value (or equivalent) — which signals an active opt-out, not an absence.
+
+- **`current_for(principal_ref)` is a deterministic query.** Invariant 3 (at-most-one-currently-in-effect) guarantees the query has a unique answer. The query is answered entirely from the current preference record set; no out-of-band data is consulted.
+
+- **`read(preference_id)` returns the full record in any state.** A Deleted record is queryable via `read` for the lifetime of the store. The audit trail of a principal's preferences over time is recoverable by enumerating records with `record.principal_ref = X` and reading each.
+
+- **Concurrent calls resolve serially under host serialization guarantees.** Two concurrent `set` calls for the same principal_ref: the first creates record R1 and supersedes any prior; the second creates record R2 and supersedes R1 (which was Active for the brief window between the two calls). Two concurrent `suspend` calls on the same id: the first succeeds; the second receives `not-active`. Two concurrent `delete` calls on the same id: the first succeeds; the second receives `already-deleted`. A concurrent `suspend` and `delete` on the same Active id: whichever is serialized first wins; the loser receives `not-active` (for the late `suspend`, because the record is now Deleted, not Active) or `already-deleted` (for the late `delete`). The atom records the transition order; the caller is the composing system's responsibility.
+
+- **No preference record is deleted from the store.** All records — Active, Suspended, Deleted — remain queryable via `read` for the lifetime of the system. `current_for` excludes Deleted records by design.
+
+- **Re-creating preferences after explicit deletion produces a new record.** A principal who calls `delete` and then `set` later has two records: the prior Deleted record (carrying the original preference values and a `deleted_at` timestamp) and the new Active record (carrying fresh `preference_id`, `set_at`, and whatever preference values the principal supplied). The two records have independent ids. The retired id is not reused.
+
+### Feedback
+
+Each successful action produces an observable, measurable change:
+
+- After `set` — a new record appears in Active with a fresh `preference_id`, the supplied `principal_ref`, the supplied preference fields, and `set_at`. Total preference record count increases by one. Active-or-Suspended count for the principal becomes 1 (any prior was transitioned to Deleted as part of the operation). The id is returned. Falsifiable: after `set(p, prefs) → n`, `read(n)` must return a record with `status = active` and `principal_ref = p`; `current_for(p)` must return that record.
+- After `suspend` — the record moves to Suspended with `suspended_at`. Active count for the principal decreases by 1; Suspended count increases by 1; total count unchanged. Falsifiable: `read(n)` must return `status = suspended` and `suspended_at` set; `current_for(principal_ref)` must still return the record.
+- After `delete` — the record moves to Deleted with `deleted_at`. Active-or-Suspended count for the principal decreases by 1; Deleted count increases by 1; total count unchanged. Falsifiable: `read(n)` must return `status = deleted` and `deleted_at` set; `current_for(principal_ref)` must not return the record.
+- After `current_for` — no state change. Returns the full preference record or `none`.
+- After `read` — no state change. Returns the full preference record or `not-known`.
+
+`set` rejections: `invalid-request`. `suspend` rejections: `not-known`, `not-active`. `delete` rejections: `not-known`, `already-deleted`.
+
+The full preference set — Active, Suspended, Deleted — is queryable via `read` and (for currently-in-effect records only) `current_for`.
+
+### Invariants
+
+The following hold across all valid sequences of actions and constitute the verification surface of the pattern:
+
+- **Invariant 1 — Preference record immutability.** Once recorded, a preference record's `preference_id`, `principal_ref`, `set_at`, and each supplied preference field (`channel_preferences`, `frequency_limit`, `quiet_hours`, `format`, `metadata`) never change. Fields not supplied at `set` remain absent for the record's lifetime. Once set, `suspended_at` and `deleted_at` never change. The `status` field is the only mutable field; it transitions per Invariant 2.
+
+- **Invariant 2 — Status monotonicity.** A record's `status` transitions only in one direction: Active → Suspended (via `suspend`), Active → Deleted (via `delete` or supersession), or Suspended → Deleted (via `delete` or supersession). No record returns from Suspended to Active or from Deleted to any other state. To return a principal to Active delivery from a Suspended or Deleted state, a fresh `set` call creates a new record.
+
+- **Invariant 3 — At most one currently-in-effect record per principal.** For any `principal_ref`, at most one preference record is in `status ∈ {active, suspended}` at any time. A `set` call for a principal who has a currently-in-effect record transitions the prior record to Deleted as part of the same operation (Invariant 4).
+
+- **Invariant 4 — Supersession atomicity.** When `set` is called for a principal who has a currently-in-effect record, the prior record's transition to Deleted and the new record's creation are part of the same operation. No external observer sees a moment in which the principal has two records in `{active, suspended}`. The prior record's `deleted_at` equals (or is within clock-precision of) the new record's `set_at`.
+
+- **Invariant 5 — Channel preferences reference declared channels.** Every channel name appearing as a key in any record's `channel_preferences` is a member of the instance's declared channel set at the moment the record was created. A subsequent removal of a channel from the declared set does not invalidate historical records; the invariant binds at record-creation time.
+
+- **Invariant 6 — Suspension is value-preserving.** The `suspend` transition changes only `status` to `suspended` and sets `suspended_at`; the preference values (`channel_preferences`, `frequency_limit`, `quiet_hours`, `format`, `metadata` if supplied) and the principal's reference remain as they were at `set` time. This is the structural mechanism behind the cheap-resumption property: a composing system that wants to resume delivery can read the Suspended record's values and replay them in a new `set` call without any vocabulary loss.
+
+- **Invariant 7 — `current_for` determinism.** `current_for(principal_ref)` returns the unique record for the principal with `status ∈ {active, suspended}`, or `none` if no such record exists. The query is determined entirely by the preference record set at query time. No out-of-band data is consulted. Invariant 3 guarantees the result is unique when non-`none`.
+
+- **Invariant 8 — No id reuse.** No two preference records share a `preference_id` across the lifetime of the system. A deleted record's id is not reused even after the record is Deleted.
+
+- **Invariant 9 — Preference store durability.** No preference record is removed from the store. The total record count is monotonically non-decreasing. Deleted records are retained as audit evidence and remain queryable via `read` for the lifetime of the system.
+
+- **Invariant 10 — Timestamp ordering.** For any record with `suspended_at` set, `set_at ≤ suspended_at`. For any record with `deleted_at` set, `set_at ≤ deleted_at`. For any record with both `suspended_at` and `deleted_at` set, `suspended_at ≤ deleted_at`. These inequalities are best-effort under non-monotonic clocks; if the underlying clock moves backward between transitions, an inequality may be violated. The implementor is responsible for the clock discipline that makes each inequality hold; see Edge cases.
+
+Preference record immutability and store durability together give the *auditability* property — the full history of every principal's preferences is recoverable from the preference store alone, with no gaps. At-most-one-currently-in-effect and supersession atomicity together give the *unambiguous-currency* property — at any moment, every principal has at most one preference record governing delivery, and the moment of transition between records is recorded. Suspension-is-value-preserving gives the *cheap-resumption* property — a principal who suspends and later wants to resume does not lose their prior preference values; the composing system can re-set them from the suspended record's stored fields.
+
+---
+
+## Examples
+
+The same atom, three domains, identical mechanic. The deployment in each example has declared channels `["email", "sms", "push", "in-app"]` at instance creation unless otherwise noted.
+
+### Consumer SaaS — onboarding preferences
+
+A new user onboarding to a productivity app picks their notification preferences: email for daily digests, push for real-time mentions, no SMS, no quiet hours, plain-text format. The settings page calls `set(principal_ref: user_u, channel_preferences: {email: "digest", push: "real-time", sms: "opt-out"}, format: "plain")` → `pref_001`. The record enters Active.
+
+When the composition fires an event for which `user_u` is subscribed, the fanout pattern calls `current_for(user_u)` → returns `pref_001`. The fanout pattern reads the channel preferences and creates one Notification per non-opted-out channel.
+
+Three weeks later, the user adds SMS for urgent items and a frequency cap: `set(principal_ref: user_u, channel_preferences: {email: "digest", push: "real-time", sms: "urgent-only"}, frequency_limit: {per_day: 10}, format: "plain")` → `pref_088`. The prior record `pref_001` transitions to Deleted with `deleted_at`; the new record `pref_088` is in Active. `current_for(user_u)` now returns `pref_088`. Subsequent notifications are shaped under the new preferences.
+
+### Marketing platform — vacation suspend
+
+A subscriber to a marketing newsletter is going on a two-week vacation and wants to pause all notifications without losing their preferences. The settings page calls `suspend(pref_088)` → `ok`. The record moves Active → Suspended with `suspended_at`. `current_for(user_u)` returns the record (in Suspended state). The fanout pattern observes the Suspended state and suppresses delivery.
+
+When the subscriber returns, the settings page reads the suspended record's values (via `current_for(user_u)`) and offers them as defaults; the subscriber confirms and the settings page calls `set(principal_ref: user_u, channel_preferences: {email: "digest", push: "real-time", sms: "urgent-only"}, frequency_limit: {per_day: 10}, format: "plain")` → `pref_141`. The prior record `pref_088` (Suspended) transitions to Deleted with `deleted_at` (preserving its `suspended_at` and the original `set_at`). `pref_141` is the new Active record carrying the previously-stored values. The subscriber is back to full delivery.
+
+### Account closure — explicit deletion
+
+A user closes their account. As part of the closure flow, the account-deletion service calls `delete(pref_141)` → `ok`. The record moves to Deleted with `deleted_at`. `current_for(user_u)` returns `none`. The fanout pattern, finding no currently-in-effect record, treats delivery per the deployment's fanout-on-no-record policy (some deployments default to system-default delivery, others suppress entirely; the policy is composing-system configuration).
+
+The prior records (`pref_001`, `pref_088`, `pref_141`) all remain in the store as Deleted records. A subsequent DSAR (data subject access request) for `user_u`'s preference history queries each `preference_id` via `read` and returns the full chronological record.
+
+### Rejection path — set with no preference fields
+
+A composing system attempts to record a "preference set" carrying nothing: `set(principal_ref: user_u)` → `rejected(invalid-request)`. No `preference_id` is issued; no record enters the store. The Decision-point rule (at least one of `channel_preferences`, `frequency_limit`, `quiet_hours`, or `format` must be supplied) is the constraint.
+
+### Rejection path — set with undeclared channel
+
+The instance was created with declared channels `["email", "sms", "push", "in-app"]`. A composing system attempts to record a preference referencing a channel not in the declared set: `set(principal_ref: user_v, channel_preferences: {email: "preferred", carrier-pigeon: "backup"})` → `rejected(invalid-request)`. No record enters the store. The composing system must use only declared channels.
+
+### Rejection path — suspend a Deleted record
+
+A retry after a network timeout: `suspend(pref_001)` → `rejected(not-active)`. The record `pref_001` is Deleted. The caller detects the rejection and suppresses the retry.
+
+### Regulated adversarial scenarios
+
+Three scenarios the preference store must survive in regulated contexts:
+
+- **Regulator audit — demonstrate honoring opt-out under CAN-SPAM.** A regulator investigates whether a marketing platform honored a principal's opt-out for the `email` channel after `2026-03-14`. The investigator queries the audit surface for `principal_ref = user_v`, enumerating the principal's records. The records show: `pref_201` Active with `email: "preferred"` from `2025-08-01` to `2026-03-14`; `pref_244` Active with `email: "opt-out"` from `2026-03-14` onward. For any email delivery alleged to have occurred to `user_v` after `2026-03-14`, the fanout pattern would have called `current_for(user_v)` and read `pref_244`. If a delivery occurred against this record, that is either a fanout-pattern conformance failure (the pattern read the record but delivered anyway) or a separate composing-layer failure — *either way*, the preference record is the structural evidence of the principal's stated intent at the time of delivery. Invariants 1 (immutability) and 10 (timestamp ordering) are the rebuttal: the record was created at that time with those values; it does not change.
+
+- **Disputed delivery — principal claims their quiet hours were ignored under TCPA.** A principal complains that they received SMS at 11:30pm despite quiet hours of 10pm-7am. The investigator queries `read(pref_id_at_time_of_delivery)`. The record shows `quiet_hours: {start: "22:00", end: "07:00", timezone: "America/Los_Angeles"}`. The atom's records confirm the principal's stated quiet hours at the moment of delivery; whether the fanout pattern observed them is the composing-layer question. The atom's commitment: the principal's preferences were recorded; the record is the structural evidence; no developer narration is required to confirm what the principal stated.
+
+- **Breach investigation — identify principals whose preferences may have been corrupted during a security incident.** A security incident on `2026-04-01T05:00Z` exposed the preference store to potential unauthorized modification. The investigator queries the audit surface for any record with `set_at`, `suspended_at`, or `deleted_at` falling within the breach window. Invariant 1 (immutability) and Invariant 9 (durability) are the rebuttal: any record created before the breach window cannot have been altered (immutability holds spec-level); any record with a transition timestamp within the breach window is a candidate for forensic review against the composing system's authentication logs. Cryptographic protection against post-hoc tampering belongs to a composing Tamper Evidence pattern; the atom's records support the forensic reconstruction but do not, on their own, prove that no out-of-band write occurred.
+
+---
+
+## Edge cases and explicit non-goals
+
+What this atom does not cover:
+
+- **Notification routing and fanout.** This atom records preferences; it does not consult subscriptions, fire events, or create notifications. Those belong to a composing fanout pattern that wires the topic-subscription concept, the legal-permission concept, this atom, and an event source.
+
+- **Whether delivery is legally permitted.** Whether the system has permission to communicate with the principal at all — under GDPR's consent requirement, HIPAA's authorization rule, ePrivacy's opt-in for non-essential communications — is a separate concept evaluated by the composing layer. The atom's commitment is conditional: *given that delivery is permitted, here is the principal's stated shape for it.* The composing layer must sequence permission-evaluation before reading preferences. See the corresponding Behavior bullet.
+
+- **Whether the principal is subscribed to the topic.** Whether this principal follows the topic of any particular notification is a separate concept. The composing layer must sequence subscription-evaluation alongside preference-reading. A principal who has set preferences but is not subscribed to a topic does not receive notifications for that topic, regardless of preference values; conversely, a principal who is subscribed but has no preference record receives notifications under the composing system's default shaping.
+
+- **Transport mechanism.** Whether `email` is delivered via SMTP, a transactional email API, or an internal mail relay is a deployment concern. The atom records the principal's channel-level preference; the composing layer interprets it.
+
+- **Preference-value semantics.** What `"preferred"`, `"opt-out"`, `"backup"`, or a numeric priority means at the channel level is the deployment's vocabulary call. The atom stores and returns these values opaque. Similarly for the structure of `frequency_limit`, `quiet_hours`, and `format` — all opaque.
+
+- **Channel set evolution.** Adding a channel to or removing a channel from the declared set is a deployment-level operation outside this atom's surface. Existing records continue to carry their original channel keys (Invariant 5 holds at record-creation time, not perpetually). The composing layer is responsible for handling records that reference channels no longer in the declared set — typically by treating the absent channel as default-suppressed.
+
+- **Default preferences for principals without a record.** A principal who has never called `set` has no record; `current_for` returns `none`. What the composing fanout pattern does in that case — apply system defaults, suppress entirely, prompt the principal — is composing-layer policy and must be disclosed for cross-deployment audit (see Generation acceptance).
+
+- **Resume from Suspended without re-statement.** The atom does not provide a `resume(preference_id)` action that returns a Suspended record to Active. To resume, a composing system reads the Suspended record's values via `current_for` or `read` and calls `set` with those values; the new record is in Active and the Suspended record transitions to Deleted. The likely objection: "this is a common user flow — why not a first-class action?" The mechanism: a resume-mutating-status action would weaken Invariant 1 (suspend currently does not mutate any field other than status and suspended_at; a resume that flipped status back would either require a third lifecycle timestamp `resumed_at` and complicate the audit story for repeated suspend/resume cycles, or would overwrite `suspended_at` and violate immutability). The supersession path produces a clean audit trail — each lifecycle action produces a monotonic-state record — and the composing-layer ergonomics of reading the Suspended record's values and offering them as `set` defaults are cheap. The result: lifecycle simplicity wins over action-surface convenience.
+
+- **Deletion-reason distinction (supersession vs. explicit).** The atom does not record whether a Deleted record was superseded by a new `set` or explicitly deleted by the principal. Both produce a Deleted record with `deleted_at`; the distinction is recoverable from the records by checking whether a successor record exists for the same principal with `set_at` at or after the Deleted record's `deleted_at`. Deployments that need first-class deletion-reason recording (e.g., for regulator-facing audit dashboards) can compose with Actor Identity or Audit Trail to attribute each lifecycle action; the bare atom does not carry a reason field.
+
+- **Conflicting preferences.** Two `set` calls with different preference values for the same principal in rapid succession produce two records; the second supersedes the first. The atom does not detect or warn about "conflicting" preferences; it records the second as authoritative per Invariant 4. Composing systems that need conflict-detection (e.g., a UI that warns "you just changed this — are you sure?") implement it at the composing layer.
+
+- **Bulk operations.** There is no bulk-set, bulk-suspend, or bulk-delete surface. Operations on multiple principals require iteration at the composing layer.
+
+- **Per-topic preference overrides.** A principal who wants different preferences per topic (e.g., real-time push for security alerts but daily digest for newsletters) needs a richer model than this atom. The atom's record applies to all notifications for the principal uniformly. Per-topic preferences are a composing-layer extension; one approach is to compose a separate preference instance per topic-class, with the composing fanout pattern selecting the right instance per notification.
+
+- **Preference attribution.** The atom does not record who called `set`, `suspend`, or `delete`. Attribution — *the principal set their own preferences via the web UI*, *an admin set preferences on behalf of the principal*, *an automated process suspended preferences in response to bounce-back* — belongs to a composing Actor Identity pattern. The `preference_id` is the hook: a composing Actor Identity pattern records `attest(preference_id, acted_by_ref, credential)` at action time. No field is added to the preference record itself; the attribution lives in the Actor Identity store.
+
+- **Authorization to set, suspend, or delete.** The atom does not enforce who may call these actions. Authorization — only the principal or an authorized admin may modify preferences — belongs to the composing system.
+
+- **Atomicity and crash semantics.** The `set` action with supersession changes two records simultaneously: the prior record's `status` and `deleted_at`, and the new record's full creation. A crash mid-`set` that creates the new record without transitioning the prior, or vice versa, violates Invariant 4 (supersession atomicity). The `suspend` and `delete` transitions change two fields on one record (`status` and a timestamp); a partial write violates Invariant 1 or Invariant 10. The implementor is responsible for the transactional boundary that makes each operation atomic. The spec does not define recovery semantics for partial writes.
+
+- **Preference data retention.** The preference store retains all records for the lifetime of the system (Invariant 9). If preference values contain sensitive data — a `quiet_hours` value naming a timezone tied to physical location, a `metadata` payload carrying tracking identifiers — the composing system is responsible for the retention and erasure policy. Retention Window is the composing pattern that bounds how long records must be kept and when they may be purged. The bare atom does not implement preference expiry or redaction.
+
+- **Cryptographic integrity of records.** The atom's immutability is spec-level — the spec says fields never change; it does not seal the records against malicious modification. Court-admissible and regulator-admissible preference records require composition with Tamper Evidence.
+
+- **Clock semantics.** `set_at`, `suspended_at`, and `deleted_at` are wall-time from the implicit clock. Clock skew, NTP adjustments, and timezone handling are deployment concerns. Invariant 10 is best-effort under non-monotonic clocks.
+
+---
+
+## Generation acceptance
+
+The audit surface is the preference store inspected on its stored fields — distinct from and complementary to the action surface (`set`, `suspend`, `delete`, `current_for`, `read`). The action surface answers *what does the atom do at runtime?*; the audit surface answers *what does the atom commit to recording, queryable on stored fields?*. A derived implementation must produce a store that supports the audit-surface queries below, independent of whether the runtime action surface exposes them.
+
+A derived implementation of Preference is *acceptable* — in the regulator-acceptance sense — when an external auditor, given the preference store, can do all of the following without recourse to source code, runbooks, or developer narration:
+
+- **Enumerate every preference record with its full lifecycle.** `preference_id`, `principal_ref`, `set_at`, `status`, and the applicable lifecycle timestamps (`suspended_at` if the record was ever Suspended; `deleted_at` if Deleted) are present and queryable for every record ever created. The preference values (`channel_preferences`, `frequency_limit`, `quiet_hours`, `format`, `metadata`) are present for every record on which they were supplied. No record is missing from the store (Invariant 9).
+
+- **Reconstruct the currently-in-effect record for any principal at any past point in time.** Given a `principal_ref` and a timestamp `t`, the auditor can determine which record was currently-in-effect at `t` by filtering on `set_at ≤ t` and (`status ∈ {active, suspended}` or `deleted_at > t`) — taking the record with the maximum `set_at` ≤ `t` (Invariant 3 guarantees this record is unique). The reconstruction is exact with respect to stored timestamps (Invariants 1 and 4); the wall-clock truth of those timestamps is subject to Invariant 10's best-effort clock caveat.
+
+- **Confirm at-most-one-currently-in-effect.** For any `principal_ref`, at most one record is in `status ∈ {active, suspended}` at any point in time. The auditor verifies by enumerating the principal's records and confirming no two records have overlapping currently-in-effect windows (Invariants 3 and 4).
+
+- **Confirm supersession atomicity at the timestamp level.** For any record that was superseded (a later record exists for the same principal with `set_at > this.set_at` and the gap is unaccounted for by explicit `delete` or `suspend`), `deleted_at` equals or is within the clock-precision of the successor's `set_at`. Materially distinct values are a conformance failure: either supersession was not atomic, or a separate `delete` was issued in the gap and the operation timeline is not what the at-most-one rule would imply.
+
+- **Confirm channel-set membership at record creation.** For every record's `channel_preferences` (if present), every key is a member of the instance's declared channel set as it stood at the moment of creation. The auditor verifies against the deployment's channel-set history.
+
+- **Identify composing patterns active in this deployment.** Whether preference attribution (Actor Identity), event firing history against preferences (Event Log), retention (Retention Window), tamper-evidence on the preference store (Tamper Evidence), and the legal-permission and topic-subscription concepts the deployment uses to gate delivery are wired in, and with what configuration. The deployment's **fanout-on-no-record policy** must also be disclosed — when `current_for(principal_ref)` returns `none`, does the fanout pattern apply system defaults, suppress delivery entirely, or prompt for preferences? Without this disclosure, the same operational situation (no preference record) produces different delivery outcomes across deployments and cross-deployment audit cannot interpret records uniformly.
+
+This is the generator's contract: any code generated from this atom must produce a preference store and a query surface that pass the six checks above.
+
+---
+
+## Composition notes
+
+Preference is freestanding and is designed to compose with:
+
+- **[Subscription](./subscription.md)** — the topic-interest concept that the composing fanout pattern consults to determine whether a given notification falls within a class the principal follows. Preference shapes delivery once Subscription has confirmed the principal follows the topic; the two atoms are sequenced peers in the fanout pipeline.
+- **[Consent](../compliance/consent.md)** — the legal-permission concept that the composing fanout pattern consults to determine whether the system may communicate with the principal at all. Preference shapes delivery once Consent has confirmed legal permission; the two atoms are sequenced peers (Consent first, then Preference), not alternatives.
+- **[Notification](./notification.md)** — the delivery-record concept. After a fanout pattern reads Preference and decides to deliver on a channel, it creates a Notification record on that channel. Preference is consulted; Notification is the result.
+- **Preference-Aware Notification Fanout** *(forthcoming — C11)* — the composition that wires Subscription + Preference + Notification + an event source into an end-to-end fanout pipeline that honors per-principal delivery shaping. The composition observes Suspended preferences as delivery-suppress, frequency limits as queue-or-drop, quiet hours as defer-until-window, and channel preferences as route-or-suppress.
+- **[Notification Fanout](../../compositions/notification-fanout.md)** — the existing two-atom fanout composition. Preference-Aware Notification Fanout extends rather than replaces it; deployments that have not yet adopted preference shaping continue to use the base composition.
+- **[Event Log](../temporal/event-log.md)** — records each preference action (`set`, `suspend`, `delete`) as an auditable event for replay and investigation when in-record timestamps are insufficient (e.g., when a deployment needs to record the full sequence of suspend-cycles a principal performed, beyond the single `suspended_at` the record retains).
+- **[Actor Identity](../compliance/actor-identity.md)** — records who initiated each preference action when attribution is required. `preference_id` is the hook: a composing Actor Identity pattern records `attest(preference_id, acted_by_ref, credential)` at action time.
+- **[Retention Window](../compliance/retention-window.md)** — the preference store must be retained for whatever regulatory or operational lifetime the deployment requires.
+- **[Tamper Evidence](../compliance/tamper-evidence.md)** — in regulated contexts, the preference store is a target for after-the-fact manipulation (a record alleging the principal opted out could be rewritten to allege they opted in). Cryptographic commitment makes any rewrite detectable.
+- **[Duplicate Prevention](../temporal/duplicate-prevention.md)** — for at-most-once semantics on `set` under retry conditions, where a network-timeout retry should not produce a second supersession.
+
+---
+
+## Standards references
+
+- **CAN-SPAM Act (15 U.S.C. §7701 et seq.)** — requires commercial email senders to honor unsubscribe requests within 10 business days and provide a working opt-out mechanism in every commercial message. The Preference atom's `channel_preferences` with channel-level opt-out values, combined with the composing fanout pattern's enforcement, is the structural mechanism. The atom's immutability and durability guarantees produce the audit record CAN-SPAM enforcement requires.
+- **Telephone Consumer Protection Act (TCPA, 47 U.S.C. §227)** — restricts automated and unsolicited calls and SMS, including frequency caps and time-of-day restrictions. The `frequency_limit` and `quiet_hours` fields, combined with the composing fanout pattern's enforcement, are the mechanism for honoring these requirements per principal.
+- **GDPR Article 7(3)** — withdrawal of consent must be as easy as giving it. While Consent governs the legal-permission axis, this atom's `set` action provides the analogous easy-update path for preferences — a principal who wants to change channel preferences, tighten frequency limits, or suspend delivery does so through the same surface that established preferences originally.
+- **GDPR Article 21(2)** — right to object to processing for direct marketing purposes; objection terminates marketing processing without delay. A principal's per-channel opt-out preference is the mechanism for honoring an Article 21 objection on a channel-by-channel basis; combined with the composing fanout pattern's enforcement, the atom's records are the structural evidence of the objection.
+- **ePrivacy Directive (2002/58/EC, as amended)** — consent and preference requirements for electronic communications in the EU. Cookie consent and marketing communication preferences fall under this directive's surface; the Preference atom's record is the artifact preferences-page UIs produce.
+- **CASL (Canadian Anti-Spam Legislation)** — analogous to CAN-SPAM with stricter consent requirements; honoring per-principal channel preferences is the mechanism.
+- **Daniel Jackson, *The Essence of Software*** — freestanding-atom posture; `channel_preferences`, `frequency_limit`, `quiet_hours`, and `format` as opaque deployment-vocabulary fields.
+- **Eiffel's design-by-contract** — preconditions on `set`, `suspend`, `delete`; named rejection reasons.
+
+---
+
+## Status
+
+`partially resolved` — foundation passes (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus) and one author-conducted refinement round complete in the initial drafting session. Status will advance to `grounded` after a fresh-reader AI-conducted Phase 3 round (per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) discipline) and the Opus Phase 4 Happy Torvalds X2 readiness check return at-or-above the 95%-good threshold. Third entry in `atoms/messaging/`.
+
+---
+
+## Lineage notes
+
+This atom is the third entry in the `messaging/` category, drafted after Subscription, Notification, and Notification Fanout had grounded. The conceptual minefield — distinguishing Preference from Subscription and from Consent — was the load-bearing authoring challenge; the resolution lives in the Intent paragraphs and the Behavior bullets that name what this atom does not consult or evaluate. Lineage notes name Subscription and Consent by reference where defending the boundary; the specification body uses neutral language (*the topic-subscription concept*, *the legal-permission concept*) per the freestanding discipline.
+
+Regulated-pattern conventions — *Regulated adversarial scenarios* and *Generation acceptance* — inherited from the methodology directly ([`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md)), baked in from the first draft because the atom's standards-anchored examples invoke regulated marketing-communication domains (CAN-SPAM, TCPA, GDPR Article 21).
+
+**Pass 1 — Structural completeness (GRID).** Three findings, all closed in-pattern.
+
+- *State node initially had only Active and Deleted, missing Suspended as a first-class state.* The early draft treated Suspended as a transient "Active-with-suppressed-delivery" — losing the load-bearing distinction from "Active-with-empty-channels". Fixed: Suspended elevated to first-class state with its own `suspended_at` timestamp, its own transitions in and out, and its own Decision-point treatment.
+
+- *Decision points did not name what triggers `invalid-request` on `set` specifically.* The early draft said "invalid-request for malformed inputs" without enumerating the cases — empty principal_ref, empty preference field set, undeclared channel reference, undeclared per-channel-preference-value shape. Fixed: Decision point at `set` now enumerates the four cases that produce `invalid-request`.
+
+- *Feedback section did not state falsifiable post-conditions for `set` and `suspend`.* The early draft listed observable changes but did not give the "after action, query X must return Y" form. Fixed: Feedback now names falsifiable post-conditions for each successful action.
+
+**Pass 2 — Conceptual independence (EOS).** Five extraction candidates evaluated; four kept in-pattern, one resolved by changing the action surface.
+
+- *Suspended state — extraction candidate.* Could "suspended" be its own atom (a delivery-suppression concept) composed with this atom? Evaluated: a delivery-suppression atom would need its own identity, its own lifecycle, its own actions — and would couple back to this atom via the suspension-target relationship. The suspension is *of this record*; it does not exist independently. Kept in-pattern as a first-class state of the preference record.
+
+- *`frequency_limit` and `quiet_hours` — extraction candidates.* Rate-limiting and time-windowing recur across many domains (auth retry caps, API rate limits, scheduling windows). Could they be separate atoms? Evaluated: rate-limiting recurs as a class of concern, but the values stored here are deployment-vocabulary parameters with no state machine of their own and no lifecycle independent of the preference record. They are *values the record carries*, not concepts composed in. Kept in-pattern. Defended in-line in Behavior with the four-step rubric.
+
+- *Channel set declaration — extraction candidate.* Could the declared channel set be a separate atom (a "Channel Registry")? Evaluated: the channel set is deployment configuration, not a state-bearing concept — channels are added or removed by deployment-level operations outside any atom's surface. Kept as a Store-instance-model concern, parallel to Consent's `store_name` discipline. A Channel Registry atom is not justified by present library evidence; if the need surfaces (channel governance becomes a domain in its own right), the extraction is straightforward.
+
+- *Resume action — extraction candidate resolved as removal.* The early draft had a `resume(preference_id)` action that returned a Suspended record to Active. Evaluated: a resume action introduces mutability of `status` after the first transition, weakening Invariant 1's audit story (either a third lifecycle timestamp `resumed_at` would be needed, or `suspended_at` would be overwritten — both complications). The same operational outcome is achieved by `set` with the prior record's values (composing system reads suspended record, replays values), at the cost of one extra record in history. Resolved: `resume` removed from the action surface; the supersession-via-set path is the canonical resume mechanism. Defended in-line in Edge cases.
+
+- *Per-topic preference overrides — extraction candidate.* A principal who wants different preferences per topic class (e.g., real-time push for security alerts, daily digest for newsletters) seems like a richer model. Evaluated: per-topic overrides could be implemented as separate preference instances per topic-class with the composing fanout pattern selecting the right instance — that is, the per-topic-ness is composition surface, not atom surface. Kept the atom as one-record-per-principal; named the per-topic concern in Edge cases as a composing-layer extension.
+
+**Pass 3 — Adversarial scrutiny (Linus mode).** Seven foundation findings, all closed in-pattern.
+
+- *Boundary with Subscription not defended in Behavior.* The Intent named the distinction but Behavior was silent on what Subscription does that this atom does not. A reader could plausibly read the atom as a superset that "knows about" subscriptions. Fixed: Behavior bullet added stating the atom does not consult or evaluate topic subscriptions; the composing fanout layer sequences subscription-evaluation alongside preference-reading.
+
+- *Boundary with Consent not defended in Behavior.* Same defect class: Intent named the distinction but Behavior was silent. Fixed: Behavior bullet added stating the atom does not consult or evaluate legal permission; the composing layer sequences permission-evaluation before reading preferences. The atom's commitment is conditional.
+
+- *Suspended-vs-empty-channels distinction not defended in Behavior.* The Intent named the distinction but a reader who skimmed to Behavior to find the operational rule could miss it. Fixed: Behavior bullet added carrying the four-step rubric defense — Suspended preserves preference values; empty channels does not; suspending is cheap to reverse and audit-distinct from preference-modification.
+
+- *Updates-not-retroactive claim was implicit, not defended.* The Intent stated it but no Behavior bullet defended the model — a reader could plausibly believe the atom does push updates into in-flight work. Fixed: Behavior bullet added with the four-step rubric defense — the atom does not modify prior records on `set`; queue-time-capture is the expected fanout policy; the atom records sufficient timestamps for either queue-time or delivery-time policies.
+
+- *Examples were happy-path-only initially.* Onboarding, vacation-suspend, account-closure were all valid happy-path-or-natural-flow examples; there was no explicit rejection-path example. Fixed: three rejection-path examples added (set with no preference fields, set with undeclared channel, suspend a Deleted record).
+
+- *Atomicity and crash semantics absent.* Each transition changes two fields simultaneously; `set` with supersession changes two records. A partial write violates Invariant 1, 4, or 10. Personal Todo, Subscription, and Notification all name this explicitly. Fixed: Edge case added covering each action's atomicity boundary.
+
+- *Regulated adversarial scenarios and generation acceptance missing from initial draft.* The standards-anchored examples invoke regulated marketing-communication domains (CAN-SPAM, TCPA); library rules require both sections for any pattern whose examples invoke regulated contexts. Fixed: both sections added, with three adversarial scenarios covering regulator audit (CAN-SPAM opt-out), disputed delivery (TCPA quiet hours), and breach investigation (store corruption).
+
+**Refinement round 1 — eight additional findings, all closed in-pattern.**
+
+- *Invariant 1 listed `metadata` and other optional fields without distinguishing "supplied" from "absent".* A reader could infer that an absent `metadata` field is a defect rather than a normal state. Fixed: Invariant 1 now distinguishes immutable fields from each-supplied-field; fields not supplied at `set` remain absent for the record's lifetime.
+
+- *Invariant 6 (suspension preserves values) read as redundant with Invariant 1 (immutability).* Both said the preference fields don't change. Distinguished: Invariant 6 reframed as a transition-specific commitment — the `suspend` transition changes only `status` and `suspended_at`, no other field — which is structurally distinct from Invariant 1's general immutability claim. Invariant 6 carries the structural mechanism behind the cheap-resumption property.
+
+- *`set` rejection priority unspecified for multi-condition failures.* When a `set` call violates multiple preconditions (empty principal_ref AND undeclared channel), the spec did not say which rejection wins. Fixed: Decision point at `set` notes that all four cases produce `invalid-request`; the implementation chooses which to report first in telemetry, but the rejection code is invariant — callers branch on the code, not the priority.
+
+- *Consent boundary in Behavior did not say "does not override".* The original wording said the atom does not consult or check legal permission; it did not explicitly say it does not override. A reader could plausibly believe the atom's currently-in-effect record overrides legal permission. Fixed: Behavior bullet expanded to state the atom does not consult, re-check, or override legal permission; revocation of legal permission makes the preference record operationally irrelevant; the composing system is responsible for sequencing; a composing system that reads preferences without first re-checking permission has made a sequencing error.
+
+- *GDPR Article 21 missing from Standards references.* Article 21(2) gives the data subject the right to object to direct marketing — the atom's channel-level opt-out is the structural mechanism. Initial draft cited only Article 7(3) for the "easy update" angle, missing the substantive Article 21 right. Fixed: Article 21(2) added to Standards references with a one-line description of how the atom's records and the composing fanout pattern's enforcement together satisfy the right.
+
+- *Deletion-reason distinction (supersession vs. explicit) not named as out-of-scope.* The audit story relies on the distinction being recoverable from successor records, but this was not made explicit. A reader could believe the atom records a deletion reason directly. Fixed: Edge case added naming the distinction as recoverable-via-successor; deployments needing first-class deletion-reason recording compose with Actor Identity or Audit Trail.
+
+- *Absent preference fields' meaning unclear in Behavior.* A record with `channel_preferences` supplied but `frequency_limit` absent: does that signal no-cap, or default-cap, or what? The early draft was silent. Fixed: Behavior bullet added stating absent fields signal no-preference (the composing fanout pattern applies its deployment default for the absent dimension); this is structurally distinct from an explicit opt-out value.
+
+- *Initial Invariant 8 (Id stability) redundant with Invariant 1.* Invariant 1 already covered immutability of `preference_id`; the separate Invariant 8 added no distinct claim. Same defect class as Subscription's Pass 3 finding 1 ("Invariant 1 and 4 redundant"). Fixed: Invariant 8 removed; subsequent invariants renumbered. No-id-reuse (general claim, system-wide uniqueness) remains as the renumbered Invariant 8.
+
+**Pass 1 / Pass 2 reruns after Refinement round 1: clean.** No new structural or extraction findings surfaced; the Pass 3 refinements were prose-and-precision tightenings that did not introduce new GRID nodes, new actions, or new concerns.
+
+*Library-wide concerns surfaced but not resolved in this round* — recorded here for the next sweep:
+
+- **The "currently-in-effect" concept vs. "Active" alone.** This atom introduces *currently-in-effect* as a derived state (`status ∈ {active, suspended}`) for the at-most-one rule. Subscription has a single Active state for the same purpose. The library may benefit from canonicalizing the term and its predicate form for use across atoms with multi-state currency rules; the canonical statement belongs in a shared document.
+
+- **Channel-set-declared-at-instantiation as a recurring pattern.** Several atoms now have deployment-declared vocabulary at instance-creation time (Consent's `store_name`, Permissions' scope vocabulary, this atom's declared channels). A canonical convention for declaring, evolving, and auditing these vocabularies would reduce per-atom drift. Belongs in `PRESSURE_TESTING.md` or `CONTRIBUTING.md`.
+
+- **Conditional-atom-commitment framing.** Both Preference's Consent-and-Subscription boundary and Notification's "doesn't enforce who may call create" framing express the same structural posture: *the atom's contribution is conditional on the composing layer having done X before calling*. A canonical "conditional-commitment" framing in the methodology would let future atoms declare their conditional posture without re-deriving the defense in-pattern.

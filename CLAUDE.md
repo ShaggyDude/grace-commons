@@ -1,5 +1,7 @@
 # CLAUDE.md — Grace Commons session bootstrap
 
+> Do not cut corners unless you have VERY good reasons and in that case ask.
+
 > Standing instructions for any Claude session working on Grace Commons. Read this first; it points at the canonical documents, names the vocabulary that is load-bearing, and lists the authoring conventions every pattern follows. The repo's own documents are canonical; this file is the index that gets you to them quickly.
 
 ---

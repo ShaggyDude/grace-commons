@@ -23,9 +23,9 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ---
 
-## Current state — 2026-05-21
+## Current state — 2026-05-25
 
-Twenty-four atoms and twelve compositions are `grounded`. The next move is one of the three remaining planned atoms (#7, #9, #10 below) or one of the nine unblocked compositions (C2, C3, C6, C7, C8, C9, C15, C17, C18 — see compositions section).
+Twenty-four atoms and twelve compositions are `grounded`; one atom (Preference / Personalization, atom #10) is `partially resolved` — author-conducted foundation passes complete, awaiting fresh-reader AI Phase 3 round and the Opus Phase 4 readiness check. The next move on the atom side is one of the two remaining unstarted planned atoms (#7 Provenance, #9 Workflow / State Machine), advancing Preference through Phase 3 and Phase 4 to `grounded`, or one of the nine unblocked compositions (C2, C3, C6, C7, C8, C9, C15, C17, C18 — see compositions section); C11 unblocks once Preference grounds.
 
 **Atoms grounded:**
 
@@ -36,6 +36,10 @@ Twenty-four atoms and twelve compositions are `grounded`. The next move is one o
 - `atoms/resource-lifecycle/` (3): Capacity Constraint Enforcement, Provisional Commitment, Soft Delete
 - `atoms/temporal/` (2): Duplicate Prevention, Event Log
 - `atoms/workflow/` (1): Approval Step
+
+**Atoms partially resolved:**
+
+- `atoms/messaging/`: Preference / Personalization — drafted 2026-05-25; author-conducted Pass 1 / Pass 2 / Pass 3 plus one refinement round complete; Phase 3 fresh-reader AI round and Phase 4 Opus clearance gate outstanding.
 
 **Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, External Onboarding, Idempotent Reservation, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Session-Gated Authorization, Shared Todo, Undo History.
 
@@ -89,7 +93,7 @@ Seven atoms remain on the planned-sequence list. They are sequenced by how many 
 
 **Category:** `atoms/messaging/`
 
-**Status:** Not started.
+**Status:** `partially resolved` 2026-05-25 — drafted. Author-conducted foundation passes (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus) and one refinement round complete; Phase 3 fresh-reader AI round and Phase 4 Opus Happy Torvalds X2 clearance gate outstanding. The drafted atom lives at [`atoms/messaging/preference.md`](./atoms/messaging/preference.md). The five anticipated invariants below are realized in the draft as ten invariants spanning record immutability, status monotonicity, at-most-one-currently-in-effect, supersession atomicity, channel-set membership at creation, value-preserving suspension, query determinism, no id reuse, store durability, and timestamp ordering.
 
 **What it is.** A messaging primitive: a durable binding of a principal's delivery preferences — channel priority, frequency limits, quiet hours, format preferences, per-topic opt-downs — that governs *how* a notification reaches a recipient, independently of *whether* they are subscribed (Subscription) or *whether* processing is legally permitted (Consent). The three atoms are distinct: Subscription governs which topics a principal follows; Consent governs whether the system may process or communicate with the principal at all; Preference governs the delivery envelope when Subscription and Consent have both permitted the notification. States: Active, Suspended (preferences retained but delivery suppressed for the principal), Deleted.
 
@@ -368,7 +372,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 | 7 | Provenance | Atom | Not started | Enriches C6, C7, C8 (optional) |
 | 8 | Capacity Constraint Enforcement | Atom | `grounded` 2026-05-15 | C9 |
 | 9 | Workflow / State Machine | Atom | Not started | C10; resolves workflow-category question |
-| 10 | Preference / Personalization | Atom | Not started | C11 |
+| 10 | Preference / Personalization | Atom | `partially resolved` 2026-05-25 | C11; drafted at `atoms/messaging/preference.md`; awaiting Phase 3 fresh-reader AI round and Phase 4 Opus clearance gate |
 | 11 | Credential | Atom | `grounded` 2026-05-19 | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
 | 12 | Session | Atom | `grounded` 2026-05-19 | C13 (Login), C14 (Session-Gated Authorization) |
 | 13 | Capability | Atom | `grounded` 2026-05-19 | C15 (Capability-Backed Sharing) |
@@ -391,7 +395,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 | C9 | Reservation Lifecycle | Composition | Unblocked; not started — **newly unblocked 2026-05-15** | Capacity Constraint Enforcement (grounded) + Provisional Commitment + Duplicate Prevention |
 | C10 | Stateful Workflow Execution | Composition | Blocked on atom #9 | Workflow / State Machine + Approval Step |
 | C12 | Chain of Custody | Composition | Blocked on atom #7 | Provenance + Actor Identity + Tamper Evidence + Retention Window + Audit Trail — cross-domain reference case (pharma + legal evidence = same atoms) |
-| C11 | Preference-Aware Notification Fanout | Composition | Blocked on atom #10 | Preference / Personalization |
+| C11 | Preference-Aware Notification Fanout | Composition | Pending Preference grounding (atom #10 `partially resolved`) | Preference / Personalization + existing Subscription, Notification, Notification Fanout |
 | C13 | Login | Composition | `grounded` 2026-05-20 | Credential + Session + Audit Trail; cascade invariant: Credential revocation invalidates all derived Sessions via `credential_to_sessions` map |
 | C14 | Session-Gated Authorization | Composition | `grounded` 2026-05-20 | Session + Permissions; principal binding as emergent invariant — session-extracted principal gates every permission query |
 | C15 | Capability-Backed Sharing | Composition | Unblocked; not started — **newly unblocked 2026-05-20** | Capability + Selective Disclosure + Audit Trail; library's worked example of bearer-token semantics composing with regulated audit |
