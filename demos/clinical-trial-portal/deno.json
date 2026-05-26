@@ -4,11 +4,11 @@
     "migrate": "deno run -A --env-file=.env scripts/migrate.ts",
     "seed":    "deno run -A --env-file=.env scripts/seed.ts",
     "css":     "deno run -A npm:@tailwindcss/cli -i styles/inkset.css -o static/styles.css",
-    "start":   "deno run -A --env-file=.env main.ts",
+    "start":   "(deno task css --watch & deno run -A --env-file=.env main.ts)",
     "verify":  "deno run -A --env-file=.env scripts/verify.ts",
     "test":    "deno test -A",
     "dev":     "deno task migrate && deno task seed && (deno task css --watch & deno run -A --env-file=.env --watch main.ts)",
-    "all":     "deno task migrate && deno task seed && deno task css && deno task start"
+    "all":     "deno task migrate && deno task seed && deno task start"
   },
   "imports": {
     "tailwindcss":              "npm:tailwindcss@^4",

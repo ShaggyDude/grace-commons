@@ -151,7 +151,7 @@
 @property --bg {
   syntax: "<color>";
   inherits: true;
-  initial-value: transparent;
+  initial-value: black;
 }
 
 @property --fg {

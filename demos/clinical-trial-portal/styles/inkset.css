@@ -279,6 +279,43 @@
     color: var(--fg);
   }
 
+  /* Wire each inks-* class to its pre-computed bg/fg pair.
+     Without this, --bg / --fg fall back to their @property
+     initial values (transparent / currentColor) and the
+     wildcard selector above silently does nothing.
+     If a new color family is added (e.g. --inks-blue-*-bg/fg),
+     add the matching .inks-blue-N rules here. */
+
+  /* SAGE */
+  .inks-sage-0    { --bg: var(--inks-sage-0-bg);    --fg: var(--inks-sage-0-fg); }
+  .inks-sage-50   { --bg: var(--inks-sage-50-bg);   --fg: var(--inks-sage-50-fg); }
+  .inks-sage-100  { --bg: var(--inks-sage-100-bg);  --fg: var(--inks-sage-100-fg); }
+  .inks-sage-200  { --bg: var(--inks-sage-200-bg);  --fg: var(--inks-sage-200-fg); }
+  .inks-sage-300  { --bg: var(--inks-sage-300-bg);  --fg: var(--inks-sage-300-fg); }
+  .inks-sage-400  { --bg: var(--inks-sage-400-bg);  --fg: var(--inks-sage-400-fg); }
+  .inks-sage-500  { --bg: var(--inks-sage-500-bg);  --fg: var(--inks-sage-500-fg); }
+  .inks-sage-600  { --bg: var(--inks-sage-600-bg);  --fg: var(--inks-sage-600-fg); }
+  .inks-sage-700  { --bg: var(--inks-sage-700-bg);  --fg: var(--inks-sage-700-fg); }
+  .inks-sage-800  { --bg: var(--inks-sage-800-bg);  --fg: var(--inks-sage-800-fg); }
+  .inks-sage-900  { --bg: var(--inks-sage-900-bg);  --fg: var(--inks-sage-900-fg); }
+  .inks-sage-950  { --bg: var(--inks-sage-950-bg);  --fg: var(--inks-sage-950-fg); }
+  .inks-sage-1000 { --bg: var(--inks-sage-1000-bg); --fg: var(--inks-sage-1000-fg); }
+
+  /* GRAY */
+  .inks-gray-0    { --bg: var(--inks-gray-0-bg);    --fg: var(--inks-gray-0-fg); }
+  .inks-gray-50   { --bg: var(--inks-gray-50-bg);   --fg: var(--inks-gray-50-fg); }
+  .inks-gray-100  { --bg: var(--inks-gray-100-bg);  --fg: var(--inks-gray-100-fg); }
+  .inks-gray-200  { --bg: var(--inks-gray-200-bg);  --fg: var(--inks-gray-200-fg); }
+  .inks-gray-300  { --bg: var(--inks-gray-300-bg);  --fg: var(--inks-gray-300-fg); }
+  .inks-gray-400  { --bg: var(--inks-gray-400-bg);  --fg: var(--inks-gray-400-fg); }
+  .inks-gray-500  { --bg: var(--inks-gray-500-bg);  --fg: var(--inks-gray-500-fg); }
+  .inks-gray-600  { --bg: var(--inks-gray-600-bg);  --fg: var(--inks-gray-600-fg); }
+  .inks-gray-700  { --bg: var(--inks-gray-700-bg);  --fg: var(--inks-gray-700-fg); }
+  .inks-gray-800  { --bg: var(--inks-gray-800-bg);  --fg: var(--inks-gray-800-fg); }
+  .inks-gray-900  { --bg: var(--inks-gray-900-bg);  --fg: var(--inks-gray-900-fg); }
+  .inks-gray-950  { --bg: var(--inks-gray-950-bg);  --fg: var(--inks-gray-950-fg); }
+  .inks-gray-1000 { --bg: var(--inks-gray-1000-bg); --fg: var(--inks-gray-1000-fg); }
+
   button {
     @apply cursor-pointer
   }
