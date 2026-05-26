@@ -34,13 +34,23 @@ export const AuditListPage: FC<{
     {/* Retention policy notice */}
     {policy && (
       <div class="raised rounded mb-4 flex items-center gap-3 text-xs opacity-70">
-        <span>
-          Retention: <strong>{policy.days} days</strong> (FDA 21 CFR Part 11 default: 2555) ·
-          enforcement is <strong>{policy.enforce_on_read ? "ON" : "OFF"}</strong>
+        <span
+          title="FDA 21 CFR Part 11 requires clinical research records to be retained for a minimum of 2555 days (7 years). The display filter below hides events older than that window from this view — records themselves are never deleted, since deletion would break the tamper-evident hash chain that Part 11 requires."
+        >
+          Retention window: <strong>{policy.days} days</strong> (FDA 21 CFR Part 11 minimum) ·
+          display filter: <strong>{policy.enforce_on_read ? "ON" : "OFF — showing full chain"}</strong>
         </span>
         <form method="POST" action="/audit/toggle-retention" class="inline">
-          <button type="submit" class="underline hover:opacity-100">
-            {policy.enforce_on_read ? "disable" : "enable"}
+          <button
+            type="submit"
+            class="underline hover:opacity-100"
+            title={
+              policy.enforce_on_read
+                ? "Override the display filter and show every audit event regardless of age. Records are unchanged — only the filter is removed."
+                : "Restore the production display filter — hide audit events older than the retention window (2555 days) from this view. Records remain intact in the database."
+            }
+          >
+            {policy.enforce_on_read ? "show all" : "restore filter"}
           </button>
         </form>
       </div>

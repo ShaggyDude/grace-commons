@@ -13,8 +13,11 @@
 // Implementation:
 //   A single-row configuration table (id = 1 enforced by schema CHECK).
 //   enforce_on_read = 1 means the /audit route filters out events older than
-//   `days`. The default is enforce_on_read = 0 (demo seed) so the full chain
-//   is visible to the CRA during a walkthrough.
+//   `days`. The default is enforce_on_read = 1 to match production posture
+//   (Part 11 filter active by default; "show all" is the explicit override).
+//   For the demo's seeded events — all recent — the visible effect is zero,
+//   so the walkthrough still sees the full chain; the difference shows up
+//   only once events accumulate past the retention window.
 //
 // Invariants:
 //   - Exactly one row exists (schema: PRIMARY KEY CHECK (id = 1))
@@ -69,7 +72,7 @@ export function toggleEnforcement(db: DB): void {
 export function ensureDefault(db: DB): void {
   db.prepare(
     `INSERT INTO retention_policy (id, days, enforce_on_read)
-     VALUES (1, 2555, 0)
+     VALUES (1, 2555, 1)
      ON CONFLICT(id) DO NOTHING`,
   ).run();
 }
