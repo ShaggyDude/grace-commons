@@ -10,13 +10,13 @@ Deno.test("retention_policy.getPolicy returns null before seeding", () => {
   });
 });
 
-Deno.test("retention_policy.ensureDefault seeds the row", () => {
+Deno.test("retention_policy.ensureDefault seeds the row (filter ON by default — production posture)", () => {
   withTestDb((ctx) => {
     retention_policy.ensureDefault(ctx.db);
     const policy = retention_policy.getPolicy(ctx.db);
     assertEquals(policy?.id, 1);
     assertEquals(policy?.days, 2555);
-    assertEquals(policy?.enforce_on_read, false);
+    assertEquals(policy?.enforce_on_read, true);
   });
 });
 
@@ -39,9 +39,10 @@ Deno.test("retention_policy.setDays updates the days value", () => {
 Deno.test("retention_policy.toggleEnforcement flips enforce_on_read", () => {
   withTestDb((ctx) => {
     retention_policy.ensureDefault(ctx.db);
-    retention_policy.toggleEnforcement(ctx.db);
-    assertEquals(retention_policy.getPolicy(ctx.db)?.enforce_on_read, true);
+    // Default is now true (filter ON); toggle goes true → false → true.
     retention_policy.toggleEnforcement(ctx.db);
     assertEquals(retention_policy.getPolicy(ctx.db)?.enforce_on_read, false);
+    retention_policy.toggleEnforcement(ctx.db);
+    assertEquals(retention_policy.getPolicy(ctx.db)?.enforce_on_read, true);
   });
 });
