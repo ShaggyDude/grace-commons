@@ -75,6 +75,8 @@ export async function sendInvitationEmail(params: {
 
     const greeting = displayName ? `Hi ${displayName},` : "Hi,";
 
+    console.log(`[mailer] Sending invite to ${to}; accept URL: ${acceptUrl}`);
+
     await transporter.sendMail({
       from: smtpFrom,
       to,
