@@ -405,6 +405,37 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 ---
 
+## Formal model coverage
+
+Per `PRESSURE_TESTING.md §Formal models`, Alloy and TLA+ artifacts complement the three-pass methodology but are not prerequisites for `grounded` status. The inventory below records which grounded patterns currently ship formal-model siblings, and which have explicit deferred-formal-models entries in their Lineage notes.
+
+### Shipped
+
+| Pattern | Type | Alloy | TLA+ | Files |
+|---|---|---|---|---|
+| Capability | Atom | ✓ | — | `atoms/compliance/capability.als` + `capability_check.py` |
+| Attributed Permissions Admin | Composition | ✓ | ✓ | `compositions/attributed-permissions-admin.als`, `attributedPermissionsAdmin.tla` + `.cfg` |
+| Privileged Access Provisioning | Composition | — | ✓ | `compositions/privilegedAccessProvisioning.tla` + `.cfg` + `privileged_access_provisioning_check.py` |
+| Login | Composition | — | ✓ | `compositions/login.tla` + `.cfg` |
+| External Onboarding | Composition | — | ✓ | `compositions/externalOnboarding.tla` + `.cfg` |
+| Session-Gated Authorization | Composition | ✓ | — | `compositions/session-gated-authorization.als` |
+
+### Deferred — recorded in Lineage notes
+
+| Pattern | Type | Candidate artifacts | Recorded |
+|---|---|---|---|
+| Preference / Personalization | Atom | TLA+ on supersession atomicity (Invariant 4) + linearizable-per-`principal_ref` requirement + check-4 indistinguishability; Alloy on the records relation (preference + configuration records, Invariants 5 and 10, bootstrap-ordering) | `atoms/messaging/preference.md` Lineage notes, Phase 4 round, *Deferred work — formal models* item |
+
+### All other grounded patterns
+
+No formal-model siblings shipped and no deferred-formal-models Lineage entry. Per the methodology this is a respectable state — `grounded` is the bar, formal models are the complement. New deferred candidates should land as a *Deferred work — formal models* item in the relevant pattern's Lineage notes (mirroring the Preference pattern), and graduate to this table's *Shipped* section when the artifact lands.
+
+### Convention
+
+A pattern moves from *Deferred* to *Shipped* when (a) the artifact exists at the path named here, (b) a *Formal model* entry is recorded in the pattern's Lineage notes per `PRESSURE_TESTING.md` (what the artifact is, what it checks, bounds/scope, deliberate exclusions, result), and (c) the row in this table is updated. Findings from formal-model runs route through the standard review channel — a contradiction inside the spec becomes a Pass-3-shaped finding in Lineage notes, not an in-flight spec rewrite.
+
+---
+
 ## Methodology debts — open
 
 These are methodology-level items the library has accumulated and not yet resolved. They are recorded here so a future session picks them up rather than re-deriving them.
