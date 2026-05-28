@@ -7,8 +7,16 @@ export const LoginPage: FC<{ error?: string | null }> = ({ error }) => (
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta name="theme-color" content="#1e3a8a" />
       <title>Sign In — Beacon Clinical Research</title>
       <link rel="stylesheet" href="/static/styles.css" />
+      <link rel="manifest" href="/static/manifest.json" />
+      <link rel="apple-touch-icon" href="/static/icon-192.png" />
+      <script dangerouslySetInnerHTML={{ __html: `
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/static/sw.js');
+        }
+      `}} />
     </head>
     <body class="min-h-screen flex items-center justify-center">
       <div class="w-full max-w-sm mx-auto px-6">

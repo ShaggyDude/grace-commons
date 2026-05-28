@@ -33,9 +33,17 @@ export const Layout: FC<
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#1e3a8a" />
         <title>{props.title} — Beacon Clinical Research</title>
         <link rel="stylesheet" href="/static/styles.css" />
+        <link rel="manifest" href="/static/manifest.json" />
+        <link rel="apple-touch-icon" href="/static/icon-192.png" />
         <script src="https://unpkg.com/htmx.org@2.0.2" defer></script>
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js');
+          }
+        `}} />
       </head>
       <body class="min-h-screen inks-gray-0">
         <header class="raised sticky top-0 z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-6">
