@@ -34,7 +34,7 @@ export const LoginPage: FC<{ error?: string | null }> = ({ error }) => (
               autocomplete="username"
               required
               autofocus
-              placeholder="anya@beacon.clinical"
+              placeholder="Email"
               class="border rounded px-3 py-2 text-sm focus:outline-none"
             />
           </div>
