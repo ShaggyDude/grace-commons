@@ -69,7 +69,7 @@ auditRouter.get("/audit", requireSession, canViewAudit, (c) => {
     });
   });
 
-  return c.html(AuditListPage({ actor, events, filters, policy, scope: scope as "all" | "own" }));
+  return c.html(AuditListPage({ actor, events, filters, policy, scope: scope as "all" | "own" }) as string);
 });
 
 auditRouter.get("/audit/verify", requireSession, canViewAudit, (c) => {
@@ -77,7 +77,7 @@ auditRouter.get("/audit/verify", requireSession, canViewAudit, (c) => {
   const db = ctx.db;
   const actor = ctx.actor!;
   const result = eventLog.verifyChain(db);
-  return c.html(AuditVerifyPage({ actor, result }));
+  return c.html(AuditVerifyPage({ actor, result }) as string);
 });
 
 auditRouter.get("/audit/export.csv", requireSession, canViewAudit, (c) => {

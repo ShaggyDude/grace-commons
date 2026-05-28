@@ -23,7 +23,7 @@ export const SubjectsNewPage: FC<{
       </p>
     )}
 
-    <form method="POST" action="/subjects" class="max-w-sm space-y-4">
+    <form method="post" action="/subjects" class="max-w-sm space-y-4">
       <div>
         <label class="block text-sm font-medium mb-1">Subject code (auto-assigned)</label>
         <input

@@ -80,7 +80,7 @@ export const PeoplePage: FC<{
                       : row.activeGrants.map((g) => (
                         <span class="inline-flex items-center gap-1">
                           <Badge label={g.permission_code} color="green" />
-                          <form method="POST" action={`/grants/${g.id}/revoke`} class="inline">
+                          <form method="post" action={`/grants/${g.id}/revoke`} class="inline">
                             <button type="submit" class="text-xs text-red-500 hover:text-red-700" title={`Revoke ${g.permission_code}`}>
                               ✕
                             </button>
@@ -90,7 +90,7 @@ export const PeoplePage: FC<{
                   </div>
                 </td>
                 <td class="px-4 py-2">
-                  <form method="POST" action="/grants" class="flex items-center gap-1">
+                  <form method="post" action="/grants" class="flex items-center gap-1">
                     <input type="hidden" name="grantee_actor_id" value={String(row.id)} />
                     <select name="permission_id" class="border rounded px-1 py-1 text-xs">
                       {permissions.map((p) => (
@@ -142,7 +142,7 @@ export const PeoplePage: FC<{
                       </code>
                     </td>
                     <td class="px-4 py-2">
-                      <form method="POST" action={`/invitations/${inv.id}/revoke`}>
+                      <form method="post" action={`/invitations/${inv.id}/revoke`}>
                         <button type="submit" class="text-xs text-red-500 hover:text-red-700">Revoke</button>
                       </form>
                     </td>
@@ -157,7 +157,7 @@ export const PeoplePage: FC<{
     {/* ── Issue Invitation ──────────────────────────────────── */}
     <section>
       <h2 class="text-base font-semibold mb-3">Invite someone</h2>
-      <form method="POST" action="/invitations" class="raised rounded flex flex-wrap items-end gap-3">
+      <form method="post" action="/invitations" class="raised rounded flex flex-wrap items-end gap-3">
         <div>
           <label class="block text-xs font-medium mb-1">Email</label>
           <input name="email" type="email" required placeholder="new@example.com" class="border rounded px-3 py-1.5 text-sm w-52" />

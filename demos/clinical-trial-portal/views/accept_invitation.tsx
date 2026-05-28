@@ -19,7 +19,7 @@ export const AcceptInvitationPage: FC<{
           {error}
         </p>
       )}
-      <form method="POST" action={`/invitations/accept/${token}`} class="space-y-4">
+      <form method="post" action={`/invitations/accept/${token}`} class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1" for="password">Password</label>
           <input

@@ -91,7 +91,7 @@ export const SubjectsDetailPage: FC<{
           </p>
         )}
         <form
-          method="POST"
+          method="post"
           action={`/subjects/${subject.id}/visits`}
           class="raised rounded flex flex-wrap items-end gap-3"
         >

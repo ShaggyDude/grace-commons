@@ -33,7 +33,7 @@ invitationsRouter.get("/invitations/accept/:token", (c) => {
         intended_role: "unknown",
         token,
         error: "This invitation link is invalid.",
-      }),
+      }) as string,
       404,
     );
   }
@@ -44,7 +44,7 @@ invitationsRouter.get("/invitations/accept/:token", (c) => {
         intended_role: inv.intended_role,
         token,
         error: "This invitation has already been used or revoked.",
-      }),
+      }) as string,
       410,
     );
   }
@@ -55,7 +55,7 @@ invitationsRouter.get("/invitations/accept/:token", (c) => {
         intended_role: inv.intended_role,
         token,
         error: "This invitation has expired. Please ask for a new one.",
-      }),
+      }) as string,
       410,
     );
   }
@@ -66,7 +66,7 @@ invitationsRouter.get("/invitations/accept/:token", (c) => {
       email: party?.email ?? "—",
       intended_role: inv.intended_role,
       token,
-    }),
+    }) as string,
   );
 });
 
@@ -84,7 +84,7 @@ invitationsRouter.post("/invitations/accept/:token", async (c) => {
 
   const renderError = (msg: string) =>
     c.html(
-      AcceptInvitationPage({ email, intended_role, token, error: msg }),
+      AcceptInvitationPage({ email, intended_role, token, error: msg }) as string,
       400,
     );
 

@@ -34,7 +34,7 @@ authRouter.get("/login", (c) => {
     // Stale or revoked cookie — clear it so the login page renders cleanly.
     deleteCookie(c, SESSION_COOKIE, { path: "/" });
   }
-  return c.html(LoginPage({}));
+  return c.html(LoginPage({}) as string);
 });
 
 authRouter.post("/login", async (c) => {
@@ -43,7 +43,7 @@ authRouter.post("/login", async (c) => {
   const password = (form.get("password") as string | null) ?? "";
 
   if (!email || !password) {
-    return c.html(LoginPage({ error: "Email and password are required." }), 400);
+    return c.html(LoginPage({ error: "Email and password are required." }) as string, 400);
   }
 
   const db = c.get("db");
@@ -51,7 +51,7 @@ authRouter.post("/login", async (c) => {
 
   const result = await composition.login(ctx, { email, password });
   if (!result.ok) {
-    return c.html(LoginPage({ error: "Invalid email or password." }), 401);
+    return c.html(LoginPage({ error: "Invalid email or password." }) as string, 401);
   }
 
   setCookie(c, SESSION_COOKIE, result.session.token, {

@@ -156,9 +156,10 @@ Deno.test("acceptInvitation: creates actor, credential, session; marks invitatio
     // Credential was created
     assertExists(credentials.getActiveByActorId(ctx.db, actor.id));
 
-    // Two audit events: invitation.issued (by PI) + invitation.accepted (by new actor)
+    // Five audit events: invitation.issued (by PI), then invitation.accepted +
+    // actor.enrolled + credential.created + session.opened (by new actor).
     const events = eventLog.listAll(ctx.db);
-    assertEquals(events.length, 2);
+    assertEquals(events.length, 5);
     assertEquals(events[1].action, "invitation.accepted");
     assertEquals(events[1].actor_id, actor.id);
 

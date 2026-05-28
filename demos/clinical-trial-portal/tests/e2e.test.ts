@@ -93,7 +93,7 @@ function formPost(
   path: string,
   fields: Record<string, string>,
   cookie?: string,
-): Promise<Response> {
+) {
   const body = new URLSearchParams(fields).toString();
   return app.request(path, {
     method: "POST",
@@ -110,7 +110,7 @@ function get(
   app: Hono<AppEnv>,
   path: string,
   cookie?: string,
-): Promise<Response> {
+) {
   return app.request(path, {
     headers: cookie ? { Cookie: cookie } : {},
   });

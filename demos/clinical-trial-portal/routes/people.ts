@@ -49,7 +49,7 @@ peopleRouter.get("/people", requireSession, canManagePeople, (c) => {
   const inviteLink = c.req.query("inviteLink") ?? null;
 
   return c.html(
-    PeoplePage({ actor, actorRows, pendingInvitations: pendingRows, permissions: allPermissions, flash, inviteLink }),
+    PeoplePage({ actor, actorRows, pendingInvitations: pendingRows, permissions: allPermissions, flash, inviteLink }) as string,
   );
 });
 

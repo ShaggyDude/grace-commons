@@ -41,7 +41,7 @@ subjectsRouter.get("/subjects", requireSession, canAccessSubjects, (c) => {
     ? subjects.listByStudy(db, study.id)
     : subjects.listByStudy(db, study.id).filter((s) => s.enrolled_by_actor_id === actor.id);
 
-  return c.html(SubjectsListPage({ actor, study, subjects: subjectList, canEnroll }));
+  return c.html(SubjectsListPage({ actor, study, subjects: subjectList, canEnroll }) as string);
 });
 
 subjectsRouter.get("/subjects/new", requireSession, canEnrollSubjects, (c) => {
@@ -53,7 +53,7 @@ subjectsRouter.get("/subjects/new", requireSession, canEnrollSubjects, (c) => {
   if (!study) return c.text("Study not found — run deno task seed first.", 500);
 
   const nextCode = subjects.nextSubjectCode(db, SUBJECT_PREFIX);
-  return c.html(SubjectsNewPage({ actor, study, nextCode }));
+  return c.html(SubjectsNewPage({ actor, study, nextCode }) as string);
 });
 
 subjectsRouter.post("/subjects", requireSession, canEnrollSubjects, async (c) => {
@@ -76,7 +76,7 @@ subjectsRouter.post("/subjects", requireSession, canEnrollSubjects, async (c) =>
   } catch (err) {
     const nextCode = subjects.nextSubjectCode(db, SUBJECT_PREFIX);
     const msg = err instanceof Error ? err.message : "Enrollment failed.";
-    return c.html(SubjectsNewPage({ actor, study, nextCode, error: msg }), 400);
+    return c.html(SubjectsNewPage({ actor, study, nextCode, error: msg }) as string, 400);
   }
 });
 
@@ -100,7 +100,7 @@ subjectsRouter.get("/subjects/:id", requireSession, canAccessSubjects, (c) => {
   );
   const flash = c.req.query("flash") ?? null;
 
-  return c.html(SubjectsDetailPage({ actor, subject, visits: visitList, canRecord, flash }));
+  return c.html(SubjectsDetailPage({ actor, subject, visits: visitList, canRecord, flash }) as string);
 });
 
 subjectsRouter.post(
@@ -136,7 +136,7 @@ subjectsRouter.post(
         SubjectsDetailPage({
           actor, subject, visits: visits.listBySubject(db, id),
           canRecord: getCanRecord(), error: "Visit type is required.",
-        }),
+        }) as string,
         400,
       );
     }
@@ -150,7 +150,7 @@ subjectsRouter.post(
         SubjectsDetailPage({
           actor, subject, visits: visits.listBySubject(db, id),
           canRecord: getCanRecord(), error: msg,
-        }),
+        }) as string,
         400,
       );
     }

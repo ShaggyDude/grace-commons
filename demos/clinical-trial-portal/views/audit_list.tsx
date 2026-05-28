@@ -40,7 +40,7 @@ export const AuditListPage: FC<{
           Retention window: <strong>{policy.days} days</strong> (FDA 21 CFR Part 11 minimum) ·
           display filter: <strong>{policy.enforce_on_read ? "ON" : "OFF — showing full chain"}</strong>
         </span>
-        <form method="POST" action="/audit/toggle-retention" class="inline">
+        <form method="post" action="/audit/toggle-retention" class="inline">
           <button
             type="submit"
             class="underline hover:opacity-100"
@@ -57,7 +57,7 @@ export const AuditListPage: FC<{
     )}
 
     {/* Filters */}
-    <form method="GET" action="/audit" class="mb-4 flex flex-wrap gap-2 items-end">
+    <form method="get" action="/audit" class="mb-4 flex flex-wrap gap-2 items-end">
       <div>
         <label class="block text-xs font-medium mb-1">Action</label>
         <input name="action" type="text" value={filters.action ?? ""} placeholder="e.g. login.succeeded" class="border rounded px-2 py-1 text-xs w-44" />

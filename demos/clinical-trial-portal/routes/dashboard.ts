@@ -21,5 +21,5 @@ dashboardRouter.get("/dashboard", requireSession, (c) => {
     .filter((g) => g.revoked_at === null)
     .map((g) => g.permission_code);
 
-  return c.html(DashboardPage({ actor, permissions: permissionCodes }));
+  return c.html(DashboardPage({ actor, permissions: permissionCodes }) as string);
 });

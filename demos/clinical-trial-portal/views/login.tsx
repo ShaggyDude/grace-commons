@@ -24,7 +24,7 @@ export const LoginPage: FC<{ error?: string | null }> = ({ error }) => (
           </div>
         )}
 
-        <form method="POST" action="/login" class="flex flex-col gap-4">
+        <form method="post" action="/login" class="flex flex-col gap-4">
           <div class="flex flex-col gap-1">
             <label for="email" class="text-sm font-medium">Email</label>
             <input

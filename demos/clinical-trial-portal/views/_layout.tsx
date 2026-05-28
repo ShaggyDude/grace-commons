@@ -59,7 +59,7 @@ export const Layout: FC<
           {props.actor ? (
             <div class="flex items-center gap-4 text-sm justify-self-end">
               <span class="opacity-60">{props.actor.display_name}</span>
-              <form method="POST" action="/logout">
+              <form method="post" action="/logout">
                 <button
                   type="submit"
                   class="opacity-60 hover"
