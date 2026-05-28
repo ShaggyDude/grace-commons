@@ -26,7 +26,13 @@ export const authRouter = new Hono<AppEnv>();
 authRouter.get("/login", (c) => {
   const token = getCookie(c, SESSION_COOKIE);
   if (token) {
-    return c.redirect("/dashboard");
+    const db = c.get("db");
+    const session = sessions.getActive(db, token);
+    if (session) {
+      return c.redirect("/dashboard");
+    }
+    // Stale or revoked cookie — clear it so the login page renders cleanly.
+    deleteCookie(c, SESSION_COOKIE, { path: "/" });
   }
   return c.html(LoginPage({}));
 });
