@@ -11,7 +11,6 @@ static/
 
 # Node/Deno dependencies
 node_modules/
-deno.lock
 
 # IDE
 .vscode/
