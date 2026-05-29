@@ -7,13 +7,12 @@
 // On install: pre-cache static shell so the app loads offline.
 // On activate: purge old cache versions.
 
-const CACHE = "beacon-v1";
+const CACHE = "beacon-v2";
 
 const PRECACHE = [
   "/static/styles.css",
   "/static/manifest.json",
-  "/static/icon-192.png",
-  "/static/icon-512.png",
+  "/favicon.svg",
 ];
 
 // ── Install ────────────────────────────────────────────────────────────────

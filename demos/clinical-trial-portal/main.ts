@@ -99,6 +99,28 @@ app.get("/static/:file{.+}", async (c) => {
   }
 });
 
+// ── Favicon ───────────────────────────────────────────────────────────────
+app.get("/favicon.svg", async (c) => {
+  try {
+    const body = await Deno.readFile("./static/favicon.svg");
+    return new Response(body, { headers: { "Content-Type": "image/svg+xml" } });
+  } catch {
+    return c.text("Not Found", 404);
+  }
+});
+
+// ── Fonts ─────────────────────────────────────────────────────────────────
+app.get("/fonts/:file{.+}", async (c) => {
+  const file = c.req.param("file");
+  if (file.includes("..")) return c.text("Not Found", 404);
+  try {
+    const body = await Deno.readFile(`./static/fonts/${file}`);
+    return new Response(body, { headers: { "Content-Type": "font/woff2" } });
+  } catch {
+    return c.text("Not Found", 404);
+  }
+});
+
 // ── Landing page ──────────────────────────────────────────────────────────
 app.get("/", (c) => c.redirect("/login"));
 

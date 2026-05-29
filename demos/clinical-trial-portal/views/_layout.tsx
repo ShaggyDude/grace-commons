@@ -37,7 +37,7 @@ export const Layout: FC<
         <title>{props.title} — Beacon Clinical Research</title>
         <link rel="stylesheet" href="/static/styles.css" />
         <link rel="manifest" href="/static/manifest.json" />
-        <link rel="apple-touch-icon" href="/static/icon-192.png" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
         <script src="https://unpkg.com/htmx.org@2.0.2" defer></script>
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {

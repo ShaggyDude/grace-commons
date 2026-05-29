@@ -11,7 +11,7 @@ export const LoginPage: FC<{ error?: string | null }> = ({ error }) => (
       <title>Sign In — Beacon Clinical Research</title>
       <link rel="stylesheet" href="/static/styles.css" />
       <link rel="manifest" href="/static/manifest.json" />
-      <link rel="apple-touch-icon" href="/static/icon-192.png" />
+      <link rel="apple-touch-icon" href="/favicon.svg" />
       <script dangerouslySetInnerHTML={{ __html: `
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.register('/static/sw.js');
