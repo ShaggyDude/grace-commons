@@ -107,7 +107,7 @@ If you want to understand something specific:
 | How does scope get enforced? | `middleware/require_permission.ts` + the `granted_scope` reads in `routes/audit.ts` and `routes/subjects.ts` |
 | How does Argon2id get wired in? | `lib/password.ts` — the only file that imports `argontwo` |
 | What does the full schema look like? | `migrations/0001_init.sql` |
-| What events are emitted by each action? | `composition.ts` header comment + §6 of `Demo2-plan.md` |
+| What events are emitted by each action? | `composition.ts` — each function carries an `Emits:` doc comment listing its events |
 | Is this spec-to-code mapping inspectable? | Yes — every public function in `composition.ts` carries a doc comment quoting the library spec. Every domain file header quotes the relevant Grace Commons atom spec verbatim. |
 
 ---
