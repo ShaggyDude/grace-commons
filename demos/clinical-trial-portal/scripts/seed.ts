@@ -13,6 +13,8 @@
 
 import { openDb } from "../lib/db.ts";
 import { hashPassword } from "../lib/password.ts";
+import { canonicalize } from "../lib/canonical.ts";
+import { sha256hex } from "../lib/hash.ts";
 import * as parties from "../domain/parties.ts";
 import * as actors from "../domain/actors.ts";
 import * as credentials from "../domain/credentials.ts";
@@ -176,6 +178,50 @@ if (!jordan_audit_grant) {
   console.log("  + grant 'view_audit' (scope=all) from PI");
 } else {
   console.log("  ✓ grant 'view_audit' already active");
+}
+
+// ---------------------------------------------------------------------------
+// 6. Backdated audit event — makes the retention display filter demonstrable.
+//
+// All live events are recent; without at least one old event the default
+// retention filter (enforce_on_read=1, 2555-day window) has no visible effect.
+// This row is dated 8 years ago — outside the 2555-day (≈7-year) FDA window —
+// so toggling "show all" in the audit UI reveals it and the filter becomes
+// observable. Inserted directly (bypassing composition) because no session
+// context exists at seed time. Hash chain is correct: prev_hash='' (first row).
+// ---------------------------------------------------------------------------
+
+console.log("\nSeeding backdated audit event…");
+
+const existingEvents = db
+  .prepare("SELECT COUNT(*) as n FROM event_log")
+  .get<{ n: number }>();
+
+if (existingEvents && existingEvents.n === 0) {
+  const occurred_at = new Date(
+    Date.now() - 8 * 365.25 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const prev_hash = "";
+  const payload_json = canonicalize({ note: "Protocol BCN-OX-201 registered in trial management system." });
+  const hashable = canonicalize({
+    action: "study.registered",
+    actor_id: null,
+    occurred_at,
+    payload_json,
+    prev_hash,
+    session_id: null,
+    target_id: "BCN-OX-201",
+    target_kind: "study",
+  });
+  const this_hash = sha256hex(hashable);
+  db.prepare(
+    `INSERT INTO event_log
+       (occurred_at, actor_id, session_id, action, target_kind, target_id, payload_json, prev_hash, this_hash)
+     VALUES (?, NULL, NULL, 'study.registered', 'study', 'BCN-OX-201', ?, ?, ?)`,
+  ).run(occurred_at, payload_json, prev_hash, this_hash);
+  console.log(`  + study.registered event backdated to ${occurred_at.slice(0, 10)}`);
+} else {
+  console.log("  ✓ event_log already has rows — skipping backdated seed");
 }
 
 // ---------------------------------------------------------------------------
