@@ -20,6 +20,7 @@ This file will be updated with each substantive AI-assisted session throughout t
 |---|---|---|
 | Claude (Anthropic) | Primary | Specification authoring, pressure-testing passes, formal model drafting, demo implementation, proposal writing. Model versions used: claude-opus-4 (clearance gates), claude-sonnet-4 (routine passes and implementation). |
 | GPT-4 (OpenAI) | Tie-breaker | Used when a specification finding or architectural decision is contested and the author wants a second independent read with no prior context from the Claude session. Not used for primary authoring. |
+| Grok (xAI) | External reviewer | Used for independent technical review of the grant proposal, demo architecture, and methodology claims. Grok sessions are conducted with no prior context from Claude or GPT-4 sessions — its value is the genuinely independent read. Contributed to: proposal credibility review (six rounds), Beacon security review (scope guard finding, canonical JSON boundary documentation), Logic Confinement Principle formalization, Year 1 roadmap framing, and EU alignment narrative. Not used for primary authoring. |
 
 ---
 
@@ -155,12 +156,17 @@ Human decision: Author established the convention for moving a pattern from Defe
 
 ---
 
-### Phase 5 — NLnet grant proposal (2026-05-27)
+### Phase 5 — NLnet grant proposal and pre-submission hardening (2026-05-27 to 2026-05-29)
 
 **2026-05-27**
 Model: Claude (sonnet)
 Work: NLnet NGI Zero Commons Fund application drafted with AI assistance across multiple sessions. AI generated candidate text for all form fields; author reviewed, edited, and approved each section. Final review pass (finding and fixing factual claims, budget arithmetic, atom counts, jargon) conducted with AI assistance under author's direction.
 Human decision: Author made all editorial decisions including budget structure (7 sprints at €60/hr × 60 hrs), atom count corrections, removal of overclaimed second-stack demo, and GenAI disclosure wording.
+
+**2026-05-27 to 2026-05-29**
+Model: Grok (xAI) — external reviewer; Claude (sonnet) — implementation
+Work: Grok conducted six independent review rounds on the grant proposal (form fields and work plan attachment), each producing scored findings the author adjudicated. Grok also conducted a technical security review of the Beacon demo — surfacing the `/subjects/:id` own-scope gap (no detail-view guard matching the list-view filter), the CSV export attestation boundary, and the canonical JSON `undefined` edge case. Claude implemented the own-scope fix, wrote a regression test (107 passing), documented the remaining findings in `CORNERS.md`. Grok contributed the Logic Confinement Principle formalization (six rules, now in `EXECUTION_CONTRACT.md`), the Year 1 roadmap framing (~100 atoms, tag-based ontology), and the EU alignment narrative ("the upper layer Europe's open digital ecosystems have been missing") now in `readme.md`. FAIR/EOSC/digital sovereignty paragraph added to Technical Challenges field. Backdated `study.registered` audit event seeded to Beacon live DB to make retention filter demonstrable.
+Human decision: Author accepted the own-scope fix as a pre-submission blocker and shipped it. Author accepted the Logic Confinement Principle as a first-class architectural commitment. Author set the ~100 atom Year 1 target as directional. Author approved all EU alignment language.
 
 ---
 
