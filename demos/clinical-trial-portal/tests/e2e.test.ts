@@ -371,3 +371,61 @@ Deno.test("e2e: invite → accept → grant → enroll → visit → audit verif
 
   db.close();
 });
+
+// ---------------------------------------------------------------------------
+// Own-scope detail guard — /subjects/:id must 404 for actors whose grant
+// scope is 'own' when the subject was enrolled by a different actor.
+// ---------------------------------------------------------------------------
+
+Deno.test("own-scope: GET /subjects/:id returns 404 for subject enrolled by another actor", async () => {
+  const db = openDb(":memory:");
+  db.exec(MIGRATION_SQL);
+  const app = buildTestApp(db);
+
+  // Seed permissions and study (route hardcodes "BCN-OX-201" — must match).
+  const enrollPerm = permissions.create(db, "enroll_subject", "enroll_subject");
+  studies.create(db, "BCN-OX-201", "Beacon Phase II");
+
+  // Actor A — enrolls a subject under own-scope.
+  const partyA = parties.create(db, "actor-a@test.local", "Actor A");
+  const actorA = actors.create(db, partyA.id);
+  const hashA = await hashPassword("passwordA");
+  credentials.create(db, actorA.id, "password", hashA);
+  grants.create(db, { grantor_actor_id: actorA.id, grantee_actor_id: actorA.id, permission_id: enrollPerm.id, scope: "own" });
+
+  // Actor B — also has enroll_subject with own scope but did not enroll the subject.
+  const partyB = parties.create(db, "actor-b@test.local", "Actor B");
+  const actorB = actors.create(db, partyB.id);
+  const hashB = await hashPassword("passwordB");
+  credentials.create(db, actorB.id, "password", hashB);
+  grants.create(db, { grantor_actor_id: actorA.id, grantee_actor_id: actorB.id, permission_id: enrollPerm.id, scope: "own" });
+
+  // Actor A logs in and enrolls a subject.
+  const loginA = await formPost(app, "/login", { email: "actor-a@test.local", password: "passwordA" });
+  const cookieA = sessionCookie(loginA);
+  assertExists(cookieA, "Actor A should get a session cookie");
+
+  const enrollRes = await formPost(app, "/subjects", {}, cookieA);
+  assertEquals(enrollRes.status, 302, "Enroll POST should redirect");
+
+  const seededStudy = studies.getByProtocol(db, "BCN-OX-201");
+  assertExists(seededStudy);
+  const subjectList = subjects.listByStudy(db, seededStudy.id);
+  assertEquals(subjectList.length, 1);
+  const subjectId = subjectList[0].id;
+  assertEquals(subjectList[0].enrolled_by_actor_id, actorA.id);
+
+  // Actor A can access the subject detail.
+  const ownRes = await get(app, `/subjects/${subjectId}`, cookieA);
+  assertEquals(ownRes.status, 200, "Actor A should see their own subject");
+
+  // Actor B logs in and attempts to access Actor A's subject — must get 404.
+  const loginB = await formPost(app, "/login", { email: "actor-b@test.local", password: "passwordB" });
+  const cookieB = sessionCookie(loginB);
+  assertExists(cookieB, "Actor B should get a session cookie");
+
+  const crossRes = await get(app, `/subjects/${subjectId}`, cookieB);
+  assertEquals(crossRes.status, 404, "Actor B must not access a subject enrolled by Actor A under own scope");
+
+  db.close();
+});
