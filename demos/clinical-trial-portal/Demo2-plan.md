@@ -959,7 +959,7 @@ export const peopleRoutes = new Hono()
 
 ### A.11 TSX view pattern
 
-Single-file views under `views/`. Each view imports the shared `Layout`. All interactive elements use HTMX attributes (`hx-post`, `hx-target`, `hx-swap`). Tailwind utility classes only — no custom CSS beyond Tailwind's base sheet. No client-side JavaScript framework, no React.
+Single-file views under `views/`. Each view imports the shared `Layout`. All interactive elements use HTMX attributes (`hx-post`, `hx-target`, `hx-swap`). Tailwind utility classes only. No client-side JavaScript framework, no React.
 
 ```typescript
 // views/_layout.tsx
