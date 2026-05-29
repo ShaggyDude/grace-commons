@@ -472,4 +472,27 @@ The broader axial-split question across all categories (`productivity`, `tempora
 
 ---
 
+## Q3 2026 – Q2 2027: Year 1 Goal — ~100 Near-Perfect Atoms
+
+**Target:** Reach approximately 100 high-quality, pressure-tested atoms and compositions by the end of the first year, with strong healthcare coverage and initial cross-domain atoms. The current 24 atoms and 12 compositions were produced in roughly three weeks while simultaneously building the methodology, the framework, and the live demo — with a second architect and dedicated tooling, this target is directional but realistic.
+
+### Key Initiatives
+
+**1. Logic Confinement Principle.**
+Formalize and fully apply the Logic Confinement Principle across the entire library and tooling. Core must remain pure (synchronous, deterministic, no I/O, no implicit time, randomness, or crypto). Single seam discipline, explicit inputs, behavior as data transformation, and async-at-the-edge rules apply to all projections. Update projector and verification harness to enforce these constraints mechanically. Beacon demo refactored to fully conform as the reference implementation.
+
+**2. Tag-Based Ontology (not folders).**
+Replace folder hierarchy with a rich, multi-dimensional tagging system driven by data rather than card-sorting. Tags will cover: Domain, Behavioral Property, Lifecycle Stage, Regulatory Anchor, Composition Role, Technical Property, Maturity. Enables dynamic views — "All EHDS-relevant atoms", "All audit-related patterns", "Cross-domain universals". Ontology evolves organically from actual composition usage, regulatory overlap, and implementation data. This is the resolution of the open taxonomy question currently documented above.
+
+**3. Healthcare Core Expansion.**
+Ground 55–65 new healthcare-focused atoms, building on the existing Clinical Observation and Medication Order base. Primary downstream target: EHDS implementation patterns.
+
+**4. Cross-Domain Attack.**
+Begin deliberate extraction and generalization of universal atoms — Audit Trail, Multi-Party Approval, Defensible Retention, Consent Propagation variants and related patterns. This phase will intentionally stress and evolve the ontology.
+
+**5. Tooling Maturity.**
+Deliver second-author-ready projector and verification harness — the core NLnet grant deliverable. The tooling makes the ~100-atom target achievable by a two-person team within the grant period.
+
+---
+
 *The roadmap is a living document. Patterns are added as the library's content forces resolution of open questions, not on a fixed schedule.*
