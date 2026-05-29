@@ -109,7 +109,7 @@ Human decision: Author confirmed APA as a distinct, library-level composition ra
 
 **2026-05-21**
 Model: Claude (sonnet)
-Work: Healthcare atoms — Clinical Observation and Medication Order — authored with AI assistance and grounded. These are worked examples of the methodology applied to HIPAA / 21 CFR Part 11 domain rather than the core compliance cluster. Eight atoms in the productivity category (Assignment, Personal Todo) also grounded.
+Work: Healthcare atoms — Clinical Observation and Medication Order — authored with AI assistance and grounded. These are worked examples of the methodology applied to HIPAA / 21 CFR Part 11 domain rather than the core compliance cluster. Two atoms in the productivity category (Assignment, Personal Todo) also grounded.
 Human decision: Author decided healthcare atoms belong in a separate category rather than in compliance — they anchor a different regulatory surface.
 
 ---
