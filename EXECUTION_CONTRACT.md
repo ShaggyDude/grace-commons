@@ -27,6 +27,26 @@ Every Grace Commons atom compiles into a single explicit state machine. Every tr
 
 ---
 
+## Logic Confinement Principle
+
+The overwhelming majority of async, consistency, timing, and correctness problems in software originate from behavioral logic leaking into the wrong layers. Grace Commons enforces a strict confinement discipline across all conforming implementations. The three primitives and the four-step pipeline below are its concrete expression.
+
+**1. Core is pure.** All atom and composition logic is synchronous, deterministic, and side-effect-free. No IO, no time sources, no randomness, no cryptography inside core logic. If it feels like it should be async, it belongs outside core.
+
+**2. Single seam rule.** Every mutation crosses exactly one transactional boundary. No business logic is permitted in route handlers, middleware, or adapters. The composition layer is the seam; handlers are plumbing.
+
+**3. Explicit inputs only.** Time (`clock_t`), identifiers (`id_t`), and cryptographic material are injected as explicit inputs — never generated inside T. A transition function that calls `Date.now()` or `crypto.randomUUID()` internally is non-deterministic by construction. The pipeline makes both reads explicit direct effects at the top of Step 3, before T runs.
+
+**4. Behavior as data transformation.** Prefer explicit construction over hidden work inside transactional functions. The pattern is: construct the value outside the boundary, pass it in, append it. Hidden side effects inside transactions are where correctness guarantees degrade silently.
+
+**5. Local, checkable invariants.** Every critical rule is asserted in the smallest possible scope. Distributed or implicit assumptions — "appendEvent always ensures X" — are replaced with named invariants in the spec and named assertions in the compiled test suite.
+
+**6. Async at the edge only.** All asynchronous, network, storage, and external concerns are confined to adapters. The pipeline itself — Steps 1 through 4 — is synchronous. Async enters core and complexity grows nonlinearly; Grace Commons eliminates the category by construction.
+
+**Current status.** The Beacon reference implementation satisfies rules 1, 2, 3, and 6 fully. Rule 4 (explicit construction / `createEvent` before `appendEvent`) and rule 5 (compiler-emitted invariant assertions) are targeted for the projector build phase — the gap is documented in the implementation's `CORNERS.md`. The principle is stated here as a first-class commitment, not a retrospective description of the demo.
+
+---
+
 ## The three primitives
 
 ### State Machine (SM)
