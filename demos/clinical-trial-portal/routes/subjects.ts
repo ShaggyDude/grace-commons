@@ -91,6 +91,12 @@ subjectsRouter.get("/subjects/:id", requireSession, canAccessSubjects, (c) => {
   const subject = subjects.getById(db, id);
   if (!subject) return c.text("Subject not found.", 404);
 
+  // Enforce own-scope on the detail view — same rule as the list.
+  const scope = c.get("granted_scope") ?? "own";
+  if (scope === "own" && subject.enrolled_by_actor_id !== actor.id) {
+    return c.text("Not Found.", 404);
+  }
+
   const visitList = visits.listBySubject(db, id);
   const allGrants = grants.listForActor(db, actor.id);
   const canRecord = allGrants.some(
