@@ -2,7 +2,7 @@
 //
 // Atom: Actor Identity
 //
-// Library spec (quoted from grace-commons/atoms/compliance/party-identity.md):
+// Library spec (quoted from grace-commons/atoms/compliance/actor-identity.md):
 //   "Actor Identity models an internal actor's ability to sign actions with
 //    credentials [...] An actor signs; a party is verified. The two atoms
 //    model different obligations, carry different state machines, and compose

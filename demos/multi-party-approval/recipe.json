@@ -1,0 +1,141 @@
+{
+  "app": "demos/multi-party-approval",
+  "generated": "2026-05-30",
+  "lineage_source": "spec-derived (demo declares no `// Atom:` headers - add them)",
+  "atoms": [
+    {
+      "name": "Actor Identity",
+      "spec": "atoms/compliance/actor-identity.md",
+      "modules": [],
+      "grounded": true
+    },
+    {
+      "name": "Permissions",
+      "spec": "atoms/compliance/permissions.md",
+      "modules": [],
+      "grounded": true
+    },
+    {
+      "name": "Retention Window",
+      "spec": "atoms/compliance/retention-window.md",
+      "modules": [],
+      "grounded": true
+    },
+    {
+      "name": "Tamper Evidence",
+      "spec": "atoms/compliance/tamper-evidence.md",
+      "modules": [],
+      "grounded": true
+    },
+    {
+      "name": "Assignment",
+      "spec": "atoms/productivity/assignment.md",
+      "modules": [],
+      "grounded": true
+    },
+    {
+      "name": "Event Log",
+      "spec": "atoms/temporal/event-log.md",
+      "modules": [],
+      "grounded": true
+    },
+    {
+      "name": "Approval Step",
+      "spec": "atoms/workflow/approval-step.md",
+      "modules": [],
+      "grounded": true
+    }
+  ],
+  "app_specific_entities": [],
+  "compositions_inferred": [
+    {
+      "name": "Attributed Permissions Admin",
+      "spec": "compositions/attributed-permissions-admin.md",
+      "constituent_atoms": [
+        "atoms/compliance/actor-identity.md",
+        "atoms/compliance/permissions.md"
+      ]
+    },
+    {
+      "name": "Audit Trail",
+      "spec": "compositions/audit-trail.md",
+      "constituent_atoms": [
+        "atoms/compliance/actor-identity.md",
+        "atoms/compliance/retention-window.md",
+        "atoms/compliance/tamper-evidence.md",
+        "atoms/temporal/event-log.md"
+      ]
+    },
+    {
+      "name": "Multi-Party Approval",
+      "spec": "compositions/multi-party-approval.md",
+      "constituent_atoms": [
+        "atoms/compliance/actor-identity.md",
+        "atoms/compliance/permissions.md",
+        "atoms/compliance/retention-window.md",
+        "atoms/compliance/tamper-evidence.md",
+        "atoms/productivity/assignment.md",
+        "atoms/temporal/event-log.md",
+        "atoms/workflow/approval-step.md"
+      ]
+    }
+  ],
+  "compositions_absent": [
+    {
+      "name": "Defensible Retention",
+      "spec": "compositions/defensible-retention.md",
+      "missing_atoms": [
+        "atoms/compliance/legal-hold.md"
+      ]
+    },
+    {
+      "name": "External Onboarding",
+      "spec": "compositions/external-onboarding.md",
+      "missing_atoms": [
+        "atoms/compliance/credential.md",
+        "atoms/compliance/invitation.md",
+        "atoms/compliance/party-identity.md"
+      ]
+    },
+    {
+      "name": "Login",
+      "spec": "compositions/login.md",
+      "missing_atoms": [
+        "atoms/compliance/credential.md",
+        "atoms/compliance/session.md"
+      ]
+    },
+    {
+      "name": "Privileged Access Provisioning",
+      "spec": "compositions/privileged-access-provisioning.md",
+      "missing_atoms": [
+        "atoms/compliance/capability.md",
+        "atoms/compliance/credential.md",
+        "atoms/compliance/session.md"
+      ]
+    },
+    {
+      "name": "Session-Gated Authorization",
+      "spec": "compositions/session-gated-authorization.md",
+      "missing_atoms": [
+        "atoms/compliance/session.md"
+      ]
+    },
+    {
+      "name": "Shared Todo",
+      "spec": "compositions/shared-todo.md",
+      "missing_atoms": [
+        "atoms/productivity/personal-todo.md"
+      ]
+    },
+    {
+      "name": "Undo History",
+      "spec": "compositions/undo-history.md",
+      "missing_atoms": [
+        "atoms/productivity/personal-todo.md"
+      ]
+    }
+  ],
+  "spec_path_errors": [],
+  "warnings": []
+}
