@@ -30,3 +30,4 @@ exclude:
   - demos/
   - grants/
   - node_modules/
+  - tools/
