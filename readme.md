@@ -99,7 +99,7 @@ atoms/
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
 │   ├── notification             — delivery record for a single notification to a single recipient
-│   └── preference               — per-principal delivery-shaping record: channels, frequency, quiet hours, format (partially resolved)
+│   └── preference               — per-principal delivery-shaping record: channels, frequency, quiet hours, format (grounded)
 ├── workflow/
 │   └── approval-step            — Pending → Approved | Rejected | Withdrawn; named-approver gate (grounded)
 └── healthcare/

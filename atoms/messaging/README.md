@@ -18,7 +18,7 @@ toc: true
 </details>
 
 
-Atoms in this category specify the primitives for communicating information across actor boundaries — recording interest, recording delivery, and tracking outcomes. Neither atom implements routing, transport, or scheduling; those belong to composing patterns.
+Atoms in this category specify the primitives for communicating information across actor boundaries — recording interest, recording delivery, recording delivery-shaping preferences, and tracking outcomes. None of these atoms implements routing, transport, or scheduling; those belong to composing patterns.
 
 ---
 
@@ -26,7 +26,7 @@ Atoms in this category specify the primitives for communicating information acro
 
 - [Subscription](./subscription.md) — a durable record that a named actor expressed interest in a class of events. Owns the active subscription set and the two query surfaces (`subscribed`, `subscribers_for`) that fanout compositions use to enumerate recipients when an event fires. `grounded`.
 - [Notification](./notification.md) — the delivery record for a single notification to a single recipient. Owns the full delivery lifecycle: Pending → Delivered | Failed | Expired. Records whether delivery succeeded; does not implement the transport that produces that outcome. `grounded`.
-- [Preference](./preference.md) — a per-principal record of how delivery should be shaped — declared channels, frequency limits, quiet hours, format. Active ↔ (Suspended) → Deleted; at most one currently-in-effect record per principal; updates supersede the prior record rather than mutating it. `partially resolved` — author-conducted foundation passes complete; awaiting fresh-reader AI Phase 3 round and the Opus Phase 4 readiness check.
+- [Preference](./preference.md) — a per-principal record of how delivery should be shaped — declared channels, frequency limits, quiet hours, format. Active → (Suspended) → Deleted; at most one currently-in-effect record per principal; updates supersede the prior record rather than mutating it. `grounded` on Final Critique 5 (2026-05-29).
 
 The three atoms answer three distinct questions in the delivery pipeline. **Subscription** answers *which topics does the principal follow?* — the interest record. **Notification** answers *did a specific piece of information reach the recipient?* — the delivery record. **Preference** answers *given that delivery is otherwise permitted, how does the principal want it shaped?* — the envelope record. Whether the system is legally permitted to communicate with the principal at all is a fourth, separate question, answered by [Consent](../compliance/consent.md). A composing fanout pattern sequences the four (Consent → Subscription → Preference → Notification) at delivery time; this category owns three of the four.
 
@@ -40,7 +40,7 @@ The three atoms answer three distinct questions in the delivery pipeline. **Subs
 
 ## Forthcoming
 
-- **Preference-Aware Notification Fanout** (`compositions/` — C11) — extends Notification Fanout by consulting Preference at queue time to shape delivery per-principal. Observes Suspended preferences as delivery-suppress, frequency limits as queue-or-drop, quiet hours as defer-until-window, and channel preferences as route-or-suppress. Pending Preference's grounding.
+- **Preference-Aware Notification Fanout** (`compositions/` — C11) — extends Notification Fanout by consulting Preference at queue time to shape delivery per-principal. Observes Suspended preferences as delivery-suppress, frequency limits as queue-or-drop, quiet hours as defer-until-window, and channel preferences as route-or-suppress. Unblocked as of 2026-05-29 (Preference grounded); ready for authoring.
 
 ---
 
