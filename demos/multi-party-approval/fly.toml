@@ -1,0 +1,30 @@
+# fly.toml for the Grace Commons Multi-Party Approval demo.
+# Modeled on the working Beacon (clinical-trial-portal) config.
+# NOTE: `app` must be globally unique on Fly. Change it if 'grace-commons-mpa'
+# is taken, and keep the [[mounts]] source in sync with the volume you create.
+
+app = 'grace-commons-mpa'
+primary_region = 'sjc'
+
+[build]
+
+[env]
+  DB_PATH = '/data/mpa.sqlite'
+  PORT = '8000'
+
+[[mounts]]
+  source = 'mpa_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 2
+  memory_mb = 512
