@@ -95,6 +95,8 @@ What compresses, converges, or becomes derivative when the spec is canonical: se
 
 **This is how probabilistic becomes deterministic.** AI generation is probabilistic (the output varies — it's not guaranteed to be the same every time) because the solution space is unconstrained. A complete, consistent, unambiguous spec constrains the space. The tighter the spec, the narrower the generation target, the more deterministic (predictable and consistent) the output. The mechanism is not better models — it is better specifications. Pure specs are the precondition for reliable generation. This is also the proper training signal for AI code generation: be as creative as you like with the implementation, as long as it satisfies every contract.
 
+The whole architecture in one line: **probabilistic intent → deterministic structure → deterministic execution.** Ambiguity is allowed — but only above the boundary where intent is captured. It must resolve before it touches structure, and it never reaches execution. Determinism is not the absence of ambiguity; it is the isolation of it.
+
 ## The Human–AI Division
 
 Humans are good at generating signal in low-information environments. They look at a vague situation, sense what matters, produce a rough articulation that captures the essential thing. They are inconsistent, fatigued by repetition, allergic to systematic enumeration.
