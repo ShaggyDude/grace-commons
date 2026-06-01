@@ -156,6 +156,7 @@ This document enumerates sections. It does not enumerate authoring conventions â
 - Invariants named descriptively first, then numbered (never letter-prefix codes)
 - Identity model explicit, opaque-id over content-field
 - Action signatures explicit, with every rejection reason named
+- **All references explicit in all directions.** Any step, invariant, or claim that depends on content defined elsewhere must name that section explicitly. Any section that defines a mechanism used elsewhere must be named by those users. Implicit "you know where to look" cross-references are a Pass 3 finding.
 - Defended-in-line: architectural claims state principle, likely objection, mechanism, result
 - Edge cases name composing patterns by link
 - Standards inheritance is selective (cite what genuinely applies at this layer)
