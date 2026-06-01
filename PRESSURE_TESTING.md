@@ -89,6 +89,7 @@ Then check the reference graph: every Friction links to a Flow step; every Decis
 - **Marketing.** Does the spec claim it *extends* or *is informed by* or *is built on* something? Is the claim accurate, or sleight-of-hand papering over a different model?
 - **Atomicity.** Are state transitions atomic? What about a crash mid-transition — is an invariant violated? Whose problem is that?
 - **Time.** Where does `now` come from? Whose clock? What about skew, monotonicity, timezone?
+- **Cross-references.** Does every step, invariant, or claim that depends on content defined elsewhere name that section explicitly? Does every section that defines a mechanism used by another section get named by those users? Implicit "you know where to look" is a finding — all references must be explicit in both directions.
 - **Logic confinement.** Does any action embed async work, IO, crypto, or clock reads inside the core transition? Time, identity, and cryptographic material must be injected inputs, not internal calls. A transition that generates `now` or a random id inside itself is non-deterministic — flag it. See *Logic Confinement Principle* in `EXECUTION_CONTRACT.md`.
 
 **Time:** 30–60 minutes for a thorough pass. The most labor-intensive of the three.
