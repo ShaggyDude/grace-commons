@@ -47,6 +47,8 @@ The three passes are recursive in a useful way: applying them to a pattern produ
 
 Then check the reference graph: every Friction links to a Flow step; every Decision links to State and Behavior; every Proof links to Intent. Orphaned references (links that point to something not defined in the spec) are violations.
 
+For compositions that define a named semantics subsection (Replay semantics, Evaluation rules, Provisioning cascade, or similar): every action wiring step that defers execution to that subsection — by saying "recompute", "evaluate", "apply", "cascade", or equivalent — must name the subsection explicitly. An action wiring step that says "recompute the derived state" without citing the Replay semantics section is an intra-document orphaned reference and is a Pass 1 finding.
+
 **Time:** 15–30 minutes for an atom; longer for an application with multiple constituents.
 
 **Personal Todo example.** First pass surfaced five gaps: actor (Behavior was incomplete — *who* acts?), description mutability (State + Decision were silent on edit), temporal metadata (State omitted timestamps), observability (Feedback didn't say what's queryable), identity policy (Decision punted on duplicate handling). Four were closed in-pattern; the fifth was extracted to Duplicate Prevention by Pass 2.
