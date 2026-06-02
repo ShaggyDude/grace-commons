@@ -214,7 +214,7 @@ check Attribution_Recoverability for 6
 -- a Revoked grant. Nothing in the current facts prevents it.
 --
 -- This is a real spec gap. The nonce-uniqueness argument lives in
--- Configuration but not in Application-level invariants. The fix
+-- Configuration but not in Composition-level invariants. The fix
 -- is a new invariant (see below).
 -- ==============================================================
 

@@ -182,7 +182,7 @@ Next ==
 Spec == Init /\ [][Next]_vars
 
 \* =========================================================================
-\* Eight emergent invariants from §Application-level invariants.
+\* Eight emergent invariants from §Composition-level invariants.
 \* Names match the spec's invariant names and the dynamic Alloy assertions.
 \* =========================================================================
 

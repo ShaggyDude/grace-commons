@@ -100,7 +100,7 @@ The application's load-bearing wiring decision: when an event's retention elapse
 
 ---
 
-## Application-level invariants
+## Composition-level invariants
 
 These invariants (conditions that must always hold) emerge from the composition. None belongs to a single constituent atom; each requires the four atoms working together to hold.
 

@@ -107,7 +107,7 @@ All entries in the `failed` list are treated as retry-eligible regardless of the
 
 ---
 
-## Application-level invariants
+## Composition-level invariants
 
 These invariants emerge from the composition. Neither constituent atom carries them alone.
 

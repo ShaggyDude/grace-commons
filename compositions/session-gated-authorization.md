@@ -101,7 +101,7 @@ check_permitted(session_token, action_scope) →
 
 ---
 
-## Application-level invariants
+## Composition-level invariants
 
 **Invariant 1 — Session gates authorization.** No call to `Permissions.permitted` is made unless `Session.validate` first returns `valid(principal_ref, expires_at)` for the presented `session_token`. An expired, revoked, or not-known session never reaches the permission check.
 

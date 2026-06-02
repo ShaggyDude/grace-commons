@@ -226,7 +226,7 @@ Next ==
 Spec == Init /\ [][Next]_vars
 
 \* =========================================================================
-\* Named invariants from §Application-level invariants.
+\* Named invariants from §Composition-level invariants.
 \* Names match the spec's invariant names.
 \* =========================================================================
 

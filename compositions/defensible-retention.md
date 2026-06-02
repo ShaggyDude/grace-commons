@@ -135,7 +135,7 @@ The composition's structural reason to exist: **a record under an Active Legal H
 
 ---
 
-## Application-level invariants
+## Composition-level invariants
 
 These invariants (conditions that must always hold) emerge from the composition. None belongs to a single constituent; each requires two or more working together to hold.
 

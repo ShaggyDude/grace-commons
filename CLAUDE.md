@@ -39,7 +39,7 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 | **Atom** | A freestanding concept with its own state, actions, invariants. Specification does not name another atom. Files in `atoms/<category>/`. |
 | **Application** | A composition of two or more atoms. Specification names the atoms it composes. Files in `compositions/`. |
 | **Freestanding** | EOS-sense: the concept can be specified without naming any other concept. Pass 2 enforces this. |
-| **Emergent invariant** | A property that appears only at composition time and belongs to no single constituent atom. Applications surface these explicitly under *Application-level invariants*. |
+| **Emergent invariant** | A property that appears only at composition time and belongs to no single constituent atom. Compositions surface these explicitly under *Composition-level invariants*. |
 | **Regulated atom** | An atom in `atoms/compliance/`, or one whose acceptance bar is set by an external evaluator (regulator, auditor). Carries two extra sections: *Regulated adversarial scenarios* and *Generation acceptance*. |
 | **Lineage notes** | The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Recursive: the notes themselves can be pressure-tested. |
 | **GRID** | The nine-node MUSE v1.1 completeness framework (Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof). Pass 1's checklist. |

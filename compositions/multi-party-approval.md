@@ -188,7 +188,7 @@ The rule is also *order-independent in outcome but order-sensitive in timing*: f
 
 ---
 
-## Application-level invariants
+## Composition-level invariants
 
 These invariants (conditions that must always hold) emerge from the composition. None belongs to a single constituent atom; each requires two or more constituents working together to hold.
 

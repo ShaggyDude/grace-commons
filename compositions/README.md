@@ -33,7 +33,7 @@ A composition spec at minimum names:
 
 - **Composes** — which atoms it brings together (linked).
 - **Composition logic** — how the atoms are wired: which actions in one trigger which in another, what policy parameters each atom is configured with, how cross-atom invariants are maintained.
-- **Application-level invariants** — invariants that emerge from composition and don't belong to any single constituent.
+- **Composition-level invariants** — invariants that emerge from composition and don't belong to any single constituent.
 - **Examples** — concrete scenarios showing the composition in action.
 - **Edge cases** — failure modes that arise from composition, including conflicts between constituent atoms.
 

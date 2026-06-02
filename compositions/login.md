@@ -124,7 +124,7 @@ The composition owns emergent state that is not representable inside any single 
    d. If `invalid(not-known)`: increment `not_found`; call `Audit Trail.record_action(actor_ref: revoked_by_ref, action: session_not_found_during_cascade, detail: {session_token, credential_id}, ...)`. This indicates a session_token is present in `credential_to_sessions` but absent from the Session store — a data integrity gap that is distinct from a normal terminal-state skip and should surface for investigation.
 6. Return `{revoked: N, skipped: M, not_found: K}`.
 
-### Application-level invariants
+### Composition-level invariants
 
 **Invariant 1 — Credential gates issuance.** A `session_token` appears in `session_to_credential` only if `Credential.verify(principal_ref, credential_type, presented_material)` returned `verified` during the `login` call that produced it, and that `verify` was the immediately preceding call in the same `login` invocation. There is no path through the composition's action wiring that calls `Session.issue` without first receiving `verified` from `Credential.verify`.
 

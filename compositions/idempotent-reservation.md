@@ -100,7 +100,7 @@ The only outcome the application does *not* cache is the `invalid-request` rejec
 
 ---
 
-## Application-level invariants
+## Composition-level invariants
 
 These invariants emerge from the composition. None of them belong to a single constituent atom; each requires both atoms working together to hold.
 

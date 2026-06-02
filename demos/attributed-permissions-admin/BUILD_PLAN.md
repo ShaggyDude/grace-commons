@@ -79,7 +79,7 @@ Tests use `DB_PATH=:memory:` and are fully isolated per file.
 
 ---
 
-## §12 — Application-level invariants (mapped to Alloy assertions)
+## §12 — Composition-level invariants (mapped to Alloy assertions)
 
 | # | Name | Alloy assertion | What it guarantees |
 |---|---|---|---|

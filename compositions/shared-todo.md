@@ -97,7 +97,7 @@ Every action follows the same two-step shape: Permissions check first, atom call
 
 - **`delete_task(actor_ref, task_id) → ok | rejected(permission-denied | not-known | storage-failure)`**
   1. `Permissions.permitted(actor_ref, tasks:delete)` → if `denied`, return `permission-denied`.
-  2. If `Assignment.active_for(task_id)` returns an active assignment, call `Assignment.recall(assignment_id)` — the cascade-on-delete rule; see Application-level invariants. If this `recall` returns `rejected(storage-failure)`, return `storage-failure` immediately; do not proceed to step 3.
+  2. If `Assignment.active_for(task_id)` returns an active assignment, call `Assignment.recall(assignment_id)` — the cascade-on-delete rule; see Composition-level invariants. If this `recall` returns `rejected(storage-failure)`, return `storage-failure` immediately; do not proceed to step 3.
   3. `PersonalTodo.delete(task_id)` → `ok | rejected(not-known | storage-failure)`. Return the result.
 
 - **`assign_task(actor_ref, task_id, assignee_ref) → assignment_id | rejected(permission-denied | already-assigned | invalid-request | storage-failure)`**
@@ -120,7 +120,7 @@ The application's load-bearing wiring decision: when a task is deleted, any Acti
 
 ---
 
-## Application-level invariants
+## Composition-level invariants
 
 These invariants emerge from the composition. None belong to a single constituent; each requires two or all three atoms working together to hold.
 

@@ -338,7 +338,7 @@ Spec == Init /\ [][Next]_vars
 
 \* =========================================================================
 \* APPLICATION-LEVEL INVARIANTS
-\* Names and numbering match §Application-level invariants in the spec.
+\* Names and numbering match §Composition-level invariants in the spec.
 \* =========================================================================
 
 \* Invariant 1 — Invitation gates enrollment.
@@ -435,7 +435,7 @@ Completion_Names_Full_Arc ==
 
 \* =========================================================================
 \* ADDITIONAL STRUCTURAL INVARIANTS
-\* Properties not named in §Application-level invariants but implied by
+\* Properties not named in §Composition-level invariants but implied by
 \* the composition's step-order wiring and needed for a complete TLC check.
 \* =========================================================================
 
@@ -472,7 +472,7 @@ Audit_Set_Integrity ==
 
 \* =========================================================================
 \* COMBINED SAFETY PREDICATE
-\* All invariants from §Application-level invariants plus structural guards.
+\* All invariants from §Composition-level invariants plus structural guards.
 \* TLC checks Safety as a single invariant over the full state space.
 \* =========================================================================
 

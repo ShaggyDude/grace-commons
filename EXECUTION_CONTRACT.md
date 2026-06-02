@@ -330,7 +330,7 @@ The seed data is not authored separately. It is derived from the atom's Examples
 | Examples (happy-path scenarios) | Seed data + expected outcomes for Transition and Sequence tests |
 | Examples (rejection-path scenarios) | Seed data + expected guard-failure outcomes |
 | Composition wiring (each action) | Composition test — one per named composition action |
-| Application-level invariants | Post-wiring assertions within each Composition test |
+| Composition-level invariants | Post-wiring assertions within each Composition test |
 | Generation acceptance (regulated) | Acceptance test check queries |
 | Regulated adversarial scenarios | Acceptance test seed data + expected query results |
 

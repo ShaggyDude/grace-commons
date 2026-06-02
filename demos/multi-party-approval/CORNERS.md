@@ -14,7 +14,7 @@ The rule for *what* belongs here vs. what belongs as a spec finding is in [`grac
 
 ### Audit table collapse
 
-- **Spec section:** *Composes — Audit Trail*; *Application-level invariants — Invariant 5*.
+- **Spec section:** *Composes — Audit Trail*; *Composition-level invariants — Invariant 5*.
 - **Cut made:** The four constituent atoms of the Audit Trail substrate (Event Log + Actor Identity + Retention Window + Tamper Evidence) are collapsed into one `audit_event` table with `attestation`, `retention_until`, and `prev_row_hash` / `row_hash` columns. Every invariant the composition needs from the substrate is satisfied, but the four-atom didactic shape is lost.
 - **What can't be demonstrated until relaxed:** the spec's *Retention-horizon asymmetry between substrate and constituents* edge case (which requires a separate Retention Window store visibly in `Purged` state) and the *Partial attestation on step failure* gap in Invariant 5 (which requires Actor Identity.attest and EventLog.append to be separable failure points).
 - **Relaxation cost:** ~3–4 hours to split into four tables, update `src/domain/audit_trail.ts`, update the verifier, update the tamper test.

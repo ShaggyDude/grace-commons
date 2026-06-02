@@ -234,7 +234,7 @@ revoke(
 
 ---
 
-## Application-level invariants
+## Composition-level invariants
 
 **Invariant 1 — Invitation gates enrollment.** No `Party Identity.enroll` call is made via the `onboard` action unless `Invitation.accept` returns `accepted` for the same `invitation_token` in the same call. No Party Identity is enrolled and no Credential registered via this composition without a preceding successful invitation acceptance.
 
