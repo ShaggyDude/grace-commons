@@ -241,7 +241,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 **Standards anchored.** GDPR Articles 15–20, CCPA/CPRA, HIPAA individual right of access (§164.524).
 
-#### C8. KYC / Customer Onboarding with Ongoing Monitoring
+#### C8. KYC (Know Your Customer) / Customer Onboarding with Ongoing Monitoring
 
 **Prerequisites:** Party Identity + Consent + Audit Trail + Event Log + Idempotent Reservation + Retention Window + Actor Identity — all grounded (Party Identity completed 2026-05-14).
 
