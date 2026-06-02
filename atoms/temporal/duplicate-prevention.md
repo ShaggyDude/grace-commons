@@ -27,7 +27,7 @@ toc: true
 
 The pattern prevents an identity from being acted on (added, submitted, posted, charged) if the same identity has been recently observed. "Recently" is bounded by a configurable window that opens on observation and closes after a duration.
 
-The concept addresses a class of integrity and UX problems that recur across virtually every system accepting user or external input: accidental double-submits, rapid double-add of the same task, replayed messages, repeated payments, double-posted comments, redundant newsletter sign-ups. The common shape is constant — an action accepts an identity, the outcome should be rejected (or de-duplicated, or replayed) if the same identity was recently observed, and "recently" is a wall-time window.
+The concept addresses a class of integrity and UX (user-experience — how the system feels to the person using it) problems that recur across virtually every system accepting user or external input: accidental double-submits, rapid double-add of the same task, replayed messages, repeated payments, double-posted comments, redundant newsletter sign-ups. The common shape is constant — an action accepts an identity, the outcome should be rejected (or de-duplicated, or replayed) if the same identity was recently observed, and "recently" is a wall-time window.
 
 This is a freestanding (can be specified without naming any other pattern) concept in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state, its own actions, and its own operational principles, and is designed to compose with patterns that contain identifiable items rather than to be absorbed into them. The same mechanic appears under different names across literatures — *idempotency window* in distributed systems, *cooldown* in UX, *replay protection* in security — but the underlying concept is identical.
 
@@ -35,11 +35,7 @@ This is a freestanding (can be specified without naming any other pattern) conce
 
 ## Summary
 
-Duplicate Prevention is a composable temporal atom (a freestanding pattern spec — one that can be specified without naming any other pattern) that gives any containing system a configurable memory of recently-seen identities. Its contract is simple: when a containing pattern removes an item, it calls `record(identity)`; before it accepts a new item, it calls `check(identity)`. If the identity was recorded within the configured time window, `check` returns `seen` and the containing pattern can reject or otherwise handle the repeat; once the window has elapsed, `check` returns `not-seen` and the identity is again freely usable.
-
-The atom is deliberately free of policy: it does not decide what to do with a `seen` result — that is the containing pattern's responsibility. This separation makes the same mechanic reusable across wildly different contexts. In a personal task list, a 24-hour window prevents accidental re-adds of just-deleted items. In a payment processor, a 5-minute window makes charge requests idempotent (submitting the same operation twice produces the same result as once) so that network retries do not produce duplicate charges. In a comment system, a 60-second window prevents a double-click from posting twice. In a newsletter signup form, an hour-long window suppresses duplicate confirmation emails. The identity-matching rule — whether comparison is exact, case-insensitive, normalized, or hashed — is also delegated to the containing pattern, so the atom imposes no opinion on how identities are canonicalized.
-
-The atom's single-recording invariant (a condition that must always hold) is the key design decision: calling `record` on an identity that is already under guard does not extend the window. This prevents a rapid sequence of deletions and re-additions from pushing the guard window forward indefinitely. The window is anchored to the first observation and expires cleanly at a fixed point in wall-time (clock time as a human would read it, not an internal counter). Grounded (passed all required review passes and is stable enough to generate from) after one full three-pass review and one refinement round.
+Duplicate Prevention gives a system a short-term memory of things it has recently seen, so it can spot repeats. The way it works is simple: when something happens (an item is removed, a request is processed), the system records that identity; before accepting a new one, it checks whether that identity was recorded within a set time window. If it was, the check reports "seen" and the system can decide what to do — reject the repeat, ignore it, or return the earlier result; once the window has passed, the same identity is fresh again. The pattern itself stays out of that decision and out of how identities are compared — those belong to the system using it — which is why the same mechanism works for a to-do list (a one-day window blocks accidental re-adds), a payment system (a few-minute window stops a retried charge from billing twice), a comment box (a one-minute window stops double-click double-posts), and a signup form. One firm guarantee: recording the same identity again does not push the window forward, so a flurry of repeats cannot extend the block indefinitely — the clock starts at the first sighting and runs out at a fixed time.
 
 ---
 
@@ -152,9 +148,9 @@ Where the pattern breaks down: when "recent" is defined by something other than 
 
 Duplicate Prevention is a primitive integrity concept. It has no direct ISO / IEEE / regulatory anchor in this generic form, though specific instantiations have widely-used standards behind them:
 
-- **HTTP idempotency keys** (IETF draft and de-facto convention for safe retry of state-changing requests).
+- **HTTP (HyperText Transfer Protocol — the request/response protocol of the web) idempotency keys** (IETF (Internet Engineering Task Force — the body that develops internet standards) draft and de-facto convention for safe retry of state-changing requests).
 - **Stripe / payment-processor idempotency** (industry-standard pattern for at-most-once charge semantics within a window).
-- **Message-queue exactly-once-within-window semantics** (Kafka, SQS, Pub/Sub deduplication).
+- **Message-queue exactly-once-within-window semantics** (Kafka, SQS (Amazon Simple Queue Service), Pub/Sub deduplication).
 
 It inherits from:
 
@@ -182,7 +178,7 @@ Window and identity-matching rule are configured per containing pattern, not glo
 Current and forthcoming compositions:
 
 - [Personal Todo](../productivity/personal-todo.md) — 24-hour window, string-equality matching.
-- [Idempotent Reservation](../../compositions/idempotent-reservation.md) — minutes-to-hours window, opaque-token matching. The general-purpose retry-safety wrapper around Provisional Commitment; subsumes the payment-processing idempotency pattern (Stripe Idempotency-Key, ISO 20022 BizMsgIdr, etc.).
+- [Idempotent Reservation](../../compositions/idempotent-reservation.md) — minutes-to-hours window, opaque-token matching. The general-purpose retry-safety wrapper around Provisional Commitment; subsumes the payment-processing idempotency pattern (Stripe Idempotency-Key, ISO 20022 (the International Organization for Standardization standard for financial-messaging data) BizMsgIdr, etc.).
 - Shared Todo *(forthcoming)* — same shape, possibly with longer windows for high-stakes domains.
 - Comment Posting *(forthcoming)* — short window with normalized-text matching.
 - Form Submission *(forthcoming)* — short window with idempotency-key matching.
@@ -193,7 +189,7 @@ Current and forthcoming compositions:
 
 This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md)) on its first revision. Findings were modest.
 
-**Pass 1 — Structural completeness (GRID).** Clean. All nine nodes are addressed; Friction is captured in Edge cases per the standard atom template.
+**Pass 1 — Structural completeness (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** Clean. All nine nodes are addressed; Friction is captured in Edge cases per the standard atom template.
 
 **Pass 2 — Conceptual independence (EOS).** Clean. The concept is intrinsically primitive — recording recently-seen identities with a window — and does not absorb any concern that recurs as its own atomic concept. The window itself is not extracted as a separate atom because windows of this shape are inherent to recency-bounded memory; pulling them apart would split too thin.
 

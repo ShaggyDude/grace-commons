@@ -35,20 +35,7 @@ This is a freestanding atom in the EOS (Essence of Software — Daniel Jackson's
 
 ## Summary
 
-Invitation is the compliance atom (a freestanding pattern spec — one that does not name any other pattern — that captures a single software concept with its own state and actions) that answers the question *"what is the state of this invitation, and who accepted it if it was accepted?"* It does this through invitation records: durable, single-resolution lifecycle artifacts that exist from the moment an invitation is issued through its terminal resolution. Each invitation is identified by an `invitation_token` — an opaque, cryptographically random, system-generated value that functions as both the record's identity and the bearer credential the invitee presents to `accept` or `decline`. The token is the invitation; presenting it is sufficient to act on it.
-
-Each invitation record traverses a one-way state machine. `Pending` is the only non-terminal state. The four terminal states are:
-
-- `Accepted` — the invitation was accepted; `accepting_identity_ref` is permanently recorded.
-- `Declined` — the invitation was deliberately declined; the refusal is a named, first-class outcome.
-- `Expired` — the invitation window closed without resolution; the invitee neither accepted nor declined before `expires_at` passed.
-- `Revoked` — the inviting actor withdrew the invitation before it was resolved; `revoked_by_ref` and `revocation_reason` are permanently recorded.
-
-The single-resolution invariant is the atom's central structural commitment: exactly one of these four transitions fires for any given invitation. Once an invitation is resolved, any subsequent action attempt returns `already-resolved(state)` naming the terminal state. This invariant handles concurrent acceptance attempts — if two requests to `accept` the same invitation arrive simultaneously, exactly one succeeds (the first to commit the transition) and the other receives `already-resolved(Accepted)`.
-
-`accept(invitation_token, accepting_identity_ref)` is the resolution path that produces a permanent identity binding. The `accepting_identity_ref` supplied at call time is immutably recorded as part of the `Accepted` transition. This is the moment at which an invitation — which may have been issued to an unknown or unresolvable invitee — gains a concrete identity in the system. The `invitee_ref` supplied at `initiate` time is not required to match `accepting_identity_ref`; the atom does not validate the relationship between the original invitee reference and the accepting identity. The composing External Onboarding pattern (C16) is where that relationship is enforced if the deployment requires it.
-
-Invitation does not cover the credential registration, identity record creation, or session issuance that typically follow acceptance. This atom's responsibility begins when `initiate` is called and ends when one of the four terminal states is reached.
+Invitation tracks the life of an invitation issued to an outside party to join something — a new employee, a customer, a collaborator, a patient. It answers "what is the state of this invitation, and who accepted it?" An invitation is issued before the invitee even has an identity in the system, which is exactly what makes it useful: it is the bridge from outsider to registered participant. Each invitation is identified by a random token that the invitee presents to act on it, and it starts Pending and resolves exactly once to one of four end states — Accepted (recording, permanently, the identity that joined), Declined (a deliberate refusal, recorded as its own outcome), Expired (the window closed with no response), or Revoked (the inviter withdrew it). Resolving exactly once is the core guarantee: after it resolves, any further attempt is told it is already resolved, which also cleanly handles two people trying to accept at the same time — one wins, the other is told. The key moment is acceptance, where a concrete identity is bound to what may have started as an invitation to an unknown party. Declined is what sets this apart from a plain bearer token: a refusal is a recorded human decision, distinct from simply never using the invitation. It deliberately does not handle the credential setup, identity record, or login that usually follow acceptance — those are separate patterns.
 
 ---
 
@@ -303,7 +290,7 @@ What this atom does not cover:
 - **Invitation transfer.** The atom does not model passing an invitation from one potential invitee to another. The `invitation_token` is a bearer credential; whoever presents it to `accept` becomes the `accepting_identity_ref`. Whether this is acceptable in a given deployment is a policy concern. Composing patterns that prohibit transfer may validate `invitee_ref` against `accepting_identity_ref` before calling `accept`.
 - **Multi-use invitations.** Each invitation is single-use: `accept` resolves it permanently. A "team invitation link" that many people can follow is not an Invitation in this atom's sense — it is a Capability (atom #13) with `max_redemptions = N` and a `scope` that encodes the team onboarding action. Each redemption of the Capability triggers a separate Invitation `initiate` + `accept` sequence for that specific invitee.
 - **Identity proofing.** The atom records who accepted the invitation but does not verify the accepting identity's real-world credentials (government ID, professional license, liveness check). Identity proofing belongs to Party Identity and the KYC composition (C8). The invitation establishes *that* someone joined via a documented channel; it does not establish *who they really are*.
-- **Clock accuracy.** `initiated_at`, `accepted_at`, `declined_at`, `expired_at`, and `revoked_at` are captured from the deployment clock. Trusted timestamping (RFC 3161) is a composing pattern for deployments requiring externally verifiable timestamps.
+- **Clock accuracy.** `initiated_at`, `accepted_at`, `declined_at`, `expired_at`, and `revoked_at` are captured from the deployment clock. Trusted timestamping (RFC 3161 — the Internet standard "Request for Comments" document 3161 defining a trusted time-stamping protocol) is a composing pattern for deployments requiring externally verifiable timestamps.
 - **Invitation store tamper-evidence.** Composing with Tamper Evidence provides cryptographic proof that no invitation record was retroactively altered — useful in regulated deployments where the `inviter_ref` and `accepting_identity_ref` fields are used as legal evidence.
 
 ---
@@ -324,11 +311,11 @@ Invitation is freestanding. It is the onboarding-lifecycle constituent of Extern
 
 ## Standards references
 
-- **GDPR Articles 6 and 7 (Lawful Basis and Consent for Processing)** — the `initiate` call creates a processing record: the system now holds the `invitee_ref` and will process data on behalf of or about the invitee if they accept. The `initiated_at` and `inviter_ref` fields constitute the processing-event record the GDPR requires. The `accept` call — and the `accepting_identity_ref` bound at that moment — is the record of the data subject's active engagement with the system. The invitation record is the lawful-basis evidence for the processing that follows onboarding.
-- **HIPAA §164.312(a)(1) (Access Control)** — invitation-based user provisioning is a covered access-granting mechanism. The `inviter_ref` (the authorized administrator who granted access) and `accepting_identity_ref` (the identity that gained access) are the access-control audit record.
+- **GDPR (EU General Data Protection Regulation — the European Union's data-privacy law) Articles 6 and 7 (Lawful Basis and Consent for Processing)** — the `initiate` call creates a processing record: the system now holds the `invitee_ref` and will process data on behalf of or about the invitee if they accept. The `initiated_at` and `inviter_ref` fields constitute the processing-event record the GDPR requires. The `accept` call — and the `accepting_identity_ref` bound at that moment — is the record of the data subject's active engagement with the system. The invitation record is the lawful-basis evidence for the processing that follows onboarding.
+- **HIPAA (US Health Insurance Portability and Accountability Act) §164.312(a)(1) (Access Control)** — invitation-based user provisioning is a covered access-granting mechanism. The `inviter_ref` (the authorized administrator who granted access) and `accepting_identity_ref` (the identity that gained access) are the access-control audit record.
 - **SCIM 2.0 (System for Cross-domain Identity Management — RFC 7644)** — SCIM's `POST /Users` with an invite flow maps to the Invitation → External Onboarding arc. The `invitee_ref` in the invitation corresponds to the SCIM user's external identity reference; the `accepting_identity_ref` corresponds to the provisioned SCIM user ID.
 - **SOC 2 CC6.2 (Prior to Issuing System Credentials, New Internal and External Users Are Registered and Authorized)** — the invitation record is the registration and authorization event SOC 2 CC6.2 requires. `inviter_ref` is the authorizing party; `accepted_at` and `accepting_identity_ref` are the registration event.
-- **NIST SP 800-63A (Digital Identity Guidelines — Enrollment and Identity Proofing)** — the enrollment event at which an applicant registers with an identity system maps to the Invitation → accept arc. The atom models the enrollment record; identity proofing (NIST 800-63A's primary concern) is Party Identity's surface and is not in scope here.
+- **NIST (National Institute of Standards and Technology — US federal standards body) SP 800-63A (Digital Identity Guidelines — Enrollment and Identity Proofing)** — the enrollment event at which an applicant registers with an identity system maps to the Invitation → accept arc. The atom models the enrollment record; identity proofing (NIST 800-63A's primary concern) is Party Identity's surface and is not in scope here.
 
 Standards anchoring for Invitation is lighter than for Credential, Session, or Capability, consistent with the ROADMAP entry: the atom earns its keep on EOS Pass 2 conceptual independence — the `Declined` state, the single-resolution invariant, and the identity-binding-at-acceptance are what justify a separate atom rather than folding Invitation into Capability.
 
@@ -353,7 +340,7 @@ A derived implementation of Invitation is *acceptable* — in the regulator-acce
 
 ## Status
 
-`grounded on Final Critique 4` — three-pass pressure testing (Rounds 1–3, each with Pass 1 GRID structural / Pass 2 EOS conceptual independence / Pass 3 Linus adversarial) plus Final Critique (Round 4, Super Torvalds) complete. Four findings resolved across Round 1; one foundational finding resolved in Final Critique 4. Final Critique 4 closed clean.
+`grounded on Final Critique 4` — three-pass pressure testing (Rounds 1–3, each with Pass 1 GRID structural — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof / Pass 2 EOS conceptual independence / Pass 3 Linus adversarial) plus Final Critique (Round 4, Super Torvalds) complete. Four findings resolved across Round 1; one foundational finding resolved in Final Critique 4. Final Critique 4 closed clean.
 
 *Provisional placement note: this atom is filed in `atoms/compliance/` as the initial home for identity-onboarding lifecycle records. Invitation is not pure compliance infrastructure — it has meaningful non-regulated applications wherever invitation-based onboarding is used. A future taxonomy refactor may relocate it to `atoms/identity/`, carrying `regulated: true` as a frontmatter attribute for regulated deployments. See the Open taxonomy question in ROADMAP.md and Methodology debt #5.*
 
@@ -381,7 +368,7 @@ A derived implementation of Invitation is *acceptable* — in the regulator-acce
 
 ---
 
-**Round 2 — Pass 1 (GRID structural).** Clean. All nine MUSE nodes fully resolved after Round 1 fixes.
+**Round 2 — Pass 1 (GRID structural).** Clean. All nine MUSE (the completeness framework, version 1.1, GRID's nodes are drawn from) nodes fully resolved after Round 1 fixes.
 
 **Round 2 — Pass 2 (EOS conceptual independence).** Clean.
 

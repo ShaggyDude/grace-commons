@@ -29,13 +29,7 @@ A single user records discrete units of work they intend to complete. Each unit 
 
 ## Summary
 
-Personal Todo is a single-actor task-tracking atom (a freestanding pattern spec that does not name any other pattern) that models the complete lifecycle of a personal work item: creation, optional revision, completion, and removal. It gives every item an opaque identifier (a system-generated ID with no meaningful content) that serves as its permanent, immutable identity, while keeping the human-readable description as a mutable property subject to explicit normalization and uniqueness rules. The atom guarantees that at any moment every item is in exactly one of two states — Pending or Done — and that once an item is deleted its identity is permanently retired. Description uniqueness is enforced across the entire active set (both Pending and Done items) using NFC normalization (Unicode canonical form — ensures equivalent characters have one standard byte sequence) so that text typed in one encoding and text pasted from another source compare equal under the uniqueness check.
-
-The pattern is explicitly scoped to a single actor: the person who adds an item is the same person who completes or removes it. This makes it directly usable for personal task lists, reading lists, grocery lists, and single-user goal capture. Every action — add, edit, complete, delete — carries named rejection reasons, so consuming systems receive precise feedback rather than generic failure signals. The atom is designed to compose with other patterns rather than absorb their concerns: recency-based duplicate prevention, edit history, priority ordering, recurrence, task delegation, and multi-user sharing are all handled by separate composing atoms that connect to Personal Todo through well-defined interfaces. Grounded (passed all required review passes and is stable enough to generate from) after two full pressure-testing iterations plus one refinement round.
-
-The pattern addresses single-actor task tracking: personal task lists, reading lists, grocery lists, personal goals, single-user project capture. The actor and the audience are the same person. Multi-actor variants (shared lists, assignment, delegation) are separate patterns.
-
-This concept is freestanding (can be specified without naming any other pattern) in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It does not implement duplicate-prevention windows, ordering, priorities, or recurrence. Each of those is a separate composable concept; see Composition notes below.
+Personal Todo is a single-person to-do list: one user records tasks, edits them while they are still open, marks them done, and deletes them. Every task gets a permanent internal identifier that never changes, so editing the wording of a task does not change which task it is. The pattern guarantees that each task is always in exactly one state — open (Pending) or finished (Done) — until it is deleted, and that no two active tasks can share the same wording (the same text typed two different ways still counts as a match). It is built for one person managing their own list — personal tasks, reading lists, grocery lists, goals — not for shared or delegated lists, which are handled by separate patterns that build on this one.
 
 ---
 
@@ -57,7 +51,7 @@ This model differs from the Alloy (a formal modeling language for checking struc
 Every description provided to `add` or `edit` is normalized before it enters state and before any active-set uniqueness comparison:
 
 - **Trim** leading and trailing whitespace.
-- **NFC-normalize** Unicode codepoints (the numeric values that identify individual characters in Unicode).
+- **NFC-normalize** Unicode codepoints (the numeric values that identify individual characters in Unicode). NFC (Normalization Form C — the Unicode standard's canonical composed form, which gives equivalent characters one standard byte sequence) ensures text typed one way and pasted another way compares equal.
 - **Reject** if the result is empty (rejection reason: `invalid-description`).
 - **Reject** if the result exceeds the maximum length (default: 1024 codepoints; configurable per implementation; rejection reason: `invalid-description`).
 
@@ -267,7 +261,7 @@ This pattern is the result of two iterations of pressure-testing.
 - *Description mutability* — `edit` action introduced, allowed on Pending only.
 - *Temporal metadata* — timestamps added: `added_at`, `last_edited_at`, `completed_at`.
 - *Observability* — Pending and Done sets explicitly queryable; per-unit fields and rejection reasons explicitly user-visible.
-- *Identity policy* — initially absorbed into the pattern as a 24-hour deletion record, then extracted to a separate composing concept ([Duplicate Prevention](../temporal/duplicate-prevention.md)) on the EOS principle that concepts should be freestanding and generic. Recency-based duplicate prevention does not belong inside Personal Todo.
+- *Identity policy* — initially absorbed into the pattern as a 24-hour deletion record, then extracted to a separate composing concept ([Duplicate Prevention](../temporal/duplicate-prevention.md)) on the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) principle that concepts should be freestanding and generic. Recency-based duplicate prevention does not belong inside Personal Todo.
 
 The first four gaps closed in-pattern. The fifth was the most instructive: the spec naturally absorbed it on first pass, then was corrected by re-reading EOS — the concern was generic, applied across many other concepts (comments, payments, form submissions, newsletter signups), and belonged to its own freestanding concept.
 
@@ -281,7 +275,7 @@ The first four gaps closed in-pattern. The fifth was the most instructive: the s
 
 Three of the original Linus-pass gaps were marked explicit out-of-scope rather than fixed in-pattern: concurrent action sequences, atomicity / crash semantics, and clock semantics. Each is a deferred concern with a forthcoming composing pattern named in Edge cases and Composition notes.
 
-The two passes together exercise the architecture as designed: GRID's nine nodes catch completeness gaps; EOS's freestanding-concepts principle catches over-absorption gaps; adversarial pressure-testing catches the load-bearing decisions that hide beneath summary prose. The pattern is stronger because all three checks happened.
+The two passes together exercise the architecture as designed: GRID's (the nine-node completeness framework — Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nine nodes catch completeness gaps; EOS's freestanding-concepts principle catches over-absorption gaps; adversarial pressure-testing catches the load-bearing decisions that hide beneath summary prose. The pattern is stronger because all three checks happened.
 
 **Refinement round 1.** Three findings, all closed in-pattern. Conventions inherited from the methodology directly.
 

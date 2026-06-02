@@ -33,11 +33,7 @@ This is a freestanding (can be specified without naming any other pattern) conce
 
 ## Summary
 
-Event Log is a foundational temporal atom (a freestanding pattern spec — one that can be specified without naming any other pattern) that provides a single, simple guarantee: anything appended to the log stays in the log, in the order it arrived, forever (within the lifetime of the log instance), unchanged. It is the substrate from which audit trails, undo histories, activity feeds, event-sourced systems, replication journals, and write-ahead logs are all built. The pattern exposes exactly two actions: `append`, which adds a new event at the tail and returns an opaque identifier (a system-generated ID with no meaningful content) for that event; and `read`, which returns events in strict sequence order for any well-formed query. There is no edit and no delete surface — the log is append-only (records can be added but never changed or deleted) by design.
-
-Each event carries four fields: its unique identifier, a strictly increasing sequence number that determines total order (meaning every pair of events has a defined earlier/later relationship with no ties, regardless of clock behavior), a wall-time (clock time as a human would read it, not an internal counter) timestamp for human-readable annotation, and an opaque payload that the Event Log does not interpret. The distinction between sequence number and wall-time is intentional and load-bearing: wall-time is best-effort and can be non-monotonic under clock skew, but sequence number is the authoritative ordering source and is always strictly monotonic. This means the log can be replayed faithfully even on systems with imperfect clocks.
-
-The atom deliberately carries no opinions about retention duration, cryptographic integrity proof, actor attribution, payload schema, or indexing by payload field — all of those are separate composing patterns (Retention Window, Tamper Evidence, Actor Identity, Schema Evolution, Reverse Index respectively). This separation means the same Event Log atom underlies a personal task history, a healthcare clinical record, a bank transaction journal, and a regulated compliance audit trail, with the compliance-layer concerns layered on only where they are needed. Grounded (passed all required review passes and is stable enough to generate from) after one full three-pass review and one refinement round.
+Event Log is an append-only record: anything written to it stays, in the order it arrived, unchanged, for as long as the log exists. It is the foundation that audit trails, undo histories, activity feeds, transaction journals, and replay systems are all built on. It offers just two operations — add an event to the end (and get back an identifier for it), and read events back in order — with no way to edit or delete, by design. Every event gets a strictly increasing sequence number that fixes its place in line; this is kept separate from the human-readable timestamp on purpose, because clocks can drift or jump but the sequence number never does, so the log can always be replayed faithfully even on a machine with a bad clock. The log itself takes no position on how long to keep events, how to prove they have not been tampered with, who wrote them, or how to search them — those are all handled by separate patterns layered on top, which is why the same simple log can sit under a personal task history, a medical chart, a bank ledger, and a regulated audit trail.
 
 ---
 
@@ -142,7 +138,7 @@ A regulated system records every state-changing action: `{type: "patient_record_
 
 ### Patient medical record (clinical history)
 
-Each clinical observation, prescription, lab result, and vital sign is appended as an event with structured data. The clinical record *is* an Event Log; the patient chart is a *view* over it (latest values per field). Mistakes are corrected by appending a *correction event*, never by editing the original — the record must show what was originally recorded and when it was corrected. ICD coding, billing extraction, and longitudinal analytics all read the same log.
+Each clinical observation, prescription, lab result, and vital sign is appended as an event with structured data. The clinical record *is* an Event Log; the patient chart is a *view* over it (latest values per field). Mistakes are corrected by appending a *correction event*, never by editing the original — the record must show what was originally recorded and when it was corrected. ICD (International Classification of Diseases — the World Health Organization's standard diagnostic coding system) coding, billing extraction, and longitudinal analytics all read the same log.
 
 ### Bank transaction journal
 
@@ -208,13 +204,13 @@ In all four, Event Log is the substrate; the application adds the policy.
 
 Event Log is a foundational primitive with deep standards backing:
 
-- **ISO/IEC 27001** — information security management; mandates event logging for security-relevant actions.
-- **NIST SP 800-92** — *Guide to Computer Security Log Management*; describes log lifecycle, integrity, retention requirements.
-- **W3C Activity Streams 2.0** — JSON format for activity feeds; treats activities as events with actor / verb / object structure.
+- **ISO/IEC 27001** (International Organization for Standardization / International Electrotechnical Commission — joint information-security management standard) — mandates event logging for security-relevant actions.
+- **NIST SP 800-92** (National Institute of Standards and Technology — US federal standards body) — *Guide to Computer Security Log Management*; describes log lifecycle, integrity, retention requirements.
+- **W3C (World Wide Web Consortium — the web standards body) Activity Streams 2.0** — JSON (JavaScript Object Notation — a lightweight text format for structured data) format for activity feeds; treats activities as events with actor / verb / object structure.
 - **Event Sourcing literature** — Greg Young's early write-ups; Martin Fowler's *Event Sourcing*; foundational pattern in domain-driven design.
-- **Database write-ahead logging (WAL)** — the same primitive at the storage layer; ARIES recovery, PostgreSQL WAL, MySQL binlog.
+- **Database write-ahead logging (WAL)** — the same primitive at the storage layer; ARIES (Algorithms for Recovery and Isolation Exploiting Semantics — a classic database crash-recovery method) recovery, PostgreSQL WAL, MySQL binlog.
 - **Distributed-systems replication logs** — Kafka topics, Raft logs, Paxos value logs.
-- **Version control** — Git's commit log is an Event Log with cryptographic tamper-evidence (Merkle DAG) layered on top.
+- **Version control** — Git's commit log is an Event Log with cryptographic tamper-evidence (a Merkle DAG — a directed acyclic graph whose nodes are linked by cryptographic hashes, so any change to history is detectable) layered on top.
 
 It inherits from:
 
@@ -234,7 +230,7 @@ It inherits from:
 
 This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md)) on its first revision.
 
-**Pass 1 — Structural completeness (GRID).** Clean. All nine nodes addressed; the Edge cases section enumerates eleven explicit out-of-scope concerns, each pointing at a composing pattern that handles it (Retention Window, Tamper Evidence, Actor Identity, Reverse Index, Consensus, Schema Evolution, Snapshot, Observer, Transaction, durability, Erasure Tombstone).
+**Pass 1 — Structural completeness (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** Clean. All nine nodes addressed; the Edge cases section enumerates eleven explicit out-of-scope concerns, each pointing at a composing pattern that handles it (Retention Window, Tamper Evidence, Actor Identity, Reverse Index, Consensus, Schema Evolution, Snapshot, Observer, Transaction, durability, Erasure Tombstone).
 
 **Pass 2 — Conceptual independence (EOS).** Clean. Event Log is itself a foundational primitive that other concepts compose on top of. The concerns most often candidates for extraction (retention, tamper-evidence, actor identity, indexing) are already correctly named as composing patterns rather than absorbed into the atom.
 

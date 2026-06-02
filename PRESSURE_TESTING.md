@@ -47,6 +47,11 @@ The three passes are recursive in a useful way: applying them to a pattern produ
 
 Then check the reference graph: every Friction links to a Flow step; every Decision links to State and Behavior; every Proof links to Intent. Orphaned references (links that point to something not defined in the spec) are violations.
 
+Then check accessibility completeness — two structural checks that are mechanical, not adversarial, and belong in Pass 1:
+
+- **Summary is Tier 1 clean.** Does the Summary contain any unexplained acronym, undefined jargon, or technical term that is not everyday English? Every such term must be defined inline. A Summary that a non-engineer with domain knowledge cannot read without a glossary is a Pass 1 structural gap, not a stylistic preference.
+- **No undefined acronym anywhere in the spec.** Does any acronym or initialisation (HIPAA, GDPR, EOS, GRID, NFC, FATF, BSA/AML, KYC, CDD, PCI DSS, etc.) appear without being spelled out and briefly glossed at its first use in the document? First-use definition is required globally — in any section, not just the Summary. An undefined acronym is an implicit "you know where to look" cross-reference and is treated as a reference-graph violation.
+
 For compositions that define a named semantics subsection (Replay semantics, Evaluation rules, Provisioning cascade, or similar): every action wiring step that defers execution to that subsection — by saying "recompute", "evaluate", "apply", "cascade", or equivalent — must name the subsection explicitly. An action wiring step that says "recompute the derived state" without citing the Replay semantics section is an intra-document orphaned reference and is a Pass 1 finding.
 
 **Time:** 15–30 minutes for an atom; longer for an application with multiple constituents.

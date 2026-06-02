@@ -18,6 +18,18 @@ toc: true
 
 ---
 
+## Three reading tiers
+
+Every Grace Commons spec is written for three audiences simultaneously, and each section belongs to exactly one tier:
+
+- **Tier 1 — Summary (anyone).** Plain language. Zero unexplained jargon. Every acronym spelled out and defined at first use. No assumed vocabulary. A non-engineer with domain knowledge (a compliance officer, a clinician, a product manager) should be able to read the Summary and understand what the pattern does, what it guarantees, and when they would use it. The formal layer carries the precision; the Summary carries the accessibility.
+- **Tier 2 — Main text (technical readers).** Intent, state machine, action wiring, invariants, examples, edge cases. Can use domain and engineering terms, but every term that is not everyday English must be defined inline at its first appearance in the spec. Acronyms must be spelled out at first use globally — not just in the Summary, but anywhere they first appear in the document. "Emergent invariant" must be defined the first time it appears; so must GRID, EOS, HIPAA, PCI DSS, and every other initialisation or term-of-art. The main text is complete and defended; the formal layer can supersede it for precision but does not replace it for human communication.
+- **Tier 3 — Formal models (experts only).** Alloy, TLA+, and associated artifacts. Dense and tight. Readers at this tier are expected to bring the vocabulary. These files are siblings of the canonical spec, not sections within it.
+
+This three-tier discipline reflects the library's core bridge principle: the same canonical artifact must serve the compliance officer and the formal-methods engineer. Tier 1 is the bridge to the first; Tier 3 is the bridge to the second; Tier 2 is the shared crossing.
+
+---
+
 ## Purpose and scope
 
 The Grace Commons library expresses every pattern as structured natural language with a fixed set of named sections in a fixed order. Section names are load-bearing — they signal to humans and AI readers what kind of content lives where, and they let the pressure-testing methodology (GRID structural completeness, EOS conceptual independence, Linus adversarial scrutiny) operate against predictable structure. Deviations from the canonical shape are review findings, not stylistic choices.
@@ -46,7 +58,7 @@ Reference examples: [`atoms/productivity/personal-todo.md`](./atoms/productivity
 
 3. **Intent.** Several paragraphs of prose explaining the business or regulatory problem the atom addresses, why the concern recurs across domains, and what the atom does and does not commit to. The Intent must be testable — falsifiable by observable behavior of an implementation. This is GRID's Intent node.
 
-4. **Summary.** *(Grounded specs only — write the Summary as part of grounding confirmation, when the spec is stable enough to anchor from.)* A plain-English description of what the atom does, what it guarantees, and its most common uses. Complete over concise — the Summary is done when someone working in any discipline (formal methods, design, engineering) could read it and start their work without a clarifying question. Placed immediately after Intent. Written assuming intelligence, not vocabulary — define any key terms inline rather than expecting the reader to bring them. The purpose is explicit: give both human readers and AI models a reliable anchor before they enter the atom's machinery. Do not trust implicit comprehension; a reader or model that skims Intent and pattern-matches on vocabulary will occasionally construct the wrong mental model, and wrong mental models compound across every spec that builds on this one. A well-authored Summary forecloses that. The system teaches itself — each Summary that defines its terms inline builds the reader's vocabulary without requiring them to look anything up.
+4. **Summary.** *(Grounded specs only — write the Summary as part of grounding confirmation, when the spec is stable enough to anchor from.)* **Tier 1 — plain language for anyone.** 3–6 sentences answering: what is this, what does it do, and what does it guarantee? Zero unexplained jargon. Every acronym spelled out and defined inline at first use. Every technical term that is not everyday English — including "invariant", "state machine", "composition", "atom" — defined in plain language the first time it appears in the Summary. The formal layer and the main text carry the precision; the Summary carries the accessibility. A Summary that a non-engineer with domain knowledge cannot read without a glossary is a Pass 1 finding.
 
 5. **Identity model.** What identifies an instance of the atom's primary record. State explicitly whether identity is an opaque system-generated id (the usual answer) and which fields are immutable properties set on the creating action. Never use a content field (description, name, reason) as identity. Identity model precision is the single most common Pass 3 finding when missing.
 
@@ -88,7 +100,7 @@ Reference examples: [`compositions/idempotent-reservation.md`](./compositions/id
 
 2. **Intent.** Several paragraphs explaining the friction at the boundary between the composed atoms, the emergent rule the composition exists to enforce, and what the composition is *not* (typically: not a new primitive — the constituent atoms are unchanged).
 
-3. **Summary.** *(Grounded specs only.)* Same rule as the atom shape: plain English, assume intelligence not vocabulary, define key terms inline. Complete over concise. For compositions, the Summary should also name what the composition wires together and what emergent guarantee results — the thing no single constituent atom can provide alone.
+3. **Summary.** *(Grounded specs only.)* Same Tier 1 rule as the atom shape: plain language for anyone, 3–6 sentences, zero unexplained jargon, every acronym spelled out and defined inline. For compositions, name what the composition wires together and what the resulting guarantee is — the property no single constituent can provide alone — in plain terms. "Composition guarantees that only appear when the atoms work together" is the plain-language form of "emergent invariant"; use whichever fits the sentence, but define the term the first time it appears.
 
 4. **Composes.** A list of the constituent atoms (or substrate compositions — see *Compositions of compositions* below). Each entry: the constituent's name (linked), a one-line description of the role it plays in this composition, and a note on how the composition uses its surface (which actions are wrapped, which queries are passed through, which state is consulted).
 
@@ -151,7 +163,9 @@ Both regulated-overlay conventions are *inherited from the methodology directly*
 
 This document enumerates sections. It does not enumerate authoring conventions — those live in [`CLAUDE.md`](./CLAUDE.md) and are reinforced by [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md). The conventions every section must honor (regardless of which shape) include:
 
-- **Complete over concise.** A section is done when it fully conveys its intent — not when it hits a line count. Brevity that loses meaning is a defect; length that preserves it is a feature.
+- **Three reading tiers, always.** Every spec has a Summary (Tier 1 — anyone), a main text (Tier 2 — technical readers), and optional formal models (Tier 3 — experts). The Summary is plain language with zero unexplained jargon. The main text defines every non-everyday term inline at first use. Formal models are dense and expert-only. See *Three reading tiers* above.
+- **Never leave an acronym unexplained.** Every acronym or initialisation (HIPAA, GDPR, EOS, GRID, NFC, PCI DSS, FATF, BSA, AML, CDD, KYC…) must be spelled out and briefly glossed the first time it appears in the document — in any section, not just the Summary. A reader who encounters an undefined acronym has hit a wall; the library's bridge principle requires a door instead.
+- **Complete over concise (main text).** In the main text, a section is done when it fully conveys its intent — not when it hits a line count. Brevity that loses meaning is a defect; length that preserves it is a feature. This rule does *not* apply to the Summary, where concision is the discipline.
 - **Assume intelligence, not vocabulary.** Write for a smart reader who may not share your specific technical vocabulary. Define key terms inline at first use — in the Summary, in the Intent, and anywhere a term is load-bearing. The spec should teach the reader the vocabulary it needs them to know, not assume they already have it. This is the mechanism by which the library teaches itself: each spec that defines its terms consistently builds the reader's vocabulary without requiring them to look anything up elsewhere.
 - Invariants named descriptively first, then numbered (never letter-prefix codes)
 - Identity model explicit, opaque-id over content-field
