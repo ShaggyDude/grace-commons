@@ -271,6 +271,7 @@ Session is freestanding. It is named by Login (C13) and Session-Gated Authorizat
 - **[Login](../../compositions/login.md)** — wires Credential verification to Session issuance, both attested under the verified principal. Carries the cascade invariant: revocation of the underlying Credential invalidates every Session derived from it — a property of the Login composition's emergent state, not of either constituent atom alone.
 - **[Session-Gated Authorization](../../compositions/session-gated-authorization.md)** — gates every Permissions check on Session validity. The pre-check fires before the Permissions call; a stale or revoked session rejects the check before Permissions is consulted.
 - **[External Onboarding](../../compositions/external-onboarding.md)** — registers the principal's credential during onboarding; the principal then calls [Login](../../compositions/login.md) with that credential to establish their first session. External Onboarding is the identity admission gate; Login is the first-session issuance step. Session is not a constituent of External Onboarding — it enters the picture via Login in the step immediately following a successful `onboard` call.
+- **[Privileged Access Provisioning](../../compositions/privileged-access-provisioning.md)** — calls `Session.validate(session_token)` as the first step of `exercise_access`. A non-`valid` result — expired, revoked, or not-known — blocks the access exercise before the Capability token is presented. Session is queried read-only; this composition does not issue or revoke sessions.
 
 ---
 

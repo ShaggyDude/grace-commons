@@ -247,7 +247,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 Legal Hold is the preservation primitive the library has held open since Retention Window was grounded. Every atom in `atoms/compliance/` and every atom in `atoms/healthcare/` ultimately composes with it when records must be preserved against destruction:
 
-- **[Retention Window](./retention-window.md)** — the primary composing peer. Legal Hold overrides Retention Window's purge eligibility: while any Active hold covers a record, `purge` must be rejected regardless of whether `retention_until` has elapsed. Neither atom enforces the other's constraint; the gate belongs to the **[Regulated Record Retention & Defensible Deletion](../../ROADMAP.md)** composition (C1).
+- **[Retention Window](./retention-window.md)** — the primary composing peer. Legal Hold overrides Retention Window's purge eligibility: while any Active hold covers a record, `purge` must be rejected regardless of whether `retention_until` has elapsed. Neither atom enforces the other's constraint; the gate belongs to the **[Defensible Retention](../../compositions/defensible-retention.md)** composition.
 - **[Audit Trail](../../compositions/audit-trail.md)** — every `place` and `release` event is an auditable action; Audit Trail provides the tamper-evident, attributed, retention-governed record of every hold lifecycle event.
 - **[Tamper Evidence](./tamper-evidence.md)** — seals hold records against post-hoc modification. Court-admissible hold records require cryptographic integrity guarantees beyond this atom's spec-level immutability.
 - **[Actor Identity](./actor-identity.md)** — `placed_by` and `released_by` are opaque references; Actor Identity provides cryptographic attestation that those references are real, credentialed actors who authorized their respective actions. In regulated contexts (SOX, 21 CFR Part 11), hold placement is an electronic record requiring verifiable authorship.
@@ -255,7 +255,7 @@ Legal Hold is the preservation primitive the library has held open since Retenti
 - **[Duplicate Prevention](../temporal/duplicate-prevention.md)** — for at-most-once semantics on hold placement under retry conditions.
 - **[Medication Order](../healthcare/medication-order.md)** — in healthcare, an active investigation or litigation hold may cover medication order records and their associated clinical observations. Legal Hold composes directly with any record-producing atom when that record's destruction must be suspended.
 - **[Clinical Observation](../healthcare/clinical-observation.md)** — same as Medication Order; clinical observations under malpractice litigation or HHS investigation are subject to legal hold.
-- **Forthcoming:** Regulated Record Retention & Defensible Deletion (C1) — Legal Hold + Retention Window + Audit Trail + Tamper Evidence, wired to enforce the purge gate. Data Subject Rights Fulfillment (C6) — Legal Hold surfaces as the reason an erasure request may be declined.
+- **[Defensible Retention](../../compositions/defensible-retention.md)** — Legal Hold + Retention Window + Audit Trail, wired to enforce the purge gate. **Forthcoming:** Data Subject Rights Fulfillment (C6) — Legal Hold surfaces as the reason an erasure request may be declined.
 
 ---
 

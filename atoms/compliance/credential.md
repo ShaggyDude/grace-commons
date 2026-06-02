@@ -268,6 +268,7 @@ Credential is freestanding. It is named by Login (C13) and External Onboarding (
 - **[Session](./session.md)** — Session records the result of a successful `verify`. [Login](../../compositions/login.md) is the composition that wires `verify → verified` to `Session.issue`.
 - **[Login](../../compositions/login.md)** — wires Credential verification to Session issuance, both attested under the verified principal. Carries the cascade invariant: revocation of a Credential invalidates every Session derived from it.
 - **[External Onboarding](../../compositions/external-onboarding.md)** — credential registration is the final step of the onboarding arc: Invitation accepted → Party Identity created → Credential registered → all steps attested.
+- **[Privileged Access Provisioning](../../compositions/privileged-access-provisioning.md)** — calls `Credential.verify` against the requestor's credential before accepting a privileged access request (`request_access` step 3), and again before each approver step decision (`approve_step` and `reject_step` step 2) to ensure no decision is attributed to a revoked or expired credential. Credential is queried read-only; this composition does not register, rotate, or revoke credentials.
 - **Compromise Disclosure** *(forthcoming)* — handles retroactive reinterpretation of `verified` results for credentials that were active during a compromise window, without mutating the credential store.
 
 ---

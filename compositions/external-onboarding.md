@@ -39,7 +39,7 @@ The second emergent property is the identity binding at accept, not at initiate.
 - **[Invitation](../atoms/compliance/invitation.md)** — the lifecycle record of an invitation from `Pending` through one of four terminal states. Provides the serialization gate via its single-resolution invariant: `Invitation.accept` is atomic under concurrent attempts; exactly one succeeds. Surface used: `initiate`, `accept`, `decline`, `revoke`.
 - **[Credential](../atoms/compliance/credential.md)** — the durable binding between a principal and authentication material. Registered after Party Identity enrollment so the `principal_ref` is a valid `party_id`. Surface used: `register`.
 - **[Party Identity](../atoms/compliance/party-identity.md)** — the persistent, verifiable identity record for an external party. Enrolled in `Unverified` state; verification (the transition to `Verified`) is a downstream concern handled by [KYC / Customer Onboarding (C8)](../ROADMAP.md) or equivalent. Surface used: `enroll`.
-- **[Audit Trail](./audit-trail.md)** — the tamper-evident, attribution-stamped substrate recording every onboarding event. Every action that changes state in any of the three data-bearing atoms is recorded here. Surface used: `record_action`.
+- **[Audit Trail](./audit-trail.md)** — the tamper-evident, attribution-stamped substrate recording every onboarding event. Every action that changes state in any of the three data-bearing atoms is recorded here. Surface used: `record_action`. Event Log, Actor Identity, Retention Window, and Tamper Evidence are reached transitively through Audit Trail; the composition does not maintain separate instances of those atoms.
 
 ---
 

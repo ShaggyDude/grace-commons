@@ -228,8 +228,10 @@ Permissions is freestanding and is designed to compose with the authorization an
 - **Actor Registry / Identity Provisioning** *(forthcoming)* — supplies the actor lifecycle that determines when `subject_ref` values are valid. Deprovisioning an actor should cascade revocation of their grants; that cascade belongs to the composing system.
 - **Authentication** *(forthcoming)* — verifies that the caller is who they claim to be before `permitted` is called. The binding of authenticated identity to `subject_ref` is the composing system's responsibility.
 - **[Audit Trail](../../compositions/audit-trail.md)** — the full regulated-audit composition (Event Log + Actor Identity + Retention Window + Tamper Evidence) applied to the grant store itself: every grant and revocation is recorded, attributed, retained, and tamper-evident.
+- **[Multi-Party Approval](../../compositions/multi-party-approval.md)** — calls `Permissions.permitted` for chain-level authorization: the composition checks that the initiating actor holds the required scope before `initiate_chain` is accepted, and applies the scope vocabulary defined in Multi-Party Approval's Composition logic to govern who may initiate, withdraw, or read chains.
+- **[Session-Gated Authorization](../../compositions/session-gated-authorization.md)** — gates every `Permissions.permitted` call on Session validity. The composition calls `Session.validate` before the Permissions check; a stale or revoked session returns `session-invalid` before Permissions is consulted.
 
-Shared Todo composes Permissions with Personal Todo and an Assignment atom — Permissions supplies the authorization surface that determines which actors can read or modify which tasks.
+[Shared Todo](../../compositions/shared-todo.md) composes Permissions with Personal Todo and an Assignment atom — Permissions supplies the authorization surface that determines which actors can read or modify which tasks.
 
 ---
 
