@@ -23,9 +23,9 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ---
 
-## Current state — 2026-05-29
+## Current state — 2026-06-03
 
-Twenty-five atoms and twelve compositions are `grounded`. Preference / Personalization (atom #10) grounded on Final Critique 5 (2026-05-29), unblocking C11. The next move on the atom side is one of the two remaining unstarted planned atoms (#7 Provenance, #9 Workflow / State Machine); on the composition side, one of the ten unblocked-and-unstarted compositions (C2, C3, C6, C7, C8, C9, C11, C15, C17, C18 — see compositions section).
+Twenty-five atoms and thirteen compositions are `grounded`. KYC / Customer Onboarding (C8) grounded on Final Critique 4 (2026-06-03). The next move on the atom side is one of the two remaining unstarted planned atoms (#7 Provenance, #9 Workflow / State Machine); on the composition side, one of the nine unblocked-and-unstarted compositions (C2, C3, C6, C7, C9, C11, C15, C17, C18 — see compositions section).
 
 **Atoms grounded:**
 
@@ -39,7 +39,7 @@ Twenty-five atoms and twelve compositions are `grounded`. Preference / Personali
 
 **Atoms partially resolved:** none — Preference / Personalization grounded on Final Critique 5 (2026-05-29); see atom #10 below.
 
-**Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, External Onboarding, Idempotent Reservation, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Session-Gated Authorization, Shared Todo, Undo History.
+**Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, External Onboarding, Idempotent Reservation, KYC / Customer Onboarding, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Session-Gated Authorization, Shared Todo, Undo History.
 
 The healthcare atoms (Clinical Observation, Medication Order) are outside the core dependency-ordered sequence — they were authored as worked examples of the methodology applied to a domain where the regulatory surface is HIPAA (Health Insurance Portability and Accountability Act) and 21 CFR Part 11 rather than the BSA (Bank Secrecy Act) / AML (Anti-Money Laundering) / GDPR (General Data Protection Regulation) / SOX (Sarbanes-Oxley Act) cluster the compliance atoms anchor. They are grounded and composable; their downstream compositions (e.g., a Clinical Trial Data Capture composition, a Medication Administration Record composition) are not on this roadmap yet because the worked-example value is in the atoms themselves rather than in any specific composition the library is committed to delivering next.
 
@@ -193,7 +193,7 @@ The seven atoms below were on the planned sequence and have shipped. Detailed au
 
 ## Compositions — current state
 
-Compositions are sequenced by readiness. Of the seventeen C-numbered compositions, six are grounded (C1, C4, C5, C13, C14, C16); nine are unblocked and not started (C2, C3, C6, C7, C8, C9, C11, C15, C17 — plus C18); two are blocked on remaining atoms (C10 on Workflow / State Machine, C12 on Provenance). C11 became unblocked when Preference / Personalization grounded on 2026-05-29. Provenance also enriches three other compositions (C6, C7, C8) as an optional composing atom for chain-of-custody guarantees — those compositions remain unblocked without it, but gain emergent invariants when composed with it once it lands.
+Compositions are sequenced by readiness. Of the seventeen C-numbered compositions, seven are grounded (C1, C4, C5, C8, C13, C14, C16); eight are unblocked and not started (C2, C3, C6, C7, C9, C11, C15, C17 — plus C18); two are blocked on remaining atoms (C10 on Workflow / State Machine, C12 on Provenance). C11 became unblocked when Preference / Personalization grounded on 2026-05-29. Provenance also enriches three other compositions (C6, C7, C8) as an optional composing atom for chain-of-custody guarantees — those compositions remain unblocked without it, but gain emergent invariants when composed with it once it lands.
 
 ---
 
@@ -249,7 +249,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 **Standards anchored.** FATF (Financial Action Task Force) Recommendations 10–12, BSA/AML (31 CFR §1020.220), FinCEN beneficial ownership rule (31 CFR §1010.230), EU 5th Anti-Money Laundering Directive.
 
-**Newly unblocked.** This composition was blocked on Party Identity through 2026-05-13; it is unblocked as of 2026-05-14 and is the natural first composition to author after the Party Identity gate cleared.
+**Status: `grounded on Final Critique 4` — 2026-06-03.** Composes Party Identity + Retention Window + Audit Trail (substrate); Idempotent Reservation and Consent were evaluated as constituents and demoted to optional Duplicate Prevention enrichment and C2 composing peer respectively (see the composition's Lineage notes — Pass 2 findings). Three-pass baseline (3×3) plus the AI-conducted Final Critique; foundational findings closed in each baseline round, and the Phase-4 Opus clearance gate returned zero foundational findings.
 
 #### C9. Reservation Lifecycle
 
@@ -474,7 +474,7 @@ The broader axial-split question across all categories (`productivity`, `tempora
 
 ## Q3 2026 – Q2 2027: Year 1 Goal — ~100 Near-Perfect Atoms
 
-**Target:** Reach approximately 100 high-quality, pressure-tested atoms and compositions by the end of the first year, with strong healthcare coverage and initial cross-domain atoms. The current 24 atoms and 12 compositions were produced in roughly three weeks while simultaneously building the methodology, the framework, and the live demo — with a second architect and dedicated tooling, this target is directional but realistic.
+**Target:** Reach approximately 100 high-quality, pressure-tested atoms and compositions by the end of the first year, with strong healthcare coverage and initial cross-domain atoms. The current 25 atoms and 13 compositions were produced in roughly three weeks while simultaneously building the methodology, the framework, and the live demo — with a second architect and dedicated tooling, this target is directional but realistic.
 
 ### Key Initiatives
 

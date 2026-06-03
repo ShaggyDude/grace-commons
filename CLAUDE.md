@@ -90,38 +90,16 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 
 ## Current state of the library
 
-Twenty atoms and eight compositions are `grounded`. [`ROADMAP.md`](./ROADMAP.md) is the canonical state-of-the-library tracker and lists what is in-progress, what is unblocked, and what is blocked on remaining atoms; the snapshot below mirrors it.
+[`ROADMAP.md`](./ROADMAP.md) is the **single source of truth** for the library's current state — the grounded counts, the per-category atom and composition lists, and what is in-progress, unblocked, or blocked on remaining atoms. This file deliberately does **not** restate that snapshot: a mirrored count drifts (this section long read "twenty atoms and eight compositions" while ROADMAP had moved well past both), and the library is built on DRY/SSOT — the same discipline applies to its own docs. Read ROADMAP for the current tree, counts, and sequencing.
 
-**Atoms (`atoms/`):**
+The structural milestones worth carrying into any session — architectural facts rather than counts — are:
 
-- `productivity/` — Personal Todo, Assignment (both `grounded`)
-- `temporal/` — Duplicate Prevention, Event Log (both `grounded`)
-- `resource-lifecycle/` — Provisional Commitment, Soft Delete, Capacity Constraint Enforcement (all `grounded`)
-- `compliance/` — Actor Identity, Consent, Legal Hold, Party Identity, Permissions, Retention Window, Selective Disclosure, Tamper Evidence (all `grounded`)
-- `messaging/` — Subscription, Notification (both `grounded`)
-- `workflow/` — Approval Step (`grounded`; one-atom category — see *Open architectural questions* below for the second-atom-pending status)
-- `healthcare/` — Clinical Observation, Medication Order (both `grounded`; outside the core dependency-ordered sequence, retained as worked examples of the methodology applied to a HIPAA and 21 CFR Part 11 domain rather than the BSA/AML/GDPR/SOX cluster the compliance atoms anchor)
-
-**Compositions (`compositions/`)** — all `grounded`:
-
-- Undo History (Personal Todo + Event Log)
-- Idempotent Reservation (Provisional Commitment + Duplicate Prevention)
-- Audit Trail (Event Log + Actor Identity + Retention Window + Tamper Evidence)
-- Shared Todo (Personal Todo + Permissions + Assignment)
-- Notification Fanout (Subscription + Notification)
-- Defensible Retention (Legal Hold + Retention Window + Audit Trail substrate)
-- Multi-Party Approval (Approval Step + Permissions + Assignment + Audit Trail substrate)
-- Attributed Permissions Admin (Permissions + Actor Identity)
-
-Structural milestones the catalog records, in roughly chronological order:
-
-- **Audit Trail** is the canonical regulated-audit stack — four atoms (Event Log + Actor Identity + Retention Window + Tamper Evidence) wired into a single application with attribution coverage, retention coverage, cascade-on-purge, and forensic completability as emergent invariants. The library's worked example of multi-atom composition under regulated load.
+- **Audit Trail** is the canonical regulated-audit stack — Event Log + Actor Identity + Retention Window + Tamper Evidence wired into a single application with attribution coverage, retention coverage, cascade-on-purge, and forensic completability as emergent invariants. The library's worked example of multi-atom composition under regulated load.
 - **Notification Fanout** is the first composition to produce a variable number of effects from a single trigger; it completes the messaging atom pair and formalizes the fan-out boundary rule from the Execution Contract.
 - **Multi-Party Approval** is the first composition to compose another composition (Audit Trail as substrate), establishing the substrate-composition pattern.
 - **Defensible Retention** anchors the FRCP Rule 37(e) / SOX §802 / HIPAA §164.530(j) / SEC Rule 17a-4 / GDPR Article 17 record-retention axis; retires forthcoming-links in Legal Hold, Retention Window, and Audit Trail.
-- **Attributed Permissions Admin** is the first composition to pair two compliance-infrastructure atoms (Permissions + Actor Identity) into a single administrative surface, and the first to ship with a dynamic Alloy trace model (Alloy 6 LTL) verifying its load-bearing temporal claims alongside the static structural model. Carries eight emergent invariants including attestation exclusivity and orphan-log durability.
-
-Three atoms remain on the roadmap (Provenance, Workflow / State Machine, Preference / Personalization). Six C-numbered compositions are unblocked and unstarted (C2, C3, C6, C7, C8, C9); three are blocked on the remaining atoms (C10 on Workflow / State Machine, C11 on Preference / Personalization, C12 on Provenance). See [`ROADMAP.md`](./ROADMAP.md) for the full sequencing and the dependency-readiness logic.
+- **Attributed Permissions Admin** is the first composition to pair two compliance-infrastructure atoms (Permissions + Actor Identity) into a single administrative surface, and the first to ship with a dynamic Alloy trace model (Alloy 6 LTL) verifying its load-bearing temporal claims alongside the static structural model.
+- **KYC / Customer Onboarding (C8)** is the verification-gates-activity composition — Party Identity + Retention Window + Audit Trail (substrate) — whose gate enforces *verified-through-C8* via the composition's own case index, with a records-alone `trigger_id` lifecycle for adverse monitoring. Grounded on Final Critique 4 (2026-06-03).
 
 ---
 
