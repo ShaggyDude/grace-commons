@@ -29,6 +29,45 @@ Of 38 grounded patterns, 13 remain fully `grounded` and 25 are now `grounded (En
 
 **Formal-layer vote sweep — 2026-06-03.** A formal-layer vote was cast for all 38 grounded patterns per `PRESSURE_TESTING.md §Formal models`. The 13 that remain fully `grounded`: model present (7) — Capability, Attributed Permissions Admin, External Onboarding, Login, Privileged Access Provisioning, Session-Gated Authorization, Multi-Party Approval; voted formal-not-warranted (6) — Actor Identity, Selective Disclosure, Tamper Evidence, Personal Todo, Soft Delete, Notification Fanout. The other 25 voted YES but have no formal model authored yet; they are downgraded to `grounded (English) — formal layer pending` and constitute the model backlog.
 
+**Formal-model backlog (triage — 2026-06-03).** The 25 pending patterns, classified by property class → tool, with a suggested author by subtlety/stakes. Each model also ships a **buggy twin** (a deliberately-wrong variant the checker must reject) as the vacuity guard, and findings fold back into the canonical English per the conflict protocol. This table is the single home for the tool/author assignment (per DRY, it is deliberately *not* duplicated into each spec's vote entry — the vote entries carry the *why*, the load-bearing invariants).
+
+*Alloy / structural — Sonnet may draft, Opus reviews:*
+
+| Pattern | Tool | Author | Load-bearing property |
+|---|---|---|---|
+| Permissions | Alloy | Sonnet → Opus review | Active→Revoked monotonicity; terminal absorption |
+| Notification | Alloy | Sonnet → Opus review | status monotonicity; terminal exclusivity |
+| Subscription | Alloy | Sonnet → Opus review | at-most-one-active per key; no-id-reuse |
+| Clinical Observation | Alloy | Sonnet → Opus review | linear amendment chains (no branching) |
+
+*TLA+ / behavioral — Opus authors (interleaving, ordering, time, cascade):*
+
+| Pattern | Tool | Stakes | Load-bearing property |
+|---|---|---|---|
+| Party Identity | TLA+ | High | Verified requires passed-after-most-recent-suspend (insertion order) |
+| Event Log | TLA+ | High (foundational) | append-only + sequence monotonicity |
+| Audit Trail | TLA+ | High (substrate) | cascade-on-purge atomicity across 4 stores; honest-destruction |
+| Capacity Constraint Enforcement | TLA+ | High | allocated ≤ capacity under serializable concurrency |
+| Credential | TLA+ | High | active uniqueness under concurrent register (check-and-commit race) |
+| Invitation | TLA+ | High | single-resolution atomicity under concurrent accept/decline/revoke |
+| Idempotent Reservation | TLA+ | High | exactly-once-in-window; unsafe eviction ordering |
+| Defensible Retention | TLA+ | High | hold-blocks-purge (named race); multi-hold independence |
+| KYC / Customer Onboarding (C8) | TLA+ | High | adverse-trigger-precedes-suspend; open-trigger ⇔ Suspended |
+| Assignment | TLA+ | Med–High | reassign atomicity (no observable both/neither Active) |
+| Medication Order | TLA+ | Med–High | hold carries prior_state; reinstate restores exactly it |
+| Preference / Personalization | TLA+ | Med–High | supersession atomicity (no observer sees two in-effect) |
+| Approval Step | TLA+ | Med–High | approver/submitter exclusivity; concurrent step independence |
+| Consent | TLA+ | Med | earlier-terminal-event-wins (revoke vs expiry) |
+| Legal Hold | TLA+ | Med | concurrent-hold independence/isolation |
+| Session | TLA+ | Med | conjunctive validity; revoked-precedes-expired |
+| Retention Window | TLA+ | Med (clock) | no-early-purge (time-gated safety) |
+| Provisional Commitment | TLA+ | Med (clock) | confirm-within-window (expiry race) |
+| Duplicate Prevention | TLA+ | Med (clock) | single-recording; window monotonicity over advancing time |
+| Shared Todo | TLA+ | Med | cascade-on-delete (recall before delete); at-most-one-responsible |
+| Undo History | TLA+ | Med | visible state = replay of non-undone events; undo targeting |
+
+Tally: ~4 Alloy/Sonnet, ~21 TLA+/Opus — the aggressive bar made the backlog Opus-heavy. If that load is too high, the lever is the **bar**, not the author split: the clock-based (Retention Window, Provisional Commitment, Duplicate Prevention) and precedence (Session, Consent) entries are the most defensible "English + records-alone is actually sufficient" reconsiderations on a second pass. Pick a single reproducible checker harness (TLC/Alloy Analyzer, or the existing Python-BFS / `run.mjs` approach) before starting, so each model's pass/fail is mechanical.
+
 **Atoms grounded** (at `grounded` or `grounded (English) — formal layer pending`; see sweep note above)**:**
 
 - `atoms/compliance/` (12): Actor Identity, Capability, Consent, Credential, Invitation, Legal Hold, Party Identity, Permissions, Retention Window, Selective Disclosure, Session, Tamper Evidence
