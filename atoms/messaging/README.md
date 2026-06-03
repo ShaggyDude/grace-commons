@@ -50,4 +50,4 @@ The three atoms answer three distinct questions in the delivery pipeline. **Subs
 - **Publish-subscribe** (Birman & Joseph, 1987; AMQP, Apache Kafka) — topic-based subscription as the mechanism for decoupling event producers from consumers.
 - **WebSub** (W3C Recommendation) — web-native publish-subscribe; the subscription resource is the direct Web analog of the Subscription atom.
 - **SMTP / RFC 5321** — email delivery; the three Notification terminal states map to SMTP dispositions.
-- **CAN-SPAM Act, TCPA, GDPR Article 7(3) and 21(2), ePrivacy Directive, CASL** — anchored by Preference; the marketing-communication regimes that require per-principal opt-out, frequency caps, time-of-day restrictions, easy-update preference changes, and direct-marketing objection rights.
+- **CAN-SPAM Act, TCPA (Telephone Consumer Protection Act), GDPR (General Data Protection Regulation) Article 7(3) and 21(2), ePrivacy Directive, CASL (Canadian Anti-Spam Legislation)** — anchored by Preference; the marketing-communication regimes that require per-principal opt-out, frequency caps, time-of-day restrictions, easy-update preference changes, and direct-marketing objection rights.

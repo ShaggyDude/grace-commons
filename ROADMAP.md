@@ -41,7 +41,7 @@ Twenty-five atoms and twelve compositions are `grounded`. Preference / Personali
 
 **Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, External Onboarding, Idempotent Reservation, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Session-Gated Authorization, Shared Todo, Undo History.
 
-The healthcare atoms (Clinical Observation, Medication Order) are outside the core dependency-ordered sequence — they were authored as worked examples of the methodology applied to a domain where the regulatory surface is HIPAA and 21 CFR Part 11 rather than the BSA/AML/GDPR/SOX cluster the compliance atoms anchor. They are grounded and composable; their downstream compositions (e.g., a Clinical Trial Data Capture composition, a Medication Administration Record composition) are not on this roadmap yet because the worked-example value is in the atoms themselves rather than in any specific composition the library is committed to delivering next.
+The healthcare atoms (Clinical Observation, Medication Order) are outside the core dependency-ordered sequence — they were authored as worked examples of the methodology applied to a domain where the regulatory surface is HIPAA (Health Insurance Portability and Accountability Act) and 21 CFR Part 11 rather than the BSA (Bank Secrecy Act) / AML (Anti-Money Laundering) / GDPR (General Data Protection Regulation) / SOX (Sarbanes-Oxley Act) cluster the compliance atoms anchor. They are grounded and composable; their downstream compositions (e.g., a Clinical Trial Data Capture composition, a Medication Administration Record composition) are not on this roadmap yet because the worked-example value is in the atoms themselves rather than in any specific composition the library is committed to delivering next.
 
 ---
 
@@ -63,7 +63,7 @@ Seven atoms remain on the planned-sequence list. They are sequenced by how many 
 
 **Key invariants (anticipated).** Each provenance entry is immutable once recorded. The chain is append-only — no entry is removed or reordered. Every entry names a custodian (an actor reference), a timestamp, and an event type (originated, received, transformed, transferred, disclosed, archived). The chain is complete — no custody gap is permitted between recorded entries; a gap is a finding, not a valid state.
 
-**Standards anchored.** ISO 23081 (records management metadata — provenance as a required metadata element); W3C PROV (data provenance ontology); FDA 21 CFR Part 211 (pharmaceutical chain of custody); SEC Rule 17a-4 (records must be maintained as originally created — provenance of the original form).
+**Standards anchored.** ISO 23081 (records management metadata — provenance as a required metadata element); W3C PROV (data provenance ontology); FDA 21 CFR Part 211 (pharmaceutical chain of custody); SEC (Securities and Exchange Commission) Rule 17a-4 (records must be maintained as originally created — provenance of the original form).
 
 **Unlocks.** Strictly blocks Chain of Custody (C12) — Provenance is C12's core atom, not an enrichment. Additionally enriches Immutable Transaction Ledger (C6), DSAR (C7), and KYC (C8) as an optional composing atom for chain-of-custody guarantees; those three are unblocked without Provenance but gain emergent invariants when composed with it.
 
@@ -81,7 +81,7 @@ Seven atoms remain on the planned-sequence list. They are sequenced by how many 
 
 **Key invariants (anticipated).** Only declared transitions are valid — an undeclared transition is rejected with `invalid-transition`. The current state is always exactly one of the declared states. The full transition history — prior state, target state, triggering action, timestamp, actor — is auditable and append-only. A state declared as terminal at instantiation is absorbing — no further transitions are accepted. Transition guards are declared at instantiation; the atom enforces that a guard must be `satisfied` before a transition fires, but does not evaluate the guard — that is the caller's obligation.
 
-**Standards anchored.** FDA 21 CFR Part 11 (electronic records in regulated workflows — each state transition is a regulated event); ISO 9001 §8.5.1 (production workflow controls); BPMN 2.0 (the canonical notation for stateful workflow — this atom is the primitive behind a BPMN state diagram); HL7 FHIR Task resource (clinical workflow state machine — Task states map directly to this atom's state machine).
+**Standards anchored.** FDA 21 CFR Part 11 (electronic records in regulated workflows — each state transition is a regulated event); ISO 9001 §8.5.1 (production workflow controls); BPMN 2.0 (the canonical notation for stateful workflow — this atom is the primitive behind a BPMN state diagram); HL7 (Health Level Seven) FHIR (Fast Healthcare Interoperability Resources) Task resource (clinical workflow state machine — Task states map directly to this atom's state machine).
 
 **Unlocks.** Stateful Workflow Execution (C10). Resolves the workflow-category one-atom question.
 
@@ -117,7 +117,7 @@ Seven atoms remain on the planned-sequence list. They are sequenced by how many 
 
 **Key invariants (anticipated).** `verify` returns `verified` only for the principal bound at registration — sole-holder verification is absolute. Once a credential transitions to `Revoked`, no future `verify` call returns `verified` — revocation is absorbing. Rotation never mutates the prior credential record; it produces a new record and transitions the prior record to `Rotated`. State machine: Active → Rotated | Revoked | Expired (three terminal states). The full rotation and revocation history is auditable from the record store alone.
 
-**Standards anchored.** NIST SP 800-63B (authenticator assurance levels — IAL/AAL tiers); OpenID Connect Core 1.0 (credential material exchange); RFC 7519 (JWT — credential token encoding); FIDO2/WebAuthn (phishing-resistant authenticator binding); PCI DSS Requirement 8 (credential management controls); ISO/IEC 27001 §A.9.4 (system and application access controls). Explicitly not citing NIST 800-63A — identity proofing belongs upstream to Party Identity.
+**Standards anchored.** NIST SP 800-63B (authenticator assurance levels — IAL/AAL tiers); OpenID Connect Core 1.0 (credential material exchange); RFC 7519 (JWT — credential token encoding); FIDO2/WebAuthn (phishing-resistant authenticator binding); PCI DSS (Payment Card Industry Data Security Standard) Requirement 8 (credential management controls); ISO/IEC 27001 §A.9.4 (system and application access controls). Explicitly not citing NIST 800-63A — identity proofing belongs upstream to Party Identity.
 
 **Unlocks.** Strictly blocks C13 (Login — Credential + Session + Actor Identity). Additionally enriches C16 (External Onboarding — the credential registration step in the onboarding arc).
 
@@ -199,7 +199,7 @@ Compositions are sequenced by readiness. Of the seventeen C-numbered composition
 
 ### Grounded
 
-- **[C1. Regulated Record Retention & Defensible Deletion](./compositions/defensible-retention.md)** — `grounded` 2026-05-13. Legal Hold + Audit Trail + Retention Window. Foundation, Round 2, and AI-conducted Round 3 (Opus) all clean. Anchors SOX, HIPAA, SEC Rule 17a-4, GDPR Article 17, FRCP Rule 37(e).
+- **[C1. Regulated Record Retention & Defensible Deletion](./compositions/defensible-retention.md)** — `grounded` 2026-05-13. Legal Hold + Audit Trail + Retention Window. Foundation, Round 2, and AI-conducted Round 3 (Opus) all clean. Anchors SOX, HIPAA, SEC Rule 17a-4, GDPR Article 17, FRCP (Federal Rules of Civil Procedure) Rule 37(e).
 - **[C4. Multi-Party Approval](./compositions/multi-party-approval.md)** — `grounded` 2026-05-13. Approval Step + Permissions + Assignment + Audit Trail (substrate). Foundation, Round 2 (human), and Round 3 (Opus Super-Torvalds) all clean. Anchors SOX §404, FDA 21 CFR Part 11, ICH E6 GCP, ISO 9001 §8.5.1.
 - **[C5. Notification Fanout](./compositions/notification-fanout.md)** — `grounded` 2026-05-13. Subscription + Notification. Foundation plus Opus adversarial pass (26 findings, all resolved). Completes the messaging atom pair and formalizes the fan-out boundary rule from the Execution Contract.
 
@@ -223,7 +223,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 **What it adds.** Soft deletion made forensically complete — every deletion, restoration, and purge is attribution-stamped and tamper-evident; the full lifecycle of every soft-deleted record is recoverable from the audit trail. Emergent invariant: no soft-deleted record is purged without an auditable record naming who purged it, when, and under what authority.
 
-**Standards anchored.** GDPR Article 17, HIPAA PHI destruction, e-discovery preservation obligation.
+**Standards anchored.** GDPR Article 17, HIPAA PHI (Protected Health Information) destruction, e-discovery preservation obligation.
 
 #### C6. Immutable Transaction Ledger with Selective Disclosure
 
@@ -245,9 +245,9 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 **Prerequisites:** Party Identity + Consent + Audit Trail + Event Log + Idempotent Reservation + Retention Window + Actor Identity — all grounded (Party Identity completed 2026-05-14).
 
-**What it adds.** Customer onboarding made regulatorily complete — every identity verification step is attribution-stamped and tamper-evident; the onboarding record is immutable from the moment the customer is enrolled; ongoing screening triggers (sanctions list match, PEP status change, adverse media) are recorded as events against the Party Identity record. Emergent invariant: no customer proceeds to active status without a verified Party Identity record; no Party Identity verification is performed without a corresponding Audit Trail entry.
+**What it adds.** Customer onboarding made regulatorily complete — every identity verification step is attribution-stamped and tamper-evident; the onboarding record is immutable from the moment the customer is enrolled; ongoing screening triggers (sanctions list match, PEP (Politically Exposed Person) status change, adverse media) are recorded as events against the Party Identity record. Emergent invariant: no customer proceeds to active status without a verified Party Identity record; no Party Identity verification is performed without a corresponding Audit Trail entry.
 
-**Standards anchored.** FATF Recommendations 10–12, BSA/AML (31 CFR §1020.220), FinCEN beneficial ownership rule (31 CFR §1010.230), EU 5th Anti-Money Laundering Directive.
+**Standards anchored.** FATF (Financial Action Task Force) Recommendations 10–12, BSA/AML (31 CFR §1020.220), FinCEN beneficial ownership rule (31 CFR §1010.230), EU 5th Anti-Money Laundering Directive.
 
 **Newly unblocked.** This composition was blocked on Party Identity through 2026-05-13; it is unblocked as of 2026-05-14 and is the natural first composition to author after the Party Identity gate cleared.
 
@@ -347,7 +347,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 **What it adds.** The full arc of admitting an external entity: invitation issued by an authorized actor, accepted (binding the invitee's external identity reference at accept time, not initiate time), Party Identity enrolled in Unverified state, credential registered, every step attested in the Audit Trail. Load-bearing emergent invariant: invitation-gates-enrollment — no Party Identity is created unless `Invitation.accept` precedes it in the same `onboard` call, and the `onboarding.completed` Audit Trail event names invitation token, accepting identity reference, party record, and credential in one tamper-evident entry. The actor credential pre-check fires before `Invitation.accept` so unauthenticated callers cannot probe invitation validity. Five emergent invariants. Three rounds of findings resolved in-pattern (audit-first step ordering, invitation-state probing prevention, `duplicate-active-credential` vs `storage-failure` distinction, Invariant 4 qualifier for background-scheduler expiry). Grounded on Final Critique 4.
 
-**Standards anchored.** GDPR Articles 6–7; HIPAA §164.312(a)(1) + §164.312(d); SOC 2 CC6.2; NIST SP 800-63A; SCIM 2.0 RFC 7644; FATF Recommendations 10–12 (enrollment record as the CDD starting point; verification is C8's concern).
+**Standards anchored.** GDPR Articles 6–7; HIPAA §164.312(a)(1) + §164.312(d); SOC 2 CC6.2; NIST SP 800-63A; SCIM 2.0 RFC 7644; FATF Recommendations 10–12 (enrollment record as the CDD (Customer Due Diligence) starting point; verification is C8's concern).
 
 ---
 
@@ -452,7 +452,7 @@ The tool split, by question type rather than by artifact type: **Alloy handles s
 
 The ordering is fixed by the discovery: prose first, formal second. The English spec is canonical; the formal model translates from it, not the other way around. A formal model written before the prose spec is grounded is built on shifting ground — the three-pass review will change the spec and break the model.
 
-What needs to land in `PRESSURE_TESTING.md`: a named Step 4 — formal verification — with the Alloy/TLA+ question-type split, the prose-first ordering rationale, and guidance on when the step is required (regulated atoms and compositions with concurrency-critical invariants) vs. optional (structural-only compositions with no temporal emergent invariants). The Attributed Permissions Admin composition is the canonical worked example: it shipped with a static Alloy structural model and a dynamic Alloy 6 LTL model verifying its load-bearing temporal claims.
+What needs to land in `PRESSURE_TESTING.md`: a named Step 4 — formal verification — with the Alloy/TLA+ question-type split, the prose-first ordering rationale, and guidance on when the step is required (regulated atoms and compositions with concurrency-critical invariants) vs. optional (structural-only compositions with no temporal emergent invariants). The Attributed Permissions Admin composition is the canonical worked example: it shipped with a static Alloy structural model and a dynamic Alloy 6 LTL (Linear Temporal Logic) model verifying its load-bearing temporal claims.
 
 **7. Logic Confinement Principle — full application to projector and verification harness.** The Logic Confinement Principle is now a first-class architectural commitment in `EXECUTION_CONTRACT.md`. The Beacon reference implementation satisfies rules 1 (core is pure), 2 (single seam), 3 (explicit inputs for clock/id), and 6 (async at the edge) fully. Two rules remain partially satisfied: rule 4 (explicit construction — `createEvent` before `appendEvent` — rather than hidden work inside transactional functions) and rule 5 (compiler-emitted local invariant assertions, not distributed runtime assumptions). Closing these requires: (a) separating event construction from event insertion in the composition layer, making the constructed event an explicit value before the transaction boundary; (b) designing the projector to emit local invariant assertions compiled from each atom's named invariant set. First natural targets: the projector architecture and the verification harness derivation pipeline. Scoped to the NLnet grant period as a named deliverable; surfaced 2026-05-29.
 

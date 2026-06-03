@@ -20,11 +20,11 @@ toc: true
 
 Patterns governing state transitions, decision gates, and structured handoffs between actors. Workflow patterns model the controlled movement of work through defined stages, with explicit guards, outcomes, and auditable histories.
 
-Workflow logic is structurally similar across regulated industries — SOX approval chains, FDA electronic-signature requirements, clinical trial investigator approvals, and ISO 9001 production controls all share the same underlying primitives — while the semantics of what moves through the workflow vary by domain.
+Workflow logic is structurally similar across regulated industries — SOX (Sarbanes-Oxley Act) approval chains, FDA electronic-signature requirements, clinical trial investigator approvals, and ISO 9001 production controls all share the same underlying primitives — while the semantics of what moves through the workflow vary by domain.
 
 ## Patterns in this category
 
-- [Approval Step](./approval-step.md) — a single binding of a required approval to a named approver, for a specified subject and scope, with a Pending → {Approved, Rejected, Withdrawn} lifecycle. The approval-gate primitive that Multi-Party Approval and Stateful Workflow Execution compose from. Anchors SOX §404, FDA 21 CFR Part 11, ICH E6 GCP, and ISO 9001 §8.5.1. `grounded` 26-05-13.
+- [Approval Step](./approval-step.md) — a single binding of a required approval to a named approver, for a specified subject and scope, with a Pending → {Approved, Rejected, Withdrawn} lifecycle. The approval-gate primitive that Multi-Party Approval and Stateful Workflow Execution compose from. Anchors SOX §404, FDA 21 CFR (Code of Federal Regulations) Part 11, ICH E6 GCP, and ISO 9001 §8.5.1. `grounded` 26-05-13.
 - Workflow / State Machine — general-purpose state machine engine with deployment-declared states and transitions — *(forthcoming, atom #9)*
 
 *This category is under active development. Pattern proposals welcome.*

@@ -17,7 +17,7 @@ toc: true
 </details>
 
 
-Freestanding primitives for clinical and healthcare administrative systems. Each atom carries the regulated-pattern conventions required by HIPAA, HL7 FHIR, and 21 CFR Part 11.
+Freestanding primitives for clinical and healthcare administrative systems. Each atom carries the regulated-pattern conventions required by HIPAA (Health Insurance Portability and Accountability Act), HL7 (Health Level Seven) FHIR (Fast Healthcare Interoperability Resources), and 21 CFR (Code of Federal Regulations) Part 11.
 
 | Atom | Status | What it models |
 |------|--------|----------------|
