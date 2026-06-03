@@ -307,7 +307,7 @@ Approval Step is the approval-gate primitive that Multi-Party Approval and State
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-20` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (AI-conducted, claude-sonnet-4-6), and Round 3 (AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. First entry in `atoms/workflow/`.
+`grounded (English) — formal layer pending` (was `grounded`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) `— 2026-05-20` — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (AI-conducted, claude-sonnet-4-6), and Round 3 (AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. First entry in `atoms/workflow/`.
 
 ---
 
@@ -407,3 +407,5 @@ All nine GRID nodes resolved.
 **Scheduled rescan: 2026-05-20.** One refining finding; closed in-pattern.
 
 - *Terminal transition crash atomicity unnamed (Pass 3).* `approve`, `reject`, and `withdraw` each write multiple fields simultaneously (state, attribution field, timestamp, and for reject/withdraw a reason field). A crash mid-transition violates Invariant 6. Clinical Observation and Notification both carry explicit atomicity edge cases; Approval Step had a Concurrency edge case (serialization) but no crash-semantics edge case. Resolved: Edge case *Atomicity and crash semantics* added, naming the multi-field write requirement and the implementation obligation for transactional atomicity or crash-recovery logic. `storage-failure` is identified as the signal of an aborted transition that leaves the step in Pending with no partial attribution written.
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 4 (approver exclusivity), Invariant 5 (submitter exclusivity), and Invariant 9 (concurrent step independence) are authorization-under-concurrency / interleaving-safety claims. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

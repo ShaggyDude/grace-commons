@@ -269,7 +269,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded — 2026-05-20` — all required structural elements resolved; identity model explicit; grant and revoke action signatures with fully-named rejection taxonomies including `storage-failure`; `permitted` query with two first-class outcomes; ten invariants including grant store durability (Invariant 10); five cross-domain examples; regulated adversarial scenarios with disputed access query corrected to timestamp-based temporal form; fifteen edge cases including revoke persistence failure (security-critical, added in refinement round 1). Fourth entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
+`grounded (English) — formal layer pending` (was `grounded`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) — all required structural elements resolved; identity model explicit; grant and revoke action signatures with fully-named rejection taxonomies including `storage-failure`; `permitted` query with two first-class outcomes; ten invariants including grant store durability (Invariant 10); five cross-domain examples; regulated adversarial scenarios with disputed access query corrected to timestamp-based temporal form; fifteen edge cases including revoke persistence failure (security-critical, added in refinement round 1). Fourth entry in `atoms/compliance/`. Survived one foundation pass and one refinement round.
 
 ---
 
@@ -312,3 +312,5 @@ This atom is the first entry in the library whose primary concern is *prospectiv
 Pass 2 was clean: no new over-absorptions. The eight concerns from the foundation pass remain correctly externalized.
 
 **Scheduled rescan: 2026-05-20.** Pass 1 clean. Pass 2 clean. Pass 3: one refining finding closed in-pattern. Decision points used "well-formed and non-empty" for `subject_ref` and `action_scope` at `grant` — inconsistent with the canonical library wording established in later atoms. Resolved: reworded to "must each contain at least one non-whitespace character," matching the convention used in Selective Disclosure, Legal Hold, and other atoms authored after this one. All nine GRID nodes confirmed resolved; no over-absorptions identified; no foundational findings. **Scheduled rescan: 2026-05-20 — clean.**
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 2 (monotonic Active→Revoked, no reversal) and Invariant 3 (revocation terminal) form a state-machine absorption/reachability claim. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

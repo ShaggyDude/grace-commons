@@ -304,7 +304,7 @@ Consent is the data subject's authorization primitive — the complement to Perm
 
 ## Status
 
-`grounded — 2026-05-20` — foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Soft Delete) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
+`grounded (English) — formal layer pending` (was `grounded`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) — foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Soft Delete) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
 
 ---
 
@@ -383,3 +383,5 @@ All nine GRID nodes resolved.
 - *Intent claim "recoverable from the records alone" overstated without naming Tamper Evidence.* The Intent paragraph asserted that the full consent history is "recoverable from the records alone" without qualifying that cryptographic protection against post-hoc modification is provided by Tamper Evidence composition. The Edge case *"Tamper Evidence"* conceded the same point. Fixed: Intent paragraph rewritten to claim that the history is carried in the records and immutable by specification, and to name Tamper Evidence as the composition that adds cryptographic protection for court-admissible and regulator-admissible evidence.
 
 **Scheduled rescan: 2026-05-20 — clean.**
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 6 (earlier terminal event wins — revoke-before-expiry yields `revoked`) and Invariant 5 (revoked_at ≥ granted_at) are ordering-across-terminal-events claims. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

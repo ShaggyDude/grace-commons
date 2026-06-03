@@ -489,3 +489,5 @@ All five foundation extraction candidates re-evaluated independently; all conclu
 **Lineage correction (Round 3).** Round 2 Pass 3 finding 2 as originally written described a fix to "Invariant 2" about `disclosure_id` uniqueness. The current Invariant 2 is about authority completeness; the uniqueness statement lives in the Identity model section. The original finding referred to an interim draft state in which the invariants were numbered differently. Round 3 verified what the fix should look like in the current numbering and rewrote the Lineage entry to accurately name the Identity model as the section that carries the two-scope (action-level assignment, store-level rejection of reuse) statement, and confirmed by edit that the Identity model section actually carries that statement.
 
 **Scheduled rescan: 2026-05-20 — clean.**
+
+**Formal-layer vote — 2026-06-03: NO.** Single-state append-only log; no state machine, concurrency, or ordering-across-sequences claims — all invariants are records-alone structural checks. Grounds English-only (minimum-formalism). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

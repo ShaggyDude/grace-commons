@@ -245,7 +245,7 @@ Clinical Observation composes naturally with the existing library:
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-20` — foundation passes complete (Pass 1, Pass 2, Pass 3), two human refinement rounds complete (Refinement rounds 1 and 2), and one AI-conducted adversarial round complete (Refinement round 3, Torvalds X2 posture, Claude Opus 4.7). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved, all concerns conceptually independent, all known adversarial gaps closed or named as explicit out-of-scope.
+`grounded (English) — formal layer pending` (was `grounded`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) `— 2026-05-20` — foundation passes complete (Pass 1, Pass 2, Pass 3), two human refinement rounds complete (Refinement rounds 1 and 2), and one AI-conducted adversarial round complete (Refinement round 3, Torvalds X2 posture, Claude Opus 4.7). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved, all concerns conceptually independent, all known adversarial gaps closed or named as explicit out-of-scope.
 
 ---
 
@@ -308,3 +308,5 @@ Pass 2 was clean. The amendment-chain extraction question was steelmanned one mo
 The AI-conducted round closed the gaps a sympathetic human reviewer would have rationalized past — the unconditional Invariant 7 framing, the exclusive-"or" Outputs description, the bad Invariant 2 citation, the unspecified rejection priority, the silent unknown-`observation_type` behavior. Each finding was a real semantic gap or a real precision failure; none was paraphrased-back commentary. The pattern is stronger because the AI pass had no investment in the prior choices.
 
 **Scheduled rescan: 2026-05-20 — clean.**
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 3 (linear amendment chains, no branching), Invariant 2 (amend creates successor without modifying original), and amend two-write atomicity carry ordering/sequencing load. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

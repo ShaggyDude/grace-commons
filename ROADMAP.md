@@ -25,9 +25,11 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ## Current state — 2026-06-03
 
-Twenty-five atoms and thirteen compositions are `grounded`. KYC / Customer Onboarding (C8) grounded on Final Critique 4 (2026-06-03). The next move on the atom side is one of the two remaining unstarted planned atoms (#7 Provenance, #9 Workflow / State Machine); on the composition side, one of the nine unblocked-and-unstarted compositions (C2, C3, C6, C7, C9, C11, C15, C17, C18 — see compositions section).
+Of 38 grounded patterns, 13 remain fully `grounded` and 25 are now `grounded (English) — formal layer pending` following the 2026-06-03 formal-layer vote sweep (aggressive bar). KYC / Customer Onboarding (C8) grounded on Final Critique 4 (2026-06-03). The next move on the atom side is one of the two remaining unstarted planned atoms (#7 Provenance, #9 Workflow / State Machine); on the composition side, one of the nine unblocked-and-unstarted compositions (C2, C3, C6, C7, C9, C11, C15, C17, C18 — see compositions section).
 
-**Atoms grounded:**
+**Formal-layer vote sweep — 2026-06-03.** A formal-layer vote was cast for all 38 grounded patterns per `PRESSURE_TESTING.md §Formal models`. The 13 that remain fully `grounded`: model present (7) — Capability, Attributed Permissions Admin, External Onboarding, Login, Privileged Access Provisioning, Session-Gated Authorization, Multi-Party Approval; voted formal-not-warranted (6) — Actor Identity, Selective Disclosure, Tamper Evidence, Personal Todo, Soft Delete, Notification Fanout. The other 25 voted YES but have no formal model authored yet; they are downgraded to `grounded (English) — formal layer pending` and constitute the model backlog.
+
+**Atoms grounded** (at `grounded` or `grounded (English) — formal layer pending`; see sweep note above)**:**
 
 - `atoms/compliance/` (12): Actor Identity, Capability, Consent, Credential, Invitation, Legal Hold, Party Identity, Permissions, Retention Window, Selective Disclosure, Session, Tamper Evidence
 - `atoms/healthcare/` (2): Clinical Observation, Medication Order
@@ -39,7 +41,7 @@ Twenty-five atoms and thirteen compositions are `grounded`. KYC / Customer Onboa
 
 **Atoms partially resolved:** none — Preference / Personalization grounded on Final Critique 5 (2026-05-29); see atom #10 below.
 
-**Compositions grounded:** Attributed Permissions Admin, Audit Trail, Defensible Retention, External Onboarding, Idempotent Reservation, KYC / Customer Onboarding, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Session-Gated Authorization, Shared Todo, Undo History.
+**Compositions grounded** (at `grounded` or `grounded (English) — formal layer pending`; see sweep note above)**:** Attributed Permissions Admin, Audit Trail, Defensible Retention, External Onboarding, Idempotent Reservation, KYC / Customer Onboarding, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Session-Gated Authorization, Shared Todo, Undo History.
 
 The healthcare atoms (Clinical Observation, Medication Order) are outside the core dependency-ordered sequence — they were authored as worked examples of the methodology applied to a domain where the regulatory surface is HIPAA (Health Insurance Portability and Accountability Act) and 21 CFR Part 11 rather than the BSA (Bank Secrecy Act) / AML (Anti-Money Laundering) / GDPR (General Data Protection Regulation) / SOX (Sarbanes-Oxley Act) cluster the compliance atoms anchor. They are grounded and composable; their downstream compositions (e.g., a Clinical Trial Data Capture composition, a Medication Administration Record composition) are not on this roadmap yet because the worked-example value is in the atoms themselves rather than in any specific composition the library is committed to delivering next.
 
@@ -355,41 +357,41 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 | # | Pattern | Type | Status | Unblocks / Notes |
 |---|---------|------|--------|------------------|
-| — | Personal Todo, Assignment | Atoms | `grounded` 2026-05-13 | `atoms/productivity/` |
-| — | Duplicate Prevention, Event Log | Atoms | `grounded` 2026-05-13 | `atoms/temporal/` |
-| — | Provisional Commitment | Atom | `grounded` 2026-05-13 | `atoms/resource-lifecycle/` |
-| — | Actor Identity, Retention Window, Tamper Evidence, Permissions | Atoms | `grounded` 2026-05-13 | `atoms/compliance/` |
-| — | Subscription, Notification | Atoms | `grounded` 2026-05-13 | `atoms/messaging/` |
-| — | Clinical Observation, Medication Order | Atoms | `grounded` 2026-05-13 | `atoms/healthcare/` (outside core sequence) |
-| 1 | Legal Hold | Atom | `grounded` 2026-05-13 | C1, C7 |
-| 2 | Consent | Atom | `grounded` 2026-05-13 | C2, C7, C8 |
+| — | Personal Todo, Assignment | Atoms | Personal Todo: `grounded` 2026-05-13; Assignment: `grounded (Eng) — formal pending` 2026-05-13 | `atoms/productivity/` |
+| — | Duplicate Prevention, Event Log | Atoms | `grounded (Eng) — formal pending` 2026-05-13 | `atoms/temporal/` |
+| — | Provisional Commitment | Atom | `grounded (Eng) — formal pending` 2026-05-13 | `atoms/resource-lifecycle/` |
+| — | Actor Identity, Retention Window, Tamper Evidence, Permissions | Atoms | Actor Identity, Tamper Evidence: `grounded` 2026-05-13; Retention Window, Permissions: `grounded (Eng) — formal pending` 2026-05-13 | `atoms/compliance/` |
+| — | Subscription, Notification | Atoms | `grounded (Eng) — formal pending` 2026-05-13 | `atoms/messaging/` |
+| — | Clinical Observation, Medication Order | Atoms | `grounded (Eng) — formal pending` 2026-05-13 | `atoms/healthcare/` (outside core sequence) |
+| 1 | Legal Hold | Atom | `grounded (Eng) — formal pending` 2026-05-13 | C1, C7 |
+| 2 | Consent | Atom | `grounded (Eng) — formal pending` 2026-05-13 | C2, C7, C8 |
 | 3 | Soft Delete | Atom | `grounded` 2026-05-13 | C3 |
-| 4 | Approval Step | Atom | `grounded` 2026-05-13 | C4 |
+| 4 | Approval Step | Atom | `grounded (Eng) — formal pending` 2026-05-13 | C4 |
 | 5 | Selective Disclosure | Atom | `grounded` 2026-05-13 | C6, C7 |
-| 6 | Party Identity | Atom | `grounded` 2026-05-14 | C8 |
+| 6 | Party Identity | Atom | `grounded (Eng) — formal pending` 2026-05-14 | C8 |
 | 7 | Provenance | Atom | Not started | Enriches C6, C7, C8 (optional) |
-| 8 | Capacity Constraint Enforcement | Atom | `grounded` 2026-05-15 | C9 |
+| 8 | Capacity Constraint Enforcement | Atom | `grounded (Eng) — formal pending` 2026-05-15 | C9 |
 | 9 | Workflow / State Machine | Atom | Not started | C10; resolves workflow-category question |
-| 10 | Preference / Personalization | Atom | `grounded` 2026-05-29 | C11; grounded on Final Critique 5; ten hard invariants + Temporal property 11 |
-| 11 | Credential | Atom | `grounded` 2026-05-19 | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
-| 12 | Session | Atom | `grounded` 2026-05-19 | C13 (Login), C14 (Session-Gated Authorization) |
+| 10 | Preference / Personalization | Atom | `grounded (Eng) — formal pending` 2026-05-29 | C11; grounded on Final Critique 5; ten hard invariants + Temporal property 11 |
+| 11 | Credential | Atom | `grounded (Eng) — formal pending` 2026-05-19 | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
+| 12 | Session | Atom | `grounded (Eng) — formal pending` 2026-05-19 | C13 (Login), C14 (Session-Gated Authorization) |
 | 13 | Capability | Atom | `grounded` 2026-05-19 | C15 (Capability-Backed Sharing) |
-| 14 | Invitation | Atom | `grounded` 2026-05-19 | C16 (External Onboarding) |
-| — | Undo History | Composition | `grounded` 2026-05-13 | Personal Todo + Event Log |
-| — | Idempotent Reservation | Composition | `grounded` 2026-05-13 | Provisional Commitment + Duplicate Prevention |
-| — | Audit Trail | Composition | `grounded` 2026-05-13 | Event Log + Actor Identity + Retention Window + Tamper Evidence |
-| — | Shared Todo | Composition | `grounded` 2026-05-13 | Personal Todo + Permissions + Assignment |
+| 14 | Invitation | Atom | `grounded (Eng) — formal pending` 2026-05-19 | C16 (External Onboarding) |
+| — | Undo History | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Personal Todo + Event Log |
+| — | Idempotent Reservation | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Provisional Commitment + Duplicate Prevention |
+| — | Audit Trail | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Event Log + Actor Identity + Retention Window + Tamper Evidence |
+| — | Shared Todo | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Personal Todo + Permissions + Assignment |
 | — | Notification Fanout | Composition | `grounded` 2026-05-13 | Subscription + Notification |
 | — | Attributed Permissions Admin | Composition | `grounded` 2026-05-18 | Permissions + Actor Identity; first two-compliance-atom composition; ships with dynamic Alloy trace model |
 | — | Privileged Access Provisioning | Composition | `grounded` 2026-05-20 | Multi-Party Approval + Credential + Session + Capability + Audit Trail; approval-gates-provisioning invariant; session-gated exercise; TLA+ behavioral model ships alongside |
 | — | Login | Composition | `grounded` 2026-05-20 | Credential + Session + Audit Trail; cascade invariant: Credential revocation invalidates all derived Sessions; `credential_to_sessions` map is the cascade mechanism |
-| C1 | Defensible Retention | Composition | `grounded` 2026-05-13 | Legal Hold + Audit Trail + Retention Window |
+| C1 | Defensible Retention | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Legal Hold + Audit Trail + Retention Window |
 | C2 | Consent & Preference Management | Composition | Unblocked; not started | Consent (grounded) |
 | C3 | Forensic Recovery | Composition | Unblocked; not started | Soft Delete (grounded) |
 | C4 | Multi-Party Approval | Composition | `grounded` 2026-05-13 | Approval Step + Permissions + Assignment + Audit Trail |
 | C6 | Immutable Transaction Ledger | Composition | Unblocked; not started | Selective Disclosure (grounded) |
 | C7 | Data Subject Rights Fulfillment | Composition | Unblocked; not started | Legal Hold + Consent + Selective Disclosure (all grounded) |
-| C8 | KYC / Customer Onboarding | Composition | `grounded on Final Critique 4` 2026-06-03 | Party Identity + Consent (both grounded) |
+| C8 | KYC / Customer Onboarding | Composition | `grounded (Eng) — formal pending` 2026-06-03 | Party Identity + Consent (both grounded) |
 | C9 | Reservation Lifecycle | Composition | Unblocked; not started — **newly unblocked 2026-05-15** | Capacity Constraint Enforcement (grounded) + Provisional Commitment + Duplicate Prevention |
 | C10 | Stateful Workflow Execution | Composition | Blocked on atom #9 | Workflow / State Machine + Approval Step |
 | C12 | Chain of Custody | Composition | Blocked on atom #7 | Provenance + Actor Identity + Tamper Evidence + Retention Window + Audit Trail — cross-domain reference case (pharma + legal evidence = same atoms) |

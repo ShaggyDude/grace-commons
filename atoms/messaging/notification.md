@@ -271,7 +271,7 @@ Notification is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-20` — structure and invariants specified; `status_of` query added after Pass 2 identified the missing read surface; Invariant 8 corrected to conditional-per-state form after Pass 1 identified the set-notation error; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. Second entry in `atoms/messaging/`.
+`grounded (English) — formal layer pending` (was `grounded`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) `— 2026-05-20` — structure and invariants specified; `status_of` query added after Pass 2 identified the missing read surface; Invariant 8 corrected to conditional-per-state form after Pass 1 identified the set-notation error; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. Second entry in `atoms/messaging/`.
 
 ---
 
@@ -325,3 +325,5 @@ This atom is the second entry in the `messaging/` category, drafted alongside Su
 **Scheduled rescan: 2026-05-20.** One refining finding; closed in-pattern.
 
 - *Rejection-path example absent (Pass 3).* Subscription's Examples section includes a dedicated "Rejection path" subsection showing `rejected(already-subscribed)`; Notification's Examples section had no analogous rejection-path example for `create`. The `create` rejection reasons (`invalid-request`) are clearly stated in Decision points, but peer-pattern parity and fresh-reader completeness favor a worked example. Resolved: rejection-path example added showing `create(recipient_ref: "", payload: {...}) → rejected(invalid-request)` with the consequence (no `notification_id` issued, no record created).
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 2 (status monotonicity Pending→exactly one terminal, no return), Invariant 3 (terminal exclusivity), and atomic status+timestamp form a state-machine absorption claim. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

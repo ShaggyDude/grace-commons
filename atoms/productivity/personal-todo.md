@@ -284,3 +284,5 @@ The two passes together exercise the architecture as designed: GRID's (the nine-
 - *Cross-file consistency gap triggered by this refinement.* Undo History and Shared Todo both used `invalid-request` for Personal Todo's description-validation rejection during their earlier refinement rounds — the correct reason, confirmed here, is `invalid-description`. Undo History's `edit` signature also omitted `not-editable`. Resolved: both files corrected retroactively in the same pass.
 
 **Scheduled rescan: 2026-05-20 — clean.**
+
+**Formal-layer vote — 2026-06-03: NO.** Single-state structural invariants (membership exclusivity, id stability, active-set uniqueness) plus timestamp inequalities, fully exercised by records-alone checks; the methodology's own minimum-formalism reference. Grounds English-only (minimum-formalism). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

@@ -241,7 +241,7 @@ Subscription is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) `— 2026-05-20` — structure and invariants specified; four examples including rejection path and regulated adversarial scenarios; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. First entry in `atoms/messaging/`.
+`grounded (English) — formal layer pending` (was `grounded`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) `— 2026-05-20` — structure and invariants specified; four examples including rejection path and regulated adversarial scenarios; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. First entry in `atoms/messaging/`.
 
 ---
 
@@ -287,3 +287,5 @@ This atom is the first entry in the `messaging/` category, drafted alongside Not
 - **"Non-empty for opaque references" check semantics.** Per-pattern fix landed (null, undefined, empty string); a canonical statement belongs in a shared document.
 
 **Scheduled rescan: 2026-05-20 — clean.**
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 6 (at-most-one-active per (subscriber, scope)) is exclusivity across sequences; Invariant 2 monotonicity; Invariant 4 no-id-reuse. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

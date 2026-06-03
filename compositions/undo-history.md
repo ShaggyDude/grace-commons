@@ -182,7 +182,7 @@ The two atoms it composes carry their own standards inheritance — Personal Tod
 
 ## Status
 
-`grounded — 2026-05-20` — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
+`grounded (English) — formal layer pending` (was `grounded — 2026-05-20`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
 
 ---
 
@@ -213,3 +213,5 @@ The application is `grounded — 2026-05-13` after one round.
 
 - *No "load-bearing wiring decision" subsection (refining).* The canonical composition shape (SPEC_FORMAT.md) requires a named subsection defending the key architectural decision in-line with the four-part rubric. The decision — identity preservation via replay rather than per-action snapshot — was implicit across the Replay semantics section and Invariant 6, but not stated and defended as a standalone subsection. Resolved: "The load-bearing wiring decision" subsection added to Composition logic, defending event-sourced replay as the structural mechanism that makes identity preservation an emergent property rather than a special case.
 - *No rejection-path example for `nothing-to-undo` (refining).* The Examples section covered the happy path and delete/undo identity preservation; `undo()` returning `rejected(nothing-to-undo)` was not exercised. The storage-failure path was similarly unexercised with concrete values. Resolved: "Rejection paths" example added walking both `nothing-to-undo` (all forward events already undone) and the `storage-failure` propagation pattern. Round closes clean.
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** State-equivalence (Inv 2 — visible state is the replay of non-undone Event Log events) and undo-targeting (Inv 3) are temporal-ordering claims sensitive to concurrent undo calls. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

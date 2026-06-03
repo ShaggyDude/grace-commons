@@ -222,7 +222,7 @@ It inherits from:
 
 ## Status
 
-`grounded — 2026-05-20` — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
+`grounded (English) — formal layer pending` (was `grounded — 2026-05-20`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
 
 ---
 
@@ -251,3 +251,5 @@ The pattern is `grounded — 2026-05-13` after one round.
 - *Sequence-number gap on storage failure not addressed.* Implementations that allocate a sequence number before the write attempt may consume that number on `storage-failure`, creating a gap in the sequence. Invariant 4 is not violated (it holds over successfully appended events only), but consumers expecting a dense sequence may misinterpret the gap. Resolved: new Edge case — *Sequence-number gaps on storage failure* — added with guidance for gap-free implementations.
 
 **Scheduled rescan: 2026-05-20.** Pass 1 clean. Pass 2 clean. Pass 3 — one refining finding: examples covered only happy-path append sequences across four domains; no example exercised the rejection paths (`invalid-payload`, `invalid-query`, `storage-failure`). All three rejection reasons were named in Decision points and Feedback but not demonstrated with concrete values. Resolved: fifth example — *Rejection paths* — added, walking all three rejection reasons in a single thread including the sequence-number gap consequence of a `storage-failure`. Round closes clean.
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 4 (sequence-number monotonicity — earlier append ⇒ smaller sequence_number) and Invariant 1 (append-only, no removal) define the replay/ordering property a formal model verifies. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

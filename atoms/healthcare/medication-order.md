@@ -354,7 +354,7 @@ Medication Order composes naturally with the existing library:
 
 ## Status
 
-`grounded` (passed all required review passes and is stable enough to generate from) — foundation round, two human refinement rounds, and AI adversarial round (Torvalds X2) complete. Last full rescan: 2026-05-20.
+`grounded (English) — formal layer pending` (was `grounded`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) — foundation round, two human refinement rounds, and AI adversarial round (Torvalds X2) complete. Last full rescan: 2026-05-20.
 
 ---
 
@@ -432,3 +432,5 @@ Pass 2 was clean. All five fixes are in-pattern resolutions. No extractions requ
 **Scheduled rescan: 2026-05-20.** One refining finding; closed in-pattern.
 
 - *`read` action description and Decision point inconsistent on time-range filter support (Pass 1 / Pass 3).* The `read` action description listed supported filter axes as "`order_id`, `patient_ref`, `medication_ref`, `prescriber_ref`, state, or any combination" with no mention of time ranges. The Decision point, however, named "a time range with end before start is `invalid-query`" — implying time-range filters are a supported axis. An implementor reading only the action description would not add time-range support; one reading only the Decision point would. The cross-section disagreement was a reference-graph violation (Pass 1) and an implementable ambiguity (Pass 3). Resolution: `read` action description updated to add time ranges on `ordered_at` as a supported filter axis, using the same `{after, before}` sub-key format Approval Step established. `read` Decision point updated to specify that an `ordered_at` time range with `after` > `before` is `invalid-query`. This also aligns with the DEA audit use case (querying orders by date range), which Approval Step's time-range-filtered `read` supports for its scope query but which Medication Order's `read` previously could not.
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 5 (hold carries prior_state; reinstate returns to exactly that state), Invariants 3/4 (pre-dispensing-only, linear amendment chains), Invariant 9 (On Hold accepts only reinstate) form a multi-state reachability/ordering surface under hold/reinstate interleavings. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

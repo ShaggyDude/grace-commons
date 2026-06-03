@@ -359,7 +359,7 @@ Party Identity is freestanding and is the external-party identity contract that 
 
 ## Status
 
-`grounded — 2026-05-20` — foundation round complete (Pass 1 GRID — the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof; Pass 2 EOS, Pass 3 Linus all run; findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2) ran against the foundation draft, surfaced six findings, and returned clean after all six were closed in-pattern. The gate also served as the closing AI adversarial round (Phase 3) given the gate's fresh-reader, full-three-pass coverage.
+`grounded (English) — formal layer pending` (was `grounded`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) — foundation round complete (Pass 1 GRID — the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof; Pass 2 EOS, Pass 3 Linus all run; findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2) ran against the foundation draft, surfaced six findings, and returned clean after all six were closed in-pattern. The gate also served as the closing AI adversarial round (Phase 3) given the gate's fresh-reader, full-three-pass coverage.
 
 ---
 
@@ -410,3 +410,5 @@ The clearance gate ran with fresh-reader discipline: full pass question sets and
 Gate re-run after the six fixes returned clean across all three passes. Status promoted from `partially resolved` to `grounded` with rescan date 2026-05-14.
 
 **Scheduled rescan: 2026-05-20 — clean.**
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 4 (Verified requires a `passed` verification after the most recent suspend in insertion order) is an ordering-across-action-sequences claim across verify/suspend/reinstate interleavings; Invariant 6 append-only insertion order. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

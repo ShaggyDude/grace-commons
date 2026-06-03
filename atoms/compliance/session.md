@@ -294,7 +294,7 @@ This is the generator's contract: any implementation derived from this atom must
 
 ## Status
 
-`grounded on Final Critique 4` — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 complete. Six findings total; all resolved in-pattern. Final Critique 4 closed clean (foundational findings: zero; refining findings: one documented, not blocking).
+`grounded (English) — formal layer pending` (was `grounded on Final Critique 4`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 complete. Six findings total; all resolved in-pattern. Final Critique 4 closed clean (foundational findings: zero; refining findings: one documented, not blocking).
 
 *Provisional placement note: this atom is filed in `atoms/compliance/` as the initial home for authentication-adjacent infrastructure. Session is not pure compliance infrastructure (it has meaningful non-regulated applications wherever authentication persistence is required). A future taxonomy refactor may relocate it to `atoms/security/` or `atoms/identity/`, carrying `regulated: true` as a frontmatter attribute. See the Open taxonomy question in ROADMAP.md and Methodology debt #5.*
 
@@ -361,3 +361,5 @@ One foundational finding fixed; one refining finding fixed for wording; one refi
 **FC3 — Generation acceptance has no check for Invariant 1 (issue immutability of non-status fields) (refining, noted, not blocking).** The five-check Generation acceptance covers Invariants 2, 3 (partially), 6, 8, 9, 10 but has no check that `session_token`, `principal_ref`, `issued_by_ref`, and `issued_at` were never modified post-issue. As with Credential FC2, this is verifiable only from store schema (no UPDATE surface) rather than from record content. Not closeable as a record-store check. Noted as a store-design requirement: deployments should constrain the session store schema to prevent UPDATE operations on non-status fields.
 
 Final Critique 4 closed clean. Foundational findings: zero remaining. Refining findings: one noted (FC3), not blocking. Session is `grounded on Final Critique 4`.
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 3 (conjunctive validity with revoked-takes-precedence-over-expired) and Invariant 4 (revocation absorbing) are reachability/precedence claims — no interleaving of expire/revoke may yield `valid`. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

@@ -271,7 +271,7 @@ Legal Hold is the preservation primitive the library has held open since Retenti
 
 ## Status
 
-`grounded — 2026-05-20` — foundation round (Pass 1 + 2 + 3 author-led), Refinement round 1 (human), and two AI-conducted adversarial rounds complete: Refinement round 2 (Sonnet, batched with Consent and Soft Delete) and Refinement round 3 (Opus single-atom, Torvalds X2 posture). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
+`grounded (English) — formal layer pending` (was `grounded`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) — foundation round (Pass 1 + 2 + 3 author-led), Refinement round 1 (human), and two AI-conducted adversarial rounds complete: Refinement round 2 (Sonnet, batched with Consent and Soft Delete) and Refinement round 3 (Opus single-atom, Torvalds X2 posture). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope.
 
 ---
 
@@ -354,3 +354,5 @@ All nine GRID nodes resolved.
 - *Unknown filter keys in `read` not specified, and `case_ref` filter on absent-case_ref holds not specified.* The spec listed supported filter axes but did not say what happened if a caller passed an unknown axis name, or how a positive `case_ref` filter handled holds without `case_ref`. Fixed: `read` action and Decision point now reject unknown filter keys as `invalid-query` (strict rather than silent-ignore) and state that a positive `case_ref` filter excludes holds without `case_ref`. A "find holds with no `case_ref`" predicate is named as out-of-scope; deployments needing it add it in the composing layer.
 
 **Scheduled rescan: 2026-05-20 — clean.**
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 4 (concurrent holds independent — releasing one does not affect another on the same record) is an interleaving isolation claim; Invariant 6 adds temporal ordering. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

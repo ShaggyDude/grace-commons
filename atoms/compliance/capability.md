@@ -406,3 +406,5 @@ Two emergent properties confirmed by the model and surfaced to the Invariants se
 - **Revoked records always have `remaining_redemptions > 0`** (entailed by revoke precondition + counter-preservation + I7).
 
 No spec findings. The twelve named invariants are mutually consistent and together entail both emergent properties.
+
+**Formal-layer vote — 2026-06-03: YES (model present).** Invariant 4 (exhaustion atomicity — exactly one concurrent `redeem` succeeds at `remaining = 1`) and Invariant 2 (monotonic counter) are interleaving-safety claims; the Alloy model confirms them. Verified by the sibling formal model (`capability.als`); the pattern remains `grounded`. Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.

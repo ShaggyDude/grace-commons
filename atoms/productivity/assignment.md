@@ -240,7 +240,7 @@ It inherits from:
 
 ## Status
 
-`grounded — 2026-05-20` — all required structural elements resolved; identity model explicit; assign, recall, and reassign preconditions explicit; rejection paths exercised in examples across four domains; deferred concerns (accept/decline, expiry, assigner authorization, assigner attribution, capacity constraints, group assignment, task lifecycle, completion handling, concurrent races, reassign atomicity, clock semantics) named as out-of-scope with composing patterns where applicable. Second entry in `atoms/productivity/`. Direct prerequisite for the Shared Todo composition.
+`grounded (English) — formal layer pending` (was `grounded — 2026-05-20`; formal-layer vote YES 2026-06-03 — model not yet authored, see Lineage) — all required structural elements resolved; identity model explicit; assign, recall, and reassign preconditions explicit; rejection paths exercised in examples across four domains; deferred concerns (accept/decline, expiry, assigner authorization, assigner attribution, capacity constraints, group assignment, task lifecycle, completion handling, concurrent races, reassign atomicity, clock semantics) named as out-of-scope with composing patterns where applicable. Second entry in `atoms/productivity/`. Direct prerequisite for the Shared Todo composition.
 
 ---
 
@@ -279,3 +279,5 @@ The strongest temptation was absorbing accept/decline — many real systems trea
 - *Reassign partial-write scenario not framed under storage-failure in Edge cases.* The crash-semantics edge case named the transactional boundary but did not address the storage-failure path (where the atom returns a rejection rather than crashing). The two-write nature of `reassign` makes this the same structural situation as `revoke` in Permissions: a partial write leaves a Transferred assignment with no Active successor, violating Invariant 7. Resolved: new edge case — *Reassign storage failure* — added, requiring rollback of both writes on failure, with recovery guidance for implementations without full transactional support.
 
 **Scheduled rescan: 2026-05-20 — clean.**
+
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 7 (reassign atomicity — exactly one Active per task, no observable both/neither state) and Invariant 1 (at-most-one-Active) are concurrency/exclusivity claims. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.
