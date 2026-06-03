@@ -389,7 +389,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 | C4 | Multi-Party Approval | Composition | `grounded` 2026-05-13 | Approval Step + Permissions + Assignment + Audit Trail |
 | C6 | Immutable Transaction Ledger | Composition | Unblocked; not started | Selective Disclosure (grounded) |
 | C7 | Data Subject Rights Fulfillment | Composition | Unblocked; not started | Legal Hold + Consent + Selective Disclosure (all grounded) |
-| C8 | KYC / Customer Onboarding | Composition | Unblocked; not started — **newly unblocked 2026-05-14** | Party Identity + Consent (both grounded) |
+| C8 | KYC / Customer Onboarding | Composition | `partially resolved` — 3×3 baseline complete 2026-06-03; Final Critique pending | Party Identity + Consent (both grounded) |
 | C9 | Reservation Lifecycle | Composition | Unblocked; not started — **newly unblocked 2026-05-15** | Capacity Constraint Enforcement (grounded) + Provisional Commitment + Duplicate Prevention |
 | C10 | Stateful Workflow Execution | Composition | Blocked on atom #9 | Workflow / State Machine + Approval Step |
 | C12 | Chain of Custody | Composition | Blocked on atom #7 | Provenance + Actor Identity + Tamper Evidence + Retention Window + Audit Trail — cross-domain reference case (pharma + legal evidence = same atoms) |
