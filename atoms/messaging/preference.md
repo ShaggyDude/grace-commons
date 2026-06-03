@@ -125,7 +125,7 @@ Transitions:
    - 3a. The principal updates: `set(principal_ref, new_values)` → a new record is created in Active; the prior record transitions to Deleted (Invariant 4).
    - 3b. The principal pauses: `suspend(preference_id)` → the record moves Active → Suspended; subsequent `current_for` queries return the Suspended record, and the composing fanout pattern suppresses delivery.
    - 3c. The principal explicitly removes: `delete(preference_id)` → the record moves to Deleted; subsequent `current_for(principal_ref)` returns `none` (until a new `set` is called).
-4. **Audit and recovery queries.** An auditor, DSAR processor, or compliance review queries `read(preference_id)` for any record (Active, Suspended, or Deleted) or `current_for(principal_ref)` for the principal's currently-in-effect record. Deleted records are returned by `read` for the lifetime of the store.
+4. **Audit and recovery queries.** An auditor, DSAR (Data Subject Access Request) processor, or compliance review queries `read(preference_id)` for any record (Active, Suspended, or Deleted) or `current_for(principal_ref)` for the principal's currently-in-effect record. Deleted records are returned by `read` for the lifetime of the store.
 
 ### Decision points
 
@@ -237,7 +237,7 @@ When the subscriber returns, the settings page reads the suspended record's valu
 
 A user closes their account. As part of the closure flow, the account-deletion service calls `delete(pref_141)` → `ok`. The record moves to Deleted with `deleted_at`. `current_for(user_u)` returns `none`. The fanout pattern, finding no currently-in-effect record, treats delivery per the deployment's fanout-on-no-record policy (some deployments default to system-default delivery, others suppress entirely; the policy is composing-system configuration).
 
-The prior records (`pref_001`, `pref_088`, `pref_141`) all remain in the store as Deleted records. A subsequent DSAR (data subject access request) for `user_u`'s preference history enumerates the principal's records from the audit surface (filtering the store on `principal_ref = user_u`, per Generation acceptance Check 1) and returns the full chronological history; each record's content is what `read(preference_id)` would return for it.
+The prior records (`pref_001`, `pref_088`, `pref_141`) all remain in the store as Deleted records. A subsequent DSAR for `user_u`'s preference history enumerates the principal's records from the audit surface (filtering the store on `principal_ref = user_u`, per Generation acceptance Check 1) and returns the full chronological history; each record's content is what `read(preference_id)` would return for it.
 
 ### Rejection path — set with no preference fields
 

@@ -143,7 +143,7 @@ Every change to an electronic batch record in a pharmaceutical manufacturing sys
 
 ### Communications — broker-dealer audit under SEC Rule 17a-4
 
-Every business communication (email, chat, voice transcript, trade message) at a registered broker-dealer is recorded with the originator's attestation, retained 3–7 years per Rule 17a-4 with the first two years in immediately-accessible storage (composing with a Storage Tier pattern), and Merkle-tree sealed. A FINRA examination walks the trail to confirm completeness; a litigation discovery walks the same trail to produce the verified history of any communication thread. WORM (Write-Once-Read-Many) storage is one mechanism this composition can be realized over; this application names the structural form.
+Every business communication (email, chat, voice transcript, trade message) at a registered broker-dealer is recorded with the originator's attestation, retained 3–7 years per Rule 17a-4 with the first two years in immediately-accessible storage (composing with a Storage Tier pattern), and Merkle-tree sealed. A FINRA (Financial Industry Regulatory Authority) examination walks the trail to confirm completeness; a litigation discovery walks the same trail to produce the verified history of any communication thread. WORM (Write-Once-Read-Many) storage is one mechanism this composition can be realized over; this application names the structural form.
 
 ### Regulated adversarial scenarios
 
@@ -186,7 +186,7 @@ This composition is the structural form of what every major audit regime require
 - **HIPAA §164.312(b) (Audit controls)** and **§164.530(j) (Documentation retention)** — record-and-examine PHI access; retain the audit documentation. Composes with state-law retention extensions.
 - **PCI DSS Requirement 10 (Track and monitor all access)** — including 10.2 (audit-log content), 10.3 (audit-log entries), 10.5 (secure audit trails so they cannot be altered), and 10.7 (audit-trail retention). The composition is the structural form across all four sub-requirements.
 - **21 CFR Part 11 (Electronic records and electronic signatures)** — *attributable, contemporaneous, original, accurate* (ALCOA) plus *complete, consistent, enduring, available* (ALCOA+). The four-atom stack is the structural form of every ALCOA+ property simultaneously.
-- **SEC Rule 17a-4 / FINRA Rule 4511** — broker-dealer record retention with access-tier requirements; FINRA is the Financial Industry Regulatory Authority. Composes with Storage Tier.
+- **SEC Rule 17a-4 / FINRA Rule 4511** — broker-dealer record retention with access-tier requirements. Composes with Storage Tier.
 - **ISO/IEC 27001 §A.12.4 (Logging and monitoring)** — the International Organization for Standardization / International Electrotechnical Commission information-security baseline. The composition satisfies §A.12.4.1 (event logging), §A.12.4.2 (protection of log information), §A.12.4.3 (administrator and operator logs), and §A.12.4.4 (clock synchronization, via Trusted Timestamping composition) at once.
 - **GDPR Article 30 (Records of processing activities)** and **Article 32 (Security of processing)** — Article 30's records-of-processing obligation and Article 32's integrity property of processing both map onto the application.
 - **eIDAS Regulation (EU 910/2014)** — qualified preservation services. The composition is one shape a qualified preservation service can take, with `anchored_at` from a qualified TSA giving the eIDAS-grade time anchor.

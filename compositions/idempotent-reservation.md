@@ -57,7 +57,7 @@ The map's lifetime is governed by the Duplicate Prevention window. Entries are e
 
 Deployment-settable knobs:
 
-- **`idempotency_window`** — the duration of the Duplicate Prevention window; passed to the Duplicate Prevention instance at initialization. Default: 60 seconds for HTTP retry envelopes; 5–10 minutes for client-side replay scenarios; 24 hours for slow payment-rail reconciliation. Regulated deployments (PCI DSS, ISO 20022) must select a window long enough to cover the slowest legitimate retry cycle for the most critical action. Window-size selection considerations are elaborated in Edge cases.
+- **`idempotency_window`** — the duration of the Duplicate Prevention window; passed to the Duplicate Prevention instance at initialization. Default: 60 seconds for HTTP retry envelopes; 5–10 minutes for client-side replay scenarios; 24 hours for slow payment-rail reconciliation. Regulated deployments (PCI DSS (Payment Card Industry Data Security Standard), ISO 20022) must select a window long enough to cover the slowest legitimate retry cycle for the most critical action. Window-size selection considerations are elaborated in Edge cases.
 - **`token_max_length`** — the maximum byte length of a well-formed `idempotency_token`. Default: 256 bytes. Must be large enough to accommodate the token format used by the caller (IETF idempotency-key draft recommends at least 16 bytes of randomness; UUIDs are 36 characters; composed keys may be longer).
 - **`digest_function`** — the hash function and serialization convention used to compute `parameters_digest`. Must be specified and consistent across all instances sharing the `token_results` store; inconsistency across replicas or versions causes legitimate retries to be misclassified as `token-collision`.
 
@@ -177,7 +177,7 @@ This composition draws on:
 - **ISO 20022 (financial messaging)** — `BizMsgIdr` and related message-uniqueness identifiers; the financial-industry standard for at-most-once message semantics.
 - **HL7 (Health Level Seven) FHIR (Fast Healthcare Interoperability Resources) `Bundle.identifier`, `MessageHeader.id`** — healthcare-industry standard for at-most-once message processing.
 - **Stripe Idempotency-Key, Adyen idempotency header, AWS request-ID** — de-facto industry conventions; this composition formalizes what they all implement.
-- **PCI DSS (Payment Card Industry Data Security Standard — the card networks' mandatory security rules for cardholder data) Requirement 10 (logging and monitoring)** — composing with Event Log, the commitment record and the token-mapping together produce the audit-evidence PCI requires.
+- **PCI DSS Requirement 10 (logging and monitoring)** — composing with Event Log, the commitment record and the token-mapping together produce the audit-evidence PCI requires.
 
 The two atoms it composes carry their own standards inheritance — Provisional Commitment (ISO 9001 — the International Organization for Standardization quality-management standard — §8.5.2 and §8.5.4; Basel III BCBS 238 — Basel Committee on Banking Supervision liquidity rules; Joint Commission; IATA — International Air Transport Association; PCI DSS; GDPR — EU General Data Protection Regulation — Art. 30; SOX — Sarbanes-Oxley Act — §404; HIPAA — Health Insurance Portability and Accountability Act — §164.312(b)) and Duplicate Prevention (IETF HTTP idempotency-key draft, payment-processor idempotency conventions, message-queue exactly-once-within-window literature).
 
