@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>CFBundleAllowMixedLocalizations</key>
+        <true/>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>English</string>
+        <key>CFBundleDisplayName</key>
+        <string>Alloy</string>
+        <key>CFBundleExecutable</key>
+        <string>alloy-gui</string>
+        <key>CFBundleIconFile</key>
+        <string>app.icns</string>
+        <key>CFBundleIdentifier</key>
+        <string>org.alloytools.alloy</string>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        <key>CFBundleName</key>
+        <string>Alloy</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleShortVersionString</key>
+        <string>6.2.0</string>
+        <key>CFBundleSignature</key>
+        <string>????</string>
+        <key>CFBundleVersion</key>
+        <string>6.2.0.0</string>
+        <key>COEnableAggressiveUpdates</key>
+        <false/>
+        <key>LSMinimumSystemVersion</key>
+        <string>13.7</string>
+        <key>NSCameraUsageDescription</key>
+        <string>The application is requesting access to the camera.</string>
+        <key>NSHighResolutionCapable</key>
+        <true/>
+        <key>NSHumanReadableCopyright</key>
+        <string>MIT</string>
+        <key>NSMicrophoneUsageDescription</key>
+        <string>The application is requesting access to the microphone.</string>
+        <key>SUAllowsAutomaticUpdates</key>
+        <true/>
+        <key>SUEnableAutomaticChecks</key>
+        <true/>
+        <key>SUEnableSystemProfiling</key>
+        <false/>
+        <key>SUFeedURL</key>
+        <string>https://alloytools.org/download/appcast-amd64.rss</string>
+        <key>SUPublicEDKey</key>
+        <string>Aw1P0FKfuEjBywJgBuyKq/grDKCI8oyifjvPuFO5Ozw=</string>
+        <key>SUScheduledCheckInterval</key>
+        <integer>3600</integer>
+        <key>SUShowReleaseNotes</key>
+        <false/>
+    </dict>
+</plist>

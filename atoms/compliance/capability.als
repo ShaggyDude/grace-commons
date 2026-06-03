@@ -190,7 +190,7 @@ assert A_TerminalModesDistinguishable {
         -- A Redeemed record is NOT Expired (different remRed constraint applies)
         r.status = Redeemed implies r.status != Expired
         -- A Revoked record is NOT Expired (Expired never has revokedBy)
-        r.status = Revoked implies no (r.status = Expired)
+        r.status = Revoked implies r.status != Expired
     }
 }
 check A_TerminalModesDistinguishable for 6

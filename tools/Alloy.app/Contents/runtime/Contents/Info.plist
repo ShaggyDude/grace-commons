@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>English</string>
+        <key>CFBundleGetInfoString</key>
+        <string>Alloy 6.2.0</string>
+        <key>CFBundleIdentifier</key>
+        <string>org.alloytools.alloy.jvm</string>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>7.0</string>
+        <key>CFBundleName</key>
+        <string>org.alloytools.alloy.jvm</string>
+        <key>CFBundlePackageType</key>
+        <string>BNDL</string>
+        <key>CFBundleShortVersionString</key>
+        <integer>17</integer>
+        <key>CFBundleSignature</key>
+        <string>????</string>
+        <key>CFBundleVersion</key>
+        <string>6.2.0.0</string>
+        <key>JavaVM</key>
+        <dict>
+            <key>JVMCapabilities</key>
+            <array>
+                <string>CommandLine</string>
+            </array>
+            <key>JVMMinimumFrameworkVersion</key>
+            <string>13.2.9</string>
+            <key>JVMMinimumSystemVersion</key>
+            <string>10.12.0</string>
+            <key>JVMPlatformVersion</key>
+            <integer>17</integer>
+            <key>JVMVendor</key>
+            <string>Alloytools</string>
+            <key>JVMVersion</key>
+            <integer>17</integer>
+        </dict>
+        <key>NSMicrophoneUsageDescription</key>
+        <string>The application is requesting access to the microphone.</string>
+    </dict>
+</plist>

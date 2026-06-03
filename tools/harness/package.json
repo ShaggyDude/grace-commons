@@ -1,0 +1,15 @@
+{
+  "name": "grace-commons-harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reproducible dual checker harness for Grace Commons formal models (TLA+ via tla-checker WASM, Alloy via the alloy.dist jar under an npm-provisioned JRE 17).",
+  "scripts": {
+    "check": "node check.mjs",
+    "audit": "node audit.mjs"
+  },
+  "dependencies": {
+    "tla-checker": "*"
+  },
+  "comment-jre": "The JRE 17 (javajre-linux-64) is installed to /tmp/javajre by bootstrap.sh, NOT here: unpacking it into the mounted repo FS drops libjli.so and the launcher fails (exit 127)."
+}
