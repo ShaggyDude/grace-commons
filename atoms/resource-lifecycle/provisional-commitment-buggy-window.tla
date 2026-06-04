@@ -1,20 +1,22 @@
----- MODULE provisional-commitment-buggy ----
-\* Grace Commons — Provisional Commitment atom: BUGGY TWIN (vacuity guard).
+---- MODULE provisional-commitment-buggy-window ----
+\* Grace Commons — Provisional Commitment atom: BUGGY TWIN (isolated, Inv 7 guard).
 \*
-\* Identical to provisional-commitment.tla EXCEPT `Release` and `Expire` stamp
-\* timestamp 0 instead of `clock` — modeling an implementation bug where the
-\* transition recorder writes a hard-coded zero instead of reading the current
-\* wall-clock value. This violates Inv8_TransitionsAfterPlacement because
-\* PlacedAt = 1 > 0 = releasedAt / expiredAt.
+\* This is the second of two isolated buggy twins. It targets Invariant 7
+\* (confirm-within-window). Its sibling `provisional-commitment-buggy.tla` targets
+\* Invariant 8 (transition timestamps after placement). Splitting the hazards
+\* across two twins gives each load-bearing invariant its own reachable,
+\* checker-rejected counterexample (a combined twin would surface only the
+\* shorter violation — Inv 8 at 4 states would mask Inv 7).
 \*
-\* The confirm-within-window guard is CORRECT here so Inv_ConfirmWithinWindow
-\* continues to hold; only Inv8_TransitionsAfterPlacement is violated, giving a
-\* clean single-invariant rejection signal.
+\* BUG — confirm at the window boundary: `ConfirmBuggy` admits a confirm while
+\* `clock <= ExpiresAt` instead of the correct `clock < ExpiresAt`. A confirm
+\* fired at clock = ExpiresAt stamps confirmedAt = ExpiresAt, which
+\* `Inv_ConfirmWithinWindow` (confirmedAt < ExpiresAt) catches. Release and Expire
+\* stamp the real clock, so `Inv8_TransitionsAfterPlacement` still HOLDS — the
+\* violation is isolated to confirm-within-window.
 \*
-\* Expected result: Inv8_TransitionsAfterPlacement VIOLATED.
-\*   Init (clock=1, state=Held) -> Release -> releasedAt=0, state=Released.
-\*   Now (state="Released") => (releasedAt >= PlacedAt) becomes 0 >= 1 = FALSE.
-\* If the checker does NOT reject this, the Inv8 check is vacuous.
+\* Expected result: Safety VIOLATED (Inv_ConfirmWithinWindow). Tick to ExpiresAt,
+\* confirm -> confirmedAt = ExpiresAt, not strictly within the window.
 
 EXTENDS Naturals
 
@@ -46,43 +48,45 @@ Tick ==
     /\ clock' = clock + 1
     /\ UNCHANGED <<state, confirmedAt, releasedAt, expiredAt, everTerminal>>
 
-\* CORRECT confirm: window guard intact — Inv7 continues to hold.
-Confirm ==
+\* BUG: confirm admitted at the boundary (clock <= ExpiresAt) — the correct
+\* model requires clock < ExpiresAt. confirmedAt is stamped with the real clock,
+\* so Inv8 holds; only Inv_ConfirmWithinWindow is violated (at clock = ExpiresAt).
+ConfirmBuggy ==
     /\ state = "Held"
-    /\ clock < ExpiresAt
+    /\ clock <= ExpiresAt
     /\ state' = "Confirmed"
     /\ confirmedAt' = clock
     /\ everTerminal' = TRUE
     /\ UNCHANGED <<clock, releasedAt, expiredAt>>
 
-\* BUG: stamps releasedAt = 0 instead of clock — simulates a recorder that
-\* hard-codes zero rather than reading the current wall clock. With PlacedAt = 1,
-\* releasedAt = 0 < PlacedAt violates Inv8_TransitionsAfterPlacement.
 Release ==
     /\ state = "Held"
     /\ state' = "Released"
-    /\ releasedAt' = 0
+    /\ releasedAt' = clock
     /\ everTerminal' = TRUE
     /\ UNCHANGED <<clock, confirmedAt, expiredAt>>
 
-\* BUG: stamps expiredAt = 0 instead of clock — same defect as Release.
 Expire ==
     /\ state = "Held"
     /\ clock >= ExpiresAt
     /\ state' = "Expired"
-    /\ expiredAt' = 0
+    /\ expiredAt' = clock
     /\ everTerminal' = TRUE
     /\ UNCHANGED <<clock, confirmedAt, releasedAt>>
 
-Next == Tick \/ Confirm \/ Release \/ Expire
+Next == Tick \/ ConfirmBuggy \/ Release \/ Expire
 Spec == Init /\ [][Next]_vars
 
 Inv_ConfirmWithinWindow == (state = "Confirmed") => (confirmedAt < ExpiresAt)
-Inv3_TerminalAbsorbing == everTerminal => (state \in {"Confirmed", "Released", "Expired"})
+
+Inv3_TerminalAbsorbing ==
+    everTerminal => (state \in {"Confirmed", "Released", "Expired"})
+
 Inv8_TransitionsAfterPlacement ==
     /\ (state = "Confirmed") => (confirmedAt >= PlacedAt)
     /\ (state = "Released")  => (releasedAt  >= PlacedAt)
     /\ (state = "Expired")   => (expiredAt   >= PlacedAt)
+
 Safety ==
     /\ TypeOK
     /\ Inv_ConfirmWithinWindow

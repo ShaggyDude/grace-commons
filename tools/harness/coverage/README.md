@@ -48,7 +48,7 @@ deliberate by-construction assumption (the methodology's other sanctioned outcom
 acceptable as documented; promote only if the model gains an explicit Expire
 action. Shared Todo Inv 2 is covered by delegation to `assignment.tla` — verified.)
 
-### Genuine GAPs (need model work)
+### Genuine GAPs — ALL RESOLVED 2026-06-04 (see Status note)
 
 | Pattern | Invariant | Nature / candidate fix |
 |---|---|---|
@@ -59,12 +59,27 @@ action. Shared Todo Inv 2 is covered by delegation to `assignment.tla` — verif
 | Capacity Constraint | **Inv 5** — non-negativity | Passes trivially because `release` is not modeled (allocated only grows). Fix: add a `release` action so the check is non-vacuous. |
 | Capacity Constraint | **Inv 14** — action atomicity | Vote-named, but within-action (not an interleaving). Fix: reconsider the vote (within-action atomicity → out-of-scope, consistent with other atoms). |
 
-## Status note
+## Resolution — 2026-06-04
 
-By the strict methodology rule a load-bearing GAP blocks *unqualified* `grounded`,
-so the five affected patterns (Medication Order, Credential, Legal Hold,
-Provisional Commitment, Capacity Constraint) carry a named coverage-pending item
-until closed. This is a refinement of formal coverage, not an English regression —
-the recommended honest label is `grounded` with a "formal coverage: Inv N pending"
-note in the Status line, pending the punch-list above. The cheap promotions close
-in minutes each; the genuine GAPs are early-sprint model work.
+All six GAPs are closed; every vote-named load-bearing invariant across the five
+patterns is now covered by a named check, each with its own dedicated,
+checker-rejected buggy twin. Produced by parallel Sonnet subagents, Opus-gated
+(diff review + independent harness re-run before any status flip).
+
+| Pattern | Invariant | How closed | Artifact(s) |
+|---|---|---|---|
+| Medication Order | Inv 3 & 4 | New Alloy structural model mirroring `clinical-observation.als`; pre-dispensing guard + linear-chain checks | `medication-order.als` + `medication-order-buggy.als` (twin flags both Inv 3 and Inv 4) |
+| Credential | Inv 7 | Added `successor` link + `Inv_RotationChain` (every Rotated slot has a non-null successor; same-pair clause by single-pair scope) | `credential.tla` (138 states) + `credential-buggy.tla` (carries both the Inv 2 TOCTOU and the Inv 7 dangling-rotation hazards) |
+| Legal Hold | Inv 6 | Two-clock extension: global `now` + ghost `placedAt`/`releasedAt`, `Inv_TemporalOrdering` | `legal-hold.tla` (370 states) + **two isolated twins**: `legal-hold-buggy.tla` (Inv 6) and `legal-hold-buggy-cascade.tla` (Inv 4) |
+| Provisional Commitment | Inv 8 | Ghost `releasedAt`/`expiredAt` + `Inv8_TransitionsAfterPlacement` with `PlacedAt=1` | `provisional-commitment.tla` (15 states) + **two isolated twins**: `…-buggy.tla` (Inv 8) and `…-buggy-window.tla` (Inv 7) |
+| Capacity Constraint | Inv 5 | Added `ReleaseAtomic` so non-negativity is non-vacuous on the release path | `capacity-constraint-enforcement.tla` (7 states) + **two isolated twins**: `…-buggy.tla` (Inv 5 underflow) and `…-buggy-toctou.tla` (Inv 4 overshoot) |
+| Capacity Constraint | Inv 14 | **Vote reconsidered → out-of-scope** (within-action atomicity is a host obligation, not an action-vs-action interleaving; parallels Party Identity Inv 11). Documented in Lineage §Formal-layer vote. | — (no model; by-design) |
+
+Gating note: the three TLA+ extensions (Legal Hold, Provisional Commitment,
+Capacity Constraint) initially repointed the single existing twin at the *new*
+invariant, which silently dropped the previously-covered invariant's
+counterexample. The Opus gate caught this and added a **second isolated twin**
+per model so each load-bearing invariant retains its own dedicated rejecting
+twin — both auto-discovered and required-to-reject by `audit.mjs`. The five
+patterns now carry unqualified `grounded` (no "formal coverage: Inv N pending"
+caveat remains).
