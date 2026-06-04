@@ -9,10 +9,23 @@
 -- construct within the scope.
 --
 -- SCOPE
--- Static structural model (snapshots). Each CapabilityRecord sig is one record in the
--- store at a point in time. Transitions are modeled as predicates over pre/post record
--- pairs, not as temporal steps — time is modeled as abstract ordered integers only
--- where needed for expires_at checks.
+-- Two-layer model mirroring the notification.als / subscription.als pattern:
+--
+--   1. Store layer (CapabilityRecord within a Store sig).
+--      A Store is a snapshot of the live capability set. Within one Store, no two
+--      records share a capability_token (Invariant 12). Facts on Store express
+--      per-snapshot well-formedness.
+--
+--   2. Transition layer (free CapabilityRecord pre/post pairs).
+--      Transitions are modeled as predicates over unbound record pairs; these records
+--      are NOT constrained by store-level token uniqueness, because pre and post
+--      represent the same logical capability before and after the action (they share
+--      a cap_token by the transition's immutability constraint). This lets the
+--      satisfiability runs find transition witnesses without the store-uniqueness fact
+--      blocking them. The original global TokenUniqueness fact made
+--      post.cap_token = pre.cap_token UNSATISFIABLE for any disj pre/post pair,
+--      causing all four transition run commands to be VACUOUS and all transition-level
+--      check assertions to be vacuously true. Store-scoping fixes this.
 --
 -- NOT MODELED HERE
 -- - Cryptographic unforgeability of capability_token (assumed by construction)
@@ -60,15 +73,40 @@ sig CapabilityRecord {
 }
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Store sig: snapshot of the live capability set.
+--
+-- Store-scoping is the mechanism that fixes the TokenUniqueness vacuity defect.
+-- Token uniqueness is a property of records that CO-EXIST in a store snapshot,
+-- not of any arbitrary pair of CapabilityRecord atoms. By quantifying uniqueness
+-- over s.records rather than over all CapabilityRecord, free pre/post transition
+-- atoms are not forced to have distinct tokens, so post.cap_token = pre.cap_token
+-- (immutable-field preservation) becomes satisfiable.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+sig Store {
+    records : set CapabilityRecord
+}
+
+-- Every CapabilityRecord belongs to at least one Store.
+-- This keeps the store and record layers connected.
+fact RecordsInStores {
+    all r : CapabilityRecord | some s : Store | r in s.records
+}
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Structural well-formedness facts
 -- (These constrain the universe to VALID configurations only.
 --  A fact is a constraint Alloy treats as always true for all instances.)
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Invariant 12: Token uniqueness.
--- No two records share a capability_token.
-fact TokenUniqueness {
-    all disj r1, r2 : CapabilityRecord | r1.cap_token != r2.cap_token
+-- Invariant 12: Token uniqueness — scoped to co-existing records in a store snapshot.
+-- No two records that co-exist in the same Store share a capability_token.
+-- Scoped to Store.records (not all CapabilityRecord pairs) so that transition
+-- pre/post pairs — which represent the SAME capability before and after a step —
+-- are free to share a token without violating this fact.
+fact StoreTokenUniqueness {
+    all s : Store |
+        all disj r1, r2 : s.records | r1.cap_token != r2.cap_token
 }
 
 -- Invariant 2: Counter bounds.
@@ -131,9 +169,11 @@ fact ZeroCounterImpliesRedeemed {
 --  All checks below should return "No counterexample found".)
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- A12: Token uniqueness holds.
+-- A12: Token uniqueness holds within each store snapshot.
+-- Scoped to Store.records, matching the StoreTokenUniqueness fact.
 assert A_TokenUniqueness {
-    all disj r1, r2 : CapabilityRecord | r1.cap_token != r2.cap_token
+    all s : Store |
+        all disj r1, r2 : s.records | r1.cap_token != r2.cap_token
 }
 check A_TokenUniqueness for 6
 
@@ -419,15 +459,16 @@ run ShowRevoked {
     some r : CapabilityRecord | r.status = Revoked
 } for 3 but 3 Int
 
--- All four statuses coexist — confirms the union is satisfiable.
+-- All four statuses coexist in one store snapshot — confirms the union is satisfiable.
 run ShowAllFourStatuses {
-    some disj r1, r2, r3, r4 : CapabilityRecord | {
+    some s : Store |
+    some disj r1, r2, r3, r4 : s.records | {
         r1.status = Allocated
         r2.status = Redeemed
         r3.status = Expired
         r4.status = Revoked
     }
-} for 5 but 4 Int
+} for 6 but 4 Int
 
 -- Exhaustion transition: a single redeem that exhausts a single-use capability.
 run ShowExhaustionTransition {
@@ -471,9 +512,10 @@ run ShowExpireTransition {
     }
 } for 5 but 4 Int
 
--- Multi-token store: two independent capabilities coexist with distinct tokens.
+-- Multi-token store: two independent capabilities coexist in one store with distinct tokens.
 run ShowTwoCapabilities {
-    some disj r1, r2 : CapabilityRecord | {
+    some s : Store |
+    some disj r1, r2 : s.records | {
         r1.status = Allocated
         r2.status = Allocated
         r1.cap_token != r2.cap_token

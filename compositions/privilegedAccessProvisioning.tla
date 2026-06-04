@@ -71,7 +71,6 @@ ChainStates == {"Pending", "Approved", "Rejected", "Withdrawn"}
 VARIABLES
   \* --- Composition-level state ---
   request_state,        \* request_id -> RequestState
-  request_to_chain,     \* request_id -> chain_id (here: same as request_id for simplicity)
   request_to_cap,       \* request_id -> CapToken (partial function; defined only when Provisioned)
   cap_to_request,       \* CapToken -> request_id (strict inverse of request_to_cap)
 
@@ -87,7 +86,7 @@ VARIABLES
   \* --- Token supply ---
   next_token            \* function: request_id -> CapToken (pre-assigned for determinism)
 
-vars == <<request_state, request_to_chain, request_to_cap, cap_to_request,
+vars == <<request_state, request_to_cap, cap_to_request,
           chain_state, approvals, rejections,
           cap_allocated, cap_exhausted, next_token>>
 
