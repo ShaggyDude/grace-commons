@@ -39,5 +39,43 @@ The number that sells is the leverage ratio: tokens + human-minutes per grounded
 pattern **vs. the time a formal-methods engineer would take to produce and verify
 the same by hand**. That baseline is an estimate — label it as one.
 
+### Session 2026-06-04 — token cost
+
+**Hard floor (platform-sourced).** Sum of the per-chunk `subagent_tokens` in the
+ledger above: **1,003,789 drafter tokens ≈ 1.00 M** (461,333 GAP sweep + 106,002
+Provenance + 118,434 C12 + 91,863 Workflow/State Machine + 115,119 C10 + 111,038
+C3). This is the Sonnet drafters only; it excludes the Opus orchestration —
+planning, the full three-pass + Final Critique gating of every pattern,
+formal-model authoring + harness runs, and all catalog / ROADMAP edits.
+
+**All-in (estimate).** **≈ 2.5 M tokens.** The Opus side ran roughly 1.5× the
+drafter floor on top of it (≈ 2.5× all-in), given the volume of spec reading, the
+gating of six large drafts, and the authoring of seven formal models (four net-new
++ the GAP twins) — plus a long accumulating main-thread context. Cross-check: the
+session consumed ~76% of the operator's subscription window, consistent with an
+all-in in the low millions; the session's token denominator is not published, so
+the 2.5 M is an estimate, not a reading.
+
+**Produced.** 5 net-new grounded patterns (Provenance, Chain of Custody C12,
+Workflow / State Machine, Stateful Workflow Execution C10, Forensic Recovery C3) +
+5 formal-coverage GAP closures (Medication Order, Credential, Legal Hold,
+Provisional Commitment, Capacity Constraint), plus a triaged healthcare roadmap
+backlog. 10 patterns to unqualified `grounded` total.
+
+| Per-pattern | Drafter floor (hard) | All-in (est. ≈ 2.5×) |
+|---|---|---|
+| Per net-new grounded pattern (÷5) | ≈ 108 k | ≈ 270 k |
+| Per pattern across all 10 grounded (÷10) | ≈ 100 k | ≈ 250 k |
+
+**Leverage claim (estimate).** Hand-producing one grounded pattern to this bar — a
+defended English spec, three adversarial review passes plus a Final Critique, *and*
+a machine-checked TLA+/Alloy model shipping with a rejecting twin — is plausibly a
+1–3 engineer-day effort for a competent formal-methods engineer (the spec and
+review alone a day; the model, twin, and harness another). At ≈ 270 k all-in tokens
+per net-new pattern — well under an operator-day of human attention apiece — that is
+roughly an **order-of-magnitude** reduction in human-time-to-verified-pattern. The
+only hard number is the 1.00 M drafter floor; the 2.5 M all-in and the leverage
+ratio are estimates, labeled as such.
+
 That's the whole protocol. No per-pattern isolation, no realtime graph, no
 stratification beyond atom-vs-composition. Keep it a trend line.
