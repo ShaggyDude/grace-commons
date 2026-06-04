@@ -95,7 +95,8 @@ atoms/
 │   ├── legal-hold               — preservation obligation (a legal requirement to keep data) suspending purge (preventing deletion) (grounded)
 │   ├── consent                  — data subject agreement (a person's consent to how their data is used) for a named processing purpose (a specific, declared reason) (grounded)
 │   ├── selective-disclosure     — append-only disclosure accountability record: recipient, scope, authority (grounded)
-│   └── party-identity           — persistent verifiable identity record for an external party with Unverified → Verified → Suspended → Closed lifecycle (grounded)
+│   ├── party-identity           — persistent verifiable identity record for an external party with Unverified → Verified → Suspended → Closed lifecycle (grounded)
+│   └── provenance                — append-only single-artifact custody chain with a hand-to-hand custody-continuity guarantee (grounded)
 ├── messaging/
 │   ├── subscription             — durable record of actor interest in an event scope
 │   ├── notification             — delivery record for a single notification to a single recipient
