@@ -81,7 +81,7 @@ Human decision: Author clarified the Unverified/Verified/Suspended/Closed lifecy
 
 **2026-05-15**
 Model: Claude (sonnet + opus)
-Work: Capacity Constraint Enforcement atom grounded. Two Phase 4 Opus rounds required (round 1: 11 foundational findings; round 2: 3 foundational + 5 refining + 1 rhetorical). First atom grounded under the revised 95%-good threshold.
+Work: Capacity Constraint Enforcement atom grounded. Two Phase 4 Opus rounds required (round 1: 11 foundational findings; round 2: 3 foundational + 5 refining + 1 rhetorical). First atom grounded under the revised 92%-good threshold.
 Human decision: Author made the call to require two clearance rounds rather than accept the spec after round 1 — the threshold held.
 
 ---
