@@ -274,7 +274,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 - **Retention and defensible disposal of the chain.** How long the chain must be kept and how it may be destroyed are governed by [Retention Window](./retention-window.md) and [Defensible Retention](../../compositions/defensible-retention.md). The atom retains all chains and entries indefinitely from its own perspective; retention policy is the composing concern.
 
-- **The full chain-of-custody surface.** The complete chain-of-custody guarantee — attribution (non-repudiable custodians via Actor Identity), structural continuity (this atom), tamper-evidence (Tamper Evidence), and retention (Retention Window / Defensible Retention) — is the Chain of Custody composition (C12) *(forthcoming)*. Provenance is the core primitive C12 composes.
+- **The full chain-of-custody surface.** The complete chain-of-custody guarantee — attribution (non-repudiable custodians via Actor Identity), structural continuity (this atom), tamper-evidence (Tamper Evidence), and retention (Retention Window / Defensible Retention) — is the [Chain of Custody composition (C12)](../../compositions/chain-of-custody.md). Provenance is the core primitive C12 composes.
 
 - **DAG-style derivation and artifact splitting.** W3C PROV's (Provenance Data Model — W3C's directed-acyclic-graph representation of provenance with `wasDerivedFrom`, `wasGeneratedBy`, and `used` relationships) `wasDerivedFrom` relationship — where one artifact is produced by transforming or combining others — is an explicit non-goal. This atom is a *linear* single-artifact chain; branching and convergence are out of scope. A pharmaceutical sample aliquoted into five sub-samples would require five new chains, each originating with `received` genesis type, each referencing its own `artifact_ref`; the relationship between the parent chain and the child chains is a composing concern outside this atom. The linearity constraint is what makes custody continuity well-defined; a DAG model does not have a single `current_custodian`.
 
@@ -300,7 +300,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 Provenance is freestanding and is the single-artifact custody primitive that several composing patterns build on:
 
-- **Chain of Custody (C12)** *(forthcoming)* — the primary composition naming Provenance. Chain of Custody wires Provenance + [Actor Identity](./actor-identity.md) + [Tamper Evidence](./tamper-evidence.md) + [Retention Window](./retention-window.md) to produce the full attribution-verified, cryptographically-sealed, retention-governed chain-of-custody surface. Provenance is the structural core; the three compliance atoms supply the per-entry attribution attestation, the chain tamper seal, and the retention clock. This composition is the canonical implementation of pharmaceutical chain of custody (21 CFR Part 211 / DEA 21 CFR Part 1304), regulated evidence custody (Federal Rules of Evidence 901(b)(9)), and financial instrument custody records (SEC Rule 17a-4). Chain of Custody (C12) retires the forthcoming-link in this Composition notes section and in any future atom that names it.
+- **[Chain of Custody (C12)](../../compositions/chain-of-custody.md)** — the primary composition naming Provenance. Chain of Custody wires Provenance + [Actor Identity](./actor-identity.md) + [Tamper Evidence](./tamper-evidence.md) + [Retention Window](./retention-window.md) to produce the full attribution-verified, cryptographically-sealed, retention-governed chain-of-custody surface. Provenance is the structural core; the three compliance atoms supply the per-entry attribution attestation, the chain tamper seal, and the retention clock. This composition is the canonical implementation of pharmaceutical chain of custody (21 CFR Part 211 / DEA 21 CFR Part 1304), regulated evidence custody (Federal Rules of Evidence 901(b)(9)), and financial instrument custody records (SEC Rule 17a-4). Chain of Custody (C12) is `grounded` (2026-06-04); its grounding resolved the forthcoming-link formerly carried in this Composition notes section.
 
 - **Immutable Transaction Ledger (C6)** *(forthcoming)* — Provenance enriches C6 for ledger entries that represent tracked artifacts; chain-of-custody guarantees on ledger entries compose naturally where the `artifact_ref` references a financial instrument.
 
@@ -334,7 +334,7 @@ Provenance is an infrastructure primitive with regulatory anchoring across pharm
 
 - **Federal Rules of Evidence 901(b)(9) (Authenticating or Identifying Evidence — Process or System)** — the US evidentiary rule for authenticating physical or electronic evidence via chain-of-custody records. The atom's custody-continuity invariant is the structural basis for authenticating evidence under 901(b)(9): a chain whose `from_custodian_ref` values match the prior `current_custodian` at every transfer step produces the unbroken sequence courts require for authentication.
 
-The cross-domain structural identity is the atom's core thesis: the pharmaceutical chain of custody, the legal evidence chain, the financial instrument custody record, and the DEA controlled-substance custody log are all instances of the same primitive — one artifact, one current custodian, append-only entries, custody never gaps. This atom is the core of the forthcoming Chain of Custody composition (C12).
+The cross-domain structural identity is the atom's core thesis: the pharmaceutical chain of custody, the legal evidence chain, the financial instrument custody record, and the DEA controlled-substance custody log are all instances of the same primitive — one artifact, one current custodian, append-only entries, custody never gaps. This atom is the core of the Chain of Custody composition (C12), `grounded` 2026-06-04.
 
 It inherits from:
 
@@ -358,7 +358,7 @@ It inherits from:
 - Non-repudiable custodian identity → [Actor Identity](./actor-identity.md)
 - Cryptographic tamper-evidence on the chain → [Tamper Evidence](./tamper-evidence.md)
 - Retention and defensible disposal → [Retention Window](./retention-window.md) / [Defensible Retention](../../compositions/defensible-retention.md)
-- The full attribution+tamper+retention chain-of-custody surface → Chain of Custody (C12) *(forthcoming)*
+- The full attribution+tamper+retention chain-of-custody surface → [Chain of Custody (C12)](../../compositions/chain-of-custody.md) (`grounded` 2026-06-04)
 - DAG-style derivation / artifact splitting → explicit non-goal (linear chain by design)
 - Multi-party simultaneous custody → explicit non-goal (single current custodian by design)
 - Trusted timestamping for custodial timestamps → Trusted Timestamping *(forthcoming)*

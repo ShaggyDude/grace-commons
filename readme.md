@@ -136,12 +136,17 @@ compositions/
 │                                  ↳ emergent invariants:
 │                                    hold-blocks-purge, retention coverage,
 │                                    hold audit coverage, defensible destruction
-└── attributed-permissions-admin — Permissions + Actor Identity
-                                   ↳ emergent invariants:
-                                     attribution completeness, revocation attribution,
-                                     attribution recoverability, attribution-time monotonicity,
-                                     constituent invariants preserved, pairing-map durability,
-                                     attestation exclusivity, orphan log durability
+├── attributed-permissions-admin — Permissions + Actor Identity
+│                                  ↳ emergent invariants:
+│                                    attribution completeness, revocation attribution,
+│                                    attribution recoverability, attribution-time monotonicity,
+│                                    constituent invariants preserved, pairing-map durability,
+│                                    attestation exclusivity, orphan log durability
+└── chain-of-custody             — Provenance + Audit Trail (substrate)
+                                   ↳ emergent guarantee:
+                                     records-alone custody proof — unbroken + attributed +
+                                     tamper-evident + retention-governed custody (pharma ≡
+                                     legal evidence: same structure); grounded
 ```
 
 Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant (a rule that must always be true — here, that deleting and undoing a task leaves it with the same identity it had before) in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Notification Fanout is structurally distinct: it is the first composition in the library where a single trigger produces a variable number of effects — the fan-out count is determined at runtime by the Active subscriber set, not at composition time — and its emergent invariants (fanout coverage, payload consistency, at-most-one per subscriber) are properties of the directed invocation graph that neither constituent atom can assert alone. Each pattern also carries **Lineage notes** (a record of what each review pass found and how it was resolved) recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
