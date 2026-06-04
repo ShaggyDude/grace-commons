@@ -544,13 +544,70 @@ Formalize and fully apply the Logic Confinement Principle across the entire libr
 Replace folder hierarchy with a rich, multi-dimensional tagging system driven by data rather than card-sorting. Tags will cover: Domain, Behavioral Property, Lifecycle Stage, Regulatory Anchor, Composition Role, Technical Property, Maturity. Enables dynamic views — "All EHDS-relevant atoms", "All audit-related patterns", "Cross-domain universals". Ontology evolves organically from actual composition usage, regulatory overlap, and implementation data. This is the resolution of the open taxonomy question currently documented above.
 
 **3. Healthcare Core Expansion.**
-Ground 55–65 new healthcare-focused atoms, building on the existing Clinical Observation and Medication Order base. Primary downstream target: EHDS implementation patterns.
+Ground 55–65 new healthcare-focused atoms, building on the existing Clinical Observation and Medication Order base. Primary downstream target: EHDS implementation patterns. A first triaged candidate backlog — separating genuinely-new atoms from domain specializations of existing concept-scoped atoms — is recorded in §"Healthcare atom backlog" below; the expansion draws from that deduplicated backlog, not a raw wishlist.
 
 **4. Cross-Domain Attack.**
 Begin deliberate extraction and generalization of universal atoms — Audit Trail, Multi-Party Approval, Defensible Retention, Consent Propagation variants and related patterns. This phase will intentionally stress and evolve the ontology.
 
 **5. Tooling Maturity.**
 Deliver second-author-ready projector and verification harness — the core NLnet grant deliverable. The tooling makes the ~100-atom target achievable by a two-person team within the grant period.
+
+---
+
+## Healthcare atom backlog — triaged candidate list (2026-06-04)
+
+> Seeded from an external brainstorm of OpenEMR / Open Hospital atom candidates and triaged against the library's reuse thesis. The thesis matters here more than anywhere: most healthcare "atoms" people list are **domain specializations of existing concept-scoped atoms, not new freestanding concepts**. "Audit Logging" is not a new atom — it is Event Log + Audit Trail. "Patient Identity" is Party Identity with a medical-record-number field. Grounding redundant domain-named atoms would defeat the cross-domain reuse the library exists to demonstrate. This section records the triage so the Healthcare Core Expansion initiative draws from a deduplicated backlog.
+>
+> Triage verdicts: **grounded** (already in the library); **reuse** (covered by an existing pattern — no new atom; the candidate is that pattern applied to a healthcare subject); **not-an-atom** (deployment config, a reference enumeration, a wire format, a foreign-key link, or a projection — not a stateful EOS concept with its own state machine, actions, and invariants); **new-atom** (a genuinely freestanding concept worth grounding, subject to the EOS Pass-2 test); **composition** (an application of two or more atoms).
+
+### Already grounded, or covered by reuse (no new atom)
+
+| Candidate | Verdict | Covered by |
+|---|---|---|
+| Medication Order | grounded | `atoms/healthcare/medication-order.md` |
+| Vital Signs Observation | reuse | Clinical Observation (vitals *are* clinical observations) |
+| Patient Identity | reuse | Party Identity (a patient is a party; MRN is a deployment field) |
+| Patient Consent | reuse | Consent (purpose-scoped agreement; treatment-consent and HIPAA authorization are scopes) |
+| Patient Record Access / PHI Access Event | reuse | Permissions + Session-Gated Authorization (C14) + Selective Disclosure + Audit Trail |
+| Encounter Status / Order Status | reuse | Workflow / State Machine (a declared status lifecycle) |
+| Appointment Slot / Booking / Cancellation / Provider Schedule | reuse | Capacity Constraint Enforcement + Provisional Commitment + Reservation Lifecycle (C9); provider availability is a time-indexed capacity pool |
+| User Authentication | reuse | Credential + Session + Login (C13) |
+| Role-Based Access | reuse | Permissions (a role is a named reusable grant set — see the *Role* new-atom note below if the bundle itself earns an atom) |
+| Audit Logging | reuse | Event Log + Audit Trail (the canonical "do not re-invent the audit atom") |
+| Data Retention Rule | reuse | Retention Window + Defensible Retention (C1) |
+| Provider Credential (authentication sense) | reuse | Credential |
+| Patient Demographics | not-an-atom | a mutable attribute schema; its correction history is Clinical Observation's amendment-chain shape, not a new concept |
+| Encounter Type | not-an-atom | a reference enumeration (a code) |
+| Billing Encounter Link | not-an-atom | a cross-reference / foreign key — composition-layer state, not an atom |
+| FHIR Resource Export / HL7 Message / Document Import / External System Sync | not-an-atom | serialization / wire formats / integration projections; PHI crossing the boundary is a Selective Disclosure event, message delivery is Notification, idempotent receipt is Duplicate Prevention, document custody is Provenance |
+| Facility Configuration | not-an-atom | deployment configuration |
+
+### Genuinely-new atom candidates (worth grounding, pending EOS Pass-2)
+
+| Candidate | Category | One-line scope | EOS note / composes |
+|---|---|---|---|
+| **Problem / Condition Entry** | healthcare | a longitudinal clinical condition with an active → resolved/inactive status lifecycle and an amendment trail; Problem-List entries, diagnoses, and Allergy Records are instances | distinct from Clinical Observation (a point-in-time measurement) — a condition persists and changes status over time; composes Clinical Observation, Provenance, Audit Trail. **Highest-leverage healthcare atom on this list.** |
+| **Fulfillable Order** | healthcare / generic | the general order-with-fulfillment lifecycle (placed, in-progress, then completed or cancelled, with a result attachment); Lab Order, Procedure Order, and Medication Order are specializations | the general primitive Medication Order is a specific case of (as Approval Step is to Workflow / State Machine); Pass 2 decides whether to extract the general atom or keep per-domain order atoms |
+| **Clinical Administration Record** | healthcare | an immutable "substance/treatment X was administered to patient P at time T" event (immunization, medication administration, infusion) with site/dose/lot | borderline — may be Clinical Observation specialized; resolve at authoring whether administration-vs-observation earns its own atom. Consumed by the MAR composition |
+| **Record Merge / Identity Reconciliation** | resource-lifecycle (generic) | merge two duplicate identity records into a surviving record, with merge provenance and (often) reversible un-merge; Patient Merge, customer dedup, party reconciliation are instances | own state machine (two sources to one merged record, reversible); composes Party Identity + Provenance + Audit Trail |
+| **Qualification / Credentialing Record** | compliance (generic) | a verifiable professional qualification — license, board certification, clinical privilege — with issuer, scope, expiry, and verification status | the *licensure* sense of "Provider Credential", **distinct from the authentication Credential atom** (name-collision flag); composes Actor Identity, Retention Window. Recurs across healthcare licensure and financial KYC |
+| **Ledger Entry / Posting** | resource-lifecycle (generic, financial) | an immutable financial posting against an account (debit or credit) with a reference and reversal-by-new-entry discipline | Charge Capture and Payment Posting are instances; the home composition is Immutable Transaction Ledger (C6) |
+| **Amendable Document / Signed Note** | generic | a narrative record with addendum/amendment history and an author signature; Clinical Note is the canonical instance | likely covered by Clinical Observation's amendment-chain shape + an Actor Identity signature — resolve at authoring whether a distinct document atom is warranted |
+| **Role / Permission Bundle** | compliance | a named, reusable set of permission grants assignable to actors (the "role" in RBAC) | borderline — Permissions composes individual grants; a Role atom adds the reusable named bundle + assignment. Decide whether the grouping earns an atom or is a Permissions composition |
+| **Time-Slot Schedule** | temporal / resource-lifecycle | a recurring time-indexed availability calendar (a provider's bookable slots over time) | borderline — Capacity Constraint Enforcement covers the bounded-pool side; a distinct atom is warranted only if recurrence / calendar arithmetic recurs widely |
+
+### Healthcare composition candidates (applications, not atoms)
+
+- **Patient Record** — Party Identity + Problem/Condition entries + Clinical Observations + a Workflow / State Machine encounter lifecycle, under Audit Trail.
+- **Patient Encounter** — an episode of care: party references (patient, providers) + a Workflow / State Machine encounter-status lifecycle + the observations and orders recorded during it.
+- **Medication Administration Record (MAR)** — Medication Order + Clinical Administration Record + Chain of Custody (C12) for the drug, under Audit Trail.
+- **Prescription Fulfillment** — Medication Order + the dispensing event + Chain of Custody.
+- **Insurance Claim Lifecycle** — a Workflow / State Machine claim lifecycle (submitted, adjudicated, then paid/denied/appealed) + Ledger Entries + an encounter link, under Audit Trail.
+- **Clinical Trial Data Capture** and **Immunization Registry Reporting** — downstream healthcare compositions noted elsewhere as worked-example targets.
+
+### Sequencing note
+
+The recommended first picks when Healthcare Core Expansion begins are the three highest-leverage genuinely-new atoms: **Problem / Condition Entry** (anchors the longitudinal clinical-record surface; unblocks Patient Record), **Fulfillable Order** (generalizes Medication Order; unblocks Lab and Procedure orders), and **Qualification / Credentialing Record** (recurs across healthcare licensure and financial KYC). Every candidate above must still clear the EOS Pass-2 freestanding test before it earns an atom file — the entries flagged *borderline* are flagged precisely because that test may route them back to an existing pattern rather than a new atom.
 
 ---
 
