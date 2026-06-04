@@ -99,6 +99,12 @@ For compositions that define a named semantics subsection (Replay semantics, Eva
 - **Cross-references.** Does every step, invariant, or claim that depends on content defined elsewhere name that section explicitly? Does every section that defines a mechanism used by another section get named by those users? Implicit "you know where to look" is a finding — all references must be explicit in both directions.
 - **Logic confinement.** Does any action embed async work, IO, crypto, or clock reads inside the core transition? Time, identity, and cryptographic material must be injected inputs, not internal calls. A transition that generates `now` or a random id inside itself is non-deterministic — flag it. See *Logic Confinement Principle* in `EXECUTION_CONTRACT.md`.
 
+**Adversarial postures (run all three).** The questions above check *topics*; these check the spec from a hostile *stance*, and catch what a topic-checklist misses:
+
+- **The cheapest-compliant implementer.** "Read this as someone trying to ship the cheapest possible implementation that still *technically* satisfies every sentence." Whatever they could get away with is an under-specification — close it.
+- **Two engineers who dislike each other.** "Find any sentence two senior engineers who want each other to be wrong could read two different ways." Each such sentence is a determinism leak — pin the reading.
+- **The unstated-assumption hunt.** "Name every implicit assumption about clocks, ordering, or identity the spec relies on but does not state." Each one is a hidden load-bearing decision — surface it or name it out-of-scope.
+
 **Time:** 30–60 minutes for a thorough pass. The most labor-intensive of the three.
 
 **Personal Todo example.** Surfaced five gaps in the simplified post-Pass-1-and-2 spec: identity model muddled, `add` return value unspecified, description rules unspecified, timestamp monotonicity (the requirement that timestamps always move forward, never backward) malformed (chain inequality with optional terms), examples were happy-path only. All five fixed in a third revision; three additional concerns (concurrency, atomicity, clock semantics) named as explicit out-of-scope rather than fixed in-pattern.
