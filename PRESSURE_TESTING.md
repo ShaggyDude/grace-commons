@@ -164,6 +164,40 @@ These are the recurring traps that surfaced authoring the formal layer across th
 
 - **Conflate nothing between "exists" and "verifies."** A `.tla`/`.als` file in the directory, a model that ran once in a GUI, or a sibling checker in another language that "agrees" are all *not* the formal layer being discharged. Only a green run of the committed artifact in the reproducible harness, with a rejected buggy twin, counts. This is the discipline the "model present" bar encodes; the pitfalls above are the specific ways an artifact silently fails it.
 
+### The coverage cross-check (formal-layer rescan sub-step)
+
+The "model present" bar establishes that a model verifies *what it checks* and that what it checks is non-vacuous. It does **not** establish that the model checks the *right* and the *whole* load-bearing surface. That residual — *did a load-bearing invariant go unchecked, or get silently scoped out?* — is the dominant property-fidelity risk, and it is the one the harness cannot catch on its own: a model can be green, twin-rejected, and non-vacuous while quietly omitting an invariant the spec calls load-bearing.
+
+The **coverage cross-check** closes it. It is a structured read-and-diff, not new tooling or heavier search — deliberately cheap, so it rides the existing scheduled-rescan cadence rather than requiring a separate effort (inductive theorem-proving and large-scope blow-up are the expensive levers, and they chase smaller, lower-probability residuals; do not reach for them to discharge this one). A fresh-context reviewer (a fresh-reader AI is ideal — it surfaces the gaps the model's author rationalized past) is the right executor; it is parallelizable across patterns.
+
+**Procedure.** For each pattern carrying a vote-yes model, produce a *coverage matrix*: one row per invariant in the spec's **Invariants** section (and per load-bearing claim named in the formal-layer vote), each classed into exactly one verdict:
+
+- **covered** — a named `check`/invariant in the model asserts it (cite the construct).
+- **by-construction** — the model makes it structurally impossible to violate rather than asserting it (e.g. an append-only log modeled with no remove action). Acceptable, but recorded as an *assumption, not a verified property* — because the model cannot catch a regression that a future edit introduces. Flag for promotion to a real `check` if the property is load-bearing.
+- **out-of-scope (named reason)** — deliberately not modeled, with the reason stated: a within-action atomicity claim (not an interleaving), a structural/relational property better suited to the other tool, a best-effort clock property, etc.
+- **GAP** — load-bearing, uncovered, and with no defensible out-of-scope reason. A GAP is a finding, routed through the standard channel (Pass-3-shaped) and blocking unqualified `grounded` until closed.
+
+Add one **bound-saturation line**: raise the model's scope once (N or MaxClock + k), confirm the explored-state count does not grow and the invariant still holds, and record the saturation point. This is the cheap guard against a low-bound pass that truncated the reachable space before the interesting interleavings.
+
+**Worked example — Party Identity.** The formal-layer vote named Invariants 4 and 6 load-bearing.
+
+| Spec invariant | Verdict |
+|---|---|
+| 2 — State membership exclusivity | covered (`Inv2_StateExclusivity` / `TypeOK`) |
+| 3 — Closed is absorbing | covered (`Inv3_ClosedAbsorbing`, history-flag form) |
+| **4 — Verified requires a passed verification after the most recent suspend** | **covered** (`Inv4_PassedAfterSuspend`, derived from the log) — *load-bearing, verified* |
+| **6 — Append-only in insertion order** | **by-construction** — the model only ever appends and never removes; append-only is a modeling *assumption*, not an asserted check. *Load-bearing per the vote → flag: promote to a real check or record the assumption explicitly.* |
+| 1, 5, 7 — record permanence / event & field immutability | out-of-scope (immutability is structural; the relational/Alloy surface, not this interleaving model) |
+| 8 — state-change events auditable | out-of-scope (records-shape property, discharged in prose + Generation acceptance) |
+| 9, 10 — id stability / no id reuse | out-of-scope (structural identity; Alloy-class, not TLC-class) |
+| 11 — action atomicity | out-of-scope (within-action, not an action-vs-action interleaving) |
+
+Bound saturation: at `MaxEvents = 6`, 532 states; `MaxEvents = 7` holds at 532 → *saturated.* ✓
+
+Note what the cross-check surfaced on the very first pattern: Invariant 6, *named load-bearing by the vote*, is only **by-construction** in the model, not asserted — exactly the kind of silent partial-coverage the green checkmark hides. That is the finding the cross-check exists to produce; it routes as a refining finding (promote Inv 6 to an explicit append-only/monotonic-length check, or record the by-construction assumption in the model's Lineage as deliberate).
+
+A blank fill-in matrix lives at [`tools/harness/coverage-matrix.template.md`](./tools/harness/coverage-matrix.template.md); one filled matrix per vote-yes pattern is the rescan artifact, and any GAP row is a routed finding.
+
 ## Defending each claim in-line
 
 The three passes are review tools — they catch gaps. Authoring well in the first place reduces what the passes find. The strongest writing discipline for architectural specs: **every claim is defended in-line by the same paragraph that introduces it.**
@@ -314,6 +348,8 @@ A scheduled rescan can surface findings for reasons the prior round could not ha
 - *The reviewer (human or AI) has improved.* An adversarial pass conducted today by a sharper reviewer than the prior round can surface a finding the prior round missed without the spec having changed.
 
 A scheduled rescan that closes with no findings updates the rescan date in the Status line and adds a one-line Lineage entry: *"Scheduled rescan: YYYY-MM-DD — clean."* A scheduled rescan that surfaces findings is treated identically to a touch-triggered re-pass — full Lineage entry naming what each pass found, fixes applied, status preserved at `grounded` only if the round closes clean across all three passes. Findings from a scheduled rescan are not a failure of the prior round; they are the rescan doing its job.
+
+For a pattern carrying a vote-yes formal model, the rescan's formal-layer portion is three cheap mechanical steps, all of which ride this same cadence: (1) re-run the model and its buggy twin through `tools/harness/` (the twin must still be rejected); (2) run the **coverage cross-check** (see §"The coverage cross-check") — emit the coverage matrix, route any GAP row as a finding; (3) take the one bound-saturation bump. None of these requires new tooling or heavier search; the coverage cross-check in particular is the highest-yield-per-minute step for closing the property-fidelity residual, which is why it belongs in every formal-layer rescan rather than in an occasional special pass.
 
 The cadence is deployment-shaped. The working default is weekly with weekends as the batch window, but a library churning slowly may rescan less often, and a library under active multi-author refinement may rescan more often. The discipline is that the cadence is *fixed and externally driven*, not "when somebody remembers." The whole point is to ratchet confidence on a rhythm independent of any particular author's attention.
 
