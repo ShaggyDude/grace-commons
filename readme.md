@@ -102,7 +102,8 @@ atoms/
 │   ├── notification             — delivery record for a single notification to a single recipient
 │   └── preference               — per-principal delivery-shaping record: channels, frequency, quiet hours, format (grounded)
 ├── workflow/
-│   └── approval-step            — Pending → Approved | Rejected | Withdrawn; named-approver gate (grounded)
+│   ├── approval-step            — Pending → Approved | Rejected | Withdrawn; named-approver gate (grounded)
+│   └── workflow-state-machine   — general-purpose declared-state-machine: only-declared-transitions, one current state, replay-deterministic history (grounded)
 └── healthcare/
     ├── clinical-observation     — immutable clinical measurement with amendment/retraction trail (grounded)
     └── medication-order         — prescription lifecycle from order through terminal resolution (grounded)
@@ -142,11 +143,17 @@ compositions/
 │                                    attribution recoverability, attribution-time monotonicity,
 │                                    constituent invariants preserved, pairing-map durability,
 │                                    attestation exclusivity, orphan log durability
-└── chain-of-custody             — Provenance + Audit Trail (substrate)
+├── chain-of-custody             — Provenance + Audit Trail (substrate)
+│                                  ↳ emergent guarantee:
+│                                    records-alone custody proof — unbroken + attributed +
+│                                    tamper-evident + retention-governed custody (pharma ≡
+│                                    legal evidence: same structure); grounded
+└── stateful-workflow-execution  — Workflow/State Machine + Approval Step + Permissions
+                                     + Assignment + Audit Trail (substrate)
                                    ↳ emergent guarantee:
-                                     records-alone custody proof — unbroken + attributed +
-                                     tamper-evident + retention-governed custody (pharma ≡
-                                     legal evidence: same structure); grounded
+                                     approval-gated transitions — a guarded transition fires
+                                     only when its bound Approval Step is Approved (guard
+                                     evaluation re-converges here); grounded
 ```
 
 Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant (a rule that must always be true — here, that deleting and undoing a task leaves it with the same identity it had before) in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Notification Fanout is structurally distinct: it is the first composition in the library where a single trigger produces a variable number of effects — the fan-out count is determined at runtime by the Active subscriber set, not at composition time — and its emergent invariants (fanout coverage, payload consistency, at-most-one per subscriber) are properties of the directed invocation graph that neither constituent atom can assert alone. Each pattern also carries **Lineage notes** (a record of what each review pass found and how it was resolved) recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
