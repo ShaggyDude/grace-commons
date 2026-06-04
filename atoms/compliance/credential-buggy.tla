@@ -1,33 +1,31 @@
 ---- MODULE credential-buggy ----
-\* Grace Commons — Credential atom: BUGGY TWIN (vacuity guard).
+\* Grace Commons — Credential atom: BUGGY TWIN (vacuity guard) — Invariant 7.
 \*
-\* Introduces TWO bugs relative to credential.tla:
+\* This is the first of two isolated buggy twins. It targets Invariant 7
+\* (rotation-chain integrity). Its sibling `credential-buggy-toctou.tla` targets
+\* Invariant 2 (active uniqueness under concurrent register). Splitting the
+\* hazards across two twins gives each load-bearing invariant its own reachable,
+\* checker-rejected counterexample — a combined twin would only ever surface the
+\* shorter of the two violations (the Inv 7 counterexample at 16 states would
+\* mask the Inv 2 counterexample at 33 states, leaving Inv 2 with no demonstrated
+\* rejection in `audit.mjs`).
 \*
-\* BUG 1 — Rotation-chain integrity (PRIMARY, targets Inv_RotationChain):
-\*   RotateAtomic_Buggy transitions the prior slot to Rotated WITHOUT setting
-\*   successor[k]. The slot is Rotated but successor[k] = 0 — a dangling chain.
-\*   Inv_RotationChain (every Rotated slot has a non-null successor link) is
-\*   violated. This is the primary targeted invariant for this twin.
+\* BUG — dangling rotation chain: RotateAtomic_Buggy transitions the prior slot
+\* to Rotated WITHOUT writing the successor link. successor[k] stays 0 ->
+\* Inv_RotationChain (every Rotated slot has a non-null successor) is violated.
+\* `register` here is the CORRECT atomic check-and-commit, so Inv_ActiveUniqueness
+\* still HOLDS — the violation is isolated to the rotation chain. If the checker
+\* reports all invariants hold here, the Inv 7 check is vacuous.
 \*
-\* BUG 2 — Active uniqueness (PRESERVED, targets Inv_ActiveUniqueness):
-\*   `register` is split into a non-atomic check-then-commit: RegisterObserve
-\*   marks a slot "checking"; RegisterCommit makes it Active without re-checking
-\*   ActiveCount. Two concurrent registers both observe ActiveCount = 0 and both
-\*   commit -> two Active credentials.
-\*
-\* The checker will find a violation: Inv_RotationChain fires first (or at the
-\* shortest counterexample path). Both invariants are included in Safety so either
-\* failure constitutes a rejection of this twin.
-\*
-\* Expected result: Safety VIOLATED (Inv_RotationChain — dangling successor link
-\* after rotation). If the checker reports all invariants hold here, the harness
-\* is vacuous.
+\* Expected result: Safety VIOLATED (Inv_RotationChain).  Sequence: register a
+\* credential (slot 1 -> Active), rotate it (slot 1 -> Rotated, slot 2 -> Active,
+\* successor[1] left at 0) -> Rotated slot with successor 0.
 
 EXTENDS Naturals, FiniteSets
 
 CONSTANT MaxC
 
-Status == {"none", "checking", "Active", "Rotated", "Revoked", "Expired"}
+Status == {"none", "Active", "Rotated", "Revoked", "Expired"}
 
 VARIABLES
     status,                 \* 1..MaxC -> Status
@@ -45,21 +43,16 @@ Init ==
     /\ status    = [k \in 1..MaxC |-> "none"]
     /\ successor = [k \in 1..MaxC |-> 0]
 
-\* BUG 1 (register split — TOCTOU): check and commit are separate steps.
-RegisterObserve ==
+\* CORRECT atomic register (Inv 2 preserved): register Active only when no Active
+\* credential exists for the pair, in one step.
+RegisterAtomic ==
     /\ ActiveCount = 0
     /\ \E m \in 1..MaxC :
         /\ status[m] = "none"
-        /\ status'    = [status    EXCEPT ![m] = "checking"]
-        /\ UNCHANGED successor
-
-RegisterCommit ==
-    /\ \E m \in 1..MaxC :
-        /\ status[m] = "checking"
         /\ status'    = [status    EXCEPT ![m] = "Active"]
-        /\ UNCHANGED successor
+        /\ successor' = [successor EXCEPT ![m] = 0]
 
-\* BUG 2 (dangling rotation chain): transitions prior slot to Rotated WITHOUT
+\* BUG (dangling rotation chain): transitions prior slot to Rotated WITHOUT
 \* writing the successor link. successor[k] stays 0 -> Inv_RotationChain violated.
 RotateAtomic_Buggy ==
     /\ \E k, m \in 1..MaxC :
@@ -81,13 +74,7 @@ Expire ==
         /\ status'    = [status    EXCEPT ![k] = "Expired"]
         /\ UNCHANGED successor
 
-Next ==
-    \/ RegisterObserve
-    \/ RegisterCommit
-    \/ RotateAtomic_Buggy
-    \/ Revoke
-    \/ Expire
-
+Next == RegisterAtomic \/ RotateAtomic_Buggy \/ Revoke \/ Expire
 Spec == Init /\ [][Next]_vars
 
 Inv_ActiveUniqueness == ActiveCount <= 1

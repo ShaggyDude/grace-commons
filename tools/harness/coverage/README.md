@@ -69,7 +69,7 @@ checker-rejected buggy twin. Produced by parallel Sonnet subagents, Opus-gated
 | Pattern | Invariant | How closed | Artifact(s) |
 |---|---|---|---|
 | Medication Order | Inv 3 & 4 | New Alloy structural model mirroring `clinical-observation.als`; pre-dispensing guard + linear-chain checks | `medication-order.als` + `medication-order-buggy.als` (twin flags both Inv 3 and Inv 4) |
-| Credential | Inv 7 | Added `successor` link + `Inv_RotationChain` (every Rotated slot has a non-null successor; same-pair clause by single-pair scope) | `credential.tla` (138 states) + `credential-buggy.tla` (carries both the Inv 2 TOCTOU and the Inv 7 dangling-rotation hazards) |
+| Credential | Inv 7 | Added `successor` link + `Inv_RotationChain` (every Rotated slot has a non-null successor; same-pair clause by single-pair scope) | `credential.tla` (138 states) + **two isolated twins**: `credential-buggy.tla` (Inv 7 dangling rotation; rejected at 5 states) and `credential-buggy-toctou.tla` (Inv 2 register TOCTOU; rejected at 33 states) |
 | Legal Hold | Inv 6 | Two-clock extension: global `now` + ghost `placedAt`/`releasedAt`, `Inv_TemporalOrdering` | `legal-hold.tla` (370 states) + **two isolated twins**: `legal-hold-buggy.tla` (Inv 6) and `legal-hold-buggy-cascade.tla` (Inv 4) |
 | Provisional Commitment | Inv 8 | Ghost `releasedAt`/`expiredAt` + `Inv8_TransitionsAfterPlacement` with `PlacedAt=1` | `provisional-commitment.tla` (15 states) + **two isolated twins**: `…-buggy.tla` (Inv 8) and `…-buggy-window.tla` (Inv 7) |
 | Capacity Constraint | Inv 5 | Added `ReleaseAtomic` so non-negativity is non-vacuous on the release path | `capacity-constraint-enforcement.tla` (7 states) + **two isolated twins**: `…-buggy.tla` (Inv 5 underflow) and `…-buggy-toctou.tla` (Inv 4 overshoot) |
@@ -83,3 +83,16 @@ per model so each load-bearing invariant retains its own dedicated rejecting
 twin — both auto-discovered and required-to-reject by `audit.mjs`. The five
 patterns now carry unqualified `grounded` (no "formal coverage: Inv N pending"
 caveat remains).
+
+Follow-up (2026-06-04): a verification audit found Credential had *not* received
+the same treatment — its single `credential-buggy.tla` carried both the Inv 2
+TOCTOU and the Inv 7 dangling-rotation hazards, and because TLC reports only the
+shortest counterexample, the Inv 7 violation (5 states) masked the Inv 2 violation
+(33 states), leaving Inv 2 with no demonstrated rejection in `audit.mjs`. Credential
+was split into two isolated twins to match the discipline above: `credential-buggy.tla`
+(Inv 7 only — `register` stays atomic, so Inv 2 holds at 105 states when checked
+alone) and `credential-buggy-toctou.tla` (Inv 2 only — `rotate` stays correct, so
+Inv 7 holds at 233 states when checked alone). Both are auto-discovered and
+required-to-reject by `audit.mjs`. No English-spec or correct-model change (the
+correct `credential.tla` already asserts both invariants and holds at 138 states);
+this was a vacuity-guard/coverage-artifact correction only.
