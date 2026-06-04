@@ -29,24 +29,26 @@ CONSTANTS ExpiresAt,        \* window close time (placed_at = 0, so = duration)
 
 States == {"Held", "Confirmed", "Released", "Expired"}
 
-VARIABLES state, clock, confirmedAt
-vars == <<state, clock, confirmedAt>>
+VARIABLES state, clock, confirmedAt, everTerminal
+vars == <<state, clock, confirmedAt, everTerminal>>
 
 TypeOK ==
     /\ state \in States
     /\ clock \in 0..MaxClock
     /\ confirmedAt \in 0..MaxClock
+    /\ everTerminal \in BOOLEAN
 
 Init ==
     /\ state = "Held"           \* place_hold: commitment starts Held at clock 0
     /\ clock = 0
     /\ confirmedAt = 0
+    /\ everTerminal = FALSE
 
 \* wall-time advances.
 Tick ==
     /\ clock < MaxClock
     /\ clock' = clock + 1
-    /\ UNCHANGED <<state, confirmedAt>>
+    /\ UNCHANGED <<state, confirmedAt, everTerminal>>
 
 \* CORRECT confirm: admitted only while strictly within the window.
 Confirm ==
@@ -54,11 +56,13 @@ Confirm ==
     /\ clock < ExpiresAt
     /\ state' = "Confirmed"
     /\ confirmedAt' = clock
+    /\ everTerminal' = TRUE
     /\ UNCHANGED clock
 
 Release ==
     /\ state = "Held"
     /\ state' = "Released"
+    /\ everTerminal' = TRUE
     /\ UNCHANGED <<clock, confirmedAt>>
 
 \* expire: admitted only once the window has elapsed.
@@ -66,6 +70,7 @@ Expire ==
     /\ state = "Held"
     /\ clock >= ExpiresAt
     /\ state' = "Expired"
+    /\ everTerminal' = TRUE
     /\ UNCHANGED <<clock, confirmedAt>>
 
 Next == Tick \/ Confirm \/ Release \/ Expire
@@ -74,9 +79,16 @@ Spec == Init /\ [][Next]_vars
 \* Load-bearing — a Confirmed commitment was confirmed strictly within the window.
 Inv_ConfirmWithinWindow == (state = "Confirmed") => (confirmedAt < ExpiresAt)
 
-Safety == TypeOK /\ Inv_ConfirmWithinWindow
+\* Invariant 3 — terminal absorption. Promoted from a by-construction assumption
+\* to an explicit check (2026-06-04 coverage cross-check): once a commitment has
+\* entered a terminal state it stays terminal (history-flag form, like Party
+\* Identity's Closed-absorbing check). A transition out of a terminal state would
+\* violate this.
+Inv3_TerminalAbsorbing ==
+    everTerminal => (state \in {"Confirmed", "Released", "Expired"})
 
-\* NOTE Invariant 1 (membership exclusivity) is TypeOK; Invariant 3 (terminal
-\* absorption) is enforced by construction — every transition guards state = Held.
+Safety == TypeOK /\ Inv_ConfirmWithinWindow /\ Inv3_TerminalAbsorbing
+
+\* NOTE Invariant 1 (membership exclusivity) is TypeOK.
 
 ====

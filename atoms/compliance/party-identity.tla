@@ -139,6 +139,15 @@ Inv3_ClosedAbsorbing == everClosed => (pstate = "Closed")
 Inv4_PassedAfterSuspend ==
     (pstate = "Verified") => HasPassedAfterSuspend(log, len)
 
-Safety == TypeOK /\ Inv2_StateExclusivity /\ Inv3_ClosedAbsorbing /\ Inv4_PassedAfterSuspend
+\* Invariant 6 — append-only in insertion order. Promoted from a by-construction
+\* assumption to an explicit check (2026-06-03 coverage cross-check): the log is a
+\* contiguous filled prefix — every position <= len holds a real event, every
+\* position > len is empty. A malformed append (a hole, or a write past the tail)
+\* violates this; append-only/monotonic growth is the structural consequence.
+Inv6_AppendOnlyPrefix ==
+    \A i \in 1..MaxEvents : (i <= len) <=> (log[i] # "e")
+
+Safety == TypeOK /\ Inv2_StateExclusivity /\ Inv3_ClosedAbsorbing
+              /\ Inv4_PassedAfterSuspend /\ Inv6_AppendOnlyPrefix
 
 ====

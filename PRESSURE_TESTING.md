@@ -186,7 +186,7 @@ Add one **bound-saturation line**: raise the model's scope once (N or MaxClock +
 | 2 — State membership exclusivity | covered (`Inv2_StateExclusivity` / `TypeOK`) |
 | 3 — Closed is absorbing | covered (`Inv3_ClosedAbsorbing`, history-flag form) |
 | **4 — Verified requires a passed verification after the most recent suspend** | **covered** (`Inv4_PassedAfterSuspend`, derived from the log) — *load-bearing, verified* |
-| **6 — Append-only in insertion order** | **by-construction** — the model only ever appends and never removes; append-only is a modeling *assumption*, not an asserted check. *Load-bearing per the vote → flag: promote to a real check or record the assumption explicitly.* |
+| **6 — Append-only in insertion order** | **GAP → resolved.** Was **by-construction** (the model only appended, never removed — an assumption, not an asserted check) despite being *load-bearing per the vote*. Promoted 2026-06-03 to an explicit check, `Inv6_AppendOnlyPrefix` (the log is a contiguous filled prefix); now **covered**. |
 | 1, 5, 7 — record permanence / event & field immutability | out-of-scope (immutability is structural; the relational/Alloy surface, not this interleaving model) |
 | 8 — state-change events auditable | out-of-scope (records-shape property, discharged in prose + Generation acceptance) |
 | 9, 10 — id stability / no id reuse | out-of-scope (structural identity; Alloy-class, not TLC-class) |
@@ -194,7 +194,7 @@ Add one **bound-saturation line**: raise the model's scope once (N or MaxClock +
 
 Bound saturation: at `MaxEvents = 6`, 532 states; `MaxEvents = 7` holds at 532 → *saturated.* ✓
 
-Note what the cross-check surfaced on the very first pattern: Invariant 6, *named load-bearing by the vote*, is only **by-construction** in the model, not asserted — exactly the kind of silent partial-coverage the green checkmark hides. That is the finding the cross-check exists to produce; it routes as a refining finding (promote Inv 6 to an explicit append-only/monotonic-length check, or record the by-construction assumption in the model's Lineage as deliberate).
+Note what the cross-check surfaced on the very first pattern: Invariant 6, *named load-bearing by the vote*, was only **by-construction** in the model, not asserted — exactly the kind of silent partial-coverage the green checkmark hides. That is the finding the cross-check exists to produce, and it was closed the same way: Invariant 6 was promoted to an explicit checked predicate (`Inv6_AppendOnlyPrefix`) in both the model and its twin, the correct model still holds (532 states) and the twin is still rejected. Surfaced and closed on the first real run — the worked example *is* the cross-check earning its keep.
 
 A blank fill-in matrix lives at [`tools/harness/coverage-matrix.template.md`](./tools/harness/coverage-matrix.template.md); one filled matrix per vote-yes pattern is the rescan artifact, and any GAP row is a routed finding.
 

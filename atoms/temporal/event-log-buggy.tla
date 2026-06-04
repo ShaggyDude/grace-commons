@@ -58,6 +58,8 @@ Spec == Init /\ [][Next]_vars
 Inv4_Monotonic == \A i, j \in 1..len : (i < j) => (log[i].seq < log[j].seq)
 Inv3_TotalOrder == \A i, j \in 1..len : (i # j) => (log[i].seq # log[j].seq)
 Inv6_NoIdReuse == \A i, j \in 1..len : (i # j) => (log[i].eid # log[j].eid)
+Inv1_AppendOnlyPrefix == \A i \in 1..MaxLen : (i <= len) <=> (log[i] # EmptyEvt)
 Safety == TypeOK /\ Inv4_Monotonic /\ Inv3_TotalOrder /\ Inv6_NoIdReuse
+              /\ Inv1_AppendOnlyPrefix
 
 ====

@@ -17,46 +17,52 @@ CONSTANTS ExpiresAt, MaxClock
 
 States == {"Held", "Confirmed", "Released", "Expired"}
 
-VARIABLES state, clock, confirmedAt
-vars == <<state, clock, confirmedAt>>
+VARIABLES state, clock, confirmedAt, everTerminal
+vars == <<state, clock, confirmedAt, everTerminal>>
 
 TypeOK ==
     /\ state \in States
     /\ clock \in 0..MaxClock
     /\ confirmedAt \in 0..MaxClock
+    /\ everTerminal \in BOOLEAN
 
 Init ==
     /\ state = "Held"
     /\ clock = 0
     /\ confirmedAt = 0
+    /\ everTerminal = FALSE
 
 Tick ==
     /\ clock < MaxClock
     /\ clock' = clock + 1
-    /\ UNCHANGED <<state, confirmedAt>>
+    /\ UNCHANGED <<state, confirmedAt, everTerminal>>
 
 \* BUG: no `clock < ExpiresAt` guard — confirm fires regardless of the window.
 Confirm ==
     /\ state = "Held"
     /\ state' = "Confirmed"
     /\ confirmedAt' = clock
+    /\ everTerminal' = TRUE
     /\ UNCHANGED clock
 
 Release ==
     /\ state = "Held"
     /\ state' = "Released"
+    /\ everTerminal' = TRUE
     /\ UNCHANGED <<clock, confirmedAt>>
 
 Expire ==
     /\ state = "Held"
     /\ clock >= ExpiresAt
     /\ state' = "Expired"
+    /\ everTerminal' = TRUE
     /\ UNCHANGED <<clock, confirmedAt>>
 
 Next == Tick \/ Confirm \/ Release \/ Expire
 Spec == Init /\ [][Next]_vars
 
 Inv_ConfirmWithinWindow == (state = "Confirmed") => (confirmedAt < ExpiresAt)
-Safety == TypeOK /\ Inv_ConfirmWithinWindow
+Inv3_TerminalAbsorbing == everTerminal => (state \in {"Confirmed", "Released", "Expired"})
+Safety == TypeOK /\ Inv_ConfirmWithinWindow /\ Inv3_TerminalAbsorbing
 
 ====

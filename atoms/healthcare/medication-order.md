@@ -354,7 +354,7 @@ Medication Order composes naturally with the existing library:
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — TLA+ model `medication-order.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`.) — foundation round, two human refinement rounds, and AI adversarial round (Torvalds X2) complete. Last full rescan: 2026-05-20.
+`grounded` (formal layer landed 2026-06-03 — TLA+ model `medication-order.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`. **Formal coverage: Invariants 3 & 4 (linear amendment chains) pending** — vote-named load-bearing, deferred to Alloy but no Alloy model yet authored; queued early-sprint, candidate fix is a small `medication-order.als` mirroring `clinical-observation.als`. Coverage cross-check 2026-06-04 — see `tools/harness/coverage/medication-order.md`. Inv 9 recorded as deliberate by-construction.) — foundation round, two human refinement rounds, and AI adversarial round (Torvalds X2) complete. Last full rescan: 2026-05-20.
 
 ---
 

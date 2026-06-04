@@ -88,6 +88,8 @@ Spec == Init /\ [][Next]_vars
 Inv2_StateExclusivity == pstate \in States
 Inv3_ClosedAbsorbing == everClosed => (pstate = "Closed")
 Inv4_PassedAfterSuspend == (pstate = "Verified") => HasPassedAfterSuspend(log, len)
-Safety == TypeOK /\ Inv2_StateExclusivity /\ Inv3_ClosedAbsorbing /\ Inv4_PassedAfterSuspend
+Inv6_AppendOnlyPrefix == \A i \in 1..MaxEvents : (i <= len) <=> (log[i] # "e")
+Safety == TypeOK /\ Inv2_StateExclusivity /\ Inv3_ClosedAbsorbing
+              /\ Inv4_PassedAfterSuspend /\ Inv6_AppendOnlyPrefix
 
 ====

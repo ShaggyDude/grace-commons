@@ -93,11 +93,18 @@ Inv3_TotalOrder ==
 Inv6_NoIdReuse ==
     \A i, j \in 1..len : (i # j) => (log[i].eid # log[j].eid)
 
-Safety == TypeOK /\ Inv4_Monotonic /\ Inv3_TotalOrder /\ Inv6_NoIdReuse
+\* Invariant 1 — append-only. Promoted from a by-construction assumption to an
+\* explicit check (2026-06-04 coverage cross-check): the log is a contiguous
+\* filled prefix — every position <= len is a landed event, every position > len
+\* is empty. A malformed append (a hole, or a write past the tail, or a removal
+\* leaving a gap) violates this; append-only/monotonic growth is the consequence.
+Inv1_AppendOnlyPrefix ==
+    \A i \in 1..MaxLen : (i <= len) <=> (log[i] # EmptyEvt)
 
-\* NOTE Invariant 1 (append-only) and Invariant 2 (event immutability) are
-\* enforced by construction: no action removes a landed event or rewrites a
-\* filled slot — AppendOk only ever writes position len+1 and increments len.
-\* They are structural here rather than asserted as state predicates.
+Safety == TypeOK /\ Inv4_Monotonic /\ Inv3_TotalOrder /\ Inv6_NoIdReuse
+              /\ Inv1_AppendOnlyPrefix
+
+\* NOTE Invariant 2 (event immutability) remains enforced by construction: no
+\* action rewrites a filled slot — AppendOk only ever writes position len+1.
 
 ====
