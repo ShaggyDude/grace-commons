@@ -47,13 +47,20 @@ RejectGate(g) ==
     /\ gate' = [gate EXCEPT ![g] = "rejected"]
     /\ UNCHANGED <<fired, audited>>
 
-\* BUG: fire without checking the gate (no gate guard) and without auditing.
-FireGuardedBuggy(g) ==
+\* BUG (Inv1 — gate clearance, ISOLATED): fire without checking the gate, but
+\* DO audit. Breaks Inv1_GateClearance (fired with gate in none/pending/rejected)
+\* while holding Inv_BindingAtomic (fired => audited) — so this twin's rejection
+\* is dedicated to the gate-clearance invariant. Its sibling
+\* `stateful-workflow-execution-buggy-unaudited.tla` isolates Inv_BindingAtomic.
+\* (A single twin breaking both would mask one in the committed run — see
+\*  tools/harness/isolate.mjs.)
+FireUngatedButAudited(g) ==
     /\ ~fired[g]
-    /\ fired' = [fired EXCEPT ![g] = TRUE]
-    /\ UNCHANGED <<gate, audited>>
+    /\ fired'   = [fired   EXCEPT ![g] = TRUE]
+    /\ audited' = [audited EXCEPT ![g] = TRUE]
+    /\ UNCHANGED gate
 
-Next == \E g \in Gates : OpenGate(g) \/ ApproveGate(g) \/ RejectGate(g) \/ FireGuardedBuggy(g)
+Next == \E g \in Gates : OpenGate(g) \/ ApproveGate(g) \/ RejectGate(g) \/ FireUngatedButAudited(g)
 Spec == Init /\ [][Next]_vars
 
 Inv1_GateClearance == \A g \in Gates : fired[g] => (gate[g] = "approved")

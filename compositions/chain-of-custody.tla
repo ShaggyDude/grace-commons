@@ -57,6 +57,7 @@ CommitCustody(e) ==
 Next == \E e \in Entries : CommitCustody(e)
 Spec == Init /\ [][Next]_vars
 
+\* @isolate-facets Inv4_BindingBijection Inv4_NoDanglingProv Inv4_NoOrphanAudit
 \* --- composition-level safety invariants ---
 
 \* The two coherent configurations of the three sub-writes for an entry.

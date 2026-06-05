@@ -58,6 +58,7 @@ WithdrawConsent(c) ==
 Next == \E c \in Consents : WithdrawConsent(c)
 Spec == Init /\ [][Next]_vars
 
+\* @isolate-facets Inv3_BindingBijection Inv_NoDanglingRevoke Inv_NoOrphanPropagation
 \* --- composition-level safety invariants ---
 
 \* The two coherent configurations of the three sub-writes for a consent.

@@ -56,6 +56,7 @@ CommitTransition(t) ==
 Next == \E t \in Transitions : CommitTransition(t)
 Spec == Init /\ [][Next]_vars
 
+\* @isolate-facets Inv4_BindingBijection Inv_NoDanglingSoft Inv_NoOrphanAudit
 \* --- composition-level safety invariants ---
 
 \* The two coherent configurations of the three sub-writes for a transition.
