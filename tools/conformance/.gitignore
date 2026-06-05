@@ -1,0 +1,7 @@
+# Generated render stores are never committed — rebuild with
+# fixtures/build-<render>.mjs (they live on the native tmp FS by default).
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+node_modules/

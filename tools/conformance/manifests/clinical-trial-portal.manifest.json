@@ -1,0 +1,426 @@
+{
+  "manifest_version": "1",
+  "render": {
+    "id": "clinical-trial-portal",
+    "title": "Beacon Clinical Research — render 1 (Deno + Hono + SQLite + HTMX)",
+    "spec_surface": ["C16", "C13", "C14", "APA", "C1"],
+    "authored": "2026-06-05",
+    "authoring": "hand-authored off the constituent compositions' Generation-acceptance sections (Day 1). Derive-from-spec-prose is explicitly next-week."
+  },
+
+  "denominator_rule": {
+    "summary": "correctness(%) = (in-scope record-clearable checks that PASS) / (in-scope record-clearable checks), equal-weight. Externally-clearable and out-of-render-scope checks are reported separately and never counted as passes OR failures.",
+    "axes": {
+      "kind": {
+        "description": "Reuses the spec's own Generation-acceptance split. Verbatim from each composition's GA section.",
+        "values": {
+          "record-clearable": "An external auditor can clear the check from the records alone (the audit log + constituent-atom stores), with no recourse to source code, runbooks, or developer narration. These are the only checks eligible for the denominator.",
+          "externally-clearable": "The check requires evidence outside the records — organizational policy, a credential-compromise disclosure, code inspection, or a formal model. The spec itself labels these as the boundary of what the composition can prove. Reported alongside the number; never scored."
+        }
+      },
+      "render_scope": {
+        "description": "Orthogonal to kind. A check is record-clearable in PRINCIPLE (against the full composition) but the spec admits renders that implement a subset. render_scope records whether THIS render's documented surface covers the check. This axis is NOT in the PLAN's two-value kind field; it exists so that a render which deliberately omits optional substrate is not punished with false fails — the load-bearing high-precision discipline ('a false fail destroys trust faster than a missed check').",
+        "values": {
+          "in-scope": "render 1's composition-coverage map (Demo2-plan.md §2) and committed Decisions (§8) cover the substrate this check reads. Counts toward the denominator.",
+          "out-of-scope": "render 1 deliberately does not implement the composition substrate this check reads (e.g. credential-revocation cascade maps, a per-call authorization event log, a cryptographic attestation store). Justified by a Demo2-plan citation in scope_note. Reported separately; never scored. Scope exclusion is auditable, never silent, and is keyed to a render DESIGN decision — never to the check happening to fail."
+        }
+      }
+    },
+    "scoring": {
+      "denominator": "count(checks where kind == 'record-clearable' AND render_scope == 'in-scope')",
+      "numerator": "count(denominator checks that evaluate PASS against the running render)",
+      "correctness_pct": "round(100 * numerator / denominator, 1)",
+      "weighting": "equal-weight in week 1 (per PLAN 'equal-weight to start'). severity does NOT weight the percentage.",
+      "severity_use": "severity drives (a) triage order on the Day-4 precision pass and (b) a SEPARATE boolean gate reported beside the number: critical_fail_count == 0. A render can be 100% with a critical fail only if a critical check is mis-scoped; that would be a manifest bug, not a pass.",
+      "separate_reports": [
+        "externally-clearable checks, with their disposition",
+        "record-clearable + out-of-scope checks, with the Demo2-plan citation that scopes them out",
+        "any check the runner could not evaluate (adapter gap) — reported as 'pending', excluded from numerator AND denominator until implemented, so a half-built run reports honestly rather than inflating"
+      ],
+      "reproducibility": "The number is COMPUTED from the manifest + the render's records, not asserted. Given the same render store, the same manifest yields the same number on every run. occurred_at timestamps and tokens vary run-to-run but no check depends on their literal values — only on ordering and referential consistency."
+    },
+    "claim_fidelity": "Every 'claim' is verbatim spec text (the bolded GA headline, or the GA bullet's lead sentence). The manifest never names a SQLite table, column, or HTTP endpoint — that mapping is the render adapter's job (Day 2/3). 'scope_note' describes the records-alone evaluation in SPEC vocabulary (events, records, ordering) so the same manifest can re-target render 2 by swapping only the adapter. 'adapter_capability' names the records-alone accessors each check needs, which seeds the Day-2 adapter interface."
+  },
+
+  "checks": [
+    {
+      "id": "C16-1",
+      "composition": "External Onboarding (C16)",
+      "ga_ref": "Generation acceptance, check 1",
+      "claim": "Every active Party Identity enrolled via this composition traces to an accepted invitation.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "Records-alone: every onboarding-completion record references an invitation record in Accepted state, with the invitation's acceptance timestamp at or before the completion event, and a preceding invitation-accepted event for the same invitation. In render 1 the completion record is the actor-enrollment event carrying via_invitation_id.",
+      "adapter_capability": ["onboardingCompletions", "invitation", "eventsByAction"]
+    },
+    {
+      "id": "C16-2",
+      "composition": "External Onboarding (C16)",
+      "ga_ref": "Generation acceptance, check 2",
+      "claim": "Every active credential registered via this composition traces to an enrolled party.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "Records-alone: every credential-created record in an onboarding burst binds to an actor whose party appears in the Party Identity store. No onboarding credential is bound to a principal that is not an enrolled party.",
+      "adapter_capability": ["credentials", "actors", "parties", "onboardingCompletions"]
+    },
+    {
+      "id": "C16-3",
+      "composition": "External Onboarding (C16)",
+      "ga_ref": "Generation acceptance, check 3",
+      "claim": "Credential-follows-party ordering.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "Records-alone: for every onboarding, the enrolled identity's creation timestamp is at or before its credential's registration timestamp. No credential predates the identity it authenticates.",
+      "adapter_capability": ["actors", "credentials"]
+    },
+    {
+      "id": "C16-4",
+      "composition": "External Onboarding (C16)",
+      "ga_ref": "Generation acceptance, check 4",
+      "claim": "Invitation-gates-enrollment.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "Records-alone: no onboarding-completion event exists without a preceding invitation-accepted event for the same invitation, and every accepted invitation is in Accepted state. Permissions were not exercised in the wrong order.",
+      "adapter_capability": ["eventsByAction", "invitation", "onboardingCompletions"]
+    },
+    {
+      "id": "C16-5",
+      "composition": "External Onboarding (C16)",
+      "ga_ref": "Generation acceptance, check 5",
+      "claim": "Unresolved interruptions are detectable.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "render 1 maps this to its atomicity guarantee: onboarding writes its four events (invitation-accepted, actor-enrolled, credential-created, session-opened) in one transaction that rolls back wholesale on any failure (proven by tests/composition.test.ts). Records-alone translation: there are NO incomplete onboarding bursts — every actor-enrolled event is accompanied by its sibling credential-created and session-opened events for the same actor. A render that emitted an explicit onboarding-interrupted event would instead enumerate interrupted-without-completed tokens; render 1's stronger atomic guarantee makes partial onboarding unrepresentable, which this check confirms structurally.",
+      "adapter_capability": ["onboardingCompletions", "eventsByAction"]
+    },
+    {
+      "id": "C16-6",
+      "composition": "External Onboarding (C16)",
+      "ga_ref": "Generation acceptance, check 6",
+      "claim": "Every terminal invitation transition via this composition is attested.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "Records-alone: every invitation in a terminal state (Accepted or Revoked) has a corresponding attestation event (invitation-accepted / invitation-revoked), and every issued invitation has an invitation-issued event. render 1 has no Declined state. Unattested terminal transitions are flagged.",
+      "adapter_capability": ["invitation", "eventsByAction"]
+    },
+
+    {
+      "id": "C13-1",
+      "composition": "Login (C13)",
+      "ga_ref": "Generation acceptance, bullet 1 (credential-gates-issuance)",
+      "claim": "Verify that every session in `session_to_credential` has a corresponding `login_succeeded` Audit Trail event.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "Records-alone, render-1 mapping: every session record traces to a session-opening event — a login-succeeded event attributed to the session's actor, OR an onboarding session-opened event naming the session. No session exists without a credential-verified login or a credential-creating onboarding. This is the credential-gates-issuance invariant (Login Invariant 1) read against render 1's session store and audit log.",
+      "adapter_capability": ["sessions", "eventsByAction"]
+    },
+    {
+      "id": "C13-2",
+      "composition": "Login (C13)",
+      "ga_ref": "Generation acceptance, bullet 2",
+      "claim": "Verify map inverse consistency.",
+      "kind": "record-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "major",
+      "scope_note": "OUT OF RENDER SCOPE. render 1 maintains no credential_to_sessions / session_to_credential cascade maps. Credential-revocation cascade is Phase 7 stretch (Demo2-plan §7 'Soft-revoke pattern for an actor … out of scope'); render 1 issues and revokes individual sessions without the dual-map bookkeeping these checks reconcile. Reported separately; never scored.",
+      "adapter_capability": []
+    },
+    {
+      "id": "C13-3",
+      "composition": "Login (C13)",
+      "ga_ref": "Generation acceptance, bullet 3",
+      "claim": "Verify cascade completeness for any credential revocation event.",
+      "kind": "record-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "major",
+      "scope_note": "OUT OF RENDER SCOPE. render 1 implements no credential-revocation cascade (Demo2-plan §7). There are no credential_revocation_cascade_initiated events to reconcile. Reported separately; never scored.",
+      "adapter_capability": []
+    },
+    {
+      "id": "C13-4",
+      "composition": "Login (C13)",
+      "ga_ref": "Generation acceptance, bullet 4",
+      "claim": "Verify login event log and Audit Trail consistency.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "Records-alone, render-1 mapping: render 1 has no separate application-layer login_event_log — its tamper-evident audit log IS the login record. Translation: every successful authentication is recorded as a login-succeeded (or onboarding session-opened) event with a real session, and every failed attempt is recorded as an anonymous login-failed event. No success without a session; no session-opening event without a session record.",
+      "adapter_capability": ["eventsByAction", "sessions"]
+    },
+    {
+      "id": "C13-5",
+      "composition": "Login (C13)",
+      "ga_ref": "Generation acceptance, bullet 5",
+      "claim": "Reconstruct the session history for any principal.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "Records-alone: for any principal, the audit log + session store yield a complete timeline — when they authenticated, which session was issued, and whether it was revoked (session-revoked event) or expired (expires_at). Every session record is reachable from an attributed opening event and carries an observable terminal disposition. No external source required.",
+      "adapter_capability": ["sessions", "eventsByActor", "eventsByAction"]
+    },
+    {
+      "id": "C13-6",
+      "composition": "Login (C13)",
+      "ga_ref": "Generation acceptance, bullet 6",
+      "claim": "Confirm all `login_map_write_failure` events are resolved.",
+      "kind": "record-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "refining",
+      "scope_note": "OUT OF RENDER SCOPE. login_map_write_failure is an event of the cascade-map machinery render 1 does not implement (Demo2-plan §7). No such events exist. Reported separately; never scored.",
+      "adapter_capability": []
+    },
+
+    {
+      "id": "C14-1",
+      "composition": "Session-Gated Authorization (C14)",
+      "ga_ref": "Generation acceptance, check 1 (state-verifiable)",
+      "claim": "Session validity at time of access.",
+      "kind": "record-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "major",
+      "scope_note": "The spec marks checks 1–2 state-verifiable only for a SPECIFIC disputed decision at a known time, and 3–5 require Audit Trail composed in for per-call records. render 1 enforces the gate in middleware (requireSession/requirePermission) and emits NO per-call authorization event (Demo2-plan §2: C14 is a middleware seam, not an audited mutation). A records-only batch validator cannot enumerate authorization decisions to replay their session validity. Reported separately.",
+      "adapter_capability": []
+    },
+    {
+      "id": "C14-2",
+      "composition": "Session-Gated Authorization (C14)",
+      "ga_ref": "Generation acceptance, check 2 (state-verifiable)",
+      "claim": "Grant existence at time of access.",
+      "kind": "record-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "major",
+      "scope_note": "Same boundary as C14-1: verifiable only for a named disputed decision against point-in-time grant state, which a records-only batch sweep cannot enumerate without a per-call authorization log. Reported separately.",
+      "adapter_capability": []
+    },
+    {
+      "id": "C14-3",
+      "composition": "Session-Gated Authorization (C14)",
+      "ga_ref": "Generation acceptance, check 3 (code-inspection)",
+      "claim": "Gate sequence.",
+      "kind": "externally-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "major",
+      "scope_note": "The spec states this 'cannot be cleared from records alone without Audit Trail; it requires code inspection.' Belongs to the formal/code-review layer, not the records validator. Reported separately.",
+      "adapter_capability": []
+    },
+    {
+      "id": "C14-4",
+      "composition": "Session-Gated Authorization (C14)",
+      "ga_ref": "Generation acceptance, check 4 (principal binding)",
+      "claim": "Principal binding.",
+      "kind": "record-clearable",
+      "kind_override": "spec-default is externally-clearable — the spec conditions principal-binding verifiability on code inspection 'without Audit Trail'. Records-clearable HERE because render 1 composes Audit Trail over every mutation, so the binding (event actor == its session's owner) is checkable from the event log + session store alone.",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "render-1 mapping of the principal-binding invariant onto the audit substrate render 1 DOES maintain: every recorded event is attributed to the actor that owns the session named on that event — never to a caller-supplied identity. Records-alone: for every event carrying a session reference, the event's actor equals the session record's actor. This confirms attribution is session-derived (set from requireSession), which is exactly what principal-binding asserts. The spec's check 4 needs code inspection WITHOUT Audit Trail; render 1 composed Audit Trail over its mutations, making this records-clearable for the audited surface.",
+      "adapter_capability": ["events", "sessions"]
+    },
+    {
+      "id": "C14-5",
+      "composition": "Session-Gated Authorization (C14)",
+      "ga_ref": "Generation acceptance, check 5 (record-verifiable, requires Audit Trail)",
+      "claim": "Per-call gate and outcome records.",
+      "kind": "record-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "major",
+      "scope_note": "OUT OF RENDER SCOPE. This check is record-clearable only when every check_permitted call is itself an audited event. render 1 audits state MUTATIONS, not authorization CHECKS — there is no per-call gate/outcome event stream (Demo2-plan §2). A render that audited each authorization decision would make this in-scope. Reported separately; never scored.",
+      "adapter_capability": []
+    },
+
+    {
+      "id": "APA-1",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, audit-traversal-clearable check 1",
+      "claim": "For every grant in the Permissions store, produce the issuance attestation and its verify result.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "render-1 mapping: render 1 attributes grants via a grantor identity on the grant record plus a grant-issued audit event, rather than a separable cryptographic attestation. Records-alone: every grant record has a grant-issued event naming it, and the grant's grantor resolves to a real enrolled actor. Every grant carries a recoverable issuance attribution.",
+      "adapter_capability": ["grants", "eventsByAction", "actors"]
+    },
+    {
+      "id": "APA-2",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, audit-traversal-clearable check 2",
+      "claim": "For every Revoked grant, produce the revocation attestation and its verify result.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "Records-alone: every grant in Revoked state (revocation timestamp set) has a grant-revoked event naming it and carries the captured revocation reason. Every revocation is attested.",
+      "adapter_capability": ["grants", "eventsByAction"]
+    },
+    {
+      "id": "APA-3",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, audit-traversal-clearable check 3",
+      "claim": "Verify the attribution-time monotonicity contract for every grant.",
+      "kind": "record-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "refining",
+      "scope_note": "OUT OF RENDER SCOPE. The contract compares an attestation's attested_at against the grant's granted_at. render 1 collapses the attestation into the audit event written in the SAME transaction as the grant insert, so there is no independent attested_at timestamp to compare — the inequality is not meaningfully evaluable against render 1's model. A render with a separable attestation store would make this in-scope. Reported separately; never scored.",
+      "adapter_capability": []
+    },
+    {
+      "id": "APA-4",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, audit-traversal-clearable check 4",
+      "claim": "Verify each constituent atom's Generation acceptance bar over its own instance.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "render-1 mapping, Permissions slice: every grant is enumerable with full history (issued, revoked, reason); revocation is terminal and immediate (no grant record transitions out of Revoked); denial is by absence (no active grant ⇒ no permitted authority). Records-alone over the grant store + grant events.",
+      "adapter_capability": ["grants", "eventsByAction"]
+    },
+    {
+      "id": "APA-5",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, audit-traversal-clearable check 5",
+      "claim": "Identify orphan attestations.",
+      "kind": "record-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "refining",
+      "scope_note": "OUT OF RENDER SCOPE. Orphan detection depends on a namespace-prefixed attestation store in Actor Identity cross-referenced against grant/revocation maps. render 1 has no separable attestation store or namespace prefix; a grant either committed (with its event, atomically) or rolled back wholesale. No orphan population exists to enumerate. Reported separately; never scored.",
+      "adapter_capability": []
+    },
+    {
+      "id": "APA-6",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, audit-traversal-clearable check 6",
+      "claim": "Verify attestation exclusivity (Invariant 7).",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "render-1 mapping: the attestation-exclusivity injectivity properties read against the audit log — no grant is named by more than one grant-issued event (issuance injectivity), no grant by more than one grant-revoked event (revocation injectivity), and the grant-issued and grant-revoked event sets for any single grant are distinct roles. Records-alone over grant events.",
+      "adapter_capability": ["eventsByAction"]
+    },
+    {
+      "id": "APA-EXT-1",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, externally-clearable",
+      "claim": "Was the grantor *authorized* to issue this grant per organizational policy?",
+      "kind": "externally-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "major",
+      "scope_note": "The spec marks this externally-clearable: the composition records THAT the grantor attested, not WHETHER policy permits that grantor to issue the scope. Requires an external policy registry / Delegation pattern. Reported separately.",
+      "adapter_capability": []
+    },
+    {
+      "id": "APA-EXT-2",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, externally-clearable",
+      "claim": "Has the grantor's credential been compromised since `attested_at`?",
+      "kind": "externally-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "refining",
+      "scope_note": "Spec-labelled externally-clearable: reinterpretation under credential compromise belongs to a Compromise Disclosure pattern, not the records. Reported separately.",
+      "adapter_capability": []
+    },
+    {
+      "id": "APA-EXT-3",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, externally-clearable",
+      "claim": "Does the composition's emergent state itself preserve tamper-evidence?",
+      "kind": "externally-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "major",
+      "scope_note": "Spec-labelled externally-clearable for the bare composition. NOTE for render 1: render 1 writes every grant/revoke into the hash-chained event log, so the grant attribution IS under tamper evidence here — but proving the chain protects the grant maps specifically is covered by C1-2b (integrity coverage). Kept separate to mirror the spec's split.",
+      "adapter_capability": []
+    },
+    {
+      "id": "APA-EXT-4",
+      "composition": "Attributed Permissions Admin (APA)",
+      "ga_ref": "Generation acceptance, externally-clearable",
+      "claim": "Was the grant's scope vocabulary recognized by the system at the time of grant?",
+      "kind": "externally-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "refining",
+      "scope_note": "Spec-labelled externally-clearable: the composition treats action_scope as opaque; scope-vocabulary validity belongs to a Scope Registry pattern. Reported separately.",
+      "adapter_capability": []
+    },
+
+    {
+      "id": "C1-1",
+      "composition": "Audit Trail (C1)",
+      "ga_ref": "Generation acceptance, check 1",
+      "claim": "Answer all four audit questions for any event.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "Records-alone: for every event the records answer WHAT (action + payload), WHO (attributed actor, or anonymous by design for login-failed), INTEGRITY (the event's hash recomputes and links to its predecessor), and RETENTION (a retention policy record covers it). Every event is completely answerable.",
+      "adapter_capability": ["events", "verifyChain", "retentionPolicy"]
+    },
+    {
+      "id": "C1-2a",
+      "composition": "Audit Trail (C1)",
+      "ga_ref": "Generation acceptance, check 2 (application invariant: attribution coverage)",
+      "claim": "Verify all eight application-level invariants over the record set.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "Attribution-coverage slice of the eight invariants. Records-alone: every event is attributed to an actor EXCEPT the by-design anonymous classes — failed-login events (no identity established, Decision §8.10) and bootstrap seed events (the seam, documented). No mutation event is unexpectedly anonymous.",
+      "adapter_capability": ["events"]
+    },
+    {
+      "id": "C1-2b",
+      "composition": "Audit Trail (C1)",
+      "ga_ref": "Generation acceptance, check 2 (application invariant: integrity coverage)",
+      "claim": "Verify all eight application-level invariants over the record set.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "Integrity-coverage slice and the load-bearing tamper-evidence check (ports tests/tamper.test.ts). Records-alone: recomputing the hash chain from event #1 reproduces every stored hash; row #1's predecessor hash is empty; each event's predecessor hash equals the prior event's hash. Any divergence localizes the first altered row.",
+      "adapter_capability": ["verifyChain", "events"]
+    },
+    {
+      "id": "C1-3",
+      "composition": "Audit Trail (C1)",
+      "ga_ref": "Generation acceptance, check 3 (Event Log append-only & total order)",
+      "claim": "Verify each constituent atom's Generation acceptance bar over its own instance.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "critical",
+      "scope_note": "Event Log slice: append-only and total order. Records-alone: event ids form a gap-free strictly-increasing sequence from 1 (monotonic id, no reuse), occurred_at is non-decreasing in id order, and each hash is unique (no silent overwrite). The log is ordered and complete.",
+      "adapter_capability": ["events"]
+    },
+    {
+      "id": "C1-4",
+      "composition": "Audit Trail (C1)",
+      "ga_ref": "Generation acceptance, check 4",
+      "claim": "Bound the forensic window of any detected tampering.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "Records-alone: the verify surface returns a precise divergence point — the latest verified event and the first failed event bound the window. On a clean chain this is vacuously satisfied (window empty); the Day-5 injected defect proves the bounding actually localizes a tampered row rather than merely reporting a boolean.",
+      "adapter_capability": ["verifyChain"]
+    },
+    {
+      "id": "C1-5",
+      "composition": "Audit Trail (C1)",
+      "ga_ref": "Generation acceptance, check 5",
+      "claim": "Distinguish lawfully destroyed from missing.",
+      "kind": "record-clearable",
+      "render_scope": "in-scope",
+      "severity": "major",
+      "scope_note": "render-1 mapping: render 1 never hard-deletes events — retention is filter-on-read only (Decision §8.6; hard deletion would break the chain). Records-alone: the id sequence is gap-free, so no event is MISSING; and because nothing is purged, no event needs a destroyed-marker. Absence-of-gaps is the structural guarantee the spec calls for.",
+      "adapter_capability": ["events", "retentionPolicy"]
+    },
+    {
+      "id": "C1-6",
+      "composition": "Audit Trail (C1)",
+      "ga_ref": "Generation acceptance, check 6",
+      "claim": "Identify the composing patterns active in this deployment.",
+      "kind": "record-clearable",
+      "render_scope": "out-of-scope",
+      "severity": "refining",
+      "scope_note": "Configuration-identification, not a correctness invariant. render 1 wires Retention Window (retention policy record present) and Tamper Evidence (hash chain present) and none of the optional composing patterns (External Anchoring, Trusted Timestamping, Legal Hold, Compromise Disclosure). Reported separately as a deployment fact, not scored — including it in the denominator would add a trivially-true check that inflates the number.",
+      "adapter_capability": ["retentionPolicy"]
+    }
+  ]
+}

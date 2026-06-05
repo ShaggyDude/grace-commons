@@ -1,0 +1,11 @@
+{
+  "render": "clinical-trial-portal",
+  "_note": "The render's composition coverage (Demo2-plan §2): which library compositions this render implements, and the code each is referred to by. Render-specific input to the extractor. Spec paths are repo-root-relative.",
+  "compositions": [
+    { "code": "C16", "spec": "compositions/external-onboarding.md" },
+    { "code": "C13", "spec": "compositions/login.md" },
+    { "code": "C14", "spec": "compositions/session-gated-authorization.md" },
+    { "code": "APA", "spec": "compositions/attributed-permissions-admin.md" },
+    { "code": "C1",  "spec": "compositions/audit-trail.md" }
+  ]
+}

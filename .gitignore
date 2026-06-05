@@ -9,11 +9,6 @@ grants/
 # TLC model-checker on-disk metadata (created on every CLI run; not a spec artifact).
 compositions/states/
 
-# Conformance validator tooling — kept private for now. Reversible: delete this
-# block to reveal. (PLAN.md is untracked via `git rm --cached` so it also leaves
-# the repo tip; it remains in past history unless history is rewritten.)
-tools/conformance/
-
 # Demos — committed source, but exclude build artifacts and runtime data.
 demos/*/node_modules/
 demos/*/.deno/
