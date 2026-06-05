@@ -1,0 +1,12 @@
+{
+  "name": "grace-commons-conformance",
+  "private": true,
+  "type": "module",
+  "description": "Conformance validator subsystem. The CORE (validate.mjs, evaluators, score, manifests) is dependency-free — Node built-ins only. The single dependency below is used ONLY by render 3, which exists to prove a genuinely different storage engine (real Postgres, via pglite-in-WASM) drops into the pipeline by writing only adapters.",
+  "scripts": {
+    "test": "node --test tests/ ghost/tests/"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.1"
+  }
+}

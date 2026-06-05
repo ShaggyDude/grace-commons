@@ -116,7 +116,10 @@ let adapter = null;
 const results = {};
 if (existsSync(dbAbs)) {
   try {
-    adapter = createAdapter({ dbPath: dbAbs });
+    // `await` supports adapters whose init is async (e.g. an engine that must
+    // load its store before exposing the synchronous accessors the evaluators
+    // call). Sync adapters return immediately — awaiting a non-promise is a no-op.
+    adapter = await createAdapter({ dbPath: dbAbs });
   } catch (e) {
     die(`adapter failed to open store '${dbAbs}': ${e.message}`);
   }
