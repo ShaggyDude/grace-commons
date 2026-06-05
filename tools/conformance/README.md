@@ -258,37 +258,45 @@ A spec claim is *carried by the spec* only if it holds identically across
 | `clinical-trial-portal`      | SQLite (Deno) | render-1 names              | Argon2id | genesis bug |
 | `clinical-trial-portal-next` | SQLite (Node) | `people`/`ledger`/`auth.ok` | scrypt   | correct |
 | `clinical-trial-portal-pg`   | **Postgres** (pglite) | `members`/`audit`/`signin.ok` | pbkdf2 | correct |
+| `clinical-trial-portal-r4`   | flat-file **JSONL** (event-sourced) | append-only log, no SQL | hashed | correct |
 
 The **same** manifest, **same** evaluators, and **same** ghost scenario drive
-all three — only the per-render adapters differ.
+all four — only the per-render adapters differ. Render 4 was authored by an agent
+with **isolated context** that never saw renders 1–3 (only the spec + the adapter
+contract), so its convergence is independent-derivation evidence, not shared
+lineage.
 
 ```bash
 node fixtures/build-clinical-trial-portal.mjs   # render 1
 node render2/build.mjs                          # render 2 (same scenario)
-node render3/build.mjs                          # render 3 (Postgres, same scenario)
-PG=$(node -e 'console.log(require("os").tmpdir())')/grace-commons-conformance/clinical-trial-portal-pg
+node render3/build.mjs                          # render 3 (Postgres)
+node render4/build.mjs                          # render 4 (JSONL, independently authored)
+T=$(node -e 'console.log(require("os").tmpdir())')/grace-commons-conformance
 node agree.mjs clinical-trial-portal \
-  clinical-trial-portal clinical-trial-portal-next "clinical-trial-portal-pg=$PG"
+  clinical-trial-portal clinical-trial-portal-next \
+  "clinical-trial-portal-pg=$T/clinical-trial-portal-pg" \
+  "clinical-trial-portal-r4=$T/clinical-trial-portal-r4.jsonl"
 ```
 
 ```
   clinical-trial-portal        95%
   clinical-trial-portal-next   100%
   clinical-trial-portal-pg     100%
+  clinical-trial-portal-r4     100%
   CROSS-RENDER CORRECTNESS: 95%   (19/20 pass on EVERY render)
     agreed-pass 19 · agreed-fail 0 · DISAGREE 1
-    C1-2b   clinical-trial-portal=fail   ...-next=pass   ...-pg=pass
+    C1-2b   ...-portal=fail   ...-next=pass   ...-pg=pass   ...-r4=pass
 ```
 
-19/20 claims hold identically across all three renders — spec-carried meaning,
-measured. The lone disagreement is render 1's genesis bug, now outvoted 2-to-1:
-the divergence localizes a render-specific defect, not a spec property.
-`agree.mjs` (N renders) exits non-zero on any disagreement, so it doubles as a CI
-gate on spec-carried behavior. Each new render joined by writing **only two
-adapters** (a validator adapter + a ghost actions adapter) — no new evaluators,
-no new manifest. Render 3 also shows the seam absorbs an **async** engine: its
-validator adapter loads Postgres into memory once, then serves the same
-synchronous accessor contract.
+19/20 claims hold identically across four renders on four paradigms (SQLite×2,
+Postgres, flat-file JSONL) — spec-carried meaning, measured. The lone
+disagreement is render 1's genesis bug, now outvoted **3-to-1**: the divergence
+localizes a render-specific defect, not a spec property. `agree.mjs` (N renders)
+exits non-zero on any disagreement, so it doubles as a CI gate on spec-carried
+behavior. Each new render joined by writing **only two adapters** (a validator
+adapter + a ghost actions adapter) — no new evaluators, no new manifest. Render 3
+also shows the seam absorbs an **async** engine: its validator adapter loads
+Postgres into memory once, then serves the same synchronous accessor contract.
 
 ## The fixture (why it's generated, not committed)
 
@@ -317,8 +325,10 @@ regen.mjs                          regen-fix loop (validator as fitness function
 agree.mjs                          multi-render agreement (cross-render correctness)
 render2/                           render 2 — pure-Node SQLite, different shape (+ build)
 render3/                           render 3 — Postgres (pglite), async (+ build)
+render4/                           render 4 — flat-file JSONL, independently authored (+ build)
 adapters/clinical-trial-portal-next.adapter.mjs    render-2 validator adapter
 adapters/clinical-trial-portal-pg.adapter.mjs      render-3 validator adapter (async load)
+adapters/clinical-trial-portal-r4.adapter.mjs      render-4 validator adapter
 ghost/                             ghost-user flows (scenario runner + per-render actions adapters)
 package.json                       core is dep-free; pglite is render-3 only
 adapters/clinical-trial-portal.adapter.mjs       render-1 seam (the only per-render file)
