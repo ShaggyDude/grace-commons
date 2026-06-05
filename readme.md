@@ -160,12 +160,18 @@ compositions/
 │                                    destruction lifecycle — no purge without an auditable
 │                                    who/when/why; recover_history replays the full lifecycle
 │                                    Soft Delete's current-state summary discards; grounded
-└── consent-preference-management — Consent + Permissions + Audit Trail (substrate)
+├── consent-preference-management — Consent + Permissions + Audit Trail (substrate)
+│                                  ↳ emergent guarantee:
+│                                    consent-gates-processing (processing_permitted) +
+│                                    revocation propagation — withdraw_consent records the
+│                                    complete downstream scope set atomically with the revoke
+│                                    (revoke ⇔ complete-propagation-record); grounded
+└── reservation-lifecycle         — Capacity Constraint + Provisional Commitment +
+                                     Duplicate Prevention + Event Log + Actor Identity
                                    ↳ emergent guarantee:
-                                     consent-gates-processing (processing_permitted) +
-                                     revocation propagation — withdraw_consent records the
-                                     complete downstream scope set atomically with the revoke
-                                     (revoke ⇔ complete-propagation-record); grounded
+                                     allocation coherence — the pool's allocated total stays
+                                     in lockstep with the live-reservation set (no oversell,
+                                     no leak, no double-release); grounded
 ```
 
 Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant (a rule that must always be true — here, that deleting and undoing a task leaves it with the same identity it had before) in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Notification Fanout is structurally distinct: it is the first composition in the library where a single trigger produces a variable number of effects — the fan-out count is determined at runtime by the Active subscriber set, not at composition time — and its emergent invariants (fanout coverage, payload consistency, at-most-one per subscriber) are properties of the directed invocation graph that neither constituent atom can assert alone. Each pattern also carries **Lineage notes** (a record of what each review pass found and how it was resolved) recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
