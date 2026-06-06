@@ -1,0 +1,17 @@
+{
+  "name": "Beacon Clinical Research",
+  "short_name": "Beacon",
+  "description": "Clinical trial portal — subject enrollment, audit trail, multi-party approval.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
