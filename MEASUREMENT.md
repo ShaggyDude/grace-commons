@@ -1,4 +1,4 @@
-# MEASUREMENT.md — tokens per pattern
+# MEASUREMENT
 
 Companion to [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md): that's the quality
 bar, this is the cost. One rule, kept deliberately simple.
