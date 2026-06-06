@@ -35,11 +35,15 @@ node validate.mjs clinical-trial-portal
 ```
 
 ```
-  CORRECTNESS: 95.0%   (19/20 passed)
-  in-scope record-clearable: 20  ·  pass 19 · fail 1 · pending 0 · error 0
-  critical-fail gate: 1 CRITICAL FAIL(S)
-  ... FAIL C1-2b  hash chain diverges at event #1 ...
+  CORRECTNESS: 100.0%   (20/20 passed)
+  in-scope record-clearable: 20  ·  pass 20 · fail 0 · pending 0 · error 0
+  critical-fail gate: clean (0 critical fails)
 ```
+
+(Render 1 measured 95% until 2026-06-06, with one red — `C1-2b`, a real
+audit-integrity bug the validator caught. The demo was patched; render 1 now
+verifies clean. The catch-and-fix is the worked example below and in
+[`DISCOVERIES.md`](../../DISCOVERIES.md).)
 
 `--db <path>` measures any store (e.g. a live `deno task seed` DB);
 `--json` emits a machine-readable report (for CI / the regen loop);
@@ -159,38 +163,47 @@ hand-authored manifest provably faithful.
 
 ## Proof it has teeth
 
-A green run is meaningless unless the validator can go red. Build variants with
-the fixture builder and watch the *right* check move — no false greens, no false
-fails:
+A green run is meaningless unless the validator can go red. The default build is
+correct (100%); inject a defect and watch the *right* check move — no false
+greens, no false fails:
 
 | build | correctness | reds |
 |---|---|---|
-| faithful (default) | **95.0%** | `C1-2b` |
-| `--clean-genesis` | **100%** | — |
-| `--defect skip-grant-audit` | **90.0%** | `APA-1` (grant 7), `C1-2b` |
-| `--clean-genesis --defect tamper-payload` | **95.0%** | `C1-2b` (localized at the tampered row #13) |
+| default (correct render) | **100%** | — |
+| `--defect genesis-hash` | **95.0%** | `C1-2b` (chain diverges at event #1) |
+| `--defect skip-grant-audit` | **95.0%** | `APA-1` (names grant 7) |
+| `--defect tamper-payload` | **95.0%** | `C1-2b` (localized at the tampered row) |
+| `--defect skip-grant-audit --defect genesis-hash` | **90.0%** | `APA-1`, `C1-2b` |
 
-- `--clean-genesis` → **100%** proves 95% is not a ceiling artifact: a correct
-  render scores full marks; the only gap is a real defect.
-- `--defect skip-grant-audit` (a render that writes a grant row but skips its
-  audit append — the PLAN's example) flips **APA-1**, which names the exact
-  offending grant.
+- The default at **100%** proves no ceiling artifact: a correct render scores full
+  marks. Every drop below is an injected defect.
+- `--defect genesis-hash` reproduces render 1's original bug (below); the chain
+  diverges at event #1.
+- `--defect skip-grant-audit` (writes a grant row but skips its audit append)
+  flips **APA-1**, which names the exact offending grant.
 - `--defect tamper-payload` (an adversary rewrites a committed payload) makes the
-  hash chain diverge **at the tampered row**, which the verify surface localizes
-  precisely — the `tamper.test.ts` property, now measured.
+  hash chain diverge **at the tampered row** — the `tamper.test.ts` property,
+  measured.
 
-### The validator's first real catch (a genuine render-1 finding)
+### The validator's first real catch — found, then fixed
 
-The lone baseline red, **C1-2b**, is **not** synthetic. Render 1's seeded
-genesis event (`study.registered`) is hashed in `scripts/seed.ts` **without** the
-`id` field, while `domain/event_log.ts` `appendEvent`/`verifyChain` hash **with**
-`id`. The genesis row therefore fails `verifyChain` on a *pristine* database — a
-CRA clicking `/audit/verify` on an untampered store would see "Tamper detected at
-event #1." The render's own tests never exercise `verifyChain` over the seeded
-event, so the defect is latent; the conformance run surfaces it immediately, and
-(because `verifyChain` stops at the first divergence) the genesis break also
-*masks* downstream tamper detection. This is a render bug, logged here and in
-chat — it is **not** patched from this tool (that is the render's review channel).
+On its first run against render 1, the validator returned 95% with one red,
+`C1-2b`, and it was **not** synthetic. Render 1's seeded genesis event
+(`study.registered`) was hashed in `scripts/seed.ts` **without** the `id` field,
+while `domain/event_log.ts` `appendEvent`/`verifyChain` hash **with** `id`. The
+genesis row therefore failed `verifyChain` on a *pristine* database — a CRA
+clicking `/audit/verify` on an untampered store would have seen "Tamper detected
+at event #1" — and because `verifyChain` stops at the first divergence, the
+genesis break *masked* downstream tamper detection. The render's own tests never
+exercised `verifyChain` over the seeded event, so the defect was latent until the
+conformance run surfaced it on contact.
+
+**Fixed in the demo on 2026-06-06** (`seed.ts` now hashes the genesis row with
+`id`, matching the append path); render 1 verifies clean and measures 100%. The
+bug is retained as a reproducible injection (`--defect genesis-hash`) and the
+full account is in [`DISCOVERIES.md`](../../DISCOVERIES.md). This is the worked
+example of the whole point: an oracle derived from the spec found a real
+audit-integrity defect the implementation's own tests missed.
 
 ---
 
@@ -255,7 +268,7 @@ A spec claim is *carried by the spec* only if it holds identically across
 
 | render | engine | schema / vocabulary | password | chain |
 |---|---|---|---|---|
-| `clinical-trial-portal`      | SQLite (Deno) | render-1 names              | Argon2id | genesis bug |
+| `clinical-trial-portal`      | SQLite (Deno) | render-1 names              | Argon2id | correct (genesis bug fixed 2026-06-06) |
 | `clinical-trial-portal-next` | SQLite (Node) | `people`/`ledger`/`auth.ok` | scrypt   | correct |
 | `clinical-trial-portal-pg`   | **Postgres** (pglite) | `members`/`audit`/`signin.ok` | pbkdf2 | correct |
 | `clinical-trial-portal-r4`   | flat-file **JSONL** (event-sourced) | append-only log, no SQL | hashed | correct |
@@ -279,24 +292,38 @@ node agree.mjs clinical-trial-portal \
 ```
 
 ```
-  clinical-trial-portal        95%
+  clinical-trial-portal        100%
   clinical-trial-portal-next   100%
   clinical-trial-portal-pg     100%
   clinical-trial-portal-r4     100%
-  CROSS-RENDER CORRECTNESS: 95%   (19/20 pass on EVERY render)
-    agreed-pass 19 · agreed-fail 0 · DISAGREE 1
-    C1-2b   ...-portal=fail   ...-next=pass   ...-pg=pass   ...-r4=pass
+  CROSS-RENDER CORRECTNESS: 100%   (20/20 pass on EVERY render)
+    agreed-pass 20 · agreed-fail 0 · DISAGREE 0
 ```
 
-19/20 claims hold identically across four renders on four paradigms (SQLite×2,
-Postgres, flat-file JSONL) — spec-carried meaning, measured. The lone
-disagreement is render 1's genesis bug, now outvoted **3-to-1**: the divergence
-localizes a render-specific defect, not a spec property. `agree.mjs` (N renders)
-exits non-zero on any disagreement, so it doubles as a CI gate on spec-carried
-behavior. Each new render joined by writing **only two adapters** (a validator
-adapter + a ghost actions adapter) — no new evaluators, no new manifest. Render 3
-also shows the seam absorbs an **async** engine: its validator adapter loads
-Postgres into memory once, then serves the same synchronous accessor contract.
+All 20 claims hold identically across four renders on four paradigms (SQLite×2,
+Postgres, flat-file JSONL) — spec-carried meaning, fully measured. `agree.mjs`
+(N renders) exits non-zero on any disagreement, so it doubles as a CI gate on
+spec-carried behavior. Each new render joined by writing **only two adapters** (a
+validator adapter + a ghost actions adapter) — no new evaluators, no new
+manifest. Render 3 also shows the seam absorbs an **async** engine: its validator
+adapter loads Postgres into memory once, then serves the same synchronous
+accessor contract.
+
+**Disagreement localizes defects — and once did.** Until 2026-06-06 render 1
+carried the genesis-hash bug, and agreement read 19/20 with the lone disagreement
+naming `C1-2b` on render 1 alone — out-voted 3-to-1, the divergence pinning the
+defect to one render rather than the spec. That demonstration is reproducible:
+rebuild render 1 with the bug injected and agreement drops accordingly —
+
+```bash
+T=$(node -e 'console.log(require("os").tmpdir())')/grace-commons-conformance
+node fixtures/build-clinical-trial-portal.mjs --defect genesis-hash --out "$T/r1-bug.db"
+node agree.mjs clinical-trial-portal \
+  "clinical-trial-portal=$T/r1-bug.db" clinical-trial-portal-next \
+  "clinical-trial-portal-pg=$T/clinical-trial-portal-pg" \
+  "clinical-trial-portal-r4=$T/clinical-trial-portal-r4.jsonl"
+#  → CROSS-RENDER CORRECTNESS 95%, DISAGREE 1: C1-2b on clinical-trial-portal only
+```
 
 ## The fixture (why it's generated, not committed)
 
@@ -305,8 +332,10 @@ sandbox, and the checked-in `dev.db` carries only the stale seed event. So
 `fixtures/build-clinical-trial-portal.mjs` replays render 1's documented
 lifecycle (Demo2-plan §0) into a SQLite store using the render's **actual
 schema** (`migrations/0001_init.sql`, exec'd verbatim) and a **byte-faithful
-port** of its event/hash construction — faithfulness is checked by reproducing
-seed.ts's exact stored hash, genesis bug and all. The store is built onto the
+port** of its event/hash construction — faithfulness was originally checked by
+reproducing seed.ts's exact stored hash, genesis bug and all (the bug it then
+caught). The default build now mirrors the **patched** seed; `--defect
+genesis-hash` reproduces the original. The store is built onto the
 native tmp FS (SQLite can't host a live DB on the mounted repo FS) and the runner
 defaults `--db` there; it is never committed. **When Deno is available, skip the
 fixture and point `--db` at a real `deno task seed` store** — the validator code

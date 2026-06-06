@@ -41,16 +41,17 @@ const MAX_ITERS = argv.includes("--max-iters") ? Number(argv[argv.indexOf("--max
 const PROVE_GUARD = argv.includes("--prove-guard");
 
 // ── render state = the patchable artifact (an agent's edits, made inspectable) ──
-// Default start is deliberately defective: it skips a grant's audit append AND
-// ships the faithful genesis-hash bug. Guard-demo starts one fix higher (95%).
+// Default start is deliberately defective: two injected defects — a skipped grant
+// audit append, and the genesis-hash bug (render 1's original defect, fixed in
+// the demo 2026-06-06; injected here so the loop has something to climb).
+// Guard-demo starts one fix higher (95%).
 const START = PROVE_GUARD
-  ? { defects: [], cleanGenesis: false }
-  : { defects: ["skip-grant-audit"], cleanGenesis: false };
+  ? { defects: ["genesis-hash"] }
+  : { defects: ["skip-grant-audit", "genesis-hash"] };
 
 function buildArgs(state) {
   const a = [];
   for (const d of state.defects) a.push("--defect", d);
-  if (state.cleanGenesis) a.push("--clean-genesis");
   a.push("--out", DB);
   return a;
 }
@@ -89,7 +90,7 @@ const RULES = [
     id: "align-genesis-hash",
     match: (r) => r.id === "C1-2b" && /event #1|diverges at event #1/i.test(r.detail || ""),
     rationale: "C1-2b: the genesis event's stored hash omits `id` while verifyChain includes it → align the seed's hash construction with appendEvent.",
-    apply: (s) => ({ ...s, cleanGenesis: true }),
+    apply: (s) => ({ ...s, defects: s.defects.filter((d) => d !== "genesis-hash") }),
   },
 ];
 

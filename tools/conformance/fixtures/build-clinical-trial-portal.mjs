@@ -43,21 +43,22 @@ const SCHEMA = join(REPO, "demos/clinical-trial-portal/migrations/0001_init.sql"
 // `--db .../data/dev.db` instead.
 const FIXDIR = join(tmpdir(), "grace-commons-conformance");
 
-// CLI: [--defect <name>] [--clean-genesis] [--out <path>]
-//   --defect skip-grant-audit  the records-level effect of a render that writes
-//                              an operational grant row but skips its audit
-//                              append (the PLAN's Day-5 example). The grant
-//                              exists; its grant.issued event does not.
-//   --defect tamper-payload    an adversary with DB write access rewrites a
-//                              committed event's payload after the fact
-//                              (the tamper.test.ts scenario), breaking the chain
-//                              at that row.
-//   --clean-genesis            emit the genesis event with appendEvent semantics
-//                              (id INCLUDED), i.e. render 1 with the seed-hash
-//                              bug fixed. Yields a fully-verifying chain.
+// CLI: [--defect <name> ...] [--out <path>]
+//   The DEFAULT build is correct — a fully-verifying chain, mirroring render 1
+//   as patched in the demo on 2026-06-06. Defects are opt-in and repeatable:
+//   --defect genesis-hash      hash the genesis event WITHOUT `id` — render 1's
+//                              original seed-hash bug (fixed in the demo
+//                              2026-06-06; retained here as a reproducible
+//                              injection, see DISCOVERIES.md). verifyChain then
+//                              false-fails at event #1.
+//   --defect skip-grant-audit  a render that writes an operational grant row but
+//                              skips its audit append. The grant exists; its
+//                              grant.issued event does not.
+//   --defect tamper-payload    an adversary rewrites a committed event's payload
+//                              after the fact, breaking the chain at that row.
 const argv = process.argv.slice(2);
-const DEFECT = argv.includes("--defect") ? argv[argv.indexOf("--defect") + 1] : "none";
-const CLEAN_GENESIS = argv.includes("--clean-genesis");
+const DEFECTS = new Set();
+for (let i = 0; i < argv.length; i++) if (argv[i] === "--defect") DEFECTS.add(argv[i + 1]);
 const OUT = argv.includes("--out")
   ? argv[argv.indexOf("--out") + 1]
   : join(FIXDIR, "clinical-trial-portal.db");
@@ -138,12 +139,12 @@ insGrant.run(5, 1, 1, 5, "own", SEED_T, null, null); // PI: view_audit (own)
 insGrant.run(6, 1, 2, 5, "all", SEED_T, null, null); // CRA: view_audit (all)
 
 // ── genesis event ────────────────────────────────────────────────────────────
-// Faithful (default): id-less hash, reproducing seed.ts's latent bug.
-// --clean-genesis: id-included hash (the bug fixed) → chain fully verifies.
+// Default: id-included hash (matches the demo's patched seed.ts) → chain verifies.
+// --defect genesis-hash: id-less hash, reproducing the original (now-fixed) bug.
 const genesisArgs = { action: "study.registered", target_kind: "study", target_id: "BCN-OX-201",
   payload: { note: "Protocol BCN-OX-201 registered in trial management system." }, occurred_at: GENESIS_T };
-if (CLEAN_GENESIS) emit(genesisArgs);
-else emitGenesis(genesisArgs);
+if (DEFECTS.has("genesis-hash")) emitGenesis(genesisArgs);
+else emit(genesisArgs);
 
 // ── operational lifecycle (appendEvent chain) ────────────────────────────────
 // A wrong-password attempt (anonymous), then PI logs in.
@@ -176,7 +177,7 @@ insGrant.run(9, 1, 3, 5, "own", at(4), null, null);
 // DEFECT skip-grant-audit: the grant row above (g7) was inserted, but this
 // render "forgot" to append its audit event. The grant exists with no
 // attestation — exactly what APA-1 must catch.
-if (DEFECT !== "skip-grant-audit") {
+if (!DEFECTS.has("skip-grant-audit")) {
   emit({ actor_id: 1, session_id: 1, action: "grant.issued", target_kind: "grant", target_id: 7, payload: { grantee_actor_id: 3, permission_id: 3, scope: "all" }, occurred_at: at(4) });
 }
 emit({ actor_id: 1, session_id: 1, action: "grant.issued", target_kind: "grant", target_id: 8, payload: { grantee_actor_id: 3, permission_id: 4, scope: "all" }, occurred_at: at(4) });
@@ -201,7 +202,7 @@ emit({ actor_id: 1, session_id: 1, action: "session.revoked", target_kind: "sess
 // DEFECT tamper-payload: an adversary with raw DB write access rewrites a
 // committed event's payload AFTER the fact (no re-hash). verifyChain must
 // localize the divergence at this row. Targets the visit.recorded event.
-if (DEFECT === "tamper-payload") {
+if (DEFECTS.has("tamper-payload")) {
   const target = db.prepare("SELECT id FROM event_log WHERE action='visit.recorded' ORDER BY id LIMIT 1").get();
   if (!target) throw new Error("tamper-payload: no visit.recorded event to tamper");
   db.prepare("UPDATE event_log SET payload_json = ? WHERE id = ?").run('{"subject_id":999,"visit_kind":"forged"}', target.id);
@@ -210,4 +211,4 @@ if (DEFECT === "tamper-payload") {
 
 db.close();
 console.log(`built ${OUT}`);
-console.log(`events: ${nextId - 1}  ·  defect: ${DEFECT}  ·  genesis: ${CLEAN_GENESIS ? "clean(id-included)" : "faithful(id-less bug)"}`);
+console.log(`events: ${nextId - 1}  ·  defects: ${DEFECTS.size ? [...DEFECTS].join(",") : "none (correct render)"}`);
