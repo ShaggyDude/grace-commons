@@ -1,0 +1,17 @@
+# Next.js build output
+.next/
+out/
+next-env.d.ts
+
+# Dependencies
+node_modules/
+
+# Embedded-Postgres (pglite) data dir + any local runtime data
+data/
+
+# Env
+.env
+.env.local
+
+# Misc
+*.tsbuildinfo

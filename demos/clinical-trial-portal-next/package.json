@@ -1,0 +1,36 @@
+{
+  "name": "clinical-trial-portal-next",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Grace Commons Demo 2 — second render (Next.js App Router + PostgreSQL + RSC). Same compositions, action codes, and hash-chain contract as demos/clinical-trial-portal (Deno+SQLite). See BUILD_PLAN.md.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "migrate": "node scripts/migrate.ts",
+    "seed": "node scripts/seed.ts",
+    "verify": "node scripts/verify.ts",
+    "prove-chain": "node scripts/prove-chain.ts",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.1",
+    "next": "^15.5.0",
+    "pg": "^8.13.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0"
+  },
+  "comments": {
+    "driver": "BUILD_PLAN Decision 1 specified postgres.js; we use node-postgres (pg) + @electric-sql/pglite behind one query(text,params) seam (lib/db.ts). Both are raw-SQL (no ORM — honors A.14/Decision 1); pglite is the zero-setup embedded default (a single in-process backend = the §4 single-writer model), pg is used when DATABASE_URL points at a real server. Logged in CORNERS.md.",
+    "password": "@node-rs/argon2 (BUILD_PLAN Decision 4) is added in the composition step; if its native binary is unavailable, lib/password.ts falls back to node:crypto scrypt with a CORNERS note (conformance does not check the password method; cross-render PHC interop is the only thing lost)."
+  }
+}

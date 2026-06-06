@@ -264,44 +264,56 @@ adapter) — that keeps the evaluators render-agnostic.
 ## Multi-render agreement (the thesis number)
 
 A spec claim is *carried by the spec* only if it holds identically across
-**independent** renders of the same surface. There are three, on three engines:
+**independent** renders of the same surface. There are six:
 
 | render | engine | schema / vocabulary | password | chain |
 |---|---|---|---|---|
-| `clinical-trial-portal`      | SQLite (Deno) | render-1 names              | Argon2id | correct (genesis bug fixed 2026-06-06) |
-| `clinical-trial-portal-next` | SQLite (Node) | `people`/`ledger`/`auth.ok` | scrypt   | correct |
-| `clinical-trial-portal-pg`   | **Postgres** (pglite) | `members`/`audit`/`signin.ok` | pbkdf2 | correct |
-| `clinical-trial-portal-r4`   | flat-file **JSONL** (event-sourced) | append-only log, no SQL | hashed | correct |
+| `clinical-trial-portal`        | SQLite (Deno)  | render-1 names              | Argon2id | correct (genesis bug fixed 2026-06-06) |
+| `clinical-trial-portal-next`   | SQLite (Node)  | `people`/`ledger`/`auth.ok` | scrypt   | correct |
+| `clinical-trial-portal-pg`     | **Postgres** (pglite) | `members`/`audit`/`signin.ok` | pbkdf2 | correct |
+| `clinical-trial-portal-r4`     | flat-file **JSONL** | append-only log, no SQL | hashed | correct |
+| `clinical-trial-portal-nextjs` | **Postgres** (pglite), Next.js-shaped | `party`/`audit_event`/`auth.login_ok` | scrypt | correct |
+| `clinical-trial-portal-next-app` | **the real deployable app** — `demos/clinical-trial-portal-next` (Next.js App Router + Postgres) | render-1 names (faithful port) | scrypt | correct |
 
-The **same** manifest, **same** evaluators, and **same** ghost scenario drive
-all four — only the per-render adapters differ. Render 4 was authored by an agent
-with **isolated context** that never saw renders 1–3 (only the spec + the adapter
-contract), so its convergence is independent-derivation evidence, not shared
-lineage.
+The **same** manifest, **same** evaluators, and **same** ghost scenario drive all
+six — only the per-render adapters differ. **Two** of them (`-r4`, `-nextjs`)
+were authored by agents with **isolated context** that never saw the other
+renders — only the spec + the adapter contract — so their convergence is
+independent-derivation evidence, not shared lineage. The **sixth**
+(`-next-app`) is not a conformance fixture at all: it is the actual deployable
+demo's own store, validated by pointing the harness at the real app — so the
+thesis number is measured against shipping code, not a test double.
 
 ```bash
 node fixtures/build-clinical-trial-portal.mjs   # render 1
 node render2/build.mjs                          # render 2 (same scenario)
 node render3/build.mjs                          # render 3 (Postgres)
 node render4/build.mjs                          # render 4 (JSONL, independently authored)
+node render5/build.mjs                          # render 5 (Next.js+Postgres, independently authored)
+# render 6 = the real app's store: (cd demos/clinical-trial-portal-next && node scripts/migrate.ts && node scripts/seed.ts)
 T=$(node -e 'console.log(require("os").tmpdir())')/grace-commons-conformance
 node agree.mjs clinical-trial-portal \
   clinical-trial-portal clinical-trial-portal-next \
   "clinical-trial-portal-pg=$T/clinical-trial-portal-pg" \
-  "clinical-trial-portal-r4=$T/clinical-trial-portal-r4.jsonl"
+  "clinical-trial-portal-r4=$T/clinical-trial-portal-r4.jsonl" \
+  "clinical-trial-portal-nextjs=$T/clinical-trial-portal-nextjs" \
+  "clinical-trial-portal-next-app=../../demos/clinical-trial-portal-next/data/pg"
 ```
 
 ```
-  clinical-trial-portal        100%
-  clinical-trial-portal-next   100%
-  clinical-trial-portal-pg     100%
-  clinical-trial-portal-r4     100%
+  clinical-trial-portal            100%
+  clinical-trial-portal-next       100%
+  clinical-trial-portal-pg         100%
+  clinical-trial-portal-r4         100%
+  clinical-trial-portal-nextjs     100%
+  clinical-trial-portal-next-app   100%
   CROSS-RENDER CORRECTNESS: 100%   (20/20 pass on EVERY render)
     agreed-pass 20 · agreed-fail 0 · DISAGREE 0
 ```
 
-All 20 claims hold identically across four renders on four paradigms (SQLite×2,
-Postgres, flat-file JSONL) — spec-carried meaning, fully measured. `agree.mjs`
+All 20 claims hold identically across six independent renders spanning SQLite,
+Postgres, a flat-file log, and the real deployable app — spec-carried meaning,
+fully measured. `agree.mjs`
 (N renders) exits non-zero on any disagreement, so it doubles as a CI gate on
 spec-carried behavior. Each new render joined by writing **only two adapters** (a
 validator adapter + a ghost actions adapter) — no new evaluators, no new
@@ -355,9 +367,12 @@ agree.mjs                          multi-render agreement (cross-render correctn
 render2/                           render 2 — pure-Node SQLite, different shape (+ build)
 render3/                           render 3 — Postgres (pglite), async (+ build)
 render4/                           render 4 — flat-file JSONL, independently authored (+ build)
+render5/                           render 5 — Next.js+Postgres, independently authored (+ build)
 adapters/clinical-trial-portal-next.adapter.mjs    render-2 validator adapter
 adapters/clinical-trial-portal-pg.adapter.mjs      render-3 validator adapter (async load)
 adapters/clinical-trial-portal-r4.adapter.mjs      render-4 validator adapter
+adapters/clinical-trial-portal-nextjs.adapter.mjs  render-5 validator adapter (async load)
+adapters/clinical-trial-portal-next-app.adapter.mjs render-6 validator adapter — the REAL app's store (near pass-through)
 ghost/                             ghost-user flows (scenario runner + per-render actions adapters)
 package.json                       core is dep-free; pglite is render-3 only
 adapters/clinical-trial-portal.adapter.mjs       render-1 seam (the only per-render file)

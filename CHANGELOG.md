@@ -26,13 +26,24 @@ cut a versioned release, so everything below sits under **Unreleased**.
     number rises (and rejects regressions).
   - **Ghost flows** (`ghost/`) — a render-agnostic scenario engine that drives
     any render through the same user journey via a small per-render adapter.
-  - **Four independent renders** of the clinical-trial-portal surface across
-    four engines/paradigms — SQLite (Deno), SQLite (Node), PostgreSQL (via
-    `pglite`, in-WASM), and an append-only flat-file JSONL log. Render 4 was
-    authored from the spec in isolation, without sight of the others.
+  - **Six independent renders** of the clinical-trial-portal surface spanning
+    SQLite (Deno), SQLite (Node), PostgreSQL (via `pglite`, in-WASM ×3 — two
+    Next.js-shaped), and an append-only flat-file JSONL log. **Two** were
+    authored from the spec in isolation, without sight of the other renders. The
+    sixth is not a test fixture but the **real deployable app**
+    ([`demos/clinical-trial-portal-next`](./demos/clinical-trial-portal-next/)) —
+    the harness is pointed at the shipping store itself.
   - **Multi-render agreement** (`agree.mjs`) — cross-render correctness: a spec
     claim counts only if it holds identically on every render. Currently
-    **20/20** across all four.
+    **20/20** across all six.
+- **Demo 2 — second render of the clinical-trial portal**
+  ([`demos/clinical-trial-portal-next/`](./demos/clinical-trial-portal-next/)) —
+  a Next.js App Router + PostgreSQL build of the same surface as the Deno+SQLite
+  demo. The atoms, composition, action codes, and hash-chain contract are a
+  faithful port (dialect + async, not redesign); the audit chain is serialized
+  by a global `pg_advisory_xact_lock` (Postgres MVCC needs the explicit lock
+  SQLite gave for free). Backend + audit surface complete and conformance-clean
+  (render 6 above); the App Router UI is the remaining piece.
 
 ### Fixed
 
