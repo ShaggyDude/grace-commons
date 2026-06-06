@@ -16,6 +16,13 @@ English was stack-dependent (BUILD_PLAN §9).
   (a chain-key column, `prev_hash` per key), which alters the Audit Trail
   composition's contract and must go through the library's review channel, not a
   code commit (BUILD_PLAN §4.4).
+- **The serialization *invariant* is not new — only the mechanism is.** Event Log
+  already mandates total order (Invariant 3) and that "the underlying implementation
+  must serialize them." So `pg_advisory_xact_lock` is render 2's *conforming
+  mechanism* for an existing atom clause, and SQLite's single-writer is render 1's —
+  one atom clause, two mechanisms, nothing added to the spec. (BUILD_PLAN §4.3's
+  "under-specified" wording was reconciled to match.) See
+  [`DISCOVERIES.md`](../../DISCOVERIES.md), entry 2026-06-06.
 - **`event_log` append-only by convention, not by trigger.** Faithful port of
   render 1. Defense-in-depth upgrade available: a `BEFORE UPDATE/DELETE … RAISE
   EXCEPTION` trigger (the Postgres analog of the Multi-Party Approval demo's

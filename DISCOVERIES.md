@@ -179,3 +179,26 @@ The skeptic's specific doubt was that a second *full* render — especially on a
 * `pglite` runs **real PostgreSQL (18.3), compiled to WASM, in-process** — no server, no `apt`, no Docker. A genuine Postgres render became a single `npm install` and an async adapter.
 
 Render 3 (Postgres) joined the entire pipeline by writing only two small adapters; render 4 (a flat-file JSONL store) was authored independently and dropped in the same way. The "hard" second render turned out to be a contract-shaped seam, not a rebuild — the engine differences (async vs sync, SQL vs flat file) were absorbed by the adapter layer the architecture already had.
+
+---
+
+### 2026-06-06 — Re-render confirmed an existing invariant rather than surfacing a new one
+
+Building the second render of the clinical-trial-portal (Next.js + React Server Components on PostgreSQL), the one genuinely new engineering surface was global serialization of the audit hash chain: every mutation takes a single `pg_advisory_xact_lock` so two concurrent appends cannot read the same tail and fork the chain (BUILD_PLAN §4). The first render got this for free from SQLite's single-writer lock and never had to think about it.
+
+The tempting reading — and the one BUILD_PLAN §4.3 reaches for — is that the swap *surfaced* an under-specified ordering assumption: a spec gap one stack had been hiding, now dragged into the open and worth depositing back into the library as a named invariant.
+
+Checking the canonical source refutes that. The Event Log atom (`atoms/temporal/event-log.md`) already carries it:
+
+- **Invariant 3 — Total order.** Any two distinct events have a defined relative position by `sequence_number`; ties never occur, even within a single wall-time instant.
+- Operationally: *"appends never fail for ordering or contention reasons — the underlying implementation must serialize them."*
+
+So the requirement that concurrent appends be totally ordered was already in the spec. The swap did not expose a missing invariant — it exercised an existing one. SQLite's single-writer lock and Postgres's `pg_advisory_xact_lock` are two *mechanisms* conforming to the same atom clause. What is non-portable is the mechanism, not the invariant: SQLite satisfies "must serialize them" for free; Postgres satisfies it with an explicit lock. That distinction is a render / EXECUTION_CONTRACT fact, not a spec change.
+
+This is the cleaner result for the thesis, not the weaker one. The 2026-06-05 genesis-hash finding was a real discovery — the validator *localized a defect*. This one localizes nothing, and that is the point: it confirms a canonical invariant holds across two unrelated serialization mechanisms. "The spec already said it" is exactly what *canonical* is supposed to mean.
+
+### Implication for Grace Commons
+
+The meta-lesson is a guardrail on atom count. The pull to "crystallize the §4 invariant into the Audit Trail composition" would have added a fragment the Event Log atom already states — a redundant invariant, an avoidable atom. The smallest-set-of-atoms discipline has a precondition: before crystallizing an apparent finding into a new invariant or atom, check whether the canonical source already carries it. Here it did, twice over (Invariant 3 plus the operational serialize clause).
+
+Two doc-level follow-ups, neither a spec change: (1) the conformance mapping — Event Log's *"the underlying implementation must serialize them"* → SQLite single-writer (render 1) / `pg_advisory_xact_lock` (render 2) — belongs in EXECUTION_CONTRACT (or the render's CORNERS), as a worked instance of one atom clause satisfied by two mechanisms; (2) BUILD_PLAN §4.3/§9's "the English was under-specified about ordering" overstates against the atom and should be reconciled to "the *mechanism* is non-portable; the invariant was already stated." Re-render is a conformance check on spec-carried meaning — agreement across mechanisms confirms completeness, and an exciting narrative is not a reason to grow the atom set.
