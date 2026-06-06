@@ -202,23 +202,33 @@ if (existingEvents && existingEvents.n === 0) {
     Date.now() - 8 * 365.25 * 24 * 60 * 60 * 1000,
   ).toISOString();
   const prev_hash = "";
+  // The genesis event MUST be hashed exactly as appendEvent/verifyChain hash
+  // every other event — i.e. INCLUDING `id`. Previously this object omitted
+  // `id`, so verifyChain (which recomputes with `id`) reported a false
+  // "Tamper detected at event #1" on a pristine database and, because it stops
+  // at the first divergence, never verified events 2..N. The genesis is always
+  // the first row (guarded above: event_log is empty), so its id is 1; we set it
+  // explicitly to keep the stored id and the hashed id in lockstep — exactly the
+  // discipline appendEvent follows.
+  const id = 1;
   const payload_json = canonicalize({ note: "Protocol BCN-OX-201 registered in trial management system." });
   const hashable = canonicalize({
-    action: "study.registered",
-    actor_id: null,
+    id,
     occurred_at,
+    actor_id: null,
+    session_id: null,
+    action: "study.registered",
+    target_kind: "study",
+    target_id: "BCN-OX-201",
     payload_json,
     prev_hash,
-    session_id: null,
-    target_id: "BCN-OX-201",
-    target_kind: "study",
   });
   const this_hash = sha256hex(hashable);
   db.prepare(
     `INSERT INTO event_log
-       (occurred_at, actor_id, session_id, action, target_kind, target_id, payload_json, prev_hash, this_hash)
-     VALUES (?, NULL, NULL, 'study.registered', 'study', 'BCN-OX-201', ?, ?, ?)`,
-  ).run(occurred_at, payload_json, prev_hash, this_hash);
+       (id, occurred_at, actor_id, session_id, action, target_kind, target_id, payload_json, prev_hash, this_hash)
+     VALUES (?, ?, NULL, NULL, 'study.registered', 'study', 'BCN-OX-201', ?, ?, ?)`,
+  ).run(id, occurred_at, payload_json, prev_hash, this_hash);
   console.log(`  + study.registered event backdated to ${occurred_at.slice(0, 10)}`);
 } else {
   console.log("  ✓ event_log already has rows — skipping backdated seed");
