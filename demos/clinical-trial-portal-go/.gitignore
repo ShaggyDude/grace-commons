@@ -1,0 +1,7 @@
+# Generated chain output (the committed golden is expected-chain.jsonl)
+out.jsonl
+*.jsonl
+!expected-chain.jsonl
+# Go build artifacts
+/clinical-trial-portal-go
+*.test
