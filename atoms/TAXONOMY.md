@@ -47,6 +47,13 @@ the composition graph**:
   it plays (the `## Composes` bullet already says "provides the append-only sequence
   the audit's *what happened* answer is read from").
 
+One sharpening: derived regulation determines *classification*, but a few atoms are
+compliance **infrastructure** (Actor Identity, Tamper Evidence, Retention Window —
+CLAUDE.md's "no meaningful non-regulated use case" set) and carry an intrinsic
+authoring obligation — to author and maintain the regulated overlay material —
+**independent of current usage**. That is not taxonomy; it is stewardship. Derivation
+handles navigation; stewardship stays with the atom (see sub-question 2).
+
 Derived facts can't drift and never need re-guessing: regenerate them from source.
 This is the same discipline the library already uses for RECIPEs (generated from
 code) and conformance (derived from spec prose) — applied to taxonomy. The call
@@ -54,16 +61,26 @@ graph *is* the taxonomy.
 
 ## The principle: name concepts, derive classifications
 
-Usage-derivation cleanly supplies the **contextual** axes — the ones the folders
-forced you to guess. It does **not** supply the **intrinsic** one: Event Log is a
-temporal append-only sequence regardless of who composes it. So:
+Folders failed because a folder is a *name* and a *classification* at once. Separating
+those reveals **three** classes of fact about an atom — and the point is that **each
+has exactly one authoritative source**, the SSOT discipline the rest of the library
+already runs on (every fact has one place it is projected from):
 
-- **Named (intrinsic):** the concept itself — its name, state, actions, invariants.
-  This is the irreducible work the library already calls "the work."
-- **Derived (contextual):** regulation, standards, domain, the contexts served —
-  read from the `## Composes` graph.
+| Class | Authoritative source | Examples |
+|---|---|---|
+| **Intrinsic** | the atom's name + concept definition — *authored* ("the work") | Event Log, Actor Identity |
+| **Structural** | the atom's *own* spec (its `## State` / `## Behavior`) — *derivable* | sequence, registry, state machine |
+| **Contextual** | the composition graph (`## Composes`) — *derived* | regulated, HIPAA, healthcare, finance |
 
-Folders tried to be both with one label and failed. This separates them.
+Only the intrinsic class is **named**; the other two are **derived** — structural from
+the atom's own structure, contextual from how compositions use it. Event Log is a
+temporal append-only sequence (intrinsic + structural) no matter who composes it;
+whether it is *regulated* or *healthcare* is contextual and changes with usage.
+
+The rule that falls out is one line, and it doubles as the test for anyone tempted to
+add a taxonomy field:
+
+> **Classification is derived from usage; generated views therefore report usage facts, never claims about the atom's essence.**
 
 ## Design
 
@@ -77,11 +94,26 @@ Folders tried to be both with one label and failed. This separates them.
    docs-site nav, and any "regulated atoms" list become **generated artifacts** of the
    reverse index — not hand-maintained folders. Browse-by-domain, browse-by-standard,
    browse-by-regulated all fall out of the same index for free.
-4. **Frontmatter carries intrinsic identity only** — title, a one-line concept
-   summary, status (e.g. `grounded`). Classification (`category`, `regulated`,
-   `standards`) is **not stored** in the atom; storing it would re-introduce a second,
-   driftable source of truth for something that is derivable.
-5. **The atom-vs-composition distinction is untouched.** `atoms/` vs `compositions/`
+4. **Generated views report usage, not essence.** A view states what it *observed* in
+   the graph, never an ontological claim about the atom — so regulated/domain are framed
+   as composition names and counts, not booleans:
+
+   ```
+   Bad (reads as essence):       Good (reads as observation):
+     Regulated: false              Composed by:  Audit Trail, KYC
+     Healthcare: false             Derived standards:  HIPAA, SOX
+                                   Current regulated usages:  2
+   ```
+
+   An uncomposed atom then shows "Composed by: (none yet)" — honest about usage —
+   instead of "Regulated: false," which would falsely assert it has no compliance
+   relevance. The graph knows usage; it does not know essence.
+5. **Frontmatter carries intrinsic identity only** — title, a one-line concept summary,
+   status (e.g. `grounded`). Not classification (`category`, `regulated`, `standards`):
+   that's contextual, derived from the graph. And **not** `shape`/`kind` either —
+   structural facts derive from the atom's own `## State` / `## Behavior`, so storing
+   them would duplicate a derivable fact. Frontmatter holds only the irreducible.
+6. **The atom-vs-composition distinction is untouched.** `atoms/` vs `compositions/`
    stays; only the *category subfolders inside* `atoms/` dissolve. The directory-
    placement test ("does the spec name another pattern?") is unaffected — it only gets
    simpler, because the intra-atom category guess disappears.
@@ -106,17 +138,19 @@ Folders tried to be both with one label and failed. This separates them.
    honestly "foundational / unused." Treat that as real signal (a primitive awaiting
    composition, or a gap worth noticing), or add a fallback label? Recommendation:
    surface it as-is; the generator lists "uncomposed atoms" as its own view.
-2. **Regulated-overlay authoring obligation.** "Regulated" becoming *derived* is fine
-   for classification, but the overlay **sections** (Regulated adversarial scenarios,
-   Generation acceptance) are authored *content* in the atom file. So derived-regulated
-   must trigger an authoring obligation — and that obligation can newly attach when a
-   later composition adopts an atom. Rule needed: the generator flags any
-   derived-regulated atom missing the overlay sections (a lint, mirroring the
-   conformance `--reconcile` check).
-3. **Does any intrinsic axis need a declared name?** The conceptual *shape* (sequence
-   / state-machine / config-singleton) is the one thing usage can't derive. Is the
-   concept name + summary enough, or do we declare a `shape` in frontmatter? Lean: name
-   + summary; add `shape` only if a real consumer needs it.
+2. **Regulated-overlay authoring = stewardship, not taxonomy.** Two obligations hide
+   here. (a) *Derived-regulated* — a regulated composition adopts an atom — can newly
+   require the overlay **sections** (Regulated adversarial scenarios, Generation
+   acceptance); the generator should lint any derived-regulated atom missing them,
+   mirroring conformance `--reconcile`. (b) The compliance-**infrastructure** atoms
+   carry that overlay obligation *intrinsically*, independent of usage. The rule:
+   derivation drives classification/navigation; the overlay obligation is an authoring
+   responsibility that travels with the atom. Keep the two concerns separate.
+3. **Structural axis — resolved: no new metadata.** The conceptual *shape* (sequence /
+   state-machine / registry) is the one class usage can't derive — but it *is* derivable
+   from the atom's **own** `## State` / `## Behavior`, so it already has an authoritative
+   source and needs no `shape:` frontmatter. Declare a `shape`/`kind` only if a real
+   consumer needs it before that deriver exists; default is none.
 4. **Domain-intrinsic-but-uncomposed.** A domain-specific atom not yet composed (a
    healthcare atom no composition uses yet) gets no domain from usage. Accept
    "untagged until composed," or let the intrinsic concept carry it? Tie-break with (1).
