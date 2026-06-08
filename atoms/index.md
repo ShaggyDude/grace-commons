@@ -22,7 +22,7 @@ toc: true
 
 The freestanding semantic units of Grace Commons — each fully specifiable without naming another atom. Atoms are stored flat (`atoms/<name>.md`); their classification is not a folder but a set of **lenses** over the Intent Graph. Overlays (regulated · security · standards) are read off the composition graph and **report usage, not essence** — a standard shows as *HIPAA via audit-trail*, an uncomposed atom as *composed by: (none yet)*, never a bare boolean. **Domain** is the one intrinsic axis: an optional, EOS-gated tag, default absent. The design and its rationale are in [the taxonomy note](./TAXONOMY.md).
 
-_18 compositions (16 regulated) · 27 atoms · 47 composition→atom edges. Generated from `tools/taxonomy/reverse_index.py`; regenerate with `python3 tools/taxonomy/generate_views.py .`_
+_19 compositions (17 regulated) · 27 atoms · 48 composition→atom edges. Generated from `tools/taxonomy/reverse_index.py`; regenerate with `python3 tools/taxonomy/generate_views.py .`_
 
 ## All atoms
 
@@ -49,7 +49,7 @@ _18 compositions (16 regulated) · 27 atoms · 47 composition→atom edges. Gene
 | [Provenance](./provenance.md) | — | yes (1) | — | chain-of-custody |
 | [Provisional Commitment](./provisional-commitment.md) | — | yes (2) | — | idempotent-reservation, reservation-lifecycle |
 | [Retention Window](./retention-window.md) | — | yes (4) | — | audit-trail, consent-preference-management, defensible-retention, kyc-customer-onboarding |
-| [Selective Disclosure](./selective-disclosure.md) | — | — | — | *(none yet)* |
+| [Selective Disclosure](./selective-disclosure.md) | — | yes (1) | — | immutable-transaction-ledger |
 | [Session](./session.md) | — | yes (3) | yes | login, privileged-access-provisioning, session-gated-authorization |
 | [Soft Delete](./soft-delete.md) | — | yes (1) | — | forensic-recovery |
 | [Subscription](./subscription.md) | — | yes (1) | — | notification-fanout |
@@ -77,6 +77,7 @@ Atoms that a regulated composition (one carrying a `## Generation acceptance` se
 - [Provenance](./provenance.md) — via chain-of-custody
 - [Provisional Commitment](./provisional-commitment.md) — via idempotent-reservation, reservation-lifecycle
 - [Retention Window](./retention-window.md) — via audit-trail, consent-preference-management, defensible-retention, kyc-customer-onboarding
+- [Selective Disclosure](./selective-disclosure.md) — via immutable-transaction-ledger
 - [Session](./session.md) — via login, privileged-access-provisioning, session-gated-authorization
 - [Soft Delete](./soft-delete.md) — via forensic-recovery
 - [Subscription](./subscription.md) — via notification-fanout
@@ -105,7 +106,7 @@ The one intrinsic axis. A domain earns a tag only when stripping it fails to lea
 
 The union of standards each atom's composers carry, attributed per composer in the atom's own page.
 
-- **21 CFR Part 11**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Event Log](./event-log.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Retention Window](./retention-window.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
+- **21 CFR Part 11**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Event Log](./event-log.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Retention Window](./retention-window.md), [Selective Disclosure](./selective-disclosure.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
 - **AMLD**: [Party Identity](./party-identity.md), [Retention Window](./retention-window.md)
 - **BSA/AML**: [Party Identity](./party-identity.md), [Retention Window](./retention-window.md)
 - **Basel III**: [Actor Identity](./actor-identity.md), [Duplicate Prevention](./duplicate-prevention.md), [Event Log](./event-log.md), [Provisional Commitment](./provisional-commitment.md), [Retention Window](./retention-window.md), [Tamper Evidence](./tamper-evidence.md)
@@ -115,20 +116,20 @@ The union of standards each atom's composers carry, attributed per composer in t
 - **FINRA**: [Actor Identity](./actor-identity.md), [Event Log](./event-log.md), [Retention Window](./retention-window.md), [Tamper Evidence](./tamper-evidence.md)
 - **FRCP 37(e)**: [Legal Hold](./legal-hold.md), [Retention Window](./retention-window.md), [Soft Delete](./soft-delete.md)
 - **FinCEN**: [Party Identity](./party-identity.md), [Retention Window](./retention-window.md)
-- **GDPR**: [Actor Identity](./actor-identity.md), [Consent](./consent.md), [Credential](./credential.md), [Duplicate Prevention](./duplicate-prevention.md), [Event Log](./event-log.md), [Invitation](./invitation.md), [Legal Hold](./legal-hold.md), [Party Identity](./party-identity.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Provisional Commitment](./provisional-commitment.md), [Retention Window](./retention-window.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md)
-- **HIPAA**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Capability](./capability.md), [Consent](./consent.md), [Credential](./credential.md), [Duplicate Prevention](./duplicate-prevention.md), [Event Log](./event-log.md), [Invitation](./invitation.md), [Legal Hold](./legal-hold.md), [Party Identity](./party-identity.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Provisional Commitment](./provisional-commitment.md), [Retention Window](./retention-window.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
+- **GDPR**: [Actor Identity](./actor-identity.md), [Consent](./consent.md), [Credential](./credential.md), [Duplicate Prevention](./duplicate-prevention.md), [Event Log](./event-log.md), [Invitation](./invitation.md), [Legal Hold](./legal-hold.md), [Party Identity](./party-identity.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Provisional Commitment](./provisional-commitment.md), [Retention Window](./retention-window.md), [Selective Disclosure](./selective-disclosure.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md)
+- **HIPAA**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Capability](./capability.md), [Consent](./consent.md), [Credential](./credential.md), [Duplicate Prevention](./duplicate-prevention.md), [Event Log](./event-log.md), [Invitation](./invitation.md), [Legal Hold](./legal-hold.md), [Party Identity](./party-identity.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Provisional Commitment](./provisional-commitment.md), [Retention Window](./retention-window.md), [Selective Disclosure](./selective-disclosure.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
 - **ISO 15489**: [Legal Hold](./legal-hold.md), [Retention Window](./retention-window.md), [Soft Delete](./soft-delete.md)
-- **ISO 27001**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Capability](./capability.md), [Credential](./credential.md), [Event Log](./event-log.md), [Permissions](./permissions.md), [Personal Todo](./personal-todo.md), [Provenance](./provenance.md), [Retention Window](./retention-window.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
+- **ISO 27001**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Capability](./capability.md), [Credential](./credential.md), [Event Log](./event-log.md), [Permissions](./permissions.md), [Personal Todo](./personal-todo.md), [Provenance](./provenance.md), [Retention Window](./retention-window.md), [Selective Disclosure](./selective-disclosure.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
 - **NIST 800-207**: [Actor Identity](./actor-identity.md), [Permissions](./permissions.md)
 - **NIST 800-53**: [Actor Identity](./actor-identity.md), [Capability](./capability.md), [Credential](./credential.md), [Permissions](./permissions.md), [Session](./session.md)
 - **NIST 800-63**: [Actor Identity](./actor-identity.md), [Credential](./credential.md), [Invitation](./invitation.md), [Party Identity](./party-identity.md), [Permissions](./permissions.md), [Session](./session.md)
 - **NIST 800-92**: [Event Log](./event-log.md), [Personal Todo](./personal-todo.md)
 - **OWASP ASVS**: [Credential](./credential.md), [Permissions](./permissions.md), [Session](./session.md)
-- **PCI DSS**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Capability](./capability.md), [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md), [Credential](./credential.md), [Duplicate Prevention](./duplicate-prevention.md), [Event Log](./event-log.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Provisional Commitment](./provisional-commitment.md), [Retention Window](./retention-window.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
+- **PCI DSS**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Capability](./capability.md), [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md), [Credential](./credential.md), [Duplicate Prevention](./duplicate-prevention.md), [Event Log](./event-log.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Provisional Commitment](./provisional-commitment.md), [Retention Window](./retention-window.md), [Selective Disclosure](./selective-disclosure.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
 - **SCIM**: [Credential](./credential.md), [Invitation](./invitation.md), [Party Identity](./party-identity.md)
-- **SEC 17a-4**: [Actor Identity](./actor-identity.md), [Event Log](./event-log.md), [Legal Hold](./legal-hold.md), [Provenance](./provenance.md), [Retention Window](./retention-window.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md)
+- **SEC 17a-4**: [Actor Identity](./actor-identity.md), [Event Log](./event-log.md), [Legal Hold](./legal-hold.md), [Provenance](./provenance.md), [Retention Window](./retention-window.md), [Selective Disclosure](./selective-disclosure.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md)
 - **SOC 2**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Credential](./credential.md), [Event Log](./event-log.md), [Invitation](./invitation.md), [Party Identity](./party-identity.md), [Permissions](./permissions.md), [Retention Window](./retention-window.md), [Tamper Evidence](./tamper-evidence.md)
-- **SOX**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Capability](./capability.md), [Credential](./credential.md), [Duplicate Prevention](./duplicate-prevention.md), [Event Log](./event-log.md), [Legal Hold](./legal-hold.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Provisional Commitment](./provisional-commitment.md), [Retention Window](./retention-window.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
+- **SOX**: [Actor Identity](./actor-identity.md), [Approval Step](./approval-step.md), [Assignment](./assignment.md), [Capability](./capability.md), [Credential](./credential.md), [Duplicate Prevention](./duplicate-prevention.md), [Event Log](./event-log.md), [Legal Hold](./legal-hold.md), [Permissions](./permissions.md), [Provenance](./provenance.md), [Provisional Commitment](./provisional-commitment.md), [Retention Window](./retention-window.md), [Selective Disclosure](./selective-disclosure.md), [Session](./session.md), [Soft Delete](./soft-delete.md), [Tamper Evidence](./tamper-evidence.md), [Workflow / State Machine](./workflow-state-machine.md)
 - **eIDAS**: [Actor Identity](./actor-identity.md), [Event Log](./event-log.md), [Permissions](./permissions.md), [Retention Window](./retention-window.md), [Tamper Evidence](./tamper-evidence.md)
 
 ## Lens — uncomposed
@@ -138,7 +139,6 @@ Atoms no composition yet composes. The overlays say nothing about them — an ho
 - [Clinical Observation](./clinical-observation.md)
 - [Medication Order](./medication-order.md)
 - [Preference](./preference.md)
-- [Selective Disclosure](./selective-disclosure.md)
 
 ---
 

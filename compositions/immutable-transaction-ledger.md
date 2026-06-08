@@ -1,0 +1,420 @@
+---
+title: Immutable Transaction Ledger with Selective Disclosure
+parent: Compositions
+nav_order: 19
+has_toc: true
+toc: true
+---
+
+# Immutable Transaction Ledger with Selective Disclosure (C6)
+
+<details markdown="block">
+  <summary>Table of contents</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+
+> A regulated composition: an append-only transaction ledger that is **immutable, attributed, tamper-evident, and retained** (the Audit Trail substrate) wired to **accountable, independently verifiable partial disclosure** (Selective Disclosure). The composition wires the two into the single structure SEC (US Securities and Exchange Commission) Rule 17a-4, HIPAA (US Health Insurance Portability and Accountability Act) §164.528, 21 CFR (Code of Federal Regulations) Part 11, and GDPR (EU General Data Protection Regulation) Article 15 all require but none names as a single composable concept. The load-bearing emergent guarantees are two: **disclosure-accountability binding bijection** — every disclosure of a ledger subset corresponds to exactly one immutable, attributed ledger event and vice versa, so the act of disclosing is itself an immutable ledger entry; and **verifiable partial disclosure** — any disclosed subset can be independently verified as authentic and derived from the ledger while the undisclosed remainder stays undisclosed and uncompromised. Neither Audit Trail (which has no notion of accountable disclosure) nor Selective Disclosure (which has no tamper-evident ledger) provides either guarantee alone. The cross-domain thesis this composition grounds: a financial trade-confirmation ledger, a healthcare disclosure-accounting ledger, and a clinical-trial submission ledger are the same structure; one composition serves all three.
+
+---
+
+## Intent
+
+Every domain that keeps a record of consequential transactions faces the same paired requirement. First, the record must be a **trustworthy ledger**: append-only and totally ordered (no entry inserted out of sequence or quietly back-dated), attributed (every entry tied to a verified actor), tamper-evident (any after-the-fact rewrite detectable from the records alone), and retention-governed (kept for its regulatory lifetime, lawfully destroyable with a defensible record). Second, the record must be **selectively shareable with accountability**: a regulator, counterparty, auditor, or data subject is shown a *subset* of the ledger — a single trade, one patient's billing disclosures, the records pertaining to one matter — and that act of sharing must itself be recorded (to whom, what scope, under what authority, when), while the disclosed subset can be independently verified as genuine and the undisclosed remainder is neither revealed nor weakened.
+
+No single atom satisfies both. The Audit Trail substrate supplies the first: it is the immutable, attributed, tamper-evident, retention-governed ledger, assembled from Event Log (append-only total order), Actor Identity (attribution), Tamper Evidence (sealing), and Retention Window (lifetime). Selective Disclosure supplies the accountability half of the second: a durable, append-only record of every disclosure — recipient, scope, authority, timestamp. But neither provides the full surface until they are wired together. Audit Trail does not know what a *disclosure* is or that disclosing a subset of its own events is itself an auditable event. Selective Disclosure does not perform disclosures, does not seal anything, and — by its own Invariant 5 (no-disclosure-unrecorded) — cannot enforce from inside that every disclosure was in fact recorded; it names that as an integration obligation for a composing pattern to close. The wiring is this composition.
+
+The cross-domain structural identity is the composition's thesis. Under SEC Rule 17a-4 a broker-dealer must keep transaction records in a non-rewritable, non-erasable form and produce them, or a defined subset, on demand for an examiner. Under HIPAA §164.528 a covered entity must give an individual an accounting of disclosures of their protected health information — what was disclosed, to whom, when, and why — drawn from its records alone. Under 21 CFR Part 11 an electronic record submitted to a regulator must be attributable, contemporaneous, and tamper-evident, with disclosures to the agency themselves recorded. Under GDPR Article 15 a data subject may demand to know what data was disclosed and to which recipients. The structural form is identical across all four: one immutable attributed ledger, and an accountable, independently verifiable mechanism for disclosing a subset of it. One grounded composition satisfies all four.
+
+This is a composition, not a new primitive. The Audit Trail substrate (with its constituent atoms Event Log, Actor Identity, Retention Window, and Tamper Evidence, reached transitively) and Selective Disclosure are unchanged. The composition is the wiring that makes them coherent as a single immutable-ledger-with-accountable-disclosure surface. It introduces emergent actions — `record_entry`, `disclose_subset`, `verify_disclosure`, `verify_ledger`, and a `read` passthrough — that belong to no single constituent and exist only because the two are wired together. `disclose_subset` in particular belongs to neither: Selective Disclosure records *that* a disclosure happened but does not seal a verifiable subset of a ledger; Audit Trail seals events but does not know a disclosure is occurring or that it must be accounted. The composition is the layer that answers: *was this subset genuinely part of the ledger, was its disclosure recorded and authorized, and did showing it compromise nothing else?*
+
+What the composition is *not*: it is not a redaction or transmission engine (Selective Disclosure's boundary holds — the composition records and proves disclosure; it does not fetch, redact, or route the underlying payloads); it is not the authorization layer that decides *whether* a disclosure is permitted (that is Consent / Permissions, named as a composing peer); it is not the legal-hold suspension layer over the ledger's retention (Legal Hold / Defensible Retention); it is not an at-most-once append guarantee under retry (Idempotent Reservation / Duplicate Prevention, named as an optional enrichment); and it is not the clock-authority layer (inherited from Audit Trail). Each is named explicitly in Edge cases.
+
+---
+
+## Summary
+
+Immutable Transaction Ledger with Selective Disclosure (C6) is a regulated composition (a spec that wires two or more atoms — freestanding, self-contained pattern specs — together) that solves a problem no single atom solves alone: keeping a tamper-evident, attributed, append-only ledger of transactions *and* being able to hand a regulator, counterparty, or data subject a verifiable slice of it — proving that slice is genuine and was part of the ledger, recording that the disclosure happened and under what authority, and revealing nothing about the rest. It wires two constituents: the Audit Trail substrate (the immutable, attributed, tamper-evident, retention-governed ledger, assembled from Event Log, Actor Identity, Tamper Evidence, and Retention Window) and Selective Disclosure (the durable, append-only accounting of every disclosure — recipient, scope, authority, time).
+
+The composition's two defining emergent guarantees are **disclosure-accountability binding bijection** — every `disclose_subset` writes, atomically, exactly one Selective Disclosure record *and* exactly one Audit Trail ledger event recording the disclosure, so the act of disclosing is itself an immutable, attributed, sealed ledger entry, and there is never a disclosure without both records or an orphan of either — and **verifiable partial disclosure** — any disclosed subset can be independently verified by its recipient as authentic and derived from the ledger, while the undisclosed remainder stays undisclosed and its integrity uncompromised. The first is a structural binding between the two stores; the second is a behavioral obligation on the ledger's tamper-evidence, realized (not defined) by mechanisms such as Merkle inclusion proofs, cryptographic accumulators, or signed disclosure packages.
+
+C6's most common uses are broker-dealer transaction records under SEC Rule 17a-4, accounting-of-disclosures under HIPAA §164.528, regulatory submissions under 21 CFR Part 11, and data-subject disclosure accounting under GDPR Article 15. Any system that must keep an immutable, attributed ledger and prove a *subset* of it to an outside party — without exposing the rest and without being able to deny that the disclosure occurred — is a candidate for this composition.
+
+---
+
+## Composes
+
+- **[Audit Trail](./audit-trail.md)** — the regulated-audit substrate that *is* the immutable transaction ledger. Every ledger entry the composition appends records here as one `AuditTrail.record_action` call, producing an Event Log entry (append-only, totally ordered — the ledger's sequence), an Actor Identity attestation (binding the entry's acting actor to a verified credential — the attribution), a Tamper Evidence seal per the configured cadence (the tamper-evidence), and a Retention Window record (the lifetime). The act of *disclosing* a subset is likewise recorded here as a ledger event. The composition maintains exactly one Audit Trail instance configured with the host's regulatory retention policy. **Event Log, Actor Identity, Tamper Evidence, and Retention Window are reached transitively through Audit Trail** — the composition does not maintain separate instances of those four atoms at this layer, per the *Compositions of compositions* convention (see [`SPEC_FORMAT.md`](../SPEC_FORMAT.md)): naming Audit Trail as the substrate satisfies the Event Log + Actor Identity + Tamper Evidence + Retention Window requirement transitively.
+
+- **[Selective Disclosure](../atoms/selective-disclosure.md)** — the disclosure-accountability surface. Every `disclose_subset` action records here as one `SelectiveDisclosure.record(subject_ref, recipient, scope, authority, …)` call, producing the durable, immutable disclosure record (recipient, scope, authority {type, reference}, timestamp) that regulators require for disclosure accounting. The composition calls `record` and `read`. Selective Disclosure deliberately does *not* perform the disclosure, seal anything, or enforce that every disclosure is recorded — its Edge cases name *"Cryptographic protection … → Tamper Evidence"*, *"Retention governance → Retention Window"*, and its Invariant 5 (no-disclosure-unrecorded) is an integration obligation. The composition is where all three re-converge: Tamper Evidence (via the Audit Trail substrate) seals the disclosure event, Retention Window (via the substrate) governs it, and the composition structurally closes Invariant 5 by making `disclose_subset` the only disclosure surface and having it always record.
+
+The Audit Trail substrate and the Selective Disclosure store are owned by their respective constituent instances; the composition does not duplicate their state. It indexes between them with one emergent map (`disclosure_to_event`, below).
+
+---
+
+## Composition logic
+
+### Application state
+
+The composition owns one piece of emergent state that wires the two constituents into a queryable, records-alone-defensible disclosure-accountability surface:
+
+- **`disclosure_to_event`** — map from a Selective Disclosure `disclosure_id` to the Audit Trail `event_id` that recorded the disclosure act in the ledger. This is the binding backbone: given any recorded disclosure, the composition can locate the immutable, attributed, sealed ledger event that proves the disclosure occurred, was attributed to an actor, and was itself placed under retention. Populated by each successful `disclose_subset` at the moment both the Selective Disclosure write and the Audit Trail `record_action` succeed; the population of this map is the per-action atomicity obligation. Never modified after insertion. A `disclosure_id` present in the Selective Disclosure store but absent from `disclosure_to_event`, or an `event_id` of `action_ref = ledger.disclosed` whose `data.disclosure_id` is not present in the Selective Disclosure store, is a structural finding (Invariant 1 — binding bijection).
+
+The ledger entries themselves are Audit Trail events; the composition does not maintain a separate entry store. A "transaction entry" *is* an Audit Trail event id; the "subset" named in a disclosure is a set of those ledger event ids. The Selective Disclosure store and the Audit Trail substrate state are owned by their constituent instances; the composition indexes into them via `disclosure_to_event`.
+
+### Configuration
+
+- **`ledger_retention_policy`** — the policy reference configured on C6's single Audit Trail instance, governing the lifetime of the ledger events (both transaction entries and disclosure events). Set once on the Audit Trail instance; `record_action` takes no per-call retention argument. For broker-dealer deployments under SEC Rule 17a-4 the policy must encode at least the six-year (and first-two-years-accessible) retention floor; for HIPAA §164.528 deployments the disclosure-accounting horizon is at least six years. Multi-jurisdiction reconciliation is a Policy Reconciliation composing concern; C6 takes the reconciled `policy_ref` as input.
+
+- **`seal_cadence`** — inherited from the Audit Trail substrate's configuration (`per-event`, `interval-based`, or `on-demand`). For a ledger whose subsets will be disclosed and independently verified, per-event or tight interval-based cadences are recommended: an unsealed entry cannot yet anchor a partial-disclosure proof, so the unsealed tail is the window during which a freshly-appended entry is not yet independently verifiable on disclosure. C6 does not override the cadence; it names the consequence explicitly in Invariant 2.
+
+- **`tamper_evidence_supports_partial_disclosure`** — a deployment-declared boolean (default required-for-disclosure) asserting that the Tamper Evidence mechanism configured inside the Audit Trail substrate **can produce a verification artifact for an individual entry or a named subset that an independent party can check against the ledger seal without access to the undisclosed entries**. This is the substrate *capability* on which Invariant 2 (Verifiable Partial Disclosure) rests. It is stated as a behavioral obligation, never as a mechanism: see *The load-bearing wiring decision* for why the composition requires the capability but not any particular realization of it. A deployment whose Tamper Evidence mechanism cannot satisfy this capability may still use `record_entry` (the ledger remains immutable, attributed, tamper-evident *as a whole*) but its `disclose_subset` proofs degrade to whole-ledger verification — named explicitly as the *Whole-ledger-only tamper evidence* edge case.
+
+### Primitive policies
+
+The composition takes string-typed inputs at its action boundaries; each is validated either at this layer or by a constituent.
+
+- **`entry_id`** / **`event_id`** — opaque, system-generated by the Audit Trail substrate's Event Log. A ledger transaction entry is addressed by its `event_id`; the composition returns it as `entry_id` at `record_entry` and accepts a set of them as the disclosed subset at `disclose_subset`. Byte-identity equality; never normalized.
+- **`disclosure_id`** — opaque, system-generated by Selective Disclosure. Returned at `disclose_subset`; the key in `disclosure_to_event`.
+- **`transaction_data`** — opaque payload of a ledger entry, passed through to `AuditTrail.record_action`'s `data`. The composition does not interpret it; the host system defines its schema.
+- **`actor_ref`** + **`credential`** — the acting party for a ledger write or a disclosure, and their opaque credential, consumed by the Actor Identity inside the Audit Trail substrate. The substrate validates the credential at the audit write and surfaces `invalid-credential`, mapped per the uniform rejection rule below.
+- **`disclosed_entry_ids`** — a non-empty set of ledger `event_id`s naming the subset being disclosed. Each must resolve to a known `ledger.entry` (transaction) event in the Audit Trail substrate: the composition validates membership by reading the substrate's Event Log for each id and confirming its `action_ref = ledger.entry`. An id that is unknown to the Event Log, *or* that resolves to a `ledger.disclosed` event (a disclosure event, not a transaction entry), yields `rejected(unknown-entry)`. An empty set is `rejected(invalid-request)`. The composition keeps no separate entry store — a transaction entry *is* a `ledger.entry` Audit Trail event — so the substrate Event Log is the authoritative membership oracle.
+- **`subject_ref`** — opaque reference to the subject the disclosed subset pertains to (an account, a patient, a counterparty, a matter). Passed to `SelectiveDisclosure.record`; validated by the constituent (non-empty).
+- **`recipient`** — non-empty string naming the party receiving the disclosure. Validated by Selective Disclosure.
+- **`scope`** — non-empty string naming what subset/fields were disclosed (Selective Disclosure's `scope`). The composition additionally records the structured `disclosed_entry_ids` in the ledger disclosure event's `data`; `scope` is the human/regulatory-facing descriptor, `disclosed_entry_ids` is the machine-checkable set.
+- **`authority`** — the structured `{type ∈ {consent, legal-hold, regulatory}, reference}` field Selective Disclosure requires; validated by the constituent (`unknown-authority-type` propagated). C6 does not itself check that the authority is *valid* (that a referenced Consent was in force) — that is a composing Consent/Permissions concern named in Edge cases; C6 records the asserted authority and makes the assertion auditable.
+
+**Uniform `record_action` rejection-mapping rule.** For every `AuditTrail.record_action` call below, the substrate's rejection taxonomy (`invalid-credential | invalid-request | recording-failure`) maps uniformly. Where the audit write *follows* a successful constituent write (every disclosure action writes Selective Disclosure first), the Selective Disclosure record is immutable once committed and cannot be rolled back; there, `invalid-credential` / `invalid-request` / `recording-failure` from Audit Trail all surface as `rejected(recording-failure)` at the C6 boundary, with the resulting orphan handled per the *Cross-store consistency under partial failure* edge case. For `record_entry` (a single substrate write with no prior constituent write), `invalid-credential` and `invalid-request` surface as clean pre-state rejections. Deployments requiring credential pre-validation before the irreversible Selective Disclosure write wire an Actor Identity pre-check above C6 (a composing peer).
+
+No primitive is case-sensitivity-normalized at the composition layer.
+
+### Action wiring
+
+The composition exposes four orchestrating actions and one read passthrough. `record_entry` and `disclose_subset` change ledger state and record in Audit Trail; `verify_disclosure` and `verify_ledger` are read-only verification queries; `read` passes through to the substrate. The `disclosure_to_event` insertion occurs only after both constituent writes succeed — its population is the evidence that the atomicity obligation was met.
+
+---
+
+#### `record_entry`
+
+```
+record_entry(transaction_data, actor_ref, credential) →
+    {entry_id}
+  | rejected(invalid-credential | invalid-request | recording-failure)
+```
+
+Appends one transaction to the ledger. Steps:
+
+1. Validate `transaction_data` present and `actor_ref` non-empty. Failure → `rejected(invalid-request)`. Stop.
+2. `AuditTrail.record_action(action_ref = ledger.entry, actor_ref, credential, data = {transaction_data, recorded_at = now})` → `event_id`. Map `invalid-credential` → `rejected(invalid-credential)`; `invalid-request` → `rejected(invalid-request)`; `recording-failure` → `rejected(recording-failure)`. Stop on any.
+3. Return `{entry_id = event_id}`. The entry is now an immutable, attributed, sealed (per cadence), retained ledger event.
+
+---
+
+#### `disclose_subset`
+
+```
+disclose_subset(
+  disclosed_entry_ids,
+  subject_ref,
+  recipient,
+  scope,
+  authority,
+  actor_ref,
+  credential
+) →
+    {disclosure_id, event_id, verification_bundle}
+  | rejected(
+      invalid-request
+    | unknown-entry
+    | unknown-authority-type
+    | recording-failure
+    )
+```
+
+Records that a named subset of the ledger was disclosed to a recipient under an authority, and produces the artifact by which the recipient can independently verify that subset. The disclosure act is itself appended to the ledger. Steps:
+
+1. Validate: `disclosed_entry_ids` non-empty (`invalid-request` if empty); `subject_ref`, `recipient`, `scope` non-empty (`invalid-request`); every id in `disclosed_entry_ids` resolves, via a read of the substrate's Event Log, to a known `ledger.entry` (transaction) event — not a `ledger.disclosed` event (`unknown-entry` naming the first id that is unknown or not a transaction entry). Stop on any.
+2. `SelectiveDisclosure.record(subject_ref, recipient, scope, authority)` → `disclosure_id`. Map `invalid-request` → `rejected(invalid-request)`; `unknown-authority-type` → `rejected(unknown-authority-type)`; `storage-failure` → `rejected(recording-failure)`. Stop on any. *(Selective Disclosure writes first; it is the disclosure-accounting record of record. If the subsequent ledger write fails, the orphan is a Selective Disclosure record with no `disclosure_to_event` binding — surfaced per the partial-failure edge case.)*
+3. `AuditTrail.record_action(action_ref = ledger.disclosed, actor_ref, credential, data = {disclosure_id, disclosed_entry_ids, recipient, scope, authority.type, recorded_at = now})` → `event_id`. The disclosing actor's credential attests the disclosure. On failure → `rejected(recording-failure)`; orphan per the partial-failure edge case. Stop on failure.
+4. Record `disclosure_to_event[disclosure_id] = event_id`.
+5. Construct `verification_bundle` — the tamper-evidence verification artifact for `disclosed_entry_ids`, obtained from the Audit Trail substrate's Tamper Evidence surface for exactly those entries (Invariant 2's capability). The bundle lets a recipient confirm each disclosed entry is a genuine, unaltered ledger entry covered by the ledger seal, without access to the undisclosed entries. *(Realization is mechanism-specific — a set of Merkle inclusion proofs, an accumulator witness, or a signed package; the composition requires the bundle to be independently checkable against the ledger seal, not any particular form.)*
+6. Return `{disclosure_id, event_id, verification_bundle}`.
+
+---
+
+#### `verify_disclosure`
+
+```
+verify_disclosure(disclosed_entries, verification_bundle, ledger_seal_reference) →
+    disclosure-proof
+```
+
+The emergent verification action, runnable by the **recipient** of a disclosure or any auditor holding the disclosed entries and the bundle — *without* access to the ledger's undisclosed contents. `disclosed_entries` is the set of disclosed entry records the recipient received — each its `entry_id` and the entry payload — against which the bundle is checked; it is *not* the whole ledger, and the action never reads an undisclosed entry. The action is self-contained given those disclosed entries, the bundle, and a reference to the ledger seal (the published seal/root the Tamper Evidence mechanism anchors to). Returns a `disclosure-proof`:
+
+- **`entries`** — per disclosed entry: `entry_id`, and `authenticity ∈ {authentic, altered, not-in-ledger, unverifiable(reason)}` — the result of checking the entry against the `verification_bundle` and `ledger_seal_reference`. `authentic` means the entry is a genuine, unaltered ledger entry covered by the seal; `altered` means the entry does not match what the seal committed to; `not-in-ledger` means the bundle does not place the entry under the seal.
+- **`confidentiality_preserved`** — `true` iff the bundle and disclosed entries reveal nothing about the count, content, or position of undisclosed entries beyond what the seal reference inherently publishes. This is the structural statement of "the remainder stays undisclosed"; its realization is the mechanism's zero-knowledge-of-complement property (a Merkle proof reveals sibling hashes but not sibling contents; an accumulator witness reveals nothing of non-members).
+- **`overall_verdict`** — `disclosure-verified` (every entry `authentic` and `confidentiality_preserved = true`) or `disclosure-unverified(reasons)`.
+
+`verify_disclosure` is the composition's defining emergent contribution on the disclosure side: neither Selective Disclosure (which records *that* a disclosure happened but seals nothing) nor Audit Trail alone (which seals the whole ledger but has no notion of a verifiable disclosed *subset*) can answer it. Note this action does **not** consult `disclosure_to_event` — it is deliberately runnable by an external recipient who holds only the bundle; the accountability side (was this disclosure recorded and attributed?) is answered separately by `verify_ledger` / `read` against the disclosure event.
+
+---
+
+#### `verify_ledger`
+
+```
+verify_ledger(disclosure_id, original_event_payloads) →
+    accountability-proof
+  | rejected(not-known)
+```
+
+The accountability-side verification, run by an auditor with access to the composition's stores. Given a `disclosure_id`, returns whether the disclosure is bound to exactly one immutable, attributed, sealed, retained ledger event (the binding bijection, Invariant 1):
+
+1. Look up `disclosure_id` in the Selective Disclosure store. If absent → `rejected(not-known)`. Stop.
+2. Look up `event_id = disclosure_to_event[disclosure_id]`. If absent → `accountability-proof` with `binding = binding-gap` (a high-priority finding: a recorded disclosure with no ledger event).
+3. `AuditTrail.verify_record(event_id, original_event_payloads[event_id])` (Audit Trail Invariant 7 — the original payload is re-presented by the caller, not fetched). Record attribution-verification, seal status, and retention state.
+4. Return `accountability-proof` { `disclosure_id`, `event_id`, `binding ∈ {bound, binding-gap}`, `attestation_verification`, `retention_state` }.
+
+---
+
+#### `read` (passthrough)
+
+```
+read(query) → results | rejected(invalid-query)
+```
+
+Passes to `SelectiveDisclosure.read(query)` for disclosure-accounting queries (by subject, recipient, authority type, time range) and/or `AuditTrail`'s read surface for ledger queries, without recording. No state change.
+
+---
+
+### The load-bearing wiring decision — disclosure ⇒ {accounting record + ledger event}, atomically; partial-verifiability as a capability, not a mechanism
+
+The composition's structural reason to exist has two halves.
+
+**Half 1 — the binding.** *Every `disclose_subset` writes, in the same transactional boundary, a Selective Disclosure record (the disclosure-accounting record of record) and an Audit Trail `ledger.disclosed` event (the immutable, attributed, sealed, retained proof that the disclosure occurred), bound in `disclosure_to_event`.*
+
+*Principle.* Disclosure accounting that an outside party can trust requires two facts to be inseparable: that the disclosure was recorded with its authority (Selective Disclosure's contribution), and that this record of disclosure is itself immutable, attributed, and tamper-evident (Audit Trail's contribution). *Likely objection:* why not let Selective Disclosure alone carry it? *Mechanism that resolves it:* Selective Disclosure deliberately extracted tamper-evidence, retention, and attribution during its own EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) Pass 2 — its Edge cases name all three as composing concerns, and its Invariant 5 (no-disclosure-unrecorded) is explicitly an integration obligation it *cannot* self-enforce. The composition is exactly where those re-converge: the Audit Trail substrate supplies attribution + seal + retention in one surface, and by making `disclose_subset` the *only* disclosure surface and having it always write both records, the composition structurally closes Invariant 5 — a disclosure cannot occur through this composition without producing both records. *Result:* a disclosure-accounting record that is itself non-repudiable and tamper-evident, which neither constituent provides alone.
+
+**Half 2 — partial verifiability as a behavioral obligation.** *A disclosed subset must be independently verifiable as authentic and derived from the ledger, while the undisclosed remainder stays undisclosed and uncompromised. The composition requires this **capability** of its tamper-evidence substrate; it does not require any particular realization.*
+
+*Principle.* The point of disclosing a subset is to prove that slice genuine without exposing the rest. *Likely objection:* doesn't this force a Merkle tree — i.e., bake a mechanism into the spec? *Mechanism that resolves it:* No — and deliberately not. Tamper Evidence is itself mechanism-neutral by design (its spec names hash chains, Merkle trees, and external anchoring as interchangeable realizations); for C6 to normatively demand Merkle would contradict its own constituent and elevate one realization into the ontology. So the composition states the obligation behaviorally — *"the substrate's tamper-evidence can produce, for a named subset, a verification artifact an independent party checks against the ledger seal without access to the undisclosed entries"* — and lists realizations (Merkle inclusion proofs, cryptographic accumulators, signed disclosure packages, or future proof systems) only as rationale. A deployment whose Tamper Evidence cannot meet the capability is not non-conforming to C6; its `disclose_subset` degrades to whole-ledger verification, named in Edge cases. *Result:* the essential capability — verifiable partial disclosure — is specified; the implementation mechanism is left to the deployment, preserving the abstraction boundary the library holds between *what must be true* and *how it is achieved*.
+
+---
+
+## Composition-level invariants
+
+These invariants emerge from the composition. None belongs to a single constituent; each requires both the Audit Trail substrate and Selective Disclosure working together.
+
+- **Invariant 1 — Disclosure-accountability binding bijection.** `disclosure_to_event` is a one-to-one binding between Selective Disclosure records produced by this composition and Audit Trail `ledger.disclosed` events: every such disclosure record has exactly one corresponding ledger event whose `data.disclosure_id` points back to it, and vice versa. The two writes are committed atomically or the failure is compensated per the *Cross-store consistency under partial failure* edge case; there is no valid state in which a composition-produced disclosure record lacks its binding, or a `ledger.disclosed` event names a `disclosure_id` absent from the Selective Disclosure store. *This is the load-bearing atomicity claim* and the formal-model subject; it mirrors Audit Trail Invariant 4 (cross-store atomicity) at the disclosure boundary. *Rests on:* Selective Disclosure Invariants 1 and 6 (record immutability, append-only durability) and Audit Trail Invariant 1 (attribution coverage).
+
+- **Invariant 2 — Verifiable partial disclosure.** Any subset disclosed via `disclose_subset` can be independently verified — by a party holding only the disclosed entries, the `verification_bundle`, and the published `ledger_seal_reference` — as authentic and derived from the ledger (`verify_disclosure` returns `authentic` per entry), while the undisclosed remainder of the ledger stays undisclosed and its integrity uncompromised (`confidentiality_preserved = true`). This is a **behavioral obligation on the substrate's tamper-evidence capability**, not a mechanism mandate; its realization (Merkle inclusion proofs, accumulators, signed packages, or equivalent) is a deployment choice. Where the configured Tamper Evidence cannot support partial proofs, this invariant degrades — per the *Whole-ledger-only tamper evidence* edge case — to whole-ledger verification, and `disclose_subset` says so in its bundle. *Rests on:* Audit Trail Invariant 3 (integrity coverage modulo unsealed tail) and Invariant 7 (verification asymmetry — the verifier presents the records), and the declared `tamper_evidence_supports_partial_disclosure` capability.
+
+- **Invariant 3 — Immutable, attributed, retention-governed ledger.** Every ledger entry (transaction or disclosure event) is append-only and totally ordered (Event Log), attributed to a verified actor (Actor Identity), tamper-evident under the configured seal cadence (Tamper Evidence), and placed under retention at write time with honest cascade-on-purge (Retention Window). No ledger entry is modified or reordered after commit. *Rests on:* the Audit Trail substrate's Invariants 1–4, 6, 8, holding transitively over Event Log, Actor Identity, Tamper Evidence, and Retention Window.
+
+- **Invariant 4 — No-disclosure-unrecorded, structurally closed.** Selective Disclosure's Invariant 5 (no-disclosure-unrecorded), which that atom can only state as an integration obligation, is structurally enforced at this layer: `disclose_subset` is the composition's only disclosure surface and it always writes both the Selective Disclosure record and the ledger disclosure event before returning success. A disclosure performed *outside* the composition is outside C6's scope (and a system-conformance failure against SD Invariant 5); a disclosure performed *through* C6 cannot escape accounting. *Rests on:* Invariant 1 and the action wiring.
+
+- **Invariant 5 — Constituent invariants preserved.** All Selective Disclosure invariants (1–6) hold over the disclosure store; all Audit Trail invariants (1–8) hold over the substrate, and transitively all Event Log, Actor Identity, Tamper Evidence, and Retention Window invariants hold over their instances. The composition weakens no constituent invariant.
+
+---
+
+## Examples
+
+### Walkthrough — broker-dealer trade-confirmation ledger under SEC Rule 17a-4
+
+A registered broker-dealer deploys C6 as the trade-confirmation ledger for one trading desk. Configuration: `ledger_retention_policy = sec_17a4_6yr` (encoding the six-year floor with the first two years immediately accessible), `seal_cadence = per-event` (each entry independently verifiable the moment it lands, so any subset disclosed later carries a valid partial proof), `tamper_evidence_supports_partial_disclosure = true` (the substrate's Tamper Evidence mechanism — a per-ledger Merkle tree — can produce an inclusion proof for any named subset).
+
+1. **Three trades are recorded.** For each executed trade, the desk calls `record_entry(transaction_data = {symbol, qty, price, counterparty, …}, actor_ref = "trader-d12", credential = <trader_cred>)`. The composition calls `AuditTrail.record_action(action_ref = ledger.entry, actor_ref = "trader-d12", <trader_cred>, data = {transaction_data, recorded_at})` three times → `{entry_id = "ev_5001"}`, `{entry_id = "ev_5002"}`, `{entry_id = "ev_5003"}`. Each entry is now an immutable, attributed, per-event-sealed, retained ledger event. No disclosure has occurred, so `disclosure_to_event` is empty.
+
+2. **An examiner requests one trade.** A FINRA (Financial Industry Regulatory Authority) examiner requests the confirmation for the single trade recorded at `ev_5002` — and only that trade; the desk's other positions are outside the examiner's scope. The compliance officer calls:
+
+   ```
+   disclose_subset(
+     disclosed_entry_ids = {"ev_5002"},
+     subject_ref = "account-7731",
+     recipient = "FINRA-exam-2026-Q2",
+     scope = "trade-confirmation:single-trade:ev_5002",
+     authority = { type: "regulatory", reference: "SEC Rule 17a-4(b)(4) — examiner production" },
+     actor_ref = "compliance-c4",
+     credential = <compliance_cred>
+   )
+   → { disclosure_id = "disc-2210", event_id = "ev_5004", verification_bundle = <Merkle inclusion proof for ev_5002> }
+   ```
+
+   The binding fires: `SelectiveDisclosure.record(...)` writes the disclosure-accounting record first → `disc-2210`; then `AuditTrail.record_action(action_ref = ledger.disclosed, actor_ref = "compliance-c4", <compliance_cred>, data = {disclosure_id: "disc-2210", disclosed_entry_ids: {"ev_5002"}, recipient, scope, authority.type, recorded_at})` → `ev_5004`; then `disclosure_to_event["disc-2210"] = "ev_5004"`. The act of disclosing is now itself an immutable, attributed, sealed ledger entry. The `verification_bundle` is the Tamper Evidence inclusion proof for `ev_5002` against the published ledger seal — and for `ev_5002` *only*.
+
+3. **The examiner independently verifies the disclosed trade.** The examiner holds the disclosed entry payload (the `ev_5002` confirmation), the `verification_bundle`, and the broker-dealer's published `ledger_seal_reference` (the Merkle root, anchored to an RFC 3161 (the Internet standard for trusted time-stamping) Time-Stamp Authority (TSA) — a trusted third party that signs proofs of when data existed). The examiner — *without any access to `ev_5001` or `ev_5003`* — runs `verify_disclosure(disclosed_entries = [ev_5002 payload], verification_bundle, ledger_seal_reference)`:
+
+   - `entries`: `[{entry_id: "ev_5002", authenticity: authentic}]` — the inclusion proof checks against the root, so the disclosed trade is a genuine, unaltered ledger entry.
+   - `confidentiality_preserved = true` — the inclusion proof reveals sibling hashes but not the contents, count, or position of `ev_5001` / `ev_5003`.
+   - `overall_verdict = disclosure-verified`.
+
+   The examiner trusts the trade without trusting the broker-dealer and without seeing the rest of the book. This is Invariant 2 (verifiable partial disclosure) in operation.
+
+4. **A compliance auditor verifies the accountability side.** Separately, an internal auditor with access to the composition's stores asks: *was this disclosure recorded and attributed?* The auditor calls `verify_ledger(disclosure_id = "disc-2210", original_event_payloads)`:
+
+   - `binding = bound` — `disclosure_to_event["disc-2210"] = "ev_5004"` is present (Invariant 1).
+   - `attestation_verification = verified` — `AuditTrail.verify_record("ev_5004", payload)` confirms the disclosing officer's credential and the seal over the disclosure event.
+   - `retention_state = Retained`.
+
+   The two verification surfaces answer two different questions: `verify_disclosure` (anyone holding the bundle) proves the *subset is genuine*; `verify_ledger` (an auditor with the stores) proves the *disclosure was accounted*. Neither constituent answers either alone.
+
+### Healthcare — accounting of disclosures under HIPAA §164.528
+
+A covered entity keeps each patient's billing-disclosure ledger in C6. Every time PHI (Protected Health Information) is disclosed to a payer, a public-health authority, or a business associate, the entity calls `disclose_subset` naming the disclosed billing entries, the recipient, and the authority (`{ type: regulatory, reference: "HIPAA §164.512(b)" }` for public-health reporting; `{ type: consent, reference: "<consent-id>" }` for patient-authorized sharing). When the patient exercises their §164.528 right to an accounting of disclosures, the entity calls `read` against the Selective Disclosure store filtered by `subject_ref = <patient>`: the result is every disclosure — date, recipient, scope, authority — drawn from the records alone. Because each disclosure is also a `ledger.disclosed` event (Invariant 1), the accounting is itself immutable, attributed, and tamper-evident — a property §164.528's accounting obligation needs but the plain Selective Disclosure atom cannot supply alone.
+
+### Clinical-trial submission ledger under 21 CFR Part 11
+
+A sponsor records each electronic submission to a regulator as a `record_entry` in a 21 CFR Part 11 submission ledger (attributable, contemporaneous, original, accurate — ALCOA — satisfied by the Audit Trail substrate). When the sponsor discloses a defined subset of the submission record to an inspector or an IRB (Institutional Review Board), `disclose_subset` produces both the accountable disclosure record and the partial-disclosure proof for exactly the disclosed documents, leaving the remainder of the submission sealed and unrevealed. The inspector verifies the disclosed subset against the published seal; the sponsor's disclosure log answers *what was shown, to whom, under what authority* from the records alone.
+
+### Rejection path — empty or unknown subset
+
+A caller attempts to disclose with no entries: `disclose_subset(disclosed_entry_ids = {}, …)` → `rejected(invalid-request)` at step 1; nothing is written to either store. A caller names an entry id that is not a ledger transaction entry — a fabricated id, or the `event_id` of a `ledger.disclosed` event rather than a `ledger.entry` event: `disclose_subset(disclosed_entry_ids = {"ev_5004"}, …)` → `rejected(unknown-entry)` naming `ev_5004` (it is a disclosure event, not a transaction entry); nothing is written. The membership test (every id resolves to a `ledger.entry` event) runs *before* the irreversible Selective Disclosure write, so an invalid subset never produces a disclosure-accounting record.
+
+### Rejection path — ledger write fails after the disclosure record commits (the orphan)
+
+The compliance officer calls `disclose_subset` with a valid subset. Step 2 succeeds: `SelectiveDisclosure.record(...)` → `disc-2211` is durably written (Selective Disclosure records are immutable once committed). Step 3 fails: `AuditTrail.record_action(ledger.disclosed, …)` returns `recording-failure` (the seal mechanism is briefly unreachable). The composition returns `rejected(recording-failure)`. The result is an **orphan**: a Selective Disclosure record (`disc-2211`) with no `disclosure_to_event` binding and no `ledger.disclosed` event. This is exactly the dangling partial that Invariant 1 forbids as a *stable* state; the *Cross-store consistency under partial failure* edge case governs its compensation (retry the audit write until it lands, surface the orphan to the compliance dashboard as a high-priority finding, mark the recovered event). The TLA+ model and its buggy twin make mechanical that a non-atomic disclosure commit is reachably unsafe — see Lineage §Formal model.
+
+### Regulated adversarial scenarios
+
+Three scenarios the composition must survive in regulated contexts:
+
+**Regulator audit — "produce the accounting of disclosures, and prove each is genuine" (HIPAA §164.528 / SEC Rule 17a-4).**
+
+A regulator queries the disclosure-accounting surface for a subject (a patient under §164.528, an account under 17a-4). The system calls `read` against the Selective Disclosure store filtered by `subject_ref`, returning every disclosure — date, recipient, scope, authority. For any disclosure the regulator wishes to verify, the system calls `verify_ledger(disclosure_id, original_event_payloads)`:
+
+- `binding = bound`: by Invariant 1 (binding bijection), every disclosure record produced by the composition has exactly one corresponding `ledger.disclosed` event. A disclosure cannot appear in the accounting without its immutable, attributed, sealed ledger event.
+- `attestation_verification = verified`: by Invariant 3 (immutable, attributed, retention-governed ledger), the disclosure event is attributed to the disclosing actor's verified credential and covered by a seal.
+- `retention_state = Retained` (or `Purged` with an honest retention record for lawfully expired entries).
+
+The accounting and its proof come from the records alone. Invariants 1, 3, and 4 are the structural basis; no developer narration is required.
+
+**Disputed transaction / data-subject request — "prove this disclosed trade subset is authentic without revealing my other trades" (GDPR Article 15).**
+
+A data subject (or a counterparty) was shown a subset of the ledger and challenges it: either (a) the disclosed entries were not genuine ledger entries, or (b) showing them exposed or compromised the undisclosed remainder. The recipient — holding only the disclosed entries, the `verification_bundle`, and the published `ledger_seal_reference` — runs `verify_disclosure`:
+
+- Claim (a): per-entry `authenticity = authentic`, resting on Invariant 2 and Audit Trail Invariant 3 (integrity coverage). The inclusion proof checks each disclosed entry against the published seal; an altered or fabricated entry returns `altered` or `not-in-ledger`. The recipient verifies authenticity *without trusting the discloser* — the proof is self-contained against the seal.
+- Claim (b): `confidentiality_preserved = true`, resting on Invariant 2's zero-knowledge-of-complement obligation. The bundle reveals nothing about the count, content, or position of the undisclosed entries beyond what the published seal inherently commits to. The GDPR Article 15 right to one's own disclosed data is satisfied *without* a parallel breach of every other data subject whose entries share the ledger.
+
+The disputed claim has no structural basis: Invariant 2 is the rebuttal, and it is checkable by the challenger themselves.
+
+**Breach or incident investigation — "is every disclosure accounted, and is any disclosure orphaned?"**
+
+An incident responder suspects that a disclosure occurred without being recorded, or that a disclosure record was tampered with. The responder runs the binding-bijection audit (Invariant 1) across the two stores:
+
+- For every Selective Disclosure record produced by the composition, confirm `disclosure_to_event[disclosure_id]` is populated and the bound `ledger.disclosed` event's `data.disclosure_id` points back. A disclosure record with no binding is an **orphan** — the partial-failure signature, surfaced as a high-priority finding (a recorded disclosure whose immutable ledger proof is missing).
+- For every `ledger.disclosed` event, confirm its `data.disclosure_id` resolves to a Selective Disclosure record. A `ledger.disclosed` event naming a `disclosure_id` absent from the disclosure store is the inverse orphan.
+- For the disclosure events themselves, walk the Audit Trail seal store in `sealed_at` order (inherited from the substrate's breach-forensics scenario): the most recent seal that verifies end-to-end and the first that returns `failed-verification(seal-proof-invalid)` bound the forensic window during which a disclosure event may have been tampered with.
+
+The binding bijection is what makes "every disclosure is accounted" a checkable property rather than a hope; the orphan is exactly the reachable bad state the formal model rejects.
+
+---
+
+## Generation acceptance
+
+A derived implementation of Immutable Transaction Ledger with Selective Disclosure is *acceptable* — in the regulator-acceptance sense — when an external auditor, given the composition's emergent state (`disclosure_to_event`) plus the Selective Disclosure store and the Audit Trail substrate stores, can do all of the following without recourse to source code, runbooks, or developer narration.
+
+### Audit-Trail-traversal-clearable checks
+
+These checks are answerable by reading the composition's records (including the Audit Trail substrate):
+
+1. **Every disclosure is doubly recorded and bound.** For every Selective Disclosure record produced by this composition, confirm `disclosure_to_event[disclosure_id]` is populated, that the bound `ledger.disclosed` event exists in the Audit Trail substrate, and that the event's `data.disclosure_id` equals the key. Conversely, for every `ledger.disclosed` event, confirm its `data.disclosure_id` resolves to a Selective Disclosure record. A disclosure record without a binding, or a `ledger.disclosed` event without a matching disclosure record, is a conformance failure. Invariant 1 (binding bijection) is the contract.
+
+2. **Every disclosed subset is independently verifiable, and reveals nothing else.** For a disclosure whose `verification_bundle` and disclosed entries are presented (with the published `ledger_seal_reference`), confirm `verify_disclosure` returns `authentic` per entry and `confidentiality_preserved = true`, yielding `overall_verdict = disclosure-verified`. A disclosed entry that returns `altered` or `not-in-ledger`, or a bundle that leaks the complement, is a conformance failure. Where the deployment declares `tamper_evidence_supports_partial_disclosure = false`, the degraded whole-ledger form is the acceptance bar instead (named in the *Whole-ledger-only tamper evidence* edge case), and the bundle says so. Invariant 2 (verifiable partial disclosure) is the contract.
+
+3. **The ledger is immutable, attributed, sealed, and retention-governed.** For every ledger entry (transaction `ledger.entry` and disclosure `ledger.disclosed`), confirm via the Audit Trail substrate that the event is append-only and totally ordered (Event Log), attributed to a verified actor (Actor Identity), covered by a seal per the configured cadence (Tamper Evidence), and under a retention record in `Retained` or `Purged` state (Retention Window). `AuditTrail.verify_record` returns `verified` (or `failed-verification(purged)` for lawfully expired entries, distinguishing destroyed from missing). Invariant 3 is the contract; it delegates to Audit Trail's own six-check Generation acceptance bar over the substrate.
+
+4. **No disclosure escapes accounting.** Confirm that `disclose_subset` is the composition's only disclosure surface and that it writes both records before returning success — so a disclosure performed *through* the composition cannot exist without its Selective Disclosure record and its `ledger.disclosed` event. (A disclosure performed *outside* the composition is a system-conformance failure against Selective Disclosure Invariant 5, named in the externally-clearable checks.) Invariant 4 (no-disclosure-unrecorded, structurally closed) is the contract.
+
+5. **Constituent Generation acceptance bars.** Verify each constituent's own Generation acceptance bar over its respective store: Selective Disclosure's six checks (record completeness, field completeness, immutability, authority-type enforcement, subject-history queryability, temporal soundness) and Audit Trail's six checks (all four audit questions answerable, all eight application-level invariants verifiable, each constituent atom's bar satisfied, forensic window boundable, honest destruction distinguishable, composing patterns identifiable). The composition's invariants depend on the correctness of the constituents'. Invariant 5 is the contract.
+
+### Externally-clearable checks
+
+These audit questions arise around C6 but cannot be answered from the composition's records alone:
+
+- **Whether the asserted `authority` was valid.** C6 records the disclosing party's asserted `authority` (`{type, reference}`) and makes the assertion immutable and attributed. It does not verify that a referenced Consent was in force, that a referenced Legal Hold was Active, or that a cited regulation genuinely permitted the disclosure at the time. Authority *legitimacy* is a composing Consent / Permissions concern (and, for `legal-hold` authority, a Legal Hold concern) — named as a peer in Edge cases. C6 makes the assertion auditable; it does not adjudicate it.
+
+- **Whether the disclosure was *permitted*.** C6 is not the authorization layer that decides *whether* a given party may disclose a given subset to a given recipient. That gate is Consent / Permissions, a composing peer. C6 records and proves disclosures that occur; it does not authorize them.
+
+- **Whether `transaction_data` is accurate or corresponds to a real-world transaction.** C6 records `transaction_data` as an opaque payload and seals it. It does not validate that the payload matches an external trade-confirmation, billing event, or submission. The host system owns the correspondence between the ledger entry and the real-world transaction it represents.
+
+- **Whether the `tamper_evidence_supports_partial_disclosure` capability is genuinely met by the configured mechanism.** C6 takes this as a deployment-declared boolean. Whether the deployment's actual Tamper Evidence mechanism can produce sound, complement-hiding partial proofs is a property of that mechanism's cryptographic construction, assessed by the deployment's security review — not clearable from C6's records.
+
+---
+
+## Edge cases and explicit non-goals
+
+- **C6 does not authorize disclosures — Consent / Permissions is the authorization peer.** C6 records and proves that a disclosure occurred and was accounted; it does not decide *whether* the disclosure was permitted. The authorization gate — may this actor disclose this subset to this recipient under this basis? — is a composing [Consent](../atoms/consent.md) / [Permissions](../atoms/permissions.md) concern, run *before* `disclose_subset`. C6's `authority` field records the asserted basis and makes the assertion immutable and attributable; validating that the basis was genuinely in force is the authorization peer's obligation (see the externally-clearable checks). A deployment composing C6 + Consent/Permissions gets both the gate (may I?) and the accountable, verifiable record (I did, here is the proof).
+
+- **C6 does not perform, redact, or transmit the disclosure — the Selective Disclosure boundary holds.** Selective Disclosure deliberately does not fetch subject data, apply redaction, or route transmissions, and C6 inherits that boundary. C6 records *that* a subset was disclosed and produces the *proof* that the disclosed subset is genuine; it does not retrieve the underlying payloads, decide what falls within a scope, or deliver anything to the recipient. The `verification_bundle` is a tamper-evidence artifact, not a data-delivery channel — the disclosed payloads themselves travel by whatever transmission mechanism the deployment uses, outside C6.
+
+- **Whole-ledger-only tamper evidence (Invariant 2 degradation).** Where the configured Tamper Evidence mechanism cannot produce a partial proof for a named subset (`tamper_evidence_supports_partial_disclosure = false`) — for example, a single whole-ledger hash with no inclusion-proof structure — `disclose_subset` still records the accountable disclosure and the `ledger.disclosed` event (the binding bijection, Invariant 1, is unaffected), but its `verification_bundle` degrades: a recipient can verify the disclosed subset only by verifying the *whole* ledger seal, which requires access to the entire ledger and therefore breaks the confidentiality half of Invariant 2. The composition does not silently weaken the guarantee; it surfaces the degradation in the bundle, and Invariant 2 names this explicitly. A deployment that requires verifiable partial disclosure must configure a Tamper Evidence mechanism with inclusion-proof capability (Merkle tree, accumulator, or equivalent).
+
+- **Cross-store consistency under partial failure.** Every `disclose_subset` writes Selective Disclosure first, then Audit Trail, then `disclosure_to_event`. A failure after the Selective Disclosure write but before the Audit Trail write produces an orphan: a Selective Disclosure record with no `disclosure_to_event` binding and no `ledger.disclosed` event. Selective Disclosure records are immutable once committed, so synchronous rollback is not available. The implementation must (a) retry the failed `AuditTrail.record_action` until it lands, (b) immediately surface the orphan to the compliance dashboard as a high-priority finding (a recorded disclosure with no immutable ledger proof), and (c) once the compensating event lands, populate `disclosure_to_event` and mark the event with `cascade_recovery = true` so an auditor can distinguish a clean disclosure from a recovered one. This mirrors Audit Trail Invariant 4's cross-store atomicity at the disclosure boundary; it is the reachable bad state the TLA+ buggy twin demonstrates. `record_entry` is a single substrate write and has no cross-store orphan of its own (an Audit Trail-internal partial-failure is the substrate's *Partial attestation on step failure* edge case).
+
+- **At-most-once append under retry — Idempotent Reservation / Duplicate Prevention enrichment.** C6's `record_entry` is not idempotent: two calls with identical `transaction_data` produce two distinct ledger entries (the same non-idempotency Selective Disclosure and Event Log carry). For deployments where a retried `record_entry` under a lost acknowledgment must not double-append a trade, compose [Idempotent Reservation](./idempotent-reservation.md) (or the [Duplicate Prevention](../atoms/duplicate-prevention.md) atom directly) as an *optional enrichment* over `record_entry`, keyed on a caller-supplied idempotency token. This is named as enrichment, not a constituent: the immutable-attributed-disclosable-ledger guarantee does not depend on at-most-once append, and many deployments (where the host already de-duplicates upstream) do not need it.
+
+- **Legal-hold suspension and defensible disposal of the ledger.** When litigation or investigation requires suspending normal purge over the ledger's retention, a [Legal Hold](../atoms/legal-hold.md) pattern intercepts purge against the Audit Trail substrate's retention records; [Defensible Retention](./defensible-retention.md) composes Legal Hold + Retention Window + Audit Trail into the hold-blocks-purge surface. C6 does not absorb this concern; a deployment composing C6 + Defensible Retention gets both the disclosable ledger and the hold-blocks-purge gate over its entries. The right-to-erasure-versus-retention collision (GDPR Article 17 versus a regulatory retention obligation) is likewise an Erasure Coordination composing concern, inherited from the Audit Trail substrate.
+
+- **Disclosure of an entry that is later lawfully purged.** A `verification_bundle` is issued at disclosure time against the seal then in force. If a disclosed entry's underlying ledger event later reaches its retention end and is lawfully purged (Audit Trail cascade-on-purge), a *subsequent* `verify_disclosure` against the original bundle may return `unverifiable(entry-purged)` for that entry — the seal can no longer be checked against a destroyed payload. This is the honest-destruction property (Audit Trail Invariant 8) surfacing at the disclosure-verification boundary, not a tamper finding: the `ledger.disclosed` *accounting* event persists under its own retention and `verify_ledger` still proves the disclosure occurred. The disclosure proof is contemporaneous evidence; it is not a perpetual oracle over a record the retention policy has authorized destroying.
+
+- **Clock source.** `recorded_at` timestamps on ledger entries and disclosure events are best-effort wall-time annotations; the Event Log `sequence_number` (via the Audit Trail substrate) is the authoritative order source. The seal-cadence timer and the retention-purge comparison both use the substrate's clock; C6 inherits Audit Trail's *Clock source for cadence and purge* edge case. For deployments where ledger or disclosure timestamps carry legal force, a Trusted Timestamping composition (per RFC 3161) provides the verifiable time anchor, and the Tamper Evidence seal's `anchored_at` already supplies an adversary-resistant upper bound for the breach-forensics scenario.
+
+- **Auditing the verification queries themselves.** `verify_disclosure`, `verify_ledger`, and `read` are pure reads; they record no ledger event. For high-assurance deployments that must also account for *who requested a disclosure proof or read the disclosure log, and when*, an access-logging composing pattern wraps C6's read surface — mirroring how Audit Trail names attempted-but-not-committed actions as a Failed-Attempt Log composing concern rather than absorbing them. C6's own ledger surface is committed entries and committed disclosures, not queries against them.
+
+- **Subset membership is over transaction entries.** `disclosed_entry_ids` names `ledger.entry` (transaction) events; the composition validates membership against the set of `ledger.entry` events and rejects an id that resolves to a `ledger.disclosed` event (or to no event) with `unknown-entry`. Disclosing the *fact of a prior disclosure* — showing an auditor the disclosure log — is a `read` against the disclosure-accounting store, not a `disclose_subset` of a `ledger.disclosed` event. This keeps the disclosed-subset semantics crisp: a disclosed subset is always a set of transactions, never a set of disclosure events.
+
+- **Single-artifact financial-instrument custody.** Where a ledger entry represents a tracked artifact (a bearer instrument, a physical certificate) whose *custody chain* must also be proven, [Provenance](../atoms/provenance.md) (via [Chain of Custody](./chain-of-custody.md)) enriches C6 for those entries: the `transaction_data` references the artifact, and a parallel custody chain records its hand-to-hand transfers. This is an optional enrichment named for the artifact-backed case, not a constituent of the general ledger.
+
+---
+
+## Standards references
+
+This composition is the structural form of the immutable-ledger-with-accountable-disclosure requirement across its canonical domains:
+
+- **SEC (US Securities and Exchange Commission) Rule 17a-4 (Records to be preserved by certain exchange members, brokers, and dealers)** — requires broker-dealer transaction records to be preserved in a non-rewriteable, non-erasable form and produced, in whole or as a defined subset, on demand for an examiner. The Audit Trail substrate's Tamper Evidence (Invariant 3) satisfies the non-rewriteable/non-erasable standard; `disclose_subset` + `verify_disclosure` (Invariant 2) is the structural form of producing a verifiable *subset* to an examiner without exposing the rest of the book; the configured `ledger_retention_policy` satisfies the six-year (first-two-years-accessible) lifetime requirement.
+
+- **HIPAA (US Health Insurance Portability and Accountability Act) §164.528 (Accounting of disclosures of protected health information)** — requires a covered entity to give an individual an accounting of disclosures of their PHI: date, recipient, scope, and purpose, drawn from the records alone. The Selective Disclosure store answers the accounting query (`read` by `subject_ref`); the binding bijection (Invariant 1) makes each accounted disclosure itself immutable, attributed, and tamper-evident — the property §164.528 needs but plain disclosure accounting cannot supply alone.
+
+- **21 CFR (US Code of Federal Regulations) Part 11 (Electronic records and electronic signatures)** — requires electronic records submitted to a regulator to be attributable, contemporaneous, original, and accurate (ALCOA), with disclosures to the agency themselves recorded. The four-atom Audit Trail stack supplies ALCOA over every ledger entry; `disclose_subset` records each disclosure to the agency as an attributed, sealed `ledger.disclosed` event.
+
+- **GDPR (EU General Data Protection Regulation) Article 15 (Right of access by the data subject)** — a data subject may demand to know what data was disclosed and to which recipients. The Selective Disclosure store is the source for the recipients-and-scope answer; `verify_disclosure` additionally lets the subject independently confirm a disclosed subset is genuine *without* the controller exposing every other subject's entries on the shared ledger (Invariant 2's confidentiality half).
+
+- **W3C Verifiable Credentials Data Model and the selective-disclosure / BBS+ (a pairing-based signature scheme supporting selective disclosure of signed messages) proof literature** — the standards surface for cryptographically proving a *subset* of a set of claims authentic while withholding the remainder. C6's `verification_bundle` and `verify_disclosure` are the composition-layer form of this capability; the W3C VC selective-disclosure mechanisms (and accumulator / Merkle-inclusion-proof constructions) are *typical realizations* of Invariant 2's behavioral obligation, named in rationale only — C6 requires the capability, not any particular proof system, exactly as Tamper Evidence is mechanism-neutral.
+
+C6 inherits the broader standards compliance of its constituents:
+
+- Through **Audit Trail** (and its transitive atoms Event Log, Actor Identity, Tamper Evidence, Retention Window): SOX (Sarbanes-Oxley Act) §802 record retention, HIPAA §164.312(b) audit controls, PCI DSS (Payment Card Industry Data Security Standard) Requirement 10, 21 CFR Part 11 electronic records, ISO/IEC 27001 §A.12.4 logging and monitoring, GDPR Articles 30 and 32, and the full Audit Trail standards inheritance. Deployments composing C6 receive these as the substrate's contribution; they are framed as inherited, not as C6's own primary anchors.
+
+- Through **Selective Disclosure**: GDPR Article 15(1)(c) and Article 30, HIPAA §164.528, and SEC Rule 17a-4 at the disclosure-accounting layer. C6 lifts these to the immutable-and-independently-verifiable form those standards actually require but that Selective Disclosure alone — which records that a disclosure occurred but seals nothing — cannot satisfy.
+
+---
+
+## Status
+
+`grounded` (formal layer complete 2026-06-08 — TLA+ (Temporal Logic of Actions — a formal specification language for concurrent and distributed systems) model [`immutable-transaction-ledger.tla`](./immutable-transaction-ledger.tla) + buggy twin verified in `tools/harness/`; see Lineage §Formal model). Drafted against the approved C6 architectural cut — Audit Trail substrate + Selective Disclosure, with Idempotent Reservation / Duplicate Prevention as optional at-most-once-append enrichment named (not core) — then gated through Pass 1 (GRID — the nine-node structural-completeness framework), Pass 2 (EOS — Essence of Software — conceptual independence; the substrate convention holds and no over-absorption survives), Pass 3 (Linus adversarial), and a Final Critique round: one foundational finding and two refining findings, all closed in-pattern (see Lineage notes). Regulated-pattern conventions (Regulated adversarial scenarios; Generation acceptance with the Audit-Trail-traversal-clearable / externally-clearable split) baked in from the first draft, inherited from the methodology directly per [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md) §Regulated-pattern conventions. The formal-layer vote was YES; the derived TLA+ model — disclosure-accountability binding-bijection / no-dangling-partial atomicity across the Selective Disclosure write and the Audit Trail `ledger.disclosed` `record_action`, mirroring `audit-trail.tla`, `chain-of-custody.tla`, and `forensic-recovery.tla` — verifies green (4 states, all invariants hold) with a buggy twin the checker rejects at 2 states (the non-atomic split reaches a dangling Selective Disclosure disclosure record). The English cleared the 92%-good threshold (foundational findings at zero) and the formal layer is discharged, so the composition is unqualified `grounded`. **First composition to compose the Selective Disclosure atom**, and the cross-domain reference case for the disclosable immutable ledger — broker-dealer trade confirmations (SEC Rule 17a-4), healthcare accounting-of-disclosures (HIPAA §164.528), and clinical-trial submissions (21 CFR Part 11) are the same structure; one composition serves all three.
+
+---
+
+## Lineage notes
+
+Regulated composition. The two regulated-overlay conventions — *Regulated adversarial scenarios* and *Generation acceptance* (with the Audit-Trail-traversal-clearable / externally-clearable split) — are **inherited from the methodology directly** ([`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md)), baked in from the first draft, not re-derived from predecessor patterns. [Chain of Custody (C12)](./chain-of-custody.md) and [Forensic Recovery (C3)](./forensic-recovery.md) are the primary structural references for the substrate-composition shape (one constituent atom + the Audit Trail substrate, joined by a single binding map), the binding-bijection emergent invariant, the cross-store-consistency-under-partial-failure treatment, and the TLA+ binding-bijection model + buggy twin.
+
+**Structural milestone.** This composition retires two `*(forthcoming)*` references to C6:
+
+- [`atoms/selective-disclosure.md`](../atoms/selective-disclosure.md)'s Composition notes named *"Immutable Transaction Ledger with Selective Disclosure (forthcoming, composition C6)"*. When this composition grounds, that forthcoming-link is resolved and re-pointed at the grounded cut (Audit Trail substrate + Selective Disclosure; Idempotent Reservation / Duplicate Prevention named as optional enrichment, not core — the resolved entry corrects the earlier "+ Event Log + Tamper Evidence + Actor Identity + Retention Window + Idempotent Reservation" wording, which predated the substrate convention and listed transitively-reached atoms as if direct).
+- [`atoms/provenance.md`](../atoms/provenance.md)'s Composition notes named *"Immutable Transaction Ledger (C6) (forthcoming)"* — Provenance enriches C6 for ledger entries that represent tracked artifacts. The marker is removed and the reference linked; the enrichment relationship is named in C6's *Single-artifact financial-instrument custody* edge case.
+
+C6 is also the cross-domain reference case grounding the thesis that a financial trade-confirmation ledger, a healthcare disclosure-accounting ledger, and a clinical-trial submission ledger are the same structure: one immutable attributed ledger plus an accountable, independently verifiable mechanism for disclosing a subset of it.
+
+**Opus-led gating review — 2026-06-08 (Pass 1 GRID / Pass 2 EOS / Pass 3 Linus + Final Critique).** One foundational finding and two refining findings, all closed in-pattern. The per-finding format is *F-id — short name — class → fix*:
+
+- *F1 — disclosed-subset membership predicate unpinned — foundational (Pass 3).* `disclose_subset` step 1 and the `disclosed_entry_ids` primitive policy said each id must be "a known ledger entry" without stating *which* events are disclosable (the substrate holds both `ledger.entry` transaction events and `ledger.disclosed` disclosure events) or *how* C6 validates membership given that it maintains no separate entry store. A generator would have to guess. → Pinned: membership is over `ledger.entry` (transaction) events only, validated by reading the Audit Trail substrate's Event Log for each id and confirming `action_ref = ledger.entry`; an unknown id or a `ledger.disclosed` id yields `unknown-entry`. The action wiring, the primitive policy, a new *Subset membership is over transaction entries* edge case, and the second rejection-path example all carry the pinned semantics.
+- *F2 — undefined acronyms — refining (Pass 1).* EOS, TSA (Time-Stamp Authority), RFC 3161, and BBS+ each first appeared without a gloss. → Each defined inline at first use (EOS at the load-bearing wiring decision; RFC 3161 / TSA at the walkthrough seal anchor; BBS+ at the Standards entry).
+- *F3 — `verify_disclosure` input under-described — refining (Pass 3).* The signature's `disclosed_entries` argument did not state whether it was entry ids, payloads, or whole records, leaving the recipient-side verifier's input ambiguous. → Clarified: `disclosed_entries` is the set of disclosed entry records (each `entry_id` plus the entry payload) the recipient received; the action never reads an undisclosed entry.
+
+Pass 1 GRID otherwise clean (all composition sections present in canonical order; reference graph intact — Selective Disclosure, Audit Trail, Idempotent Reservation, Duplicate Prevention, Consent, Permissions, Legal Hold, Defensible Retention, Provenance, Chain of Custody all exist and link). Pass 2 EOS clean: the substrate convention keeps Event Log / Actor Identity / Tamper Evidence / Retention Window transitive through Audit Trail (not re-listed as direct constituents); the authorization gate (Consent / Permissions), at-most-once append (Idempotent Reservation / Duplicate Prevention), hold-blocks-purge (Legal Hold / Defensible Retention), and artifact custody (Provenance) are all correctly externalized as composing peers or optional enrichments rather than absorbed — no over-absorption survives. Pass 3's adversarial-question coverage confirmed the template's regulated edge cases were authored in from the first draft and hold: cross-store partial-failure orphan handling, whole-ledger-only tamper-evidence degradation (Invariant 2), disclosure-of-a-later-purged-entry (honest-destruction at the verification boundary), clock authority (inherited from the substrate), and auditing the verification queries themselves (an access-log composing concern, mirroring Audit Trail and Chain of Custody). The English cleared the 92%-good threshold (foundational findings at zero); the TLA+ binding-atomicity model was the remaining grounding prerequisite per the YES vote.
+
+**Formal-layer vote: YES.** The load-bearing **disclosure-accountability binding bijection** (Invariant 1) — the claim that the Selective Disclosure record write and the Audit Trail `ledger.disclosed` `record_action` write are committed atomically or compensated, leaving no reachable state with a disclosure record lacking its attributed ledger event (or a `ledger.disclosed` event lacking its disclosure record) — is an ordering/atomicity claim across two stores. This is a TLA+-class claim of exactly the shape `audit-trail.tla` (cascade-on-purge across four stores), `chain-of-custody.tla`, and `forensic-recovery.tla` (binding bijection across two stores) already model: the correct model performs the two store writes and the binding as a single atomic action; the buggy twin performs them as separate, interleavable sub-steps with no compensation, leaving a reachable state where a disclosure record exists without its `disclosure_to_event` binding and its ledger event. The other emergent invariants are not TLA+-class: Invariant 2 (verifiable partial disclosure) is a behavioral capability obligation on the substrate's tamper-evidence, discharged in prose + Generation acceptance + the Tamper Evidence atom's own structural model, not an interleaving; Invariant 3 (immutable-attributed-retained ledger) is the Audit Trail substrate's property, modeled in `audit-trail.tla`; Invariant 4 (no-disclosure-unrecorded, structurally closed) is a single-write-path argument; Invariant 5 (constituents preserved) is each constituent's own bar.
+
+**Formal model — 2026-06-08: TLA+ authored and verified; pattern promoted to `grounded`.** Derived model [`immutable-transaction-ledger.tla`](./immutable-transaction-ledger.tla) with config [`immutable-transaction-ledger.cfg`](./immutable-transaction-ledger.cfg), checked via `tools/harness/check.mjs` (the repo's `tla-checker` WASM checker). *What it checks:* per disclosure, three sub-writes — `sdState` (Selective Disclosure disclosure record), `auditState` (Audit Trail `ledger.disclosed` event), `bound` (the `disclosure_to_event` binding). Three composition-level safety invariants under every interleaving: the load-bearing **Invariant 1** (`Inv1_BindingBijection` — every disclosure is in one of two coherent configurations, uncreated or fully-committed; never a dangling partial), `Inv1_NoDanglingDisclosure` (a Selective Disclosure disclosure record implies its `ledger.disclosed` event and binding), and `Inv1_NoOrphanAudit` (a `ledger.disclosed` event implies its disclosure record). The CORRECT model performs the three sub-writes as a single atomic action (the single-transaction form Invariant 1 permits); 4 reachable states, all invariants hold. *Bounds/saturation:* `Disclosures = {d1, d2}`; the property is per-disclosure local (each disclosure independently uncreated→committed), insensitive to disclosure count — `Disclosures = {d1, d2, d3}` holds at 8 states with no new behavior, so the bound is saturated and the verification value lives in the buggy twin, exactly as in `chain-of-custody.tla` / `forensic-recovery.tla`. *Buggy twin:* [`immutable-transaction-ledger-buggy.tla`](./immutable-transaction-ledger-buggy.tla) splits the commit into three separate, interleavable sub-steps (`WriteSD` → `WriteAudit` → `Bind`) with no compensation — the naive implementation the *Cross-store consistency under partial failure* edge case warns against. TLC stops after `WriteSD(d)` alone: `sdState = present, auditState = absent, bound = FALSE` — a dangling Selective Disclosure disclosure record with no attributed ledger event, which is exactly the orphan that edge case describes (Selective Disclosure writes first, so the orphan is a disclosure-accounting record with no binding). The checker rejects it at 2 states on `Inv1_BindingBijection`. This is the model's load-bearing contribution: it demonstrates mechanically that the atomicity (or compensation) in Invariant 1 is required, not decorative — a non-atomic disclosure commit is reachably unsafe, leaving a recorded disclosure whose immutable ledger proof is missing. *Conflict-protocol outcome:* none — the model corroborates the English; the spec already requires "committed atomically or compensated," which is exactly the correct/buggy distinction. Canonical English unchanged. Reproduce: `cd tools/harness && node check.mjs ../../compositions/immutable-transaction-ledger.tla` (and `… immutable-transaction-ledger-buggy.tla --buggy`).

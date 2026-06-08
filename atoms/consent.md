@@ -281,7 +281,7 @@ Consent is the data subject's authorization primitive — the complement to Perm
 - **[Legal Hold](./legal-hold.md)** — a consent record under active litigation (e.g., a class-action data subject dispute) may be subject to a legal hold overriding its retention window.
 - **[Duplicate Prevention](./duplicate-prevention.md)** — for at-most-once semantics on consent grant under retry conditions.
 - **[Consent & Preference Management with Revocation Propagation](../compositions/consent-preference-management.md)** (C2, `grounded` 2026-06-04) — Consent + Permissions + Audit Trail (substrate, → Event Log + Actor Identity + Retention Window + Tamper Evidence) + a distinct consent-record Retention Window placement, wired to gate processing on consent (`processing_permitted`) and propagate revocation downstream: every `withdraw_consent` records, atomically with the revoke, the complete set of downstream processing scopes the consent governed. This composition is the home of the propagation this atom deliberately excludes.
-- **Forthcoming:** Data Subject Rights Fulfillment (C6) — Consent records are the primary artifact answered by a DSAR right-of-access request.
+- **Forthcoming:** Data Subject Rights Fulfillment (C7) — Consent records are the primary artifact answered by a DSAR right-of-access request.
 
 ---
 
