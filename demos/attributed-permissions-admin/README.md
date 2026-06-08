@@ -14,7 +14,7 @@ Deno + Hono (JSX) + SQLite (`@db/sqlite`) + HTMX + Tailwind 4. Server-rendered h
 deno task setup      # no-op in Deno; documents the init step
 deno task migrate    # create schema in data/apa-demo.sqlite
 deno task seed       # insert demo actors, grants, and one orphan log entry
-deno task dev        # watch-mode: Tailwind + server on :8000
+deno task dev        # watch-mode: Tailwind + server on :8002
 deno task build:css  # single-pass Tailwind build
 deno task test       # run all tests
 ```

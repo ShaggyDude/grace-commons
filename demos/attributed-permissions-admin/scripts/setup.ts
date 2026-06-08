@@ -9,4 +9,4 @@ console.log("✓ Setup complete — dependencies will be resolved on first run."
 console.log("  Next steps:");
 console.log("    deno task migrate   # create the database schema");
 console.log("    deno task seed      # insert demo actors and grants");
-console.log("    deno task dev       # start the server at http://localhost:8000");
+console.log("    deno task dev       # start the server at http://localhost:8002");

@@ -10,4 +10,4 @@ export const SYSTEM_ACTOR_REF = "system@apa-demo";
 /**
  * Port the development server listens on.
  */
-export const PORT = parseInt(Deno.env.get("PORT") ?? "8000", 10);
+export const PORT = parseInt(Deno.env.get("PORT") ?? "8002", 10);

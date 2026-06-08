@@ -12,7 +12,7 @@ Deno + Hono (JSX) + SQLite (`@db/sqlite`) + HTMX + Tailwind 4 (`@tailwindcss/cli
 deno task setup      # download npm deps (node_modules/) — run once
 deno task migrate    # apply schema.sql to data/grace-commons-demo.sqlite
 deno task seed       # insert demo actors, chains, and steps
-deno task dev        # watch-mode: Tailwind rebuild + Deno server on :8000
+deno task dev        # watch-mode: Tailwind rebuild + Deno server on :8001
 deno task build:css  # single-pass Tailwind build (app.css → public/styles.css)
 deno task test       # run the full test suite under tests/
 ```
