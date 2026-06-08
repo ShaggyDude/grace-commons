@@ -38,7 +38,7 @@ This document does not duplicate the methodology — see [`PRESSURE_TESTING.md`]
 
 Three shapes are canonical:
 
-1. **Atom shape** — a freestanding concept's specification. Specification does not name another atom. Files live in `atoms/<category>/`.
+1. **Atom shape** — a freestanding concept's specification. Specification does not name another atom. Files live flat in `atoms/` (`atoms/<name>.md`); classification is derived, not a folder (see [`atoms/TAXONOMY.md`](./atoms/TAXONOMY.md)).
 2. **Composition shape** — a composition of two or more atoms. Specification names the atoms it composes. Files live in `compositions/`.
 3. **Regulated overlay** — additional mandatory sections that apply to any pattern (atom or composition) whose acceptance bar is set by an external evaluator (regulator, auditor). Applies to atoms carrying the regulated overlay, to atoms in other categories whose examples invoke regulated domains, and to any composition naming a regulated atom.
 

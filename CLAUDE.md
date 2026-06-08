@@ -36,7 +36,7 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 
 | Term | Meaning |
 |------|---------|
-| **Atom** | A freestanding concept with its own state, actions, invariants. Specification does not name another atom. Files in `atoms/<category>/`. |
+| **Atom** | A freestanding concept with its own state, actions, invariants. Specification does not name another atom. Stored flat as `atoms/<name>.md` (no category folder; classification is derived — see [`atoms/TAXONOMY.md`](./atoms/TAXONOMY.md)). |
 | **Application** | A composition of two or more atoms. Specification names the atoms it composes. Files in `compositions/`. |
 | **Freestanding** | EOS-sense: the concept can be specified without naming any other concept. Pass 2 enforces this. |
 | **Emergent invariant** | A property that appears only at composition time and belongs to no single constituent atom. Compositions surface these explicitly under *Composition-level invariants*. |
@@ -110,7 +110,7 @@ The structural milestones worth carrying into any session — architectural fact
 3. **Draft.** For regulated atoms or applications composing regulated atoms, bake in *Regulated adversarial scenarios* and *Generation acceptance* from the first draft. Identity model and action signatures explicit. Invariants named descriptively then numbered.
 4. **Run all three passes.** GRID first, EOS second, Linus third. Iterate until clean. Lineage notes record what each pass found and how it was resolved.
 5. **Resolve forthcoming-links.** Any existing atom whose Composition notes name the new pattern as `*(forthcoming)*` gets the marker removed and the reference linked.
-6. **Update catalog files.** The category README (`atoms/<category>/README.md`), the top-level snapshot in `readme.md`, and — for applications — `compositions/README.md`. Add the new pattern with a one-line description and the standards it anchors.
+6. **Update catalog files.** Regenerate the browse-by-overlay catalog (`atoms/index.md`, via `python3 tools/taxonomy/generate_views.py .`), the top-level snapshot in `readme.md`, and — for applications — `compositions/README.md`. Add the new pattern with a one-line description and the standards it anchors. (Atom overlays are derived, so the catalog regenerates rather than being hand-maintained.)
 
 ---
 
@@ -155,7 +155,7 @@ Builds proceed against the spec as written. The spec changes only through a revi
 - [`SPEC_FORMAT.md`](./SPEC_FORMAT.md) — canonical reference for the three spec shapes (atom, composition, regulated overlay), required sections in order, and the canonical examples to mirror.
 - [`ROADMAP.md`](./ROADMAP.md) — planned atoms and compositions in dependency order; what each unlocks; what each blocks on.
 - [`EXECUTION_CONTRACT.md`](./EXECUTION_CONTRACT.md) — the deterministic compilation target: three primitives, four-step pipeline, atom-to-runtime mapping, conformance definition.
-- `atoms/<category>/README.md` — per-category catalogs.
+- [`atoms/`](./atoms/) — the generated browse-by-overlay catalog (`atoms/index.md`, emitted by `tools/taxonomy/generate_views.py` from the reverse index).
 - [`compositions/README.md`](./compositions/README.md) — compositions catalog, vocabulary note.
 
 ---
@@ -167,3 +167,15 @@ Grace Commons authoring is plain, dense, and defended-in-line. The architecture 
 When in doubt, say more. Verbosity that preserves meaning is a feature, not a defect. AI summaries can shorten the canonical text for orientation; the canonical text itself stays long because it must be verifiable.
 
 The litmus test for any architectural addition is from the *Bridges* section of the manifesto: *does this build a bridge, or does it build a wall?* Walls exclude an audience to optimize for another; bridges accommodate both. The architecture optimizes for bridges by default.
+
+---
+
+## Cowork sandbox notes (environment-specific — not Grace Commons content)
+
+Operational quirks of running this repo inside the Cowork Linux sandbox. These are environment facts, not canonical content, and do not apply to a local machine / Claude Code. Recorded so a session need not rediscover them.
+
+- **The formal harness needs Java 17, and the bootstrap must finish.** `node tools/harness/audit.mjs` checks `.tla` models with a bundled WASM checker (works out of the box) and `.als` (Alloy) models with `tools/alloy/alloy.jar`, which needs **Java 17** — the sandbox's system Java is 11, too old for Alloy 6. `tools/harness/bootstrap.sh` installs a JRE 17 to `/tmp/javajre` via npm; the unpack is large and **overruns a ~45-second command window**, and if it is cut off it leaves `jre/` without `lib/` (no `libjli.so`), so *every* `.als` fails with `libjli.so: cannot open shared object file` while `.tla` still passes. Fix: re-run the install until `/tmp/javajre/node_modules/javajre-linux-64/jre/lib/libjli.so` exists (it finishes even when the foreground call times out). Each Alloy model takes ~5–40s, so the full 74-model audit will not complete in one window — run `.als` in small batches.
+
+- **The mount blocks `unlink`.** `rm`, `git rm`, and any delete fail with *Operation not permitted* until the cowork delete-permission tool (`allow_cowork_file_delete`) is invoked once for the folder. Until then: a failed `git rm` leaves a stale `.git/index.lock` (move it aside — `rename` works even though `unlink` doesn't), and every `sed -i` / `perl -i` leaves a `.fuse_hiddenXXXX` orphan of the pre-edit file (these get swept into `git add -A` and corrupt rename detection — delete them before staging). `git mv` (rename) is unaffected.
+
+- **~45 seconds per command, and background work does not reliably survive between calls.** Chunk long operations (npm installs, the full audit) rather than backgrounding them.

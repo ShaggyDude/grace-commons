@@ -28,7 +28,7 @@ derive — so it is the one axis a human curates, gated by the EOS freestanding 
 
 ## Signals
 
-- **Composes** — `- **[Atom](../atoms/<cat>/<name>.md)** — role.` bullets in `## Composes`.
+- **Composes** — `- **[Atom](../atoms/<name>.md)** — role.` bullets in `## Composes`.
 - **regulated** — a composition is regulated iff it carries a `## Generation acceptance` section.
 - **standards** — normalized families matched in the composition's `## Standards[ references]` section.
 - **security** — an overlay (not a domain): an atom carries it iff it derives an
