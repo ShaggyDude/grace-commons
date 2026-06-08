@@ -45,5 +45,6 @@ python3 tools/taxonomy/reverse_index.py . --json     # machine index (atom → o
 The `--json` index is the seam for the generated catalog/nav and for a future
 derived-regulated linter (any derived-regulated atom missing its overlay sections —
 *Regulated adversarial scenarios* / *Generation acceptance* — mirroring the conformance
-`--reconcile`). See [`MIGRATION.md`](./MIGRATION.md) for the one-pass flatten that
-makes these views canonical.
+`--reconcile`). The one-pass flatten that made these views canonical landed
+2026-06-08; [`generate_views.py`](./generate_views.py) emits the browse-by-overlay
+catalog (`atoms/index.md`) from this index.
