@@ -1,0 +1,44 @@
+# fly.toml — DEPLOY.md Option 1: pglite on a Fly volume, single machine by design.
+# A Fly volume attaches to exactly one machine and pglite wants exactly one
+# in-process writer — do NOT scale to >1 machine on this option (one writer per
+# volume = divergent chains). Managed Postgres (Option 2) is the upgrade path.
+
+app = 'beacon-clinical-next'      # pick a unique app name
+primary_region = 'sjc'
+
+[build]
+
+[env]
+  PGLITE_DIR = '/data/pg'          # embedded Postgres lives on the volume
+  SESSION_COOKIE = 'beacon_session'
+  PORT = '3000'
+  HOSTNAME = '0.0.0.0'
+  NODE_ENV = 'production'
+
+[[mounts]]
+  source = 'beacon_next_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1         # keep one warm: it is the single writer to the
+                                   # volume-backed pglite, and a demo should be
+                                   # instantly clickable
+
+# Fly-native health check → /api/health (200 only when the embedded DB answers).
+# Restarts a wedged machine fast. grace_period covers migrate+seed+boot, which run
+# before the server starts listening.
+[[http_service.checks]]
+  interval = '30s'
+  timeout = '5s'
+  grace_period = '40s'
+  method = 'GET'
+  path = '/api/health'
+
+[[vm]]
+  memory = '1gb'                   # Next server + pglite WASM; 512 MB is tight
+  cpu_kind = 'shared'
+  cpus = 1
