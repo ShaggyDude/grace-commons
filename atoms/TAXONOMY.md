@@ -5,8 +5,10 @@ nav_exclude: true
 
 # Usage-derived taxonomy for atoms — resolved design
 
-**Status:** decided, pending (a) rough-council review and (b) one discrete execution
-pass. Supersedes the original proposal draft. The decision was validated against the
+**Status:** council-approved (unanimous, 2026-06-08) **conditioned on continued careful
+curation** — specifically of the one intrinsic axis (`domain`, EOS-gated) and of overlay
+attribution; the derivation removes the relabeling guess, it does not remove stewardship.
+Pending one discrete execution pass. Supersedes the original proposal draft. The decision was validated against the
 live corpus by a read-only generator (`tools/taxonomy/reverse_index.py`, run 2026-06-08:
 18 compositions / 27 atoms / 47 composition→atom edges); the dry-run assessment is the
 evidence base for everything below. Nothing in the tree moves until the council signs
