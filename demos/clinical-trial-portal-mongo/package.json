@@ -1,0 +1,14 @@
+{
+  "name": "clinical-trial-portal-mongo",
+  "private": true,
+  "type": "module",
+  "description": "Mongo ghost render of the clinical-trial-portal spec surface — headless, document-store. Boots an ephemeral mongod (single-node replica set, for multi-document transactions) via mongodb-memory-server; never pollutes committed data. See README.md for the invariant → enforcer discovery table.",
+  "scripts": {
+    "build": "node build.mjs",
+    "prove-serialization": "node prove-serialization.mjs"
+  },
+  "dependencies": {
+    "mongodb": "^6.0.0",
+    "mongodb-memory-server": "^11.0.0"
+  }
+}
