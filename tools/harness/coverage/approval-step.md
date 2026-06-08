@@ -1,14 +1,14 @@
 # Coverage matrix — `approval-step`
 
-- **Pattern:** `atoms/workflow/approval-step.md`
+- **Pattern:** `atoms/approval-step.md`
 - **Model:** `approval-step.tla` (+ buggy twin `approval-step-buggy.tla`)
 - **Reviewer / date:** agent coverage cross-check — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 4 (approver exclusivity), Invariant 5 (submitter exclusivity), Invariant 9 (concurrent step independence)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/workflow/approval-step.tla` → `PASS` ☐ *(per Lineage: 16 states, holds)*
-- Buggy twin: `node check.mjs ../../atoms/workflow/approval-step-buggy.tla --buggy` → `PASS` (rejected) ☐ *(per Lineage: rejected at 4 states — wrong actor approves s1)*
+- Correct model: `node check.mjs ../../atoms/approval-step.tla` → `PASS` ☐ *(per Lineage: 16 states, holds)*
+- Buggy twin: `node check.mjs ../../atoms/approval-step-buggy.tla --buggy` → `PASS` (rejected) ☐ *(per Lineage: rejected at 4 states — wrong actor approves s1)*
 
 ## Step 2 — coverage matrix
 

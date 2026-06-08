@@ -2,7 +2,7 @@
 //
 // Atom: Event Log + Tamper Evidence (C1 audit substrate)
 //
-// Library spec — Event Log (quoted from grace-commons/atoms/temporal/event-log.md):
+// Library spec — Event Log (quoted from grace-commons/atoms/event-log.md):
 //   "Event Log is a foundational temporal atom that provides a single, simple
 //    guarantee: anything appended to the log stays in the log, in the order it
 //    arrived, forever (within the lifetime of the log instance), unchanged. [...]
@@ -11,7 +11,7 @@
 //    strict sequence order for any well-formed query. There is no edit and no
 //    delete surface — the log is append-only by design."
 //
-// Library spec — Tamper Evidence (quoted from grace-commons/atoms/compliance/tamper-evidence.md):
+// Library spec — Tamper Evidence (quoted from grace-commons/atoms/tamper-evidence.md):
 //   "Tamper Evidence is the compliance atom that answers the question 'how do I
 //    know these records weren't altered after the fact?' It does this through
 //    seals: immutable records that bind a proof — a cryptographic commitment to

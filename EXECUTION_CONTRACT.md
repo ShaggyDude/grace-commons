@@ -147,7 +147,7 @@ The Grace Commons atom spec maps to the execution model through a direct section
 
 ### Regulated atoms
 
-Atoms in `atoms/compliance/`, and any atom whose examples invoke regulated domains, compile with two additional outputs beyond the standard set:
+Atoms carrying the regulated overlay, and any atom whose examples invoke regulated domains, compile with two additional outputs beyond the standard set:
 
 **Generation acceptance checks.** Each check in the atom's Generation acceptance section compiles to a named read query over the record set — a SQL query an external auditor can run to verify the invariant holds without recourse to source code. These checks are first-class outputs of the compiler, not tests.
 

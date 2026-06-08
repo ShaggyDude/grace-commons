@@ -1,14 +1,14 @@
 # Coverage matrix — `provisional-commitment`
 
-- **Pattern:** `atoms/resource-lifecycle/provisional-commitment.md`
+- **Pattern:** `atoms/provisional-commitment.md`
 - **Model:** `provisional-commitment.tla` (+ buggy twin `provisional-commitment-buggy.tla`)
 - **Reviewer / date:** agent coverage cross-check — 2026-06-03; Inv8 closed — 2026-06-04
 - **Formal-layer vote load-bearing claims:** Invariant 7 (confirmation within the window — `confirm` rejected if `now ≥ expires_at`), Invariant 8 (transition timestamps strictly after placement), Invariant 3 (terminal absorption)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/resource-lifecycle/provisional-commitment.tla` → `PASS` ✓ *(15 states, all invariants hold — 2026-06-04 re-run with PlacedAt=1, ExpiresAt=2, MaxClock=3)*
-- Buggy twin: `node check.mjs ../../atoms/resource-lifecycle/provisional-commitment-buggy.tla --buggy` → `PASS` (rejected) ✓ *(4 states — Release fires at clock=1, stamps releasedAt=0 < PlacedAt=1; Inv8_TransitionsAfterPlacement violated)*
+- Correct model: `node check.mjs ../../atoms/provisional-commitment.tla` → `PASS` ✓ *(15 states, all invariants hold — 2026-06-04 re-run with PlacedAt=1, ExpiresAt=2, MaxClock=3)*
+- Buggy twin: `node check.mjs ../../atoms/provisional-commitment-buggy.tla --buggy` → `PASS` (rejected) ✓ *(4 states — Release fires at clock=1, stamps releasedAt=0 < PlacedAt=1; Inv8_TransitionsAfterPlacement violated)*
 
 ## Step 2 — coverage matrix
 

@@ -1,14 +1,14 @@
 # Coverage matrix — `preference`
 
-- **Pattern:** `atoms/messaging/preference.md`
+- **Pattern:** `atoms/preference.md`
 - **Model:** `preference.tla` (+ buggy twin `preference-buggy.tla`)
 - **Reviewer / date:** agent coverage cross-check — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 3 (at most one currently-in-effect record per principal), Invariant 4 (supersession atomicity — new record Active + prior → Deleted in one operation)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/messaging/preference.tla` → `PASS` ☐ *(per Lineage: clean)*
-- Buggy twin: `node check.mjs ../../atoms/messaging/preference-buggy.tla --buggy` → `PASS` (rejected) ☐ *(per Lineage: splits supersession, Inv3 catches two-in-effect window)*
+- Correct model: `node check.mjs ../../atoms/preference.tla` → `PASS` ☐ *(per Lineage: clean)*
+- Buggy twin: `node check.mjs ../../atoms/preference-buggy.tla --buggy` → `PASS` (rejected) ☐ *(per Lineage: splits supersession, Inv3 catches two-in-effect window)*
 
 ## Step 2 — coverage matrix
 

@@ -40,7 +40,7 @@ Three shapes are canonical:
 
 1. **Atom shape** — a freestanding concept's specification. Specification does not name another atom. Files live in `atoms/<category>/`.
 2. **Composition shape** — a composition of two or more atoms. Specification names the atoms it composes. Files live in `compositions/`.
-3. **Regulated overlay** — additional mandatory sections that apply to any pattern (atom or composition) whose acceptance bar is set by an external evaluator (regulator, auditor). Applies to atoms in `atoms/compliance/`, to atoms in other categories whose examples invoke regulated domains, and to any composition naming a regulated atom.
+3. **Regulated overlay** — additional mandatory sections that apply to any pattern (atom or composition) whose acceptance bar is set by an external evaluator (regulator, auditor). Applies to atoms carrying the regulated overlay, to atoms in other categories whose examples invoke regulated domains, and to any composition naming a regulated atom.
 
 The overlay is *additive*: a regulated atom carries the atom shape's sections plus the overlay's two extra sections. A regulated composition carries the composition shape's sections plus the overlay's two extras.
 
@@ -48,7 +48,7 @@ The overlay is *additive*: a regulated atom carries the atom shape's sections pl
 
 ## Atom shape
 
-Reference examples: [`atoms/productivity/personal-todo.md`](./atoms/productivity/personal-todo.md) for the simplest non-regulated shape; [`atoms/compliance/actor-identity.md`](./atoms/compliance/actor-identity.md) for the regulated shape with the overlay.
+Reference examples: [`atoms/personal-todo.md`](./atoms/personal-todo.md) for the simplest non-regulated shape; [`atoms/actor-identity.md`](./atoms/actor-identity.md) for the regulated shape with the overlay.
 
 ### Required sections, in order
 
@@ -136,7 +136,7 @@ A composition may name another composition as a substrate rather than re-listing
 
 ## Regulated overlay
 
-Applies to any atom in `atoms/compliance/`, any atom in another category whose acceptance bar is set by an external evaluator, and any composition naming a regulated atom. Two additional sections are *required* — they sit alongside the standard sections of the atom or composition shape, not in place of them.
+Applies to any atom carrying the regulated overlay, any atom in another category whose acceptance bar is set by an external evaluator, and any composition naming a regulated atom. Two additional sections are *required* — they sit alongside the standard sections of the atom or composition shape, not in place of them.
 
 ### Required additions
 
@@ -191,8 +191,8 @@ A pattern in `draft` or `partially resolved` status may carry a section labeled 
 
 | Shape | Canonical example | Why it's the reference |
 |-------|-------------------|-----------------------|
-| Atom — simplest | [`Personal Todo`](./atoms/productivity/personal-todo.md) | Smallest atom with a two-iteration Lineage record |
-| Atom — regulated | [`Actor Identity`](./atoms/compliance/actor-identity.md) | Carries both regulated-overlay conventions |
+| Atom — simplest | [`Personal Todo`](./atoms/personal-todo.md) | Smallest atom with a two-iteration Lineage record |
+| Atom — regulated | [`Actor Identity`](./atoms/actor-identity.md) | Carries both regulated-overlay conventions |
 | Composition — simplest | [`Idempotent Reservation`](./compositions/idempotent-reservation.md) | Two-atom composition with all required sections |
 | Composition — substrate use | [`Audit Trail`](./compositions/audit-trail.md) | Composes four atoms; the canonical regulated-audit substrate other compositions name |
 | Composition — composition-of-composition | [`Defensible Retention`](./compositions/defensible-retention.md) | Names Audit Trail as a substrate composition rather than re-listing its four atoms; carries the full regulated overlay including the Generation acceptance split |

@@ -2,7 +2,7 @@
 //
 // Atom: Retention Window
 //
-// Library spec (quoted from grace-commons/atoms/compliance/retention-window.md):
+// Library spec (quoted from grace-commons/atoms/retention-window.md):
 //   "Retention Window is the compliance atom that enforces the structural rule
 //    that a record must be kept for a minimum period and then becomes eligible
 //    for destruction. [...] Retention does NOT delete rows. Hard deletion would

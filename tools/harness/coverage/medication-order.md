@@ -1,16 +1,16 @@
 # Coverage matrix — `medication-order`
 
-- **Pattern:** `atoms/healthcare/medication-order.md`
+- **Pattern:** `atoms/medication-order.md`
 - **Models:** `medication-order.tla` (+ buggy twin `medication-order-buggy.tla`); `medication-order.als` (+ buggy twin `medication-order-buggy.als`)
 - **Reviewer / date:** agent coverage cross-check — 2026-06-03; GAP closure — 2026-06-04
 - **Formal-layer vote load-bearing claims:** Invariant 5 (hold carries prior_state; reinstate returns to exactly it), Invariants 3/4 (pre-dispensing-only, linear amendment chains), Invariant 9 (On Hold accepts only reinstate)
 
 ## Step 1 — harness re-run (must pass)
 
-- TLA+ correct model: `node check.mjs ../../atoms/healthcare/medication-order.tla` → `PASS` ✓ *(per Lineage: 31 states, holds)*
-- TLA+ buggy twin: `node check.mjs ../../atoms/healthcare/medication-order-buggy.tla --buggy` → `PASS` (rejected) ✓ *(per Lineage: rejected at 11 states — reinstates to wrong state)*
-- Alloy correct model: `node check.mjs ../../atoms/healthcare/medication-order.als` → `PASS` ✓ *(13 checks UNSAT, 7 runs SAT — scope 8)*
-- Alloy buggy twin: `node check.mjs ../../atoms/healthcare/medication-order-buggy.als --buggy` → `PASS` (rejected) ✓ *(4 counterexamples found)*
+- TLA+ correct model: `node check.mjs ../../atoms/medication-order.tla` → `PASS` ✓ *(per Lineage: 31 states, holds)*
+- TLA+ buggy twin: `node check.mjs ../../atoms/medication-order-buggy.tla --buggy` → `PASS` (rejected) ✓ *(per Lineage: rejected at 11 states — reinstates to wrong state)*
+- Alloy correct model: `node check.mjs ../../atoms/medication-order.als` → `PASS` ✓ *(13 checks UNSAT, 7 runs SAT — scope 8)*
+- Alloy buggy twin: `node check.mjs ../../atoms/medication-order-buggy.als --buggy` → `PASS` (rejected) ✓ *(4 counterexamples found)*
 
 ## Step 2 — coverage matrix
 

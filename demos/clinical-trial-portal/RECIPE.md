@@ -6,15 +6,15 @@ _Generated 2026-05-30 by `tools/recipe/generate_recipe.py`. Do not hand-edit - r
 
 ## Atoms
 
-- **Actor Identity** - `atoms/compliance/actor-identity.md` (grounded) - module(s): actors
-- **Credential** - `atoms/compliance/credential.md` (grounded) - module(s): credentials
-- **Invitation** - `atoms/compliance/invitation.md` (grounded) - module(s): invitations
-- **Party Identity** - `atoms/compliance/party-identity.md` (grounded) - module(s): parties
-- **Permissions** - `atoms/compliance/permissions.md` (grounded) - module(s): grants, permissions
-- **Retention Window** - `atoms/compliance/retention-window.md` (grounded) - module(s): retention_policy
-- **Session** - `atoms/compliance/session.md` (grounded) - module(s): sessions
-- **Tamper Evidence** - `atoms/compliance/tamper-evidence.md` (grounded) - module(s): event_log
-- **Event Log** - `atoms/temporal/event-log.md` (grounded) - module(s): event_log
+- **Actor Identity** - `atoms/actor-identity.md` (grounded) - module(s): actors
+- **Credential** - `atoms/credential.md` (grounded) - module(s): credentials
+- **Invitation** - `atoms/invitation.md` (grounded) - module(s): invitations
+- **Party Identity** - `atoms/party-identity.md` (grounded) - module(s): parties
+- **Permissions** - `atoms/permissions.md` (grounded) - module(s): grants, permissions
+- **Retention Window** - `atoms/retention-window.md` (grounded) - module(s): retention_policy
+- **Session** - `atoms/session.md` (grounded) - module(s): sessions
+- **Tamper Evidence** - `atoms/tamper-evidence.md` (grounded) - module(s): event_log
+- **Event Log** - `atoms/event-log.md` (grounded) - module(s): event_log
 
 ## App-specific entities (NOT library atoms)
 

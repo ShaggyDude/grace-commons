@@ -38,10 +38,10 @@ Audit Trail answers, all at once, the four questions a regulator or investigator
 
 ## Composes
 
-- **[Event Log](../atoms/temporal/event-log.md)** — provides the append-only, totally-ordered sequence the audit's *what happened* answer is read from. The application maintains exactly one Event Log instance (the audit log).
-- **[Actor Identity](../atoms/compliance/actor-identity.md)** — provides the verifiable attribution the audit's *who authorized it* answer is read from. The application maintains exactly one Actor Identity instance (the attestation store).
-- **[Retention Window](../atoms/compliance/retention-window.md)** — provides the policy-bounded lifetime the audit's *was the retention honored* answer is read from. The application maintains one Retention Window instance configured with the host's regulatory policy (or a policy selector for content-derived rules).
-- **[Tamper Evidence](../atoms/compliance/tamper-evidence.md)** — provides the integrity proof the audit's *has the record been altered* answer is read from. The application maintains exactly one Tamper Evidence instance (the seal store) sealing over ranges of the audit log on a configured cadence.
+- **[Event Log](../atoms/event-log.md)** — provides the append-only, totally-ordered sequence the audit's *what happened* answer is read from. The application maintains exactly one Event Log instance (the audit log).
+- **[Actor Identity](../atoms/actor-identity.md)** — provides the verifiable attribution the audit's *who authorized it* answer is read from. The application maintains exactly one Actor Identity instance (the attestation store).
+- **[Retention Window](../atoms/retention-window.md)** — provides the policy-bounded lifetime the audit's *was the retention honored* answer is read from. The application maintains one Retention Window instance configured with the host's regulatory policy (or a policy selector for content-derived rules).
+- **[Tamper Evidence](../atoms/tamper-evidence.md)** — provides the integrity proof the audit's *has the record been altered* answer is read from. The application maintains exactly one Tamper Evidence instance (the seal store) sealing over ranges of the audit log on a configured cadence.
 
 ---
 

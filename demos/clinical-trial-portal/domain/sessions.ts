@@ -2,7 +2,7 @@
 //
 // Atom: Session
 //
-// Library spec (quoted from grace-commons/atoms/compliance/session.md):
+// Library spec (quoted from grace-commons/atoms/session.md):
 //   "Session is the compliance atom that answers the question 'is this session
 //    token currently valid, and for which principal?' [...] Each session record
 //    has a status that traverses a simple state machine: Active is the only

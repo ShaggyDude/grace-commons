@@ -1,5 +1,5 @@
 // domain/permissions.ts — Atom: Permissions (registry of permission codes)
-// Library spec (atoms/compliance/permissions.md): code is unique; rows seeded at
+// Library spec (atoms/permissions.md): code is unique; rows seeded at
 // startup, never created at runtime; absence of a grant is denial.
 import type { Queryable } from "../lib/db.ts";
 

@@ -5,14 +5,17 @@ nav_exclude: true
 
 # Usage-derived taxonomy for atoms — resolved design
 
-**Status:** council-approved (unanimous, 2026-06-08) **conditioned on continued careful
-curation** — specifically of the one intrinsic axis (`domain`, EOS-gated) and of overlay
-attribution; the derivation removes the relabeling guess, it does not remove stewardship.
-Pending one discrete execution pass. Supersedes the original proposal draft. The decision was validated against the
-live corpus by a read-only generator (`tools/taxonomy/reverse_index.py`, run 2026-06-08:
-18 compositions / 27 atoms / 47 composition→atom edges); the dry-run assessment is the
-evidence base for everything below. Nothing in the tree moves until the council signs
-off and the pass is run; the move, when it happens, happens **once**.
+**Status:** **executed 2026-06-08.** The one discrete pass landed: atoms flattened to
+`atoms/<name>.md`, the seven category folders dissolved, the per-category README catalogs
+replaced by the generated browse-by-overlay view (`atoms/index.md`, emitted by
+`tools/taxonomy/generate_views.py` from the reverse index), and `domain: healthcare`
+seeded on `medication-order` with `clinical-observation` held. Council-approved
+(unanimous, 2026-06-08) **conditioned on continued careful curation** of the one intrinsic
+axis (`domain`, EOS-gated) and of overlay attribution — the derivation removes the
+relabeling guess, not the stewardship. The decision was validated against the live corpus
+by a read-only generator (`tools/taxonomy/reverse_index.py`: 18 compositions / 27 atoms /
+47 composition→atom edges); the dry-run assessment is the evidence base for everything
+below. The move was scripted, link-checked, and done **once**.
 
 ## The decision, in one line
 
@@ -27,7 +30,7 @@ is earned.*
 
 ## Why folders are wrong — the evidence, not the assertion
 
-The original proposal argued that `atoms/compliance/` *conflates* infrastructure (it
+The original proposal argued that the former `compliance/` folder *conflates* infrastructure (it
 named Actor Identity and Tamper Evidence as "non-regulated infra") with regulated-by-
 usage atoms. **The dry run shows that example is wrong** — Actor Identity (composed by 3
 regulated compositions) and Tamper Evidence (1) are both regulated-by-usage. The real

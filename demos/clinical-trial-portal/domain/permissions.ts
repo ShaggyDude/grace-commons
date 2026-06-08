@@ -2,7 +2,7 @@
 //
 // Atom: Permissions (permission registry)
 //
-// Library spec (quoted from grace-commons/atoms/compliance/permissions.md):
+// Library spec (quoted from grace-commons/atoms/permissions.md):
 //   "Permissions is the compliance atom that answers the question 'is this
 //    actor allowed to do this thing right now?' It does so through grants:
 //    explicit records that bind a subject (the actor requesting access) to an

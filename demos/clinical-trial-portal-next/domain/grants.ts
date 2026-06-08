@@ -1,5 +1,5 @@
 // domain/grants.ts — Atom: Permissions (grants)
-// Library spec (atoms/compliance/permissions.md): a grant binds a subject to a
+// Library spec (atoms/permissions.md): a grant binds a subject to a
 // permission; active until revoked; revocation immediate and permanent. The
 // `scope` ('all'|'own') is the demo's composition-emergent discriminator.
 import type { Queryable } from "../lib/db.ts";

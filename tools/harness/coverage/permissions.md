@@ -1,14 +1,14 @@
-# Coverage matrix — `atoms/compliance/permissions.md`
+# Coverage matrix — `atoms/permissions.md`
 
-- **Pattern:** `atoms/compliance/permissions.md`
+- **Pattern:** `atoms/permissions.md`
 - **Model:** `permissions.als` + buggy twin `permissions-buggy.als`
 - **Reviewer / date:** Claude Sonnet 4.6 — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 2 (status monotonicity — Active → Revoked only; no return to Active), Invariant 3 (revocation is terminal / absorbing)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/compliance/permissions.als` → `PASS` ☐ *(not re-run here; lineage records green run 2026-06-03, all 7 checks UNSAT)*
-- Buggy twin: `node check.mjs ../../atoms/compliance/permissions-buggy.als --buggy` → `PASS` (rejected) ☐
+- Correct model: `node check.mjs ../../atoms/permissions.als` → `PASS` ☐ *(not re-run here; lineage records green run 2026-06-03, all 7 checks UNSAT)*
+- Buggy twin: `node check.mjs ../../atoms/permissions-buggy.als --buggy` → `PASS` (rejected) ☐
 
 ## Step 2 — coverage matrix
 

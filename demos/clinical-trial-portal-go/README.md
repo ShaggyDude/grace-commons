@@ -110,5 +110,5 @@ a generator can't rely on "happens to."
 
 - [`../clinical-trial-portal`](../clinical-trial-portal/) — render 1 (Deno/HTMX/SQLite)
 - [`../clinical-trial-portal-next`](../clinical-trial-portal-next/) — render 2 (Next.js/RSC/Postgres)
-- [`../../compositions/external-onboarding.md`](../../compositions/external-onboarding.md) · [`../../atoms/temporal/event-log.md`](../../atoms/temporal/event-log.md) — the specs
+- [`../../compositions/external-onboarding.md`](../../compositions/external-onboarding.md) · [`../../atoms/event-log.md`](../../atoms/event-log.md) — the specs
 - [`../../DISCOVERIES.md`](../../DISCOVERIES.md) — the re-render-as-conformance findings

@@ -1,14 +1,14 @@
-# Coverage matrix — `atoms/messaging/notification.md`
+# Coverage matrix — `atoms/notification.md`
 
-- **Pattern:** `atoms/messaging/notification.md`
+- **Pattern:** `atoms/notification.md`
 - **Model:** `notification.als` + buggy twin `notification-buggy.als`
 - **Reviewer / date:** Claude Sonnet 4.6 — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 2 (status monotonicity — Pending → exactly one terminal; no return or inter-terminal transition), Invariant 3 (terminal states are exclusive — at most one terminal timestamp), Invariant 4 (terminal timestamps match status — biconditional)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/messaging/notification.als` → `PASS` ☐ *(not re-run here; lineage records green run 2026-06-03, all 19 checks UNSAT)*
-- Buggy twin: `node check.mjs ../../atoms/messaging/notification-buggy.als --buggy` → `PASS` (rejected) ☐
+- Correct model: `node check.mjs ../../atoms/notification.als` → `PASS` ☐ *(not re-run here; lineage records green run 2026-06-03, all 19 checks UNSAT)*
+- Buggy twin: `node check.mjs ../../atoms/notification-buggy.als --buggy` → `PASS` (rejected) ☐
 
 ## Step 2 — coverage matrix
 

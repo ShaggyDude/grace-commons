@@ -134,8 +134,8 @@ def main():
     os.makedirs(out, exist_ok=True)
     today = datetime.date.today().isoformat()
 
-    atom_files = [os.path.relpath(p, repo) for p in glob.glob(os.path.join(repo, "atoms", "*", "*.md"))
-                  if os.path.basename(p).lower() not in ("readme.md", "index.md")]
+    atom_files = [os.path.relpath(p, repo) for p in glob.glob(os.path.join(repo, "atoms", "**", "*.md"), recursive=True)
+                  if os.path.basename(p).lower() not in ("readme.md", "index.md", "taxonomy.md")]
     comp_files = [os.path.relpath(p, repo) for p in glob.glob(os.path.join(repo, "compositions", "*.md"))
                   if os.path.basename(p).lower() not in ("readme.md", "index.md")]
     title_index = {}

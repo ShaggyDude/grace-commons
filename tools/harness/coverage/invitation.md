@@ -1,14 +1,14 @@
 # Coverage matrix — `invitation`
 
-- **Pattern:** `atoms/compliance/invitation.md`
+- **Pattern:** `atoms/invitation.md`
 - **Model:** `invitation.tla` + `invitation-buggy.tla`
 - **Reviewer / date:** Claude Sonnet 4.6 (fresh-context) — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 2 (single-resolution — check-and-commit Pending → terminal must be atomic under concurrent accept/decline/revoke)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/compliance/invitation.tla` → `PASS` ☐ *(prior: 5 states)*
-- Buggy twin: `node check.mjs ../../atoms/compliance/invitation-buggy.tla --buggy` → `PASS` (rejected) ☐ *(prior: rejected at 6 states — Decline → AcceptBuggy → state Accepted while resolution Declined)*
+- Correct model: `node check.mjs ../../atoms/invitation.tla` → `PASS` ☐ *(prior: 5 states)*
+- Buggy twin: `node check.mjs ../../atoms/invitation-buggy.tla --buggy` → `PASS` (rejected) ☐ *(prior: rejected at 6 states — Decline → AcceptBuggy → state Accepted while resolution Declined)*
 
 ## Step 2 — coverage matrix
 

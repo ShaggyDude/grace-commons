@@ -137,7 +137,7 @@ Human decision: Author accepted the GPT-4 read on the contested finding and clos
 
 **2026-05-25**
 Model: Claude (sonnet + opus)
-Work: Preference / Personalization atom (`atoms/messaging/preference.md`) drafted and taken through Pass 1 (GRID), Pass 2 (EOS), Pass 3 (Linus), and one refinement round. Phase 4 Opus clearance gate run; 13 findings closed. Second gate run pending at end of session.
+Work: Preference / Personalization atom (`atoms/preference.md`) drafted and taken through Pass 1 (GRID), Pass 2 (EOS), Pass 3 (Linus), and one refinement round. Phase 4 Opus clearance gate run; 13 findings closed. Second gate run pending at end of session.
 Human decision: Author did not declare `grounded` despite passing one Opus gate — second gate run discipline held. Atom is `partially resolved`.
 
 **2026-05-25 to 2026-05-26**

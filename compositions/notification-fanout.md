@@ -16,7 +16,7 @@ toc: true
 </details>
 
 
-> A composition: when an event fires against a named scope, every currently-Active subscriber for that scope receives a Notification record. Composes [Subscription](../atoms/messaging/subscription.md) with [Notification](../atoms/messaging/notification.md) to produce the end-to-end delivery pipeline — from the query *"who should receive this?"* through the per-recipient record *"a delivery attempt was made."*
+> A composition: when an event fires against a named scope, every currently-Active subscriber for that scope receives a Notification record. Composes [Subscription](../atoms/subscription.md) with [Notification](../atoms/notification.md) to produce the end-to-end delivery pipeline — from the query *"who should receive this?"* through the per-recipient record *"a delivery attempt was made."*
 
 ---
 
@@ -40,8 +40,8 @@ The most common uses are compliance and policy-change broadcast systems where ev
 
 ## Composes
 
-- **[Subscription](../atoms/messaging/subscription.md)** — provides the Active subscriber set and the `subscribers_for(event_scope)` query surface. The composition reads but never writes the subscription store.
-- **[Notification](../atoms/messaging/notification.md)** — provides the per-recipient delivery record and the `create(recipient_ref, payload)` action. The composition creates one Notification record per subscriber returned by the Subscription query.
+- **[Subscription](../atoms/subscription.md)** — provides the Active subscriber set and the `subscribers_for(event_scope)` query surface. The composition reads but never writes the subscription store.
+- **[Notification](../atoms/notification.md)** — provides the per-recipient delivery record and the `create(recipient_ref, payload)` action. The composition creates one Notification record per subscriber returned by the Subscription query.
 
 ---
 
@@ -184,7 +184,7 @@ An auditor later asks: *was every subscribed compliance officer notified of poli
 
 ## Edge cases and explicit non-goals
 
-- **Fanout idempotency and crash-mid-execution.** The bare composition provides no idempotency guarantee. Two distinct failure modes require attention. First: if `fanout` is called twice for the same event (network retry, double-click, replay), two full rounds of `Notification.create` execute — two notification records per subscriber. Second, and more dangerous: if the composition crashes mid-execution after some creates have succeeded, the `{created, failed}` result is never returned. The caller has no record of which subscribers received a notification record; a retry without idempotency creates duplicates for subscribers whose creates already succeeded. In both cases, composing [Duplicate Prevention](../atoms/temporal/duplicate-prevention.md) to guard the `fanout` call provides at-most-once fanout semantics within the deduplication window. Without it, the caller must treat any retry as a potential duplicate-creation event and handle the resulting multiple notification records at the delivery layer.
+- **Fanout idempotency and crash-mid-execution.** The bare composition provides no idempotency guarantee. Two distinct failure modes require attention. First: if `fanout` is called twice for the same event (network retry, double-click, replay), two full rounds of `Notification.create` execute — two notification records per subscriber. Second, and more dangerous: if the composition crashes mid-execution after some creates have succeeded, the `{created, failed}` result is never returned. The caller has no record of which subscribers received a notification record; a retry without idempotency creates duplicates for subscribers whose creates already succeeded. In both cases, composing [Duplicate Prevention](../atoms/duplicate-prevention.md) to guard the `fanout` call provides at-most-once fanout semantics within the deduplication window. Without it, the caller must treat any retry as a potential duplicate-creation event and handle the resulting multiple notification records at the delivery layer.
 - **Subscriber-set staleness between query and create.** `Subscription.subscribers_for` is called once at the start of the fanout. A subscriber who cancels after the query but before their `Notification.create` is called will still receive a notification record — their subscription was Active at query time. Whether the delivery should proceed is a deployment policy the composing system defines, not a correctness failure of the composition.
 - **New subscribers after query.** A subscriber who becomes Active after `subscribers_for` executes does not receive a notification for that fanout invocation. They will receive notifications from subsequent fanouts. This is correct: the composition delivers to the Active set at trigger time.
 - **Empty Active subscriber set.** `fanout` returns `{fanout_id, created: [], failed: []}`. No Notification records are created. This is a valid, non-error outcome. The `fanout_id` is still generated and returned — it is the invocation's correlation handle regardless of the subscriber count. The composing system may log this via Event Log if observability of empty fanouts is required.
@@ -200,7 +200,7 @@ An auditor later asks: *was every subscribed compliance officer notified of poli
 
 - **Retry targeting the original failed set.** A caller who retries `fanout` re-queries `subscribers_for`, which may return a different set than the original invocation. Callers who need to retry exactly the failed subscriber_refs should call `Notification.create` directly for each ref in the `failed` list rather than re-invoking `fanout`.
 - **Transport mechanism.** This composition creates Notification records; it does not dispatch them to recipients. The delivery layer — WebSocket push, webhook POST, email send — reads `Notification.pending_for` and calls `deliver`, `fail`, or `expire`. Transport is a deployment concern outside this composition.
-- **Authorization to fanout.** The composition does not enforce who may call `fanout`. Any caller may trigger a fanout for any event scope with any payload. Authorization belongs to the composing system — typically [Permissions](../atoms/compliance/permissions.md) gating the `fanout` action against the caller, optionally with [Actor Identity](../atoms/compliance/actor-identity.md) attesting who triggered the invocation when attribution is required for audit.
+- **Authorization to fanout.** The composition does not enforce who may call `fanout`. Any caller may trigger a fanout for any event scope with any payload. Authorization belongs to the composing system — typically [Permissions](../atoms/permissions.md) gating the `fanout` action against the caller, optionally with [Actor Identity](../atoms/actor-identity.md) attesting who triggered the invocation when attribution is required for audit.
 - **Payload size and content.** Payload is opaque and passed to `Notification.create` unchanged. Size limits, schema validation, and content restrictions belong to the composing system before calling `fanout`.
 - **Fan-out at scale.** N sequential or parallel `create` calls scale with the Active subscriber count. For scopes with thousands of Active subscribers, the implementation must handle throughput concerns (batching, cursor-pagination of `subscribers_for`, parallel creates). The spec does not constrain the execution strategy as long as Invariant 1 (fanout coverage) holds.
 
@@ -237,8 +237,8 @@ These questions arise around the composition but require deployment configuratio
 
 It inherits from:
 
-- **[Subscription](../atoms/messaging/subscription.md)** — standards inheritance in full: Observer pattern, pub-sub, WebSub.
-- **[Notification](../atoms/messaging/notification.md)** — standards inheritance in full: Observer pattern, SMTP, HTTP webhooks, W3C Activity Streams, APNs/FCM.
+- **[Subscription](../atoms/subscription.md)** — standards inheritance in full: Observer pattern, pub-sub, WebSub.
+- **[Notification](../atoms/notification.md)** — standards inheritance in full: Observer pattern, SMTP, HTTP webhooks, W3C Activity Streams, APNs/FCM.
 
 ---
 

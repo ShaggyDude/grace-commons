@@ -1,5 +1,5 @@
 // domain/credentials.ts — Atom: Credential
-// Library spec (atoms/compliance/credential.md): binds secret material to a
+// Library spec (atoms/credential.md): binds secret material to a
 // principal (actor); active until revoked. Password kind only for the demo.
 import type { Queryable } from "../lib/db.ts";
 

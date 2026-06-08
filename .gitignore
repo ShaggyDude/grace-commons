@@ -14,3 +14,10 @@ demos/*/node_modules/
 demos/*/.deno/
 demos/*/data/
 demos/*/public/styles.css
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# virtiofs rename-on-unlink orphans (sandbox artifact)
+.fuse_hidden*

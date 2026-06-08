@@ -2,7 +2,7 @@
 //
 // Atom: Credential
 //
-// Library spec (quoted from grace-commons/atoms/compliance/credential.md):
+// Library spec (quoted from grace-commons/atoms/credential.md):
 //   "Credential is the compliance atom that answers the question 'does this
 //    presented material belong to this principal, for this credential type?'
 //    It does this through credential records: durable bindings that associate

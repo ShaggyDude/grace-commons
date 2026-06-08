@@ -46,7 +46,7 @@ What this gives consumers:
 - **Provenance.** The seal is proof that a specific version was reviewed and admitted at a specific point in time.
 - **Drift detection.** A consumer holding a sealed hash can verify their local copy against the canonical version at any time.
 
-This is the library applying its own [Tamper Evidence](./atoms/compliance/tamper-evidence.md) atom to itself — which is the right thing to do.
+This is the library applying its own [Tamper Evidence](./atoms/tamper-evidence.md) atom to itself — which is the right thing to do.
 
 ---
 
@@ -65,7 +65,7 @@ This is the library applying its own [Tamper Evidence](./atoms/compliance/tamper
 - [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) — the authoring standard that feeds the Council's review gate.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — the contribution lifecycle that precedes Council admission.
 - [`EXECUTION_CONTRACT.md`](./EXECUTION_CONTRACT.md) — sealed patterns are the stable inputs to the compilation pipeline.
-- [Tamper Evidence](./atoms/compliance/tamper-evidence.md) — the integrity primitive the sealing mechanism instantiates.
+- [Tamper Evidence](./atoms/tamper-evidence.md) — the integrity primitive the sealing mechanism instantiates.
 
 ---
 

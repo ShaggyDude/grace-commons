@@ -5,13 +5,13 @@
   "atoms": [
     {
       "name": "Actor Identity",
-      "spec": "atoms/compliance/actor-identity.md",
+      "spec": "atoms/actor-identity.md",
       "modules": [],
       "grounded": true
     },
     {
       "name": "Permissions",
-      "spec": "atoms/compliance/permissions.md",
+      "spec": "atoms/permissions.md",
       "modules": [],
       "grounded": true
     }
@@ -22,8 +22,8 @@
       "name": "Attributed Permissions Admin",
       "spec": "compositions/attributed-permissions-admin.md",
       "constituent_atoms": [
-        "atoms/compliance/actor-identity.md",
-        "atoms/compliance/permissions.md"
+        "atoms/actor-identity.md",
+        "atoms/permissions.md"
       ]
     }
   ],
@@ -32,82 +32,82 @@
       "name": "Audit Trail",
       "spec": "compositions/audit-trail.md",
       "missing_atoms": [
-        "atoms/compliance/retention-window.md",
-        "atoms/compliance/tamper-evidence.md",
-        "atoms/temporal/event-log.md"
+        "atoms/retention-window.md",
+        "atoms/tamper-evidence.md",
+        "atoms/event-log.md"
       ]
     },
     {
       "name": "Defensible Retention",
       "spec": "compositions/defensible-retention.md",
       "missing_atoms": [
-        "atoms/compliance/legal-hold.md",
-        "atoms/compliance/retention-window.md",
-        "atoms/compliance/tamper-evidence.md",
-        "atoms/temporal/event-log.md"
+        "atoms/legal-hold.md",
+        "atoms/retention-window.md",
+        "atoms/tamper-evidence.md",
+        "atoms/event-log.md"
       ]
     },
     {
       "name": "External Onboarding",
       "spec": "compositions/external-onboarding.md",
       "missing_atoms": [
-        "atoms/compliance/credential.md",
-        "atoms/compliance/invitation.md",
-        "atoms/compliance/party-identity.md",
-        "atoms/compliance/retention-window.md",
-        "atoms/compliance/tamper-evidence.md",
-        "atoms/temporal/event-log.md"
+        "atoms/credential.md",
+        "atoms/invitation.md",
+        "atoms/party-identity.md",
+        "atoms/retention-window.md",
+        "atoms/tamper-evidence.md",
+        "atoms/event-log.md"
       ]
     },
     {
       "name": "Login",
       "spec": "compositions/login.md",
       "missing_atoms": [
-        "atoms/compliance/credential.md",
-        "atoms/compliance/retention-window.md",
-        "atoms/compliance/session.md",
-        "atoms/compliance/tamper-evidence.md",
-        "atoms/temporal/event-log.md"
+        "atoms/credential.md",
+        "atoms/retention-window.md",
+        "atoms/session.md",
+        "atoms/tamper-evidence.md",
+        "atoms/event-log.md"
       ]
     },
     {
       "name": "Multi-Party Approval",
       "spec": "compositions/multi-party-approval.md",
       "missing_atoms": [
-        "atoms/compliance/retention-window.md",
-        "atoms/compliance/tamper-evidence.md",
-        "atoms/productivity/assignment.md",
-        "atoms/temporal/event-log.md",
-        "atoms/workflow/approval-step.md"
+        "atoms/retention-window.md",
+        "atoms/tamper-evidence.md",
+        "atoms/assignment.md",
+        "atoms/event-log.md",
+        "atoms/approval-step.md"
       ]
     },
     {
       "name": "Privileged Access Provisioning",
       "spec": "compositions/privileged-access-provisioning.md",
       "missing_atoms": [
-        "atoms/compliance/capability.md",
-        "atoms/compliance/credential.md",
-        "atoms/compliance/retention-window.md",
-        "atoms/compliance/session.md",
-        "atoms/compliance/tamper-evidence.md",
-        "atoms/productivity/assignment.md",
-        "atoms/temporal/event-log.md",
-        "atoms/workflow/approval-step.md"
+        "atoms/capability.md",
+        "atoms/credential.md",
+        "atoms/retention-window.md",
+        "atoms/session.md",
+        "atoms/tamper-evidence.md",
+        "atoms/assignment.md",
+        "atoms/event-log.md",
+        "atoms/approval-step.md"
       ]
     },
     {
       "name": "Session-Gated Authorization",
       "spec": "compositions/session-gated-authorization.md",
       "missing_atoms": [
-        "atoms/compliance/session.md"
+        "atoms/session.md"
       ]
     },
     {
       "name": "Shared Todo",
       "spec": "compositions/shared-todo.md",
       "missing_atoms": [
-        "atoms/productivity/assignment.md",
-        "atoms/productivity/personal-todo.md"
+        "atoms/assignment.md",
+        "atoms/personal-todo.md"
       ]
     }
   ],

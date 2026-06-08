@@ -2,7 +2,7 @@
 //
 // Atom: Permissions (grants)
 //
-// Library spec (quoted from grace-commons/atoms/compliance/permissions.md):
+// Library spec (quoted from grace-commons/atoms/permissions.md):
 //   "A grant is the atom's unit of authorization: a binding of a subject to an
 //    action scope that remains active until revoked. Evaluation is grant-lookup:
 //    if any active grant exists for the queried (subject, scope) pair, the answer

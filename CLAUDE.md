@@ -25,7 +25,7 @@ If you have no prior context, read in this order:
 3. **[`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md)** — the three-pass methodology (GRID structural, EOS conceptual independence, Linus adversarial), the four-step authoring rubric, and the **Regulated-pattern conventions** section that canonicalizes *Regulated adversarial scenarios* and *Generation acceptance*.
 4. **[`CONTRIBUTING.md`](./CONTRIBUTING.md)** — contribution shape, the three perspectives (rigor / clarity / implementability), the quality bar, and the contribution lifecycle.
 5. **[`SPEC_FORMAT.md`](./SPEC_FORMAT.md)** — the canonical reference for the shape of a Grace Commons spec. Enumerates the three shapes (atom, composition, regulated overlay), the required sections in order, and the canonical examples to mirror. Drafter agents (human or AI) read from here.
-6. **An example atom.** [`atoms/productivity/personal-todo.md`](./atoms/productivity/personal-todo.md) for the simplest atom shape with a two-iteration Lineage record. [`atoms/compliance/actor-identity.md`](./atoms/compliance/actor-identity.md) for the regulated-atom shape (carries both regulated-pattern conventions).
+6. **An example atom.** [`atoms/personal-todo.md`](./atoms/personal-todo.md) for the simplest atom shape with a two-iteration Lineage record. [`atoms/actor-identity.md`](./atoms/actor-identity.md) for the regulated-atom shape (carries both regulated-pattern conventions).
 7. **An example application.** [`compositions/idempotent-reservation.md`](./compositions/idempotent-reservation.md) for a two-atom composition. [`compositions/audit-trail.md`](./compositions/audit-trail.md) for the four-atom canonical regulated-audit composition.
 
 When drafting a new pattern, additionally read the most structurally adjacent existing pattern — mirror its shape.
@@ -40,7 +40,7 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 | **Application** | A composition of two or more atoms. Specification names the atoms it composes. Files in `compositions/`. |
 | **Freestanding** | EOS-sense: the concept can be specified without naming any other concept. Pass 2 enforces this. |
 | **Emergent invariant** | A property that appears only at composition time and belongs to no single constituent atom. Compositions surface these explicitly under *Composition-level invariants*. |
-| **Regulated atom** | An atom in `atoms/compliance/`, or one whose acceptance bar is set by an external evaluator (regulator, auditor). Carries two extra sections: *Regulated adversarial scenarios* and *Generation acceptance*. |
+| **Regulated atom** | An atom carrying the regulated overlay, or one whose acceptance bar is set by an external evaluator (regulator, auditor). Carries two extra sections: *Regulated adversarial scenarios* and *Generation acceptance*. |
 | **Lineage notes** | The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Recursive: the notes themselves can be pressure-tested. |
 | **GRID** | The nine-node MUSE v1.1 completeness framework (Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof). Pass 1's checklist. |
 | **The canonical regulated-audit stack** | Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail. All four atoms grounded; the four-atom application landed. The library's worked example of multi-atom composition under regulated load. |
@@ -79,7 +79,7 @@ Each pass catches a different class of gap. Skipping is not an option. A pattern
 
 ## Regulated-pattern conventions
 
-Two structural sections are **required** for atoms in `atoms/compliance/`, atoms in other categories whose examples invoke regulated domains, and applications composing any of the above:
+Two structural sections are **required** for atoms carrying the regulated overlay, atoms in other categories whose examples invoke regulated domains, and applications composing any of the above:
 
 - **Regulated adversarial scenarios** — an *Examples* subsection walking three canonical adversarial reads: *regulator audit* (a query against records that must return the expected result by virtue of an invariant), *disputed transaction or data-subject request* (an external party challenges the system's claim and the records must answer), *breach or incident investigation* (an investigator queries during or after an anomaly).
 - **Generation acceptance** — a standalone section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks.

@@ -1,11 +1,11 @@
 /**
  * domain/event_log.ts — Event Log + Tamper Evidence (C1 audit substrate).
  *
- * Library spec — Event Log (atoms/temporal/event-log.md): "anything appended to
+ * Library spec — Event Log (atoms/event-log.md): "anything appended to
  * the log stays in the log, in the order it arrived, forever, unchanged … append
  * adds a new event at the tail and returns an opaque identifier; read returns
  * events in strict sequence order. There is no edit and no delete surface."
- * Library spec — Tamper Evidence (atoms/compliance/tamper-evidence.md): seals
+ * Library spec — Tamper Evidence (atoms/tamper-evidence.md): seals
  * make tampering "structurally visible to anyone who has the original records and
  * the seal."
  *

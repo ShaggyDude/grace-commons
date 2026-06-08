@@ -44,8 +44,8 @@ This composition does not implement role management, attribute-based policy eval
 
 ## Composes
 
-- **[Permissions](../atoms/compliance/permissions.md)** — provides the grant store and the evaluation surface: `grant`, `revoke`, `permitted`. The application maintains exactly one Permissions instance scoped to the administered authorization domain. The application wraps `grant` and `revoke` behind its own actions; `permitted` is passed through unchanged.
-- **[Actor Identity](../atoms/compliance/actor-identity.md)** — provides the attestation surface: `attest`, `verify`. The application maintains exactly one Actor Identity instance whose attestations bind grantors and revokers to composition-defined action references. The application wraps `attest` behind its own actions and surfaces `verify` results inside the composition's read-only query.
+- **[Permissions](../atoms/permissions.md)** — provides the grant store and the evaluation surface: `grant`, `revoke`, `permitted`. The application maintains exactly one Permissions instance scoped to the administered authorization domain. The application wraps `grant` and `revoke` behind its own actions; `permitted` is passed through unchanged.
+- **[Actor Identity](../atoms/actor-identity.md)** — provides the attestation surface: `attest`, `verify`. The application maintains exactly one Actor Identity instance whose attestations bind grantors and revokers to composition-defined action references. The application wraps `attest` behind its own actions and surfaces `verify` results inside the composition's read-only query.
 
 ---
 

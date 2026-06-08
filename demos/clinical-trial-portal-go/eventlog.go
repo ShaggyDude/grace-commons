@@ -21,7 +21,7 @@ type EventRow struct {
 //
 // chainMu is render 3's mechanism for the Event Log atom's operational clause
 // "appends never fail for ordering or contention reasons — the underlying
-// implementation must serialize them" (atoms/temporal/event-log.md, Invariant 3).
+// implementation must serialize them" (atoms/event-log.md, Invariant 3).
 // SQLite satisfies that clause with its single-writer lock; Postgres with
 // pg_advisory_xact_lock; Go with this sync.Mutex. Three renders, three mechanisms,
 // one already-stated spec invariant (see DISCOVERIES 2026-06-06). The lock is held

@@ -2,7 +2,7 @@
 //
 // Atom: Invitation
 //
-// Library spec (quoted from grace-commons/atoms/compliance/invitation.md):
+// Library spec (quoted from grace-commons/atoms/invitation.md):
 //   "Invitation is the compliance atom that answers the question 'what is the
 //    state of this invitation, and who accepted it if it was accepted?' It does
 //    this through invitation records: durable, single-resolution lifecycle

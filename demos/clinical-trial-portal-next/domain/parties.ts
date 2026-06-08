@@ -1,5 +1,5 @@
 // domain/parties.ts — Atom: Party Identity
-// Library spec (atoms/compliance/party-identity.md): a Party is a durable
+// Library spec (atoms/party-identity.md): a Party is a durable
 // identity (email + display name); email is unique; rows are never deleted.
 // Ported from render 1 (async + Postgres).
 import type { Queryable } from "../lib/db.ts";

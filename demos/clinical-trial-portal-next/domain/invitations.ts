@@ -1,5 +1,5 @@
 // domain/invitations.ts — Atom: Invitation
-// Library spec (atoms/compliance/invitation.md): a single-resolution lifecycle
+// Library spec (atoms/invitation.md): a single-resolution lifecycle
 // artifact (Pending → Accepted | Expired | Revoked); the token is identity +
 // bearer credential; never deleted.
 import type { Queryable } from "../lib/db.ts";

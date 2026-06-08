@@ -76,11 +76,26 @@ def frontmatter_domain(text):
     return m.group(1).strip() if m else None
 
 
+def is_nav_page(text):
+    """True for a catalog/landing/nav page (not an atom spec): its frontmatter
+    declares `has_children: true` or `nav_exclude: true`. Keeps the atom scan
+    correct once atoms and generated browse-by-overlay views share the flat
+    atoms/ directory (post-flatten); pre-flatten it is redundant with the
+    readme/index/taxonomy name skip, which is intentional."""
+    if not text.startswith("---"):
+        return False
+    end = text.find("\n---", 3)
+    block = text[3:end] if end != -1 else ""
+    return bool(re.search(r"^\s*(?:has_children|nav_exclude):\s*true\s*$", block, re.M))
+
+
 def parse_composition(path):
     text = path.read_text(encoding="utf-8")
     composes = section(text, r"^## Composes\b")
     atoms, roles = [], {}
-    for m in re.finditer(r"\[([^\]]+)\]\(\.\./atoms/[a-z-]+/([a-z0-9-]+)\.md\)(?:\*\*)?\s*[—-]\s*(.*)", composes):
+    # `(?:[a-z-]+/)?` makes the category segment optional: matches the pre-flatten
+    # ../atoms/<cat>/<name>.md and the post-flatten ../atoms/<name>.md alike.
+    for m in re.finditer(r"\[([^\]]+)\]\(\.\./atoms/(?:[a-z-]+/)?([a-z0-9-]+)\.md\)(?:\*\*)?\s*[—-]\s*(.*)", composes):
         name = m.group(2)
         atoms.append(name)
         roles[name] = m.group(3).strip()[:90]
@@ -95,11 +110,17 @@ def build_index(root):
     atoms_dir, comps_dir = root / "atoms", root / "compositions"
 
     atom = {}  # name -> {folder, domain}
-    for p in sorted(atoms_dir.glob("*/*.md")):
-        if p.name.lower() in ("readme.md", "index.md"):
+    # Layout-agnostic: rglob matches both atoms/<cat>/<name>.md (pre-flatten) and
+    # atoms/<name>.md (post-flatten). Catalog / landing / generated-view pages are
+    # not atoms — excluded by name and by their has_children/nav_exclude frontmatter.
+    for p in sorted(atoms_dir.rglob("*.md")):
+        if p.name.lower() in ("readme.md", "index.md", "taxonomy.md"):
+            continue
+        text = p.read_text(encoding="utf-8")
+        if is_nav_page(text):
             continue
         atom[p.stem] = {"folder": p.parent.name,
-                        "domain": frontmatter_domain(p.read_text(encoding="utf-8"))}
+                        "domain": frontmatter_domain(text)}
 
     comps = [parse_composition(p) for p in sorted(comps_dir.glob("*.md"))
              if p.name.lower() != "readme.md"]

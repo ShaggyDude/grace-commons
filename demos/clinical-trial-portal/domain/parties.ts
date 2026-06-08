@@ -2,7 +2,7 @@
 //
 // Atom: Party Identity
 //
-// Library spec (quoted from grace-commons/atoms/compliance/party-identity.md):
+// Library spec (quoted from grace-commons/atoms/party-identity.md):
 //   "Party Identity is the specification of a persistent, verifiable identity
 //    record for an external party — a customer, patient, counterparty, or
 //    beneficial owner. It answers the foundational compliance question that

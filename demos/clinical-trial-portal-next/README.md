@@ -31,15 +31,15 @@ This render is one half of that experiment; read it next to the first render and
 | **APA — Attributed Permissions Admin** | [`compositions/attributed-permissions-admin.md`](../../compositions/attributed-permissions-admin.md) | `composition.ts` `grantPermission` / `revokeGrant`; `app/people` |
 | **C1 Audit Trail** | [`compositions/audit-trail.md`](../../compositions/audit-trail.md) | `domain/event_log.ts` (`appendEvent`/`verifyChain`) + `app/audit/*` |
 
-Backing atoms: [party-identity](../../atoms/compliance/party-identity.md),
-[actor-identity](../../atoms/compliance/actor-identity.md),
-[credential](../../atoms/compliance/credential.md),
-[session](../../atoms/compliance/session.md),
-[permissions](../../atoms/compliance/permissions.md),
-[invitation](../../atoms/compliance/invitation.md),
-[event-log](../../atoms/temporal/event-log.md),
-[tamper-evidence](../../atoms/compliance/tamper-evidence.md),
-[retention-window](../../atoms/compliance/retention-window.md).
+Backing atoms: [party-identity](../../atoms/party-identity.md),
+[actor-identity](../../atoms/actor-identity.md),
+[credential](../../atoms/credential.md),
+[session](../../atoms/session.md),
+[permissions](../../atoms/permissions.md),
+[invitation](../../atoms/invitation.md),
+[event-log](../../atoms/event-log.md),
+[tamper-evidence](../../atoms/tamper-evidence.md),
+[retention-window](../../atoms/retention-window.md).
 
 ## Stack
 

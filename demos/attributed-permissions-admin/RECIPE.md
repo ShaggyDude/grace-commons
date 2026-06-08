@@ -7,8 +7,8 @@ _Generated 2026-05-30 by `tools/recipe/generate_recipe.py`. Do not hand-edit - r
 ## Atoms
 _(derived from the matching composition spec; the demo's code does not yet declare `// Atom:` headers, so this is what it SHOULD contain, not what it proves)_
 
-- **Actor Identity** - `atoms/compliance/actor-identity.md` (grounded)
-- **Permissions** - `atoms/compliance/permissions.md` (grounded)
+- **Actor Identity** - `atoms/actor-identity.md` (grounded)
+- **Permissions** - `atoms/permissions.md` (grounded)
 
 ## Compositions present (inferred - all constituent atoms available)
 

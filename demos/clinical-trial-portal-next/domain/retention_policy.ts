@@ -1,5 +1,5 @@
 // domain/retention_policy.ts — Atom: Retention Window (single-row config)
-// Library spec (atoms/compliance/retention-window.md): retention bounds how long
+// Library spec (atoms/retention-window.md): retention bounds how long
 // records are presented; it never deletes — Part 11 forbids that.
 import type { Queryable } from "../lib/db.ts";
 

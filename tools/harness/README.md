@@ -20,11 +20,11 @@ This installs `tla-checker` into `tools/harness/node_modules` and the JRE 17 int
 
 ```bash
 # A correct model must hold (TLA+) / have all checks UNSAT and all runs SAT (Alloy):
-node check.mjs ../../atoms/compliance/party-identity.tla
+node check.mjs ../../atoms/party-identity.tla
 node check.mjs ../../compositions/session-gated-authorization.als
 
 # A buggy twin must be REJECTED (the vacuity guard):
-node check.mjs ../../atoms/compliance/party-identity-buggy.tla --buggy
+node check.mjs ../../atoms/party-identity-buggy.tla --buggy
 
 # Run every model in the repo:
 node audit.mjs

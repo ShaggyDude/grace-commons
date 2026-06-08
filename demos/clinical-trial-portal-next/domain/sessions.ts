@@ -1,5 +1,5 @@
 // domain/sessions.ts — Atom: Session
-// Library spec (atoms/compliance/session.md): a session is an opaque DB-backed
+// Library spec (atoms/session.md): a session is an opaque DB-backed
 // token with issue/expiry/revoke; the sessions table is the source of truth.
 import type { Queryable } from "../lib/db.ts";
 

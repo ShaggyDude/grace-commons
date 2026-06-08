@@ -1,14 +1,14 @@
 # Coverage matrix — `duplicate-prevention`
 
-- **Pattern:** `atoms/temporal/duplicate-prevention.md`
+- **Pattern:** `atoms/duplicate-prevention.md`
 - **Model:** `duplicate-prevention.tla` + `duplicate-prevention-buggy.tla`
 - **Reviewer / date:** Claude Sonnet 4.6 (fresh-context) — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 2 (single-recording — `record` does not extend the window for an already-recorded identity; original `recorded_at` preserved); Invariant 1 (window monotonicity — anything in `recorded` satisfies `now − recorded_at < window`)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/temporal/duplicate-prevention.tla` → `PASS` ☐ *(not re-run in this pass; prior run verified in Lineage — 14 states)*
-- Buggy twin: `node check.mjs ../../atoms/temporal/duplicate-prevention-buggy.tla --buggy` → `PASS` (rejected) ☐ *(prior: rejected at 11 states)*
+- Correct model: `node check.mjs ../../atoms/duplicate-prevention.tla` → `PASS` ☐ *(not re-run in this pass; prior run verified in Lineage — 14 states)*
+- Buggy twin: `node check.mjs ../../atoms/duplicate-prevention-buggy.tla --buggy` → `PASS` (rejected) ☐ *(prior: rejected at 11 states)*
 
 ## Step 2 — coverage matrix
 

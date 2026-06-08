@@ -1,5 +1,5 @@
 // domain/actors.ts — Atom: Actor Identity
-// Library spec (atoms/compliance/actor-identity.md): an Actor is a credentialed
+// Library spec (atoms/actor-identity.md): an Actor is a credentialed
 // identity bound to a Party; opaque system id; never deleted.
 import type { Queryable } from "../lib/db.ts";
 

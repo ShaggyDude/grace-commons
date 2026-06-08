@@ -1,6 +1,6 @@
 # Coverage matrix — `capacity-constraint-enforcement`
 
-- **Pattern:** `atoms/resource-lifecycle/capacity-constraint-enforcement.md`
+- **Pattern:** `atoms/capacity-constraint-enforcement.md`
 - **Model:** `capacity-constraint-enforcement.tla` (+ buggy twin `capacity-constraint-enforcement-buggy.tla`)
 - **Reviewer / date:** agent coverage cross-check — 2026-06-03; updated 2026-06-04 (release action added; Inv 14 vote reconsidered)
 - **Formal-layer vote load-bearing claims:** Invariant 4 (bounded arithmetic `allocated ≤ capacity` under serializable concurrency), Invariant 5 (non-negativity)
@@ -8,8 +8,8 @@
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/resource-lifecycle/capacity-constraint-enforcement.tla` → `PASS` ✓ *(7 states, all invariants hold; Capacity=2 Workers={w1,w2,w3})*
-- Buggy twin: `node check.mjs ../../atoms/resource-lifecycle/capacity-constraint-enforcement-buggy.tla --buggy` → `PASS` (rejected) ✓ *(3 states, Inv5_NonNegativity violated — unguarded ReleaseBuggy drives allocated to -1)*
+- Correct model: `node check.mjs ../../atoms/capacity-constraint-enforcement.tla` → `PASS` ✓ *(7 states, all invariants hold; Capacity=2 Workers={w1,w2,w3})*
+- Buggy twin: `node check.mjs ../../atoms/capacity-constraint-enforcement-buggy.tla --buggy` → `PASS` (rejected) ✓ *(3 states, Inv5_NonNegativity violated — unguarded ReleaseBuggy drives allocated to -1)*
 
 ## Step 2 — coverage matrix
 

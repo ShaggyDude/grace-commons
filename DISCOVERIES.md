@@ -188,7 +188,7 @@ Building the second render of the clinical-trial-portal (Next.js + React Server 
 
 The tempting reading — and the one BUILD_PLAN §4.3 reaches for — is that the swap *surfaced* an under-specified ordering assumption: a spec gap one stack had been hiding, now dragged into the open and worth depositing back into the library as a named invariant.
 
-Checking the canonical source refutes that. The Event Log atom (`atoms/temporal/event-log.md`) already carries it:
+Checking the canonical source refutes that. The Event Log atom (`atoms/event-log.md`) already carries it:
 
 - **Invariant 3 — Total order.** Any two distinct events have a defined relative position by `sequence_number`; ties never occur, even within a single wall-time instant.
 - Operationally: *"appends never fail for ordering or contention reasons — the underlying implementation must serialize them."*

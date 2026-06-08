@@ -1,14 +1,14 @@
-# Coverage matrix — `atoms/messaging/subscription.md`
+# Coverage matrix — `atoms/subscription.md`
 
-- **Pattern:** `atoms/messaging/subscription.md`
+- **Pattern:** `atoms/subscription.md`
 - **Model:** `subscription.als` + buggy twin `subscription-buggy.als`
 - **Reviewer / date:** Claude Sonnet 4.6 — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 6 (at-most-one-Active per (subscriber_ref, event_scope) pair), Invariant 2 (status monotonicity Active → Cancelled), Invariant 4 (new subscribe after cancel produces a new distinct id / no id reuse)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/messaging/subscription.als` → `PASS` ☐ *(not re-run here; lineage records green run 2026-06-03, all 7 checks UNSAT)*
-- Buggy twin: `node check.mjs ../../atoms/messaging/subscription-buggy.als --buggy` → `PASS` (rejected) ☐
+- Correct model: `node check.mjs ../../atoms/subscription.als` → `PASS` ☐ *(not re-run here; lineage records green run 2026-06-03, all 7 checks UNSAT)*
+- Buggy twin: `node check.mjs ../../atoms/subscription-buggy.als --buggy` → `PASS` (rejected) ☐
 
 ## Step 2 — coverage matrix
 

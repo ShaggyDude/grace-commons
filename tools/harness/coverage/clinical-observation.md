@@ -1,14 +1,14 @@
-# Coverage matrix — `atoms/healthcare/clinical-observation.md`
+# Coverage matrix — `atoms/clinical-observation.md`
 
-- **Pattern:** `atoms/healthcare/clinical-observation.md`
+- **Pattern:** `atoms/clinical-observation.md`
 - **Model:** `clinical-observation.als` + buggy twin `clinical-observation-buggy.als`
 - **Reviewer / date:** Claude Sonnet 4.6 — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 3 (amendment chains are linear — at most one successor, at most one predecessor, no branching, no cycles), Invariant 2 (amend creates successor without modifying original; Amended ⟺ has-successor)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/healthcare/clinical-observation.als` → `PASS` ☐ *(not re-run here; lineage records green run 2026-06-03, all 12 checks UNSAT)*
-- Buggy twin: `node check.mjs ../../atoms/healthcare/clinical-observation-buggy.als --buggy` → `PASS` (rejected) ☐
+- Correct model: `node check.mjs ../../atoms/clinical-observation.als` → `PASS` ☐ *(not re-run here; lineage records green run 2026-06-03, all 12 checks UNSAT)*
+- Buggy twin: `node check.mjs ../../atoms/clinical-observation-buggy.als --buggy` → `PASS` (rejected) ☐
 
 ## Step 2 — coverage matrix
 

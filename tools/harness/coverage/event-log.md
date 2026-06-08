@@ -1,14 +1,14 @@
 # Coverage matrix — `event-log`
 
-- **Pattern:** `atoms/temporal/event-log.md`
+- **Pattern:** `atoms/event-log.md`
 - **Model:** `event-log.tla` (+ buggy twin `event-log-buggy.tla`)
 - **Reviewer / date:** agent coverage cross-check — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 4 (sequence-number monotonicity), Invariant 1 (append-only)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/temporal/event-log.tla` → `PASS` ☐ *(per Lineage: 119 states, all invariants hold)*
-- Buggy twin: `node check.mjs ../../atoms/temporal/event-log-buggy.tla --buggy` → `PASS` (rejected) ☐ *(per Lineage: rejected at 14 states)*
+- Correct model: `node check.mjs ../../atoms/event-log.tla` → `PASS` ☐ *(per Lineage: 119 states, all invariants hold)*
+- Buggy twin: `node check.mjs ../../atoms/event-log-buggy.tla --buggy` → `PASS` (rejected) ☐ *(per Lineage: rejected at 14 states)*
 
 ## Step 2 — coverage matrix
 

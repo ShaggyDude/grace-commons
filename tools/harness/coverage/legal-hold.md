@@ -1,14 +1,14 @@
 # Coverage matrix — `legal-hold`
 
-- **Pattern:** `atoms/compliance/legal-hold.md`
+- **Pattern:** `atoms/legal-hold.md`
 - **Model:** `legal-hold.tla` + `legal-hold-buggy.tla`
 - **Reviewer / date:** Claude Sonnet 4.6 (fresh-context) — 2026-06-03; GAP closed 2026-06-04
 - **Formal-layer vote load-bearing claims:** Invariant 4 (concurrent holds independent — releasing one hold does not affect any other hold on the same record); Invariant 6 (temporal ordering — `released_at ≥ placed_at`)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/compliance/legal-hold.tla` → `PASS` ✓ *(370 states, MaxH=2, MaxClock=3)*
-- Buggy twin: `node check.mjs ../../atoms/compliance/legal-hold-buggy.tla --buggy` → `PASS` (rejected) ✓ *(18 states — Tick→Place→Release stamps releasedAt=0 < placedAt=1; Inv_TemporalOrdering violated)*
+- Correct model: `node check.mjs ../../atoms/legal-hold.tla` → `PASS` ✓ *(370 states, MaxH=2, MaxClock=3)*
+- Buggy twin: `node check.mjs ../../atoms/legal-hold-buggy.tla --buggy` → `PASS` (rejected) ✓ *(18 states — Tick→Place→Release stamps releasedAt=0 < placedAt=1; Inv_TemporalOrdering violated)*
 
 ## Step 2 — coverage matrix
 

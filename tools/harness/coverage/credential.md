@@ -1,15 +1,15 @@
 # Coverage matrix — `credential`
 
-- **Pattern:** `atoms/compliance/credential.md`
+- **Pattern:** `atoms/credential.md`
 - **Model:** `credential.tla` + two isolated twins `credential-buggy.tla` (Inv 7) and `credential-buggy-toctou.tla` (Inv 2)
 - **Reviewer / date:** Claude Sonnet 4.6 (fresh-context) — 2026-06-03; updated 2026-06-04 (Inv 7 GAP closed; twins split into two isolated twins)
 - **Formal-layer vote load-bearing claims:** Invariant 2 (active uniqueness — at most one Active credential per `(principal_ref, credential_type)` pair, including the concurrent-`register` TOCTOU race); Invariant 7 (rotation-chain integrity — every `Rotated` record has a non-null `successor_credential_id` referencing a record with the same `principal_ref` and `credential_type`)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/compliance/credential.tla` → `PASS` ✓ *(138 states at MaxC=3)*
-- Buggy twin (Inv 7): `node check.mjs ../../atoms/compliance/credential-buggy.tla --buggy` → `PASS` (rejected) ✓ *(rejected at 5 states — `Inv_RotationChain` violated: rotation sets slot to Rotated without writing successor link; dangling chain detected. `register` stays atomic, so `Inv_ActiveUniqueness` holds here — verified at 105 states when checked alone — isolating the rejection to Inv 7.)*
-- Buggy twin (Inv 2): `node check.mjs ../../atoms/compliance/credential-buggy-toctou.tla --buggy` → `PASS` (rejected) ✓ *(rejected at 33 states — `Inv_ActiveUniqueness` violated: non-atomic check-then-commit `register` lets two concurrent registers both observe `ActiveCount = 0` and both commit. `rotate` stays atomic and sets the successor link, so `Inv_RotationChain` holds here — verified at 233 states when checked alone — isolating the rejection to Inv 2.)*
+- Correct model: `node check.mjs ../../atoms/credential.tla` → `PASS` ✓ *(138 states at MaxC=3)*
+- Buggy twin (Inv 7): `node check.mjs ../../atoms/credential-buggy.tla --buggy` → `PASS` (rejected) ✓ *(rejected at 5 states — `Inv_RotationChain` violated: rotation sets slot to Rotated without writing successor link; dangling chain detected. `register` stays atomic, so `Inv_ActiveUniqueness` holds here — verified at 105 states when checked alone — isolating the rejection to Inv 7.)*
+- Buggy twin (Inv 2): `node check.mjs ../../atoms/credential-buggy-toctou.tla --buggy` → `PASS` (rejected) ✓ *(rejected at 33 states — `Inv_ActiveUniqueness` violated: non-atomic check-then-commit `register` lets two concurrent registers both observe `ActiveCount = 0` and both commit. `rotate` stays atomic and sets the successor link, so `Inv_RotationChain` holds here — verified at 233 states when checked alone — isolating the rejection to Inv 2.)*
 
 The two twins are isolated deliberately: a single combined twin would surface only the shorter counterexample (Inv 7 at 5 states would mask Inv 2 at 33 states), leaving Inv 2 without a demonstrated rejection in `audit.mjs`. This mirrors the isolated-twin discipline applied to Legal Hold, Provisional Commitment, and Capacity Constraint on the same date.
 

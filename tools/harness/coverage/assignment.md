@@ -1,14 +1,14 @@
 # Coverage matrix — `assignment`
 
-- **Pattern:** `atoms/productivity/assignment.md`
+- **Pattern:** `atoms/assignment.md`
 - **Model:** `assignment.tla` (+ buggy twin `assignment-buggy.tla`)
 - **Reviewer / date:** agent coverage cross-check — 2026-06-03
 - **Formal-layer vote load-bearing claims:** Invariant 7 (reassign atomicity — no observable both/neither Active state), Invariant 1 (at-most-one-Active per task)
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../atoms/productivity/assignment.tla` → `PASS` ☐ *(per Lineage: 47 states, holds)*
-- Buggy twin: `node check.mjs ../../atoms/productivity/assignment-buggy.tla --buggy` → `PASS` (rejected) ☐ *(per Lineage: rejected at 6 states — two-Active window detected)*
+- Correct model: `node check.mjs ../../atoms/assignment.tla` → `PASS` ☐ *(per Lineage: 47 states, holds)*
+- Buggy twin: `node check.mjs ../../atoms/assignment-buggy.tla --buggy` → `PASS` (rejected) ☐ *(per Lineage: rejected at 6 states — two-Active window detected)*
 
 ## Step 2 — coverage matrix
 
