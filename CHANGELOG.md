@@ -26,24 +26,36 @@ cut a versioned release, so everything below sits under **Unreleased**.
     number rises (and rejects regressions).
   - **Ghost flows** (`ghost/`) — a render-agnostic scenario engine that drives
     any render through the same user journey via a small per-render adapter.
-  - **Six independent renders** of the clinical-trial-portal surface spanning
+  - **Seven independent renders** of the clinical-trial-portal surface spanning
     SQLite (Deno), SQLite (Node), PostgreSQL (via `pglite`, in-WASM ×3 — two
-    Next.js-shaped), and an append-only flat-file JSONL log. **Two** were
-    authored from the spec in isolation, without sight of the other renders. The
-    sixth is not a test fixture but the **real deployable app**
+    Next.js-shaped), an append-only flat-file JSONL log, and MongoDB. **Two**
+    were authored from the spec in isolation, without sight of the other
+    renders. The sixth is not a test fixture but the **real deployable app**
     ([`demos/clinical-trial-portal-next`](./demos/clinical-trial-portal-next/)) —
     the harness is pointed at the shipping store itself.
+  - **Mongo ghost render**
+    ([`demos/clinical-trial-portal-mongo/`](./demos/clinical-trial-portal-mongo/)) —
+    the first document-store render: no foreign keys, no CHECKs, no schema-level
+    delete discipline. Ships the invariant → enforcer discovery table (which
+    Postgres-carried guarantees move to `$jsonSchema`, which to app code, which
+    to runtime mechanism) and the **fourth** conforming mechanism for Event
+    Log's serialize clause — replica-set transaction + unique chain-position
+    index as fork guard + optimistic retry, measured by
+    `prove-serialization.mjs`. The mongod-stored chain re-verifies
+    byte-identically under the JS canonical contract.
   - **Multi-render agreement** (`agree.mjs`) — cross-render correctness: a spec
     claim counts only if it holds identically on every render. Currently
-    **20/20** across all six.
+    **20/20** across all seven.
 - **Demo 2 — second render of the clinical-trial portal**
   ([`demos/clinical-trial-portal-next/`](./demos/clinical-trial-portal-next/)) —
   a Next.js App Router + PostgreSQL build of the same surface as the Deno+SQLite
   demo. The atoms, composition, action codes, and hash-chain contract are a
   faithful port (dialect + async, not redesign); the audit chain is serialized
   by a global `pg_advisory_xact_lock` (Postgres MVCC needs the explicit lock
-  SQLite gave for free). Backend + audit surface complete and conformance-clean
-  (render 6 above); the App Router UI is the remaining piece.
+  SQLite gave for free). Backend, audit surface, and App Router UI complete and
+  conformance-clean (render 6 above); the Fly.io deploy
+  ([`DEPLOY.md`](./demos/clinical-trial-portal-next/DEPLOY.md)) is the remaining
+  piece.
 
 ### Fixed
 

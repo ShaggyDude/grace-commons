@@ -168,6 +168,23 @@ Model: Grok (xAI) — external reviewer; Claude (sonnet) — implementation
 Work: Grok conducted six independent review rounds on the grant proposal (form fields and work plan attachment), each producing scored findings the author adjudicated. Grok also conducted a technical security review of the Beacon demo — surfacing the `/subjects/:id` own-scope gap (no detail-view guard matching the list-view filter), the CSV export attestation boundary, and the canonical JSON `undefined` edge case. Claude implemented the own-scope fix, wrote a regression test (107 passing), documented the remaining findings in `CORNERS.md`. Grok contributed the Logic Confinement Principle formalization (six rules, now in `EXECUTION_CONTRACT.md`), the Year 1 roadmap framing (~100 atoms, tag-based ontology), and the EU alignment narrative ("the upper layer Europe's open digital ecosystems have been missing") now in `readme.md`. FAIR/EOSC/digital sovereignty paragraph added to Technical Challenges field. Backdated `study.registered` audit event seeded to Beacon live DB to make retention filter demonstrable.
 Human decision: Author accepted the own-scope fix as a pre-submission blocker and shipped it. Author accepted the Logic Confinement Principle as a first-class architectural commitment. Author set the ~100 atom Year 1 target as directional. Author approved all EU alignment language.
 
+### Phase 6 — Formal-layer completion, pattern sprint, and the conformance loop (2026-06-02 to 2026-06-07)
+
+**2026-06-02 to 2026-06-04**
+Model: Claude (opus — orchestration, gating, formal models; sonnet — drafting subagents)
+Work: The entire formal-model backlog landed — 18 TLA+ models and 4 Alloy structural models, each with a buggy twin the checker rejects; the formal-layer vote sweep, bar reconsideration, and inaugural coverage cross-check (6 genuine coverage GAPs surfaced and labeled). Net-new patterns grounded in an Opus-plan → Sonnet-draft → Opus-gate pipeline: Provenance, Workflow / State Machine, Chain of Custody (C12), Stateful Workflow Execution (C10), Forensic Recovery (C3), Consent & Preference Management (C2), Reservation Lifecycle (C9), KYC / Customer Onboarding (C8). Token spend per chunk recorded in `MEASUREMENT.md` (drafter-side floors).
+Human decision: Author set the gating bar (foundational findings block; refining/rhetorical recorded), adjudicated every Final Critique finding, approved each grounding, and made the bar-reconsideration call returning three clock/precedence patterns to English-only.
+
+**2026-06-05 to 2026-06-06**
+Model: Claude (opus)
+Work: The conformance validator (`tools/conformance/`) built end-to-end: hand-authored manifest off the Generation-acceptance prose, render-agnostic evaluators, per-render adapters, scoring kernel, defect injection, regen-fix loop, derive-from-prose reconcile, ghost-flow scenario engine, and multi-render agreement (`agree.mjs`). Renders 2–5 authored (two by isolated-context agents); the validator's first run against render 1 caught a real genesis-hash audit bug (fixed in the demo; retained as an injectable defect). Render 2 of the portal (Next.js + Postgres) completed and validated as render 6 — the real app's store. Findings logged in `DISCOVERIES.md` (2026-06-05 ×3, 2026-06-06).
+Human decision: Author approved the denominator rule (record-clearable, in-scope, equal-weight), the catch-and-fix handling of the genesis bug (spec unchanged; demo patched through review), and the six-render agreement claim wording.
+
+**2026-06-07**
+Model: Claude (opus — Cowork agent session)
+Work: Mongo ghost render built and verified in-sandbox (`demos/clinical-trial-portal-mongo`): spec-derived core on the mongodb driver, replica-set transactions, the fourth serialize-clause mechanism (unique chain-position index + optimistic retry, measured by `prove-serialization.mjs`), the invariant → enforcer discovery table, validator + ghost adapters; 20/20 conformance, seven-render agreement at 100%, chain byte-identical under the JS canonical contract. Go render compiled and verified against its golden in-sandbox. Public docs updated (demos.md, DISCOVERIES.md 2026-06-07 entry); root-doc currency sweep (readme tree, CHANGELOG, EXECUTION_CONTRACT fourth mechanism, PRESSURE_TESTING round-structure canonicalization, linter TAXONOMY exclusion).
+Human decision: Author directed the render's discovery framing (findings vs CORNERS routing), committed the render after reviewing the proposed message, approved adding ghost renders to the public docs ("more evidence"), and commissioned the root-doc sweep.
+
 ---
 
 ## Ongoing log format

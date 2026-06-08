@@ -81,7 +81,9 @@ def load_patterns(root: Path) -> dict[Path, Pattern]:
     for d in PATTERN_DIRS:
         for md in sorted((root / d).rglob("*.md")):
             name = md.name.lower()
-            if name == "readme.md" or name == "index.md":
+            # readme/index are catalogs; TAXONOMY.md is a proposal doc
+            # (nav_exclude, "Status: proposal") — none are patterns.
+            if name in ("readme.md", "index.md", "taxonomy.md"):
                 continue
             text = md.read_text(encoding="utf-8")
             out[md] = Pattern(
