@@ -23,7 +23,9 @@ The topological ordering principle is codified in [`PRESSURE_TESTING.md`](./PRES
 
 ---
 
-## Current state — 2026-06-04
+## Current state — 2026-06-08
+
+**Taxonomy flattened; status reconciled — 2026-06-08.** The `atoms/<category>/` subfolders were dissolved; atoms are stored flat (`atoms/<name>.md`) with classification derived (overlays from the composition graph; `domain` the one intrinsic, EOS-gated axis), and the per-category READMEs replaced by a generated browse-by-overlay catalog (`atoms/index.md`, via `tools/taxonomy/generate_views.py`). Corpus unchanged at **45 grounded patterns (27 atoms, 18 compositions)**; the move was path-safe — all 74 formal models still found and green. This ROADMAP's atom/composition status was then reconciled to reality: the planned-sequence atoms (#7–#14) are all grounded, and the genuine remaining composition backlog is **C6, C7, C11, C15, C17, C18** (all unblocked, none blocked on a missing atom). See [`atoms/TAXONOMY.md`](./atoms/TAXONOMY.md).
 
 **Coverage GAPs closed — 2026-06-04.** The 6 genuine coverage GAPs the inaugural cross-check surfaced (Medication Order Inv 3/4, Credential Inv 7, Legal Hold Inv 6, Provisional Commitment Inv 8, Capacity Constraint Inv 5; plus the Inv 14 reconsideration) are **all closed** — produced by parallel Sonnet subagents, Opus-gated (diff review + independent harness re-run). Medication Order gained an Alloy structural model (`medication-order.als`, mirroring `clinical-observation.als`) covering the pre-dispensing-only + linear-amendment invariants; Credential, Legal Hold, Provisional Commitment, and Capacity Constraint gained TLA+ model extensions (rotation-chain link; two-clock temporal ordering; release/expire transition timestamps; a `release` action making non-negativity non-vacuous). Capacity Constraint Inv 14 (within-action atomicity) was reconsidered to **out-of-scope** (a host obligation, not an action-vs-action interleaving — parallels Party Identity Inv 11). Every vote-named load-bearing invariant across the five patterns now carries a named check **and its own dedicated, checker-rejected buggy twin** — Legal Hold, Provisional Commitment, Capacity Constraint, and (on a 2026-06-04 follow-up audit) Credential each carry a second isolated twin so no previously-covered invariant lost its counterexample when the new check landed. (Credential initially shipped a single combined twin in which the shorter Inv 7 counterexample masked the Inv 2 counterexample; the follow-up split it into `credential-buggy.tla` (Inv 7) and `credential-buggy-toctou.tla` (Inv 2).) The five patterns drop their `formal coverage: Inv N pending` caveat and return to unqualified `grounded`. See [`tools/harness/coverage/README.md`](./tools/harness/coverage/README.md) §Resolution. Harness re-run green: 5 correct models hold, 9 twins rejected.
 
@@ -110,9 +112,9 @@ The healthcare atoms (Clinical Observation, Medication Order) are outside the co
 
 ---
 
-## Remaining atoms — in draft order
+## Planned-sequence atoms — all grounded (roadmap history)
 
-Five atoms remain on the planned-sequence list (atom #7 Provenance and atom #9 Workflow / State Machine both grounded 2026-06-04; their entries below are retained as roadmap history). They are sequenced by how many downstream compositions they unblock.
+All of atoms #7–#14 are now grounded; none remains on the planned sequence. The detailed entries below are retained as roadmap history (originally sequenced by how many downstream compositions each unblocked).
 
 ---
 
@@ -174,7 +176,7 @@ Five atoms remain on the planned-sequence list (atom #7 Provenance and atom #9 W
 
 **Classification:** stored flat as `atoms/credential.md` — no category folder. Its **regulated** and **security** classifications are overlays derived from its composers, not a folder it is filed under; this resolves the former provisional `compliance/` placement and the question of a dedicated security/identity folder. See the [usage-derived taxonomy](./atoms/TAXONOMY.md).
 
-**Status:** Not started.
+**Status:** `grounded` 2026-05-19 (Final Critique 4); formal layer landed 2026-06-03 (`credential.tla` + buggy twins). Retained below as roadmap history.
 
 **What it is.** An authentication primitive: a durable binding between a principal and a secret or token that the principal presents to prove they are who they claim to be. Credential models the registration of that binding, the verification of presented material against it, the rotation of the binding to a new secret while retiring the prior one, and the revocation of the binding entirely. Each credential record is tied to exactly one principal at registration and that binding is immutable; rotation produces a *new* credential record bound to the same principal, never a mutation of the prior one. The prior record transitions to the terminal state `Rotated`, preserving the full rotation history in the record store. Actions: `register`, `verify`, `rotate`, `revoke`.
 
@@ -192,7 +194,7 @@ Five atoms remain on the planned-sequence list (atom #7 Provenance and atom #9 W
 
 **Classification:** stored flat as `atoms/session.md` — no category folder. Its **regulated** and **security** classifications are overlays derived from its composers, not a folder it is filed under; this resolves the former provisional `compliance/` placement and the question of a dedicated security/identity folder. See the [usage-derived taxonomy](./atoms/TAXONOMY.md).
 
-**Status:** Not started.
+**Status:** `grounded` 2026-05-19 (Final Critique 4); formal-layer vote reconsidered to NO (formal-not-warranted; records-alone, interleaving lives in Session-Gated Authorization). Retained below as roadmap history.
 
 **What it is.** A time-limited authenticated channel primitive: a record attesting that a given principal was authenticated at a specific moment and that the authentication remains valid until the session expires or is explicitly revoked. Session does not perform authentication — that is Credential's surface. Session records the *result* of a successful authentication and makes it queryable by composing systems for the duration of its validity. Each session carries an `expires_at` timestamp set at issuance and never mutated; extension of a session produces a new session record, not a modification of the prior one. Actions: `issue`, `validate`, `expire`, `revoke`. State machine: Active → Expired | Revoked (two terminal states).
 
@@ -210,7 +212,7 @@ Five atoms remain on the planned-sequence list (atom #7 Provenance and atom #9 W
 
 **Classification:** stored flat as `atoms/capability.md` — no category folder. The object-capability literature anchors it as a security primitive; under the usage-derived taxonomy that shows up as a derived **security** overlay (alongside **regulated**), not a folder placement. This resolves the former provisional `compliance/` placement. See the [usage-derived taxonomy](./atoms/TAXONOMY.md).
 
-**Status:** Not started.
+**Status:** `grounded` 2026-05-19 (Final Critique 4; Alloy model `capability.als` + buggy twin). Retained below as roadmap history.
 
 **What it is.** A bearer-token authorization primitive: an unforgeable token that carries its own authorization to access a specific resource or perform a specific action. The defining property of a Capability is that possession of the token is sufficient authorization — the redeemer's identity is intentionally irrelevant at redemption time. Capability generalizes single-use links (a password-reset link), multi-use API tokens (a service credential scoped to a single resource), and pre-authorized action tokens under one structural pattern. Each capability carries a `remaining_redemptions` counter set at allocation (default 1) and decremented monotonically on each redemption; a capability with `remaining_redemptions = 0` is exhausted and terminal. Actions: `allocate`, `redeem`. State machine: Allocated → Redeemed | Expired | Revoked (three terminal states, with exhaustion via counter being the structural route to Redeemed).
 
@@ -228,7 +230,7 @@ Five atoms remain on the planned-sequence list (atom #7 Provenance and atom #9 W
 
 **Classification:** stored flat as `atoms/invitation.md` — no category folder. Its core concern is onboarding an external entity into a system identity context; under the usage-derived taxonomy that is captured by its derived **security** and **regulated** overlays rather than a dedicated identity folder. This resolves the former provisional `compliance/` placement. See the [usage-derived taxonomy](./atoms/TAXONOMY.md).
 
-**Status:** Not started.
+**Status:** `grounded` 2026-05-19 (Final Critique 4); formal layer landed 2026-06-03 (`invitation.tla` + buggy twin). Retained below as roadmap history.
 
 **What it is.** A lifecycle primitive for inviting an external entity to join a context: a durable record of the invitation event itself, from the moment the invitation is issued through its resolution — accepted, declined, expired, or revoked before resolution. The defining property of Invitation is that the invitee's identity may not be known or validatable at initiation time; the moment of acceptance is when an identity is bound. Actions: `initiate`, `accept`, `decline`, `revoke`, `expire`. State machine: Pending → Accepted | Declined | Expired | Revoked (four terminal states). `accept` carries an `accepting_identity_ref` argument — the identity is bound at the moment of acceptance and is immutable thereafter.
 
@@ -354,7 +356,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 ---
 
-### Blocked on remaining atoms
+### Formerly blocked on remaining atoms — now grounded or unblocked
 
 #### C12. Chain of Custody
 
@@ -404,7 +406,7 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 #### C15. Capability-Backed Sharing
 
-**Prerequisites:** Capability *(atom #13 — not started)* + Selective Disclosure (grounded) + Audit Trail substrate (grounded).
+**Prerequisites:** Capability *(atom #13 — grounded)* + Selective Disclosure (grounded) + Audit Trail substrate (grounded) — all grounded; this composition is unblocked, not started.
 
 **What it adds.** A capability token allocated to authorize disclosure of a record subset; redemption triggers the disclosure and the audit record in one wired step. The emergent invariant is the audit-subject asymmetry: the audit record reads "disclosed by bearer of capability X, allocated by actor Y at time T" — the allocator is identified (via the Capability atom's allocation provenance invariant), the redeemer is structurally not. This is the library's worked example of bearer-token semantics composing with regulated audit without breaking either: Selective Disclosure's invariants are satisfied (a disclosure record exists); Capability's bearer-key semantics are satisfied (no identity check at redemption); the Audit Trail records what was disclosed, by whom it was authorized, and that a bearer redeemed it. The load-bearing wiring decision: the audit-subject asymmetry is defended in-line in the composition because it is a property of the wiring, not of either constituent.
 
@@ -424,42 +426,42 @@ These compositions have all their constituent atoms grounded. They are ready for
 
 | # | Pattern | Type | Status | Unblocks / Notes |
 |---|---------|------|--------|------------------|
-| — | Personal Todo, Assignment | Atoms | Personal Todo: `grounded` 2026-05-13; Assignment: `grounded (Eng) — formal pending` 2026-05-13 | `productivity` |
-| — | Duplicate Prevention, Event Log | Atoms | `grounded (Eng) — formal pending` 2026-05-13 | `temporal` |
-| — | Provisional Commitment | Atom | `grounded (Eng) — formal pending` 2026-05-13 | `resource-lifecycle` |
-| — | Actor Identity, Retention Window, Tamper Evidence, Permissions | Atoms | Actor Identity, Tamper Evidence: `grounded` 2026-05-13; Retention Window, Permissions: `grounded (Eng) — formal pending` 2026-05-13 | `compliance` |
-| — | Subscription, Notification | Atoms | `grounded (Eng) — formal pending` 2026-05-13 | `messaging` |
-| — | Clinical Observation, Medication Order | Atoms | `grounded (Eng) — formal pending` 2026-05-13 | `healthcare` (outside core sequence) |
-| 1 | Legal Hold | Atom | `grounded (Eng) — formal pending` 2026-05-13 | C1, C7 |
-| 2 | Consent | Atom | `grounded (Eng) — formal pending` 2026-05-13 | C2, C7, C8 |
+| — | Personal Todo, Assignment | Atoms | Personal Todo: `grounded` 2026-05-13; Assignment: `grounded` 2026-05-13 | `productivity` |
+| — | Duplicate Prevention, Event Log | Atoms | `grounded` 2026-05-13 | `temporal` |
+| — | Provisional Commitment | Atom | `grounded` 2026-05-13 | `resource-lifecycle` |
+| — | Actor Identity, Retention Window, Tamper Evidence, Permissions | Atoms | Actor Identity, Tamper Evidence: `grounded` 2026-05-13; Retention Window, Permissions: `grounded` 2026-05-13 | `compliance` |
+| — | Subscription, Notification | Atoms | `grounded` 2026-05-13 | `messaging` |
+| — | Clinical Observation, Medication Order | Atoms | `grounded` 2026-05-13 | `healthcare` (outside core sequence) |
+| 1 | Legal Hold | Atom | `grounded` 2026-05-13 | C1, C7 |
+| 2 | Consent | Atom | `grounded` 2026-05-13 | C2, C7, C8 |
 | 3 | Soft Delete | Atom | `grounded` 2026-05-13 | C3 |
-| 4 | Approval Step | Atom | `grounded (Eng) — formal pending` 2026-05-13 | C4 |
+| 4 | Approval Step | Atom | `grounded` 2026-05-13 | C4 |
 | 5 | Selective Disclosure | Atom | `grounded` 2026-05-13 | C6, C7 |
-| 6 | Party Identity | Atom | `grounded (Eng) — formal pending` 2026-05-14 | C8 |
+| 6 | Party Identity | Atom | `grounded` 2026-05-14 | C8 |
 | 7 | Provenance | Atom | `grounded` 2026-06-04 | Unblocks C12 (Chain of Custody); enriches C6, C7, C8; Alloy model + buggy twin |
-| 8 | Capacity Constraint Enforcement | Atom | `grounded (Eng) — formal pending` 2026-05-15 | C9 |
+| 8 | Capacity Constraint Enforcement | Atom | `grounded` 2026-05-15 | C9 |
 | 9 | Workflow / State Machine | Atom | `grounded` 2026-06-04 | Unblocks C10; resolves workflow-category one-atom question; Alloy model + buggy twin |
-| 10 | Preference / Personalization | Atom | `grounded (Eng) — formal pending` 2026-05-29 | C11; grounded on Final Critique 5; ten hard invariants + Temporal property 11 |
-| 11 | Credential | Atom | `grounded (Eng) — formal pending` 2026-05-19 | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
-| 12 | Session | Atom | `grounded (Eng) — formal pending` 2026-05-19 | C13 (Login), C14 (Session-Gated Authorization) |
+| 10 | Preference / Personalization | Atom | `grounded` 2026-05-29 | C11; grounded on Final Critique 5; ten hard invariants + Temporal property 11 |
+| 11 | Credential | Atom | `grounded` 2026-05-19 | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
+| 12 | Session | Atom | `grounded` 2026-05-19 | C13 (Login), C14 (Session-Gated Authorization) |
 | 13 | Capability | Atom | `grounded` 2026-05-19 | C15 (Capability-Backed Sharing) |
-| 14 | Invitation | Atom | `grounded (Eng) — formal pending` 2026-05-19 | C16 (External Onboarding) |
-| — | Undo History | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Personal Todo + Event Log |
-| — | Idempotent Reservation | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Provisional Commitment + Duplicate Prevention |
-| — | Audit Trail | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Event Log + Actor Identity + Retention Window + Tamper Evidence |
-| — | Shared Todo | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Personal Todo + Permissions + Assignment |
+| 14 | Invitation | Atom | `grounded` 2026-05-19 | C16 (External Onboarding) |
+| — | Undo History | Composition | `grounded` 2026-05-13 | Personal Todo + Event Log |
+| — | Idempotent Reservation | Composition | `grounded` 2026-05-13 | Provisional Commitment + Duplicate Prevention |
+| — | Audit Trail | Composition | `grounded` 2026-05-13 | Event Log + Actor Identity + Retention Window + Tamper Evidence |
+| — | Shared Todo | Composition | `grounded` 2026-05-13 | Personal Todo + Permissions + Assignment |
 | — | Notification Fanout | Composition | `grounded` 2026-05-13 | Subscription + Notification |
 | — | Attributed Permissions Admin | Composition | `grounded` 2026-05-18 | Permissions + Actor Identity; first two-compliance-atom composition; ships with dynamic Alloy trace model |
 | — | Privileged Access Provisioning | Composition | `grounded` 2026-05-20 | Multi-Party Approval + Credential + Session + Capability + Audit Trail; approval-gates-provisioning invariant; session-gated exercise; TLA+ behavioral model ships alongside |
 | — | Login | Composition | `grounded` 2026-05-20 | Credential + Session + Audit Trail; cascade invariant: Credential revocation invalidates all derived Sessions; `credential_to_sessions` map is the cascade mechanism |
-| C1 | Defensible Retention | Composition | `grounded (Eng) — formal pending` 2026-05-13 | Legal Hold + Audit Trail + Retention Window |
-| C2 | Consent & Preference Management | Composition | Unblocked; not started | Consent (grounded) |
+| C1 | Defensible Retention | Composition | `grounded` 2026-05-13 | Legal Hold + Audit Trail + Retention Window |
+| C2 | Consent & Preference Management | Composition | `grounded` 2026-06-04 | Consent + Permissions + Audit Trail (substrate); consent-gates-processing + revocation-propagation binding bijection; TLA+ model |
 | C3 | Forensic Recovery | Composition | `grounded` 2026-06-04 | Soft Delete + Audit Trail (substrate); attributed + tamper-evident + full-history-recoverable destruction lifecycle; purge-eligibility gate delegated to C1; TLA+ binding-bijection model |
 | C4 | Multi-Party Approval | Composition | `grounded` 2026-05-13 | Approval Step + Permissions + Assignment + Audit Trail |
 | C6 | Immutable Transaction Ledger | Composition | Unblocked; not started | Selective Disclosure (grounded) |
 | C7 | Data Subject Rights Fulfillment | Composition | Unblocked; not started | Legal Hold + Consent + Selective Disclosure (all grounded) |
-| C8 | KYC / Customer Onboarding | Composition | `grounded (Eng) — formal pending` 2026-06-03 | Party Identity + Consent (both grounded) |
-| C9 | Reservation Lifecycle | Composition | Unblocked; not started — **newly unblocked 2026-05-15** | Capacity Constraint Enforcement (grounded) + Provisional Commitment + Duplicate Prevention |
+| C8 | KYC / Customer Onboarding | Composition | `grounded` 2026-06-03 | Party Identity + Consent (both grounded) |
+| C9 | Reservation Lifecycle | Composition | `grounded` 2026-06-04 | Capacity Constraint + Provisional Commitment + Duplicate Prevention + Event Log + Actor Identity; allocation-coherence binding; TLA+ model |
 | C10 | Stateful Workflow Execution | Composition | `grounded` 2026-06-04 | Workflow / State Machine + Approval Step + Permissions + Assignment + Audit Trail (substrate); approval-gated transitions (guard *evaluation* re-converges); TLA+ model; first composition to compose Workflow / State Machine |
 | C12 | Chain of Custody | Composition | `grounded` 2026-06-04 | Provenance + Audit Trail (substrate, → Actor Identity + Tamper Evidence + Retention Window); records-alone custody proof; TLA+ binding-bijection model; cross-domain pharma≡legal-evidence flagship; first composition to compose Provenance |
 | C11 | Preference-Aware Notification Fanout | Composition | Unblocked; not started — **newly unblocked 2026-05-29** | Preference / Personalization (grounded) + existing Subscription, Notification, Notification Fanout |
