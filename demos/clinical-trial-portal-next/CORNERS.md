@@ -83,6 +83,39 @@ English was stack-dependent (BUILD_PLAN §9).
   parity) and renders newest-first for readability; the CSV export stays
   oldest-first (chain order) so an external verifier can re-walk it.
 
+### Test layer (BUILD_PLAN §7)
+
+- **Ported to `node:test`, not Vitest.** BUILD_PLAN §7 planned Vitest + Playwright;
+  the suite is instead **`node --test` + `node:assert/strict`** — zero new
+  dependencies (the repo's dependency-light house style), driven against an
+  ephemeral in-memory pglite (`PGLITE_DIR="memory://"`, the seam `lib/db.ts`
+  documents for tests). **117 tests across 15 files** mirror render 1's layers
+  one-to-one: 12 atom unit suites (`tests/atoms/`), composition rollback +
+  named-rejection (`composition.test.ts`), hash-chain tamper-evidence
+  (`tamper.test.ts`), and the full lifecycle walk (`e2e.test.ts`).
+  `tests/_helpers.ts` keeps one warm pglite per test file and runs
+  `TRUNCATE … RESTART IDENTITY` between tests — isolation without paying the WASM
+  init per test. `e2e.test.ts` drives the `composition.ts` surface directly (render
+  1 drove HTTP routes; render 2 has none to POST to) and asserts the audit log
+  equals the lifecycle's events *in exact order* (stronger than render 1's
+  set-membership). This closes the §7 gap — until now the render shipped a `test`
+  script with no tests behind it.
+- **`test` script fixed.** Was `node --test tests/` — a trailing-slash directory
+  arg node 22.22 resolves as a missing module (the script never ran). Now
+  `node --test "tests/**/*.test.ts"` (node expands the glob itself, so it is
+  `sh`-safe under `npm test` and recurses into `tests/atoms/`).
+- **Divergences the port surfaced — render 2's domain surface is deliberately
+  leaner.** Several render-1 helpers/validations are absent; the ported tests
+  assert render 2's *actual* behavior (each adaptation noted inline in the test
+  file), never a weakened check: no `display_name` on the Actor row (it lives on
+  the bound Party); `credentials` exposes only `getActiveByActorId`/`create` (no
+  `revoke`/`getById`); no `grants.listForActor`, `subjects.getByCode` /
+  `updateStatus`, or `visits.getById`; `subjects` codes are `COUNT(*)+1` (vs render
+  1's max-suffix+1); `studies`/`visits` `create` dropped render 1's empty-field
+  guards (Postgres `NOT NULL` accepts `""`); `retention_policy.ensure` seeds
+  `enforce_on_read=false` and is `ON CONFLICT DO NOTHING`. None is a spec
+  contradiction — each is a render-layer data point of the kind this file tracks.
+
 ## Convention (carried, not cuts)
 
 - **`composition.ts` is the only mutation surface** for the five business

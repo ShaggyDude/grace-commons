@@ -1,5 +1,13 @@
 # Beacon Clinical Research — **Second Render** (Next.js + PostgreSQL + RSC)
 
+### Live demo
+
+https://beacon-clinical-next.fly.dev
+
+Login: `anya@beacon.clinical` / `demo-pi` (PI) · `jordan@beacon.clinical` / `demo-cra` (CRA)
+
+---
+
 **Thesis: the spec is canonical.** This is the *second render* of the same Grace
 Commons compositions that produced [`demos/clinical-trial-portal`](../clinical-trial-portal/)
 (the first render: Deno + Hono + SQLite + HTMX). It re-expresses the **same**

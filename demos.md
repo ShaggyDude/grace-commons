@@ -27,7 +27,7 @@ The Beacon Clinical Research Portal is rendered four ways from the *same* Grace 
 | Render | Stack | Status |
 |---|---|---|
 | 1 | Deno · Hono · SQLite · HTMX | **Live** — [beacon-clinical.fly.dev](https://beacon-clinical.fly.dev/) |
-| 2 | Next.js 15 · PostgreSQL · React Server Components | [source](https://github.com/scottromack/grace-commons/tree/main/demos/clinical-trial-portal-next) — live demo pending deploy |
+| 2 | Next.js 15 · PostgreSQL · React Server Components | **Live** — [beacon-clinical-next.fly.dev](https://beacon-clinical-next.fly.dev/) · [source](https://github.com/scottromack/grace-commons/tree/main/demos/clinical-trial-portal-next) |
 | 3 | Go (headless) · Python verification twin | [source](https://github.com/scottromack/grace-commons/tree/main/demos/clinical-trial-portal-go) — cross-language chain proof |
 | 4 | MongoDB (headless) · mongodb-memory-server | [source](https://github.com/scottromack/grace-commons/tree/main/demos/clinical-trial-portal-mongo) — document-store proof: where Postgres-carried invariants go when the declarative layer disappears |
 

@@ -12,7 +12,7 @@
     "seed": "node scripts/seed.ts",
     "verify": "node scripts/verify.ts",
     "prove-chain": "node scripts/prove-chain.ts",
-    "test": "node --test tests/"
+    "test": "node --test \"tests/**/*.test.ts\""
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.1",
