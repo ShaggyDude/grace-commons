@@ -16,6 +16,13 @@ the three-pass review otherwise has to catch by eye —
                               links to a file which is already `grounded`.
   E. Count honesty          — "NN grounded patterns / NN compositions" claims in
                               ROADMAP.md and readme.md match the real file counts.
+  F. Rests-on refs          — a "<Pattern> Invariant N" cross-reference (as used in
+                              invariant *Rests on:* clauses) resolves: N <= the cited
+                              pattern's real invariant count. The tractable mechanical
+                              slice of the capability-provenance rule (PRESSURE_TESTING.md
+                              §Capability provenance); the broader "is this capability
+                              actually declared by that constituent" check stays a
+                              fresh-reader Pass-2 concern (paraphrased names defeat a regex).
 
 Design notes (this tool is meant to be maintained by a small/cheap model):
   - Standard library only. No deps. Runs anywhere `python3` does.
@@ -58,6 +65,9 @@ INV_COUNT_REF = re.compile(
     r"\[[^\]]+\]\((\.{1,2}/[^)]+?\.md)(?:#[^)]*)?\)",
     re.I,
 )
+# the pattern's display name, read from its H1 title (trailing " (Cxx)" stripped)
+H1_TITLE = re.compile(r"^#\s+(.+?)\s*$", re.M)
+TRAILING_PAREN = re.compile(r"\s*\([^)]*\)\s*$")
 
 
 @dataclass
@@ -248,6 +258,46 @@ def check_counts(root: Path, patterns: dict[Path, Pattern]) -> list[Finding]:
     return findings
 
 
+def check_rests_on_refs(patterns: dict[Path, Pattern], md_files: list[Path]) -> list[Finding]:
+    """F. A '<Pattern> Invariant N' reference resolves: N <= that pattern's count.
+
+    The tractable mechanical slice of the capability-provenance rule
+    (PRESSURE_TESTING.md §Capability provenance): it catches a cross-reference to an
+    invariant *number* a pattern does not have (the dangling-number class). It
+    deliberately does NOT verify that the cited capability is the *right* one —
+    paraphrased parenthetical names ("Invariant 4 (cross-store atomicity)" for a
+    header named "Cascade-on-purge") are legitimate and would false-positive a name
+    match — so the broader "is this capability actually declared by that constituent"
+    check stays a Pass-2 fresh-reader concern. High precision: fires only when an
+    exact known pattern name is immediately followed by "Invariant(s) <n>".
+    """
+    by_name: dict[str, int] = {}
+    for p in patterns.values():
+        m = H1_TITLE.search(p.text)
+        if not m or not p.invariant_count:
+            continue
+        name = TRAILING_PAREN.sub("", m.group(1).strip()).strip()
+        if name:
+            by_name[name] = p.invariant_count
+    refs = [
+        (re.compile(r"(?<![A-Za-z])" + re.escape(nm)
+                    + r"\s+Invariants?\s+([0-9][0-9,\s]*(?:and\s+[0-9]+)?)"), nm, count)
+        for nm, count in by_name.items()
+    ]
+    findings: list[Finding] = []
+    for md in md_files:
+        text = md.read_text(encoding="utf-8")
+        for rx, nm, count in refs:
+            for m in rx.finditer(text):
+                for n in (int(x) for x in re.findall(r"\d+", m.group(1))):
+                    if n > count:
+                        findings.append(Finding(
+                            md, line_of(text, m.start()), "F-invariant-ref",
+                            f"cites {nm} Invariant {n}, but {nm} declares {count}",
+                        ))
+    return findings
+
+
 # --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
@@ -271,6 +321,7 @@ def main(argv: list[str]) -> int:
     findings += check_models_present(patterns)
     findings += check_stale_forthcoming(root, patterns, scan)
     findings += check_counts(root, patterns)
+    findings += check_rests_on_refs(patterns, scan)
 
     findings.sort(key=lambda f: (f.code, str(f.path), f.line))
     for f in findings:

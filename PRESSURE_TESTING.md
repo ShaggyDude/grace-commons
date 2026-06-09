@@ -45,7 +45,7 @@ The three passes are recursive in a useful way: applying them to a pattern produ
 | Behavior | Must be observable — not inferred |
 | Proof | Must be measurable and defined before development begins, and must name its verification surface — records-alone checks, and/or a derived formal model where the formal-layer vote requires one (see *Formal models* below) |
 
-Then check the reference graph: every Friction links to a Flow step; every Decision links to State and Behavior; every Proof links to Intent. Orphaned references (links that point to something not defined in the spec) are violations.
+Then check the reference graph: every Friction links to a Flow step; every Decision links to State and Behavior; every Proof links to Intent. Orphaned references (links that point to something not defined in the spec) are violations. The same check extends to invariant dependencies: every *Rests on:* clause must resolve to a declared capability (see *Capability provenance*) — a dependency on an undeclared substrate or constituent capability is an orphaned reference of the same class.
 
 Then check accessibility completeness — two structural checks that are mechanical, not adversarial, and belong in Pass 1:
 
@@ -72,6 +72,8 @@ For compositions that define a named semantics subsection (Replay semantics, Eva
 - Does this concern have its own state machine, distinct from the host concept's? (If so, almost certainly its own concept.)
 - Could the host concept be specified without this concern, with the concern composed in? (If yes, extract.)
 - Would another concept that needs this concern reinvent it? (If yes, extract.)
+
+A sibling boundary error EOS also owns is **capability mis-attribution**: an invariant or action that pins a capability on a constituent which does not expose it. The capability is real and emergent, but it belongs to a composition-introduced surface or a not-yet-extracted atom — not the constituent it is named on. Treat it like over-absorption in reverse: surface the real owner and declare the dependency there (see *Capability provenance*).
 
 **Time:** 10–20 minutes once familiar with the existing atom catalog. Faster as the catalog grows — a quick scan against existing atoms surfaces most over-absorptions.
 
@@ -229,6 +231,29 @@ Tracing the rubric through it:
 - *Result:* readers choose detail level; consistency preserved.
 
 **Apply to every architectural claim.** Atomic-pattern specs, application specs, methodology documents, and outreach material all benefit from this discipline. Where an architectural claim does not yet have a defended-in-line form, that is a writing gap to fix in the next revision — not a structural gap that needs a pass.
+
+---
+
+## Capability provenance — invariants may depend only on declared capabilities
+
+An invariant is only as sound as the authority it quantifies over. The strongest form of the reference-graph discipline, applied to invariant dependencies: **every clause an invariant rests on must trace to an *explicitly declared* capability — never to an implicit assumption that a constituent or substrate "can" do something it does not declare.** This is *no ambient authority* — the core tenet of capability-based security — lifted to the invariant layer: an invariant may rely only on authority explicitly held somewhere in the spec graph.
+
+A legitimate invariant dependency traces to exactly one of four declared sources:
+
+- a **named constituent invariant or action** — `Audit Trail Invariant 3`, `AuditTrail.verify_record`, a Tamper Evidence seal — something the constituent's own spec states it has;
+- a **deployment-declared configuration capability** — a named, deployment-set obligation such as `tamper_evidence_supports_partial_disclosure`;
+- a **composition-introduced surface** — an emergent action the composition itself defines and owns (a `verify_disclosure` specified at the composition's own layer); or
+- a **declared dependency on a named peer pattern** — an atom or composition the spec does *not* compose but explicitly names, where that peer genuinely declares the capability and the spec states the deployment's obligation to wire it (a conditional invariant whose antecedent is "the named peer is wired"). This differs from an undeclared dependency precisely in being *named*: the owner is real and stated, not an ambient "the substrate can…".
+
+An invariant resting on anything else — *"the substrate can produce…"*, *"the mechanism supports…"* with no declaring source — carries an **undeclared dependency**, a foundational finding. The invariant's *Rests on:* line is the provenance record where this is enforced: every entry must resolve to one of the three sources.
+
+**Declared is not verified.** The rule governs provenance, not soundness. An invariant *may* rest on a declared-but-unverified capability — a deployment-asserted obligation the records cannot confirm — provided it is stated *as* an obligation with its verification routed to an externally-clearable check (see *Generation acceptance*). The rule forbids *undeclared* dependencies, not *unverified* ones; conflating the two would forbid every legitimately **conditional** invariant — one whose antecedent is a declared capability the deployment supplies, stated with the antecedent inside the invariant rather than as an after-the-fact weakening clause.
+
+**Which pass owns it.** Detection is a **Pass 2 (EOS)** concern: attributing a capability to a constituent that does not expose it is a boundary error of the same family as over-absorption — the concern is mis-housed, belonging to a composition-introduced surface or a not-yet-extracted atom rather than the constituent it is pinned on; the fix names the real owner. The mechanical form is a **Pass 1 reference-graph** check: every *Rests on:* entry resolves to a declared source, exactly as every relative link must resolve to a real file. A future [`tools/linter/lint.py`](tools/linter/lint.py) check — the *dangling-capability* check, sibling to the existing dangling-link check — can enforce the mechanical half: parse each invariant's *Rests on:* clause and flag any referenced capability that names no declaring constituent invariant/action, configuration knob, or composition surface.
+
+**Worked origin.** Surfaced by the fresh-reader council on [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) (C6, Final Critique 5, finding FC5-1): Invariant 2 (verifiable partial disclosure) rested on "the Audit Trail substrate's Tamper Evidence surface" producing a *subset* inclusion proof — but the Tamper Evidence atom verifies only *whole* record-sets, so the capability was pinned on a constituent action that does not exist. The fix re-declared the dependency at two of the legitimate sources (a composition-introduced `verify_disclosure` surface resting on a deployment-declared mechanism capability) and seeded a forthcoming Subset Proof atom as the eventual named-constituent home. An author reviewing their own work is structurally prone to this miss: the assumed capability *feels* declared because the author knows what they meant — the fresh-reader EOS seat, lacking that context, reads only what the spec actually grants. The rule is the generalization that makes the miss catchable before a fresh reader is available.
+
+**Corpus rescan (2026-06-08).** A fresh-reader sweep of all eighteen then-grounded compositions against this rule found **zero** undeclared dependencies — the substrate-composition template the library already uses attributes capabilities to named constituent actions/invariants, so C6's FC5-1 was the unique instance, closed when it landed. The sweep did pressure-test the rule itself: Privileged Access Provisioning's Invariant 4 (cascading revocation) rests on Login's `revoke_sessions_for_credential` — a *peer* composition PAP names but does not compose — which the original three-source list (written from the C6 case) did not cover. The capability is real and the dependency is declared, so it is sound; the **fourth source** above was added to name the peer-pattern case explicitly. The rescan also surfaced one mechanical nit the [`lint.py`](tools/linter/lint.py) check below cannot catch — Forensic Recovery cited "Event Log Invariant 1 (total order preserved)" when total order is Event Log Invariant 3 (Invariant 1 is append-only); the number was in range, so only a name-aware reader catches it. The division of labor is the lesson: the linter catches out-of-range invariant *numbers*; the fresh-reader Pass-2 catches name/number *mismatches* and phantom *capabilities*.
 
 ---
 
