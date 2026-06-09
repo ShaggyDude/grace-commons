@@ -1,4 +1,4 @@
-# MEASUREMENT
+# Measurement
 
 Companion to [`pressure-testing.md`](./pressure-testing.md): that's the quality
 bar, this is the cost. One rule, kept deliberately simple.
