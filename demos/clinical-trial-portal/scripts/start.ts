@@ -1,5 +1,5 @@
 /**
- * Start: Boot the Hono server on 127.0.0.1:8000
+ * Start: Boot the Hono server on 0.0.0.0:8000
  *
  * Usage: deno run -A scripts/start.ts
  *
@@ -10,7 +10,7 @@ import { Hono } from "hono";
 import { openDb } from "../lib/db.ts";
 import { Layout } from "../views/_layout.tsx";
 
-const HOST = "127.0.0.1";
+const HOST = "0.0.0.0";
 const PORT = 8000;
 
 // Ensure migrations are applied
