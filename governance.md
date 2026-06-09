@@ -22,7 +22,7 @@ toc: true
 
 A pattern library is only as useful as it is trustworthy. Anyone can publish a collection of specs. What makes a spec worth building against is knowing it has been reviewed, that it won't change underneath you without notice, and that the version you built against is the same one everyone else sees.
 
-The three-pass methodology in [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) handles the quality bar for individual patterns. This document proposes what sits above that — the process for admitting patterns to the canonical library, and the mechanism that makes "admitted" mean something durable.
+The three-pass methodology in [`pressure-testing.md`](./pressure-testing.md) handles the quality bar for individual patterns. This document proposes what sits above that — the process for admitting patterns to the canonical library, and the mechanism that makes "admitted" mean something durable.
 
 ---
 
@@ -62,9 +62,9 @@ This is the library applying its own [Tamper Evidence](./atoms/tamper-evidence.m
 
 ## Relationship to existing documents
 
-- [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) — the authoring standard that feeds the Council's review gate.
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — the contribution lifecycle that precedes Council admission.
-- [`EXECUTION_CONTRACT.md`](./EXECUTION_CONTRACT.md) — sealed patterns are the stable inputs to the compilation pipeline.
+- [`pressure-testing.md`](./pressure-testing.md) — the authoring standard that feeds the Council's review gate.
+- [`contributing.md`](./contributing.md) — the contribution lifecycle that precedes Council admission.
+- [`execution-contract.md`](./execution-contract.md) — sealed patterns are the stable inputs to the compilation pipeline.
 - [Tamper Evidence](./atoms/tamper-evidence.md) — the integrity primitive the sealing mechanism instantiates.
 
 ---

@@ -25,7 +25,7 @@ Grace Commons is early and foundational. The pattern library is being built. Thi
 
 **Domain expertise.** The patterns that matter most are the ones that appear in regulated industries with formal standards behind them — healthcare, finance, logistics, government. If you work in one of these domains and recognize the problem this library is trying to solve, your knowledge of what the standards actually say is directly valuable.
 
-**Honest criticism.** The architectural philosophy is in `THE_SPEC_LAYER.md`. If you think it is wrong in ways that matter, say so. The most useful response is the honest one.
+**Honest criticism.** The architectural philosophy is in `the-spec-layer.md`. If you think it is wrong in ways that matter, say so. The most useful response is the honest one.
 
 ---
 
@@ -96,7 +96,7 @@ A Grace Commons spec participates in three distinct verification layers. Each ca
 
 **Layer 3 — Property-based and exhaustive tests (implementation time).** Once a spec is compiled to running code via the Execution Contract, the spec's invariants become checkable properties in a property-based testing framework (Hypothesis, fast-check, QuickCheck). The framework generates and exhausts the input space against the stated properties, verifying that the implementation satisfies every invariant the spec declares. This layer does not live in the spec library — Grace Commons defers implementations — but it belongs in the pipeline that derives implementations from specs. The verification harness is derived directly from the Generation acceptance bar and the application-level invariants. This approach has been demonstrated in practice; it is not yet codified as a formal convention in this library.
 
-These three layers are the full verification stack. The spec is canonical; the formal model checks it before implementation; the property tests verify the implementation against it. The governing principle is the *minimum-formalism principle* in `THE_SPEC_LAYER.md`: plain English by default, formalism introduced only when irreducible complexity requires it, high-logic tooling always under the hood.
+These three layers are the full verification stack. The spec is canonical; the formal model checks it before implementation; the property tests verify the implementation against it. The governing principle is the *minimum-formalism principle* in `the-spec-layer.md`: plain English by default, formalism introduced only when irreducible complexity requires it, high-logic tooling always under the hood.
 
 ---
 
@@ -115,7 +115,7 @@ Formal-model artifacts (Layer 2 above) are recognized companion artifacts to any
 
 Same directory, related base name, different extension. The extension identifies the tool; the naming makes the relationship self-evident without subdirectories. (Subdirectories are avoided because they interfere with Jekyll HTML generation from `.md` files.)
 
-**TLA+ filename rule (exception to base-name sharing).** The TLA+ parser (SANY) requires every `.tla` file to declare `MODULE <name>` where `<name>` is the file's basename exactly, and TLA+ identifiers cannot contain hyphens (`-` is the subtraction operator). This forces `.tla` filenames to lower-camelCase regardless of the kebab-case used for `.md` / `.als` / atom and composition names. The `.cfg` files paired with each `.tla` follow the same camelCase. Every other file type stays kebab-case. See [`DISCOVERIES.md`](./DISCOVERIES.md) §2026-05-23 for the full rationale and the planned future adapter that may restore kebab-case as the canonical surface.
+**TLA+ filename rule (exception to base-name sharing).** The TLA+ parser (SANY) requires every `.tla` file to declare `MODULE <name>` where `<name>` is the file's basename exactly, and TLA+ identifiers cannot contain hyphens (`-` is the subtraction operator). This forces `.tla` filenames to lower-camelCase regardless of the kebab-case used for `.md` / `.als` / atom and composition names. The `.cfg` files paired with each `.tla` follow the same camelCase. Every other file type stays kebab-case. See [`discoveries.md`](./discoveries.md) §2026-05-23 for the full rationale and the planned future adapter that may restore kebab-case as the canonical surface.
 
 **Tier discipline.** Formal artifacts are *spec-layer* artifacts. They live in the same tier as their canonical `.md` (`atoms/` for atoms, `compositions/` for compositions). They do not live in `demos/`, build-tier folders, POC subdirectories, or anywhere else downstream of the spec. The spec is canonical; the formal model validates the spec; both belong on the canonical side of the spec-versus-build line. A formal model that lives under a specific implementation's folder implicitly claims the implementation as its referent — which inverts SSOT, treats one build as the canonical artifact, and walls off other builds. Build-tier tooling (TLC runners, CI integration, build-specific harnesses) may live in implementation folders or in a top-level `tools/` location; the canonical `.tla`/`.als`/`.cfg` files do not.
 
@@ -151,7 +151,7 @@ A pattern — atomic or application — is `grounded` only after surviving three
 - **Pass 2 — Conceptual independence (EOS).** Does the spec absorb any concern that belongs to a separate freestanding atom?
 - **Pass 3 — Adversarial scrutiny (Linus mode).** Are there muddled identities, sloppy invariants, happy-path-only examples, or hidden load-bearing decisions?
 
-Each pass catches a different class of gap. None substitutes for the others. See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the full methodology and [`atoms/personal-todo.md`](./atoms/personal-todo.md) for a worked example whose Lineage notes record the arc.
+Each pass catches a different class of gap. None substitutes for the others. See [`pressure-testing.md`](./pressure-testing.md) for the full methodology and [`atoms/personal-todo.md`](./atoms/personal-todo.md) for a worked example whose Lineage notes record the arc.
 
 A pattern that has only survived one or two passes is *in process* — and that is a respectable state, provided the actual state is declared honestly per MUSE's completeness states (`unresolved`, `partially resolved`, `grounded`).
 

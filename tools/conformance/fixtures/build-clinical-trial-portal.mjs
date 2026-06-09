@@ -49,7 +49,7 @@ const FIXDIR = join(tmpdir(), "grace-commons-conformance");
 //   --defect genesis-hash      hash the genesis event WITHOUT `id` — render 1's
 //                              original seed-hash bug (fixed in the demo
 //                              2026-06-06; retained here as a reproducible
-//                              injection, see DISCOVERIES.md). verifyChain then
+//                              injection, see discoveries.md). verifyChain then
 //                              false-fails at event #1.
 //   --defect skip-grant-audit  a render that writes an operational grant row but
 //                              skips its audit append. The grant exists; its

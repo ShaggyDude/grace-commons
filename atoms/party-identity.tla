@@ -2,7 +2,7 @@
 \* Grace Commons — Party Identity atom.
 \* Spec-level formal sibling of atoms/party-identity.md.
 \* Derived validator; the English spec is the single source of truth. If this
-\* model and the English disagree, diagnose per PRESSURE_TESTING.md §The conflict
+\* model and the English disagree, diagnose per pressure-testing.md §The conflict
 \* protocol before changing either.
 \*
 \* WHAT THIS MODEL CHECKS

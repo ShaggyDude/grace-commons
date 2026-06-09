@@ -2,7 +2,7 @@
 \* Grace Commons — Medication Order atom.
 \* Spec-level formal sibling of atoms/medication-order.md.
 \* Derived validator; the English spec is the single source of truth. On any
-\* disagreement, diagnose per PRESSURE_TESTING.md §The conflict protocol.
+\* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
 \* The load-bearing claim is Invariant 5 (hold carries prior_state; reinstate

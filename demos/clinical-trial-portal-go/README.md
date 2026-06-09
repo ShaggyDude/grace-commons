@@ -55,7 +55,7 @@ invariant:
 | 2 — Postgres | `pg_advisory_xact_lock` |
 | 3 — Go | `sync.Mutex` |
 
-(See `../../DISCOVERIES.md`, 2026-06-06: the mechanism is non-portable; the invariant is not.)
+(See `../../discoveries.md`, 2026-06-06: the mechanism is non-portable; the invariant is not.)
 
 ## Notes
 
@@ -111,4 +111,4 @@ a generator can't rely on "happens to."
 - [`../clinical-trial-portal`](../clinical-trial-portal/) — render 1 (Deno/HTMX/SQLite)
 - [`../clinical-trial-portal-next`](../clinical-trial-portal-next/) — render 2 (Next.js/RSC/Postgres)
 - [`../../compositions/external-onboarding.md`](../../compositions/external-onboarding.md) · [`../../atoms/event-log.md`](../../atoms/event-log.md) — the specs
-- [`../../DISCOVERIES.md`](../../DISCOVERIES.md) — the re-render-as-conformance findings
+- [`../../discoveries.md`](../../discoveries.md) — the re-render-as-conformance findings

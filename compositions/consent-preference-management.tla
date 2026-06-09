@@ -2,7 +2,7 @@
 \* Grace Commons — Consent & Preference Management with Revocation Propagation (C2).
 \* Spec-level formal sibling of compositions/consent-preference-management.md.
 \* Derived validator; the English spec is the single source of truth. On any
-\* disagreement, diagnose per PRESSURE_TESTING.md §The conflict protocol.
+\* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
 \* The composition's load-bearing wiring decision is Invariant 3 (revocation-

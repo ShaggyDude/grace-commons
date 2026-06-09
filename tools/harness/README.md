@@ -47,7 +47,7 @@ A correct model needs every `check` UNSAT and every `run` SAT. A vacuous `run` (
 
 ## Pitfalls & checker dialect
 
-The *authoring* pitfalls — vacuity, store-scoping transitions, deriving idealizations instead of lagging them with a flag, saturating the bound, and the "model present" bar — are methodology and live in [`PRESSURE_TESTING.md`](../../PRESSURE_TESTING.md) §"Formal-model authoring pitfalls" and §"The formal-layer vote → the model-present bar". Read those before authoring. What follows is purely operational — the harness/checker quirks that cost real time:
+The *authoring* pitfalls — vacuity, store-scoping transitions, deriving idealizations instead of lagging them with a flag, saturating the bound, and the "model present" bar — are methodology and live in [`pressure-testing.md`](../../pressure-testing.md) §"Formal-model authoring pitfalls" and §"The formal-layer vote → the model-present bar". Read those before authoring. What follows is purely operational — the harness/checker quirks that cost real time:
 
 **Checker dialect (the WASM `tla-checker`).** Mirror the idiom already proven in the repo, not generic TLA+:
 

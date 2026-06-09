@@ -2,7 +2,7 @@
 \* Grace Commons — Audit Trail composition.
 \* Spec-level formal sibling of compositions/audit-trail.md.
 \* Derived validator; the English spec is the single source of truth. On any
-\* disagreement, diagnose per PRESSURE_TESTING.md §The conflict protocol.
+\* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
 \* The composition's load-bearing wiring decision is Invariant 4 (cascade-on-

@@ -15,11 +15,11 @@ the three-pass review otherwise has to catch by eye —
   D. Stale forthcoming      — a `*(forthcoming)*` marker in a list item that also
                               links to a file which is already `grounded`.
   E. Count honesty          — "NN grounded patterns / NN compositions" claims in
-                              ROADMAP.md and readme.md match the real file counts.
+                              roadmap.md and readme.md match the real file counts.
   F. Rests-on refs          — a "<Pattern> Invariant N" cross-reference (as used in
                               invariant *Rests on:* clauses) resolves: N <= the cited
                               pattern's real invariant count. The tractable mechanical
-                              slice of the capability-provenance rule (PRESSURE_TESTING.md
+                              slice of the capability-provenance rule (pressure-testing.md
                               §Capability provenance); the broader "is this capability
                               actually declared by that constituent" check stays a
                               fresh-reader Pass-2 concern (paraphrased names defeat a regex).
@@ -237,7 +237,7 @@ def check_counts(root: Path, patterns: dict[Path, Pattern]) -> list[Finding]:
     real_comps = len(comps)
 
     claim = re.compile(r"\*\*(\d+)\s+grounded\s+patterns\s*\(\s*(\d+)\s+grounded\s+compositions?\)\*\*")
-    for fname in ("ROADMAP.md", "readme.md"):
+    for fname in ("roadmap.md", "readme.md"):
         f = root / fname
         if not f.exists():
             continue
@@ -262,7 +262,7 @@ def check_rests_on_refs(patterns: dict[Path, Pattern], md_files: list[Path]) -> 
     """F. A '<Pattern> Invariant N' reference resolves: N <= that pattern's count.
 
     The tractable mechanical slice of the capability-provenance rule
-    (PRESSURE_TESTING.md §Capability provenance): it catches a cross-reference to an
+    (pressure-testing.md §Capability provenance): it catches a cross-reference to an
     invariant *number* a pattern does not have (the dangling-number class). It
     deliberately does NOT verify that the cited capability is the *right* one —
     paraphrased parenthetical names ("Invariant 4 (cross-store atomicity)" for a
@@ -306,9 +306,9 @@ def main(argv: list[str]) -> int:
     root = Path(argv[1]).resolve() if len(argv) > 1 else Path(__file__).resolve().parents[2]
     patterns = load_patterns(root)
     # link / forthcoming / count checks also scan the top-level canonical docs
-    extra_docs = [root / n for n in ("ROADMAP.md", "readme.md", "CLAUDE.md",
-                                     "PRESSURE_TESTING.md", "CONTRIBUTING.md",
-                                     "SPEC_FORMAT.md")]
+    extra_docs = [root / n for n in ("roadmap.md", "readme.md", "CLAUDE.md",
+                                     "pressure-testing.md", "contributing.md",
+                                     "spec-format.md")]
     pattern_files = [p.path for p in patterns.values()]
     readme_files = [root / d / "README.md" for d in PATTERN_DIRS] + [root / "compositions" / "README.md"]
     scan = pattern_files + [f for f in extra_docs if f.exists()] + [f for f in readme_files if f.exists()]

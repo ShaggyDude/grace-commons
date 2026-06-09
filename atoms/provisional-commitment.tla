@@ -2,7 +2,7 @@
 \* Grace Commons — Provisional Commitment atom.
 \* Spec-level formal sibling of atoms/provisional-commitment.md.
 \* Derived validator; the English spec is the single source of truth. On any
-\* disagreement, diagnose per PRESSURE_TESTING.md §The conflict protocol.
+\* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
 \* (1) Inv 7 — confirm-within-window: a commitment may reach Confirmed ONLY if

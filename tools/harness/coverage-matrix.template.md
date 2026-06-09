@@ -1,6 +1,6 @@
 # Coverage matrix — `<pattern-name>`
 
-> Fill-in template for the formal-layer **coverage cross-check** (PRESSURE_TESTING.md
+> Fill-in template for the formal-layer **coverage cross-check** (pressure-testing.md
 > §"The coverage cross-check"). One filled matrix per vote-yes pattern is the
 > rescan artifact. A fresh-context reviewer is the ideal executor — it surfaces the
 > gaps the model's author rationalized past. This is a read-and-diff, not new

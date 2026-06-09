@@ -2,7 +2,7 @@
 \* Grace Commons — Stateful Workflow Execution (C10) composition.
 \* Spec-level formal sibling of compositions/stateful-workflow-execution.md.
 \* Derived validator; the English spec is the single source of truth. On any
-\* disagreement, diagnose per PRESSURE_TESTING.md §The conflict protocol.
+\* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
 \* The composition's load-bearing wiring decision is Invariant 1 (approval-gated

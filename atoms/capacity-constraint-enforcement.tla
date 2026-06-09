@@ -2,7 +2,7 @@
 \* Grace Commons — Capacity Constraint Enforcement atom.
 \* Spec-level formal sibling of atoms/capacity-constraint-enforcement.md.
 \* Derived validator; the English spec is the single source of truth. On any
-\* disagreement, diagnose per PRESSURE_TESTING.md §The conflict protocol.
+\* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
 \* The load-bearing claims are Invariant 4 (capacity constraint): at every instant

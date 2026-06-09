@@ -2,7 +2,7 @@
 \* Grace Commons — Data Subject Rights Fulfillment (C7).
 \* Spec-level formal sibling of compositions/data-subject-rights-fulfillment.md.
 \* Derived validator; the English spec is the single source of truth. On any
-\* disagreement, diagnose per PRESSURE_TESTING.md §The conflict protocol.
+\* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
 \* C7's two load-bearing emergent guarantees, for the fulfillment of one request

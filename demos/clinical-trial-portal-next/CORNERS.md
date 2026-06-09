@@ -23,8 +23,8 @@ English was stack-dependent (BUILD_PLAN §9).
   one atom clause, three mechanisms (render 3's Go `sync.Mutex` is the third),
   nothing added to the spec. (BUILD_PLAN §4.3's "under-specified" wording was
   reconciled to match.) The cross-render mapping now lives canonically in
-  [`EXECUTION_CONTRACT.md`](../../EXECUTION_CONTRACT.md) (Data layer contract); see
-  also [`DISCOVERIES.md`](../../DISCOVERIES.md) (2026-06-06).
+  [`execution-contract.md`](../../execution-contract.md) (Data layer contract); see
+  also [`discoveries.md`](../../discoveries.md) (2026-06-06).
 - **`event_log` append-only by convention, not by trigger.** Faithful port of
   render 1. Defense-in-depth upgrade available: a `BEFORE UPDATE/DELETE … RAISE
   EXCEPTION` trigger (the Postgres analog of the Multi-Party Approval demo's

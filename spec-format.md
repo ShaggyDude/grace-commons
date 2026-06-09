@@ -34,7 +34,7 @@ This three-tier discipline reflects the library's core bridge principle: the sam
 
 The Grace Commons library expresses every pattern as structured natural language with a fixed set of named sections in a fixed order. Section names are load-bearing — they signal to humans and AI readers what kind of content lives where, and they let the pressure-testing methodology (GRID structural completeness, EOS conceptual independence, Linus adversarial scrutiny) operate against predictable structure. Deviations from the canonical shape are review findings, not stylistic choices.
 
-This document does not duplicate the methodology — see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for what each pass checks. It enumerates the *containers*; the methodology checks the *contents*.
+This document does not duplicate the methodology — see [`pressure-testing.md`](./pressure-testing.md) for what each pass checks. It enumerates the *containers*; the methodology checks the *contents*.
 
 Three shapes are canonical:
 
@@ -84,7 +84,7 @@ Reference examples: [`atoms/personal-todo.md`](./atoms/personal-todo.md) for the
 
 17. **Standards references.** The regulatory or industry standards the atom's invariants satisfy or contribute toward, with section anchors where applicable. Cite only standards that genuinely apply at this layer; frame standards that belong to a composing pattern as the composing pattern's obligation.
 
-18. **Status.** A one-line status indicator (`grounded — YYYY-MM-DD` for a grounded atom, `partially resolved` for an atom that has not completed all required passes, or `draft` for a freshly authored atom). See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the status taxonomy.
+18. **Status.** A one-line status indicator (`grounded — YYYY-MM-DD` for a grounded atom, `partially resolved` for an atom that has not completed all required passes, or `draft` for a freshly authored atom). See [`pressure-testing.md`](./pressure-testing.md) for the status taxonomy.
 
 19. **Lineage notes.** The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Pass 1 GRID findings, Pass 2 EOS extractions, Pass 3 Linus fixes, and any Round 2 / Round 3 / scheduled-rescan entries — what was found, what was closed in-pattern, what was deferred as explicit out-of-scope. The Lineage notes section is the evidence the atom has been pressure-tested; an absence here is not necessarily a problem but a rich Lineage section is provably evidence-bearing.
 
@@ -155,13 +155,13 @@ All three must be walked; conflating them into one scenario loses the structural
 
 The split convention was established in Multi-Party Approval's Round 3 and applied retroactively to regulated compositions; the bar an external auditor can clear from the records alone is structurally distinct from the bar the composing organization must clear with its own governance evidence.
 
-Both regulated-overlay conventions are *inherited from the methodology directly* (see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md)'s *Regulated-pattern conventions*), not re-derived from predecessor patterns. Lineage notes for new regulated patterns cite the methodology, not earlier worked examples.
+Both regulated-overlay conventions are *inherited from the methodology directly* (see [`pressure-testing.md`](./pressure-testing.md)'s *Regulated-pattern conventions*), not re-derived from predecessor patterns. Lineage notes for new regulated patterns cite the methodology, not earlier worked examples.
 
 ---
 
 ## What's not in this document
 
-This document enumerates sections. It does not enumerate authoring conventions — those live in [`CLAUDE.md`](./CLAUDE.md) and are reinforced by [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md). The conventions every section must honor (regardless of which shape) include:
+This document enumerates sections. It does not enumerate authoring conventions — those live in [`CLAUDE.md`](./CLAUDE.md) and are reinforced by [`pressure-testing.md`](./pressure-testing.md). The conventions every section must honor (regardless of which shape) include:
 
 - **Three reading tiers, always.** Every spec has a Summary (Tier 1 — anyone), a main text (Tier 2 — technical readers), and optional formal models (Tier 3 — experts). The Summary is plain language with zero unexplained jargon. The main text defines every non-everyday term inline at first use. Formal models are dense and expert-only. See *Three reading tiers* above.
 - **Never leave an acronym unexplained.** Every acronym or initialisation (HIPAA, GDPR, EOS, GRID, NFC, PCI DSS, FATF, BSA, AML, CDD, KYC…) must be spelled out and briefly glossed the first time it appears in the document — in any section, not just the Summary. A reader who encounters an undefined acronym has hit a wall; the library's bridge principle requires a door instead.
@@ -175,7 +175,7 @@ This document enumerates sections. It does not enumerate authoring conventions �
 - Edge cases name composing patterns by link
 - Standards inheritance is selective (cite what genuinely applies at this layer)
 
-This document also does not enumerate the *content* expected at each pass. That is the methodology's job — Pass 1's GRID completeness rules, Pass 2's EOS extraction questions, Pass 3's adversarial question set. See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).
+This document also does not enumerate the *content* expected at each pass. That is the methodology's job — Pass 1's GRID completeness rules, Pass 2's EOS extraction questions, Pass 3's adversarial question set. See [`pressure-testing.md`](./pressure-testing.md).
 
 ---
 

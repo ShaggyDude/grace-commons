@@ -67,7 +67,7 @@ persisted data directory the validator reads.
 The Event Log atom requires that *"appends never fail for ordering or
 contention reasons — the underlying implementation must serialize them"*
 (Invariant 3, total order). Three mechanisms are on record
-([`DISCOVERIES.md`](../../DISCOVERIES.md) 2026-06-06); Mongo has no advisory
+([`discoveries.md`](../../discoveries.md) 2026-06-06); Mongo has no advisory
 lock, so this render supplies a fourth:
 
 | Render | Serialization mechanism |

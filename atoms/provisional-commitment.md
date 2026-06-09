@@ -271,7 +271,7 @@ This is the *generator's contract*: any code generated from this atom must produ
 
 This atom is the result of two iterations of pressure-testing.
 
-**First iteration — three-pass review during authoring.** All three passes from [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md) run during the initial drafting; findings recorded below.
+**First iteration — three-pass review during authoring.** All three passes from [`pressure-testing.md`](../pressure-testing.md) run during the initial drafting; findings recorded below.
 
 **Pass 1 — Structural completeness (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** Clean after one revision. The initial draft conflated *Unheld* with a system state, which would have left State malformed (a commitment cannot be Unheld and have an id at the same time). Resolved: State names four states (Held, Confirmed, Released, Expired); Intent and Flow frame Unheld as a property of the *resource* before and after the commitment's effect, not of the commitment record. All nine GRID nodes resolved with their references intact.
 
@@ -305,7 +305,7 @@ The three passes together exercise the architecture as designed: GRID catches st
 
 The second iteration confirms the recursive property the methodology claims: Lineage notes themselves are pressure-testable, and a fresh adversarial pass surfaces additional gaps even after the three-pass authoring review reaches *grounded*. Each fresh application of the methodology adds evidence the architecture is doing real work.
 
-*Subsequent to this atom's publication, two of the second-iteration fixes — Regulated adversarial scenarios and Generation acceptance — were promoted to canonical status in [`CONTRIBUTING.md`](../CONTRIBUTING.md) and [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md). This atom's second-iteration record is the historical origin; the methodology docs are now the canonical source.*
+*Subsequent to this atom's publication, two of the second-iteration fixes — Regulated adversarial scenarios and Generation acceptance — were promoted to canonical status in [`contributing.md`](../contributing.md) and [`pressure-testing.md`](../pressure-testing.md). This atom's second-iteration record is the historical origin; the methodology docs are now the canonical source.*
 
 **Refinement round 1.** Four findings, all closed in-pattern. Conventions inherited from the methodology directly.
 
@@ -316,7 +316,7 @@ The second iteration confirms the recursive property the methodology claims: Lin
 
 **Scheduled rescan: 2026-05-20.** Pass 1 GRID clean. Pass 2 EOS clean. Pass 3 Linus (fresh-reader) — one refining finding: Generation acceptance check 3 listed "six named reasons" and omitted `storage-failure`, which is a named rejection reason in all four action signatures and correctly listed in the Feedback section. Fixed: updated to "seven named reasons" with `storage-failure` added to the enumeration. No other findings.
 
-**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 7 (confirm rejected if now ≥ expires_at) is a timing claim; Invariant 8 (transition timestamps after placement) and Invariant 3 (terminal absorption) form a temporal reachability surface. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 7 (confirm rejected if now ≥ expires_at) is a timing claim; Invariant 8 (transition timestamps after placement) and Invariant 3 (terminal absorption) form a temporal reachability surface. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
 
 **Formal-layer vote — reconsidered 2026-06-03: KEPT YES.** This pattern was one of the five clock/precedence candidates reviewed in the 2026-06-03 bar reconsideration. Unlike Retention Window / Session / Consent (downgraded to English-only), Provisional Commitment was **kept** because confirm-within-window is a genuine *action-vs-time* race: as the clock advances, a `confirm` must not slip past `expires_at` while an auto-`expire` is also enabled. That is exactly the class a model exhausts and prose cannot. Model authored same day (below).
 

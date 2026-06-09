@@ -59,4 +59,4 @@ toc: true
 
 **Scope Creep & Maintenance Burden** — The atom catalog becomes too large and internally inconsistent over time.
 
-*Mitigation:* Strict topological ordering, strong categorization, dependency tracking, and scheduled refactoring cycles. The ROADMAP.md dependency order is the operational form of this mitigation.
+*Mitigation:* Strict topological ordering, strong categorization, dependency tracking, and scheduled refactoring cycles. The roadmap.md dependency order is the operational form of this mitigation.

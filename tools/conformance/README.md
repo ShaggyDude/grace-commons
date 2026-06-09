@@ -43,7 +43,7 @@ node validate.mjs clinical-trial-portal
 (Render 1 measured 95% until 2026-06-06, with one red — `C1-2b`, a real
 audit-integrity bug the validator caught. The demo was patched; render 1 now
 verifies clean. The catch-and-fix is the worked example below and in
-[`DISCOVERIES.md`](../../DISCOVERIES.md).)
+[`discoveries.md`](../../discoveries.md).)
 
 `--db <path>` measures any store (e.g. a live `deno task seed` DB);
 `--json` emits a machine-readable report (for CI / the regen loop);
@@ -201,7 +201,7 @@ conformance run surfaced it on contact.
 **Fixed in the demo on 2026-06-06** (`seed.ts` now hashes the genesis row with
 `id`, matching the append path); render 1 verifies clean and measures 100%. The
 bug is retained as a reproducible injection (`--defect genesis-hash`) and the
-full account is in [`DISCOVERIES.md`](../../DISCOVERIES.md). This is the worked
+full account is in [`discoveries.md`](../../discoveries.md). This is the worked
 example of the whole point: an oracle derived from the spec found a real
 audit-integrity defect the implementation's own tests missed.
 

@@ -226,7 +226,7 @@ It inherits from:
 
 ## Lineage notes
 
-This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md)) on its first revision.
+This pattern survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first revision.
 
 **Pass 1 — Structural completeness (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** Clean. All nine nodes addressed; the Edge cases section enumerates eleven explicit out-of-scope concerns, each pointing at a composing pattern that handles it (Retention Window, Tamper Evidence, Actor Identity, Reverse Index, Consensus, Schema Evolution, Snapshot, Observer, Transaction, durability, Erasure Tombstone).
 
@@ -250,7 +250,7 @@ The pattern is `grounded — 2026-05-13` after one round.
 
 **Scheduled rescan: 2026-05-20.** Pass 1 clean. Pass 2 clean. Pass 3 — one refining finding: examples covered only happy-path append sequences across four domains; no example exercised the rejection paths (`invalid-payload`, `invalid-query`, `storage-failure`). All three rejection reasons were named in Decision points and Feedback but not demonstrated with concrete values. Resolved: fifth example — *Rejection paths* — added, walking all three rejection reasons in a single thread including the sequence-number gap consequence of a `storage-failure`. Round closes clean.
 
-**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 4 (sequence-number monotonicity — earlier append ⇒ smaller sequence_number) and Invariant 1 (append-only, no removal) define the replay/ordering property a formal model verifies. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 4 (sequence-number monotonicity — earlier append ⇒ smaller sequence_number) and Invariant 1 (append-only, no removal) define the replay/ordering property a formal model verifies. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
 
 **Formal model — 2026-06-03: TLA+ authored and verified; pattern promoted to `grounded`.** The derived model is [`event-log.tla`](./event-log.tla) with config [`event-log.cfg`](./event-log.cfg), checked by the repo's `tla-checker` WASM model checker via `tools/harness/check.mjs`.
 

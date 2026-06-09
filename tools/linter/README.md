@@ -31,7 +31,7 @@ hook or CI gate.
 | **B-invariant-count** | "all *N* invariants from [Pattern](path)" where *N* does not equal the real count of `**Invariant N —**` headers in Pattern. (The nine-vs-ten drift hazard.) |
 | **C-model-missing / C-twin-missing** | A pattern whose Status claims a verified model (mentions `tools/harness` or a buggy twin) names a `.tla`/`.als` file that is absent, or has no `-buggy` twin beside it (the vacuity guard). |
 | **D-stale-forthcoming** | A link whose own `*(forthcoming)*` marker decorates a pattern file that is already `grounded`. |
-| **E-count-drift** | The latest "*NN* grounded patterns (*NN* grounded compositions)" claim in `ROADMAP.md` / `readme.md` does not match the real file count. (Earlier dated claims are history and are allowed to be stale.) |
+| **E-count-drift** | The latest "*NN* grounded patterns (*NN* grounded compositions)" claim in `roadmap.md` / `readme.md` does not match the real file count. (Earlier dated claims are history and are allowed to be stale.) |
 
 ## Design principles (this tool is meant to be maintained by a small/cheap model)
 

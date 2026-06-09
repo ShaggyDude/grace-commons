@@ -2,7 +2,7 @@
 \* Grace Commons — KYC / Customer Onboarding with Ongoing Monitoring (C8).
 \* Spec-level formal sibling of compositions/kyc-customer-onboarding.md.
 \* Derived validator; the English spec is the single source of truth. On any
-\* disagreement, diagnose per PRESSURE_TESTING.md §The conflict protocol.
+\* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
 \* The load-bearing claim is the adverse-monitoring coupling: an adverse trigger

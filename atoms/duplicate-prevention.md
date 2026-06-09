@@ -185,7 +185,7 @@ Current and forthcoming compositions:
 
 ## Lineage notes
 
-This pattern survived all three pressure-testing passes (see [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md)) on its first revision. Findings were modest.
+This pattern survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first revision. Findings were modest.
 
 **Pass 1 — Structural completeness (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** Clean. All nine nodes are addressed; Friction is captured in Edge cases per the standard atom template.
 
@@ -207,7 +207,7 @@ The pattern is `grounded — 2026-05-13` after one round.
 
 **Scheduled rescan: 2026-05-20.** Pass 1 clean. Pass 2 clean. Pass 3 — one refining finding: clock semantics not explicitly named as an out-of-scope concern in Edge cases, unlike the sibling atoms Personal Todo and Assignment which both carry an explicit clock-semantics entry. The wall-time framing was present throughout the spec body, and the Lineage notes from the original Pass 3 acknowledged the concern, but the explicit Edge case entry was missing. Resolved: new Edge case — *Clock semantics* — added, naming wall-time as the basis, naming skew and backward-clock risks, and pointing containing patterns that need strict monotonic enforcement at a Logical Clock composing pattern. Round closes clean.
 
-**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 2 (single-recording — `record` does not extend the window for an already-recorded identity; original recorded_at preserved) and Invariant 1 (window monotonicity now − recorded_at < window) are timing claims about `check` results across record/check sequences with advancing time. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.
+**Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 2 (single-recording — `record` does not extend the window for an already-recorded identity; original recorded_at preserved) and Invariant 1 (window monotonicity now − recorded_at < window) are timing claims about `check` results across record/check sequences with advancing time. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
 
 **Formal-layer vote — reconsidered 2026-06-03: KEPT YES.** One of the five clock/precedence candidates reviewed in the 2026-06-03 bar reconsideration. Unlike Retention Window / Session / Consent (downgraded to English-only), Duplicate Prevention was **kept** because single-recording is a genuine claim about *advancing time*: a re-record must not push `recorded_at` forward and silently extend the guard window. Model authored same day (below).
 

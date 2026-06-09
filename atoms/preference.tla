@@ -2,7 +2,7 @@
 \* Grace Commons — Preference / Personalization atom.
 \* Spec-level formal sibling of atoms/preference.md.
 \* Derived validator; the English spec is the single source of truth. On any
-\* disagreement, diagnose per PRESSURE_TESTING.md §The conflict protocol.
+\* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
 \* The load-bearing claim is Invariant 3 (at most one currently-in-effect —

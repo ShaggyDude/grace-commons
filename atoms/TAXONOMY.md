@@ -222,7 +222,7 @@ the generator runs and the derived classification was eyeballed against reality)
    wire the generator's output (overlay catalogs + nav) into the build.
 6. **Update canonical docs.** SPEC_FORMAT (`atoms/<category>/` → `atoms/<name>.md`;
    classification derived), THE_SPEC_LAYER's Taxonomy section, ROADMAP's open-taxonomy note,
-   CLAUDE.md's two open questions → resolved with a pointer here, OPEN_QUESTIONS.md.
+   CLAUDE.md's two open questions → resolved with a pointer here, open-questions.md.
 7. **Verify.** Repo-wide link-check (zero dangling `atoms/<category>/`), generated
    catalog/nav builds, site builds, Alloy/TLA models still run (paths intact).
 

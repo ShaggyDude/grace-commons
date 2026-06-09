@@ -283,4 +283,4 @@ The two passes together exercise the architecture as designed: GRID's (the nine-
 
 **Scheduled rescan: 2026-05-20 — clean.**
 
-**Formal-layer vote — 2026-06-03: NO.** Single-state structural invariants (membership exclusivity, id stability, active-set uniqueness) plus timestamp inequalities, fully exercised by records-alone checks; the methodology's own minimum-formalism reference. Grounds English-only (minimum-formalism). Vote per [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.
+**Formal-layer vote — 2026-06-03: NO.** Single-state structural invariants (membership exclusivity, id stability, active-set uniqueness) plus timestamp inequalities, fully exercised by records-alone checks; the methodology's own minimum-formalism reference. Grounds English-only (minimum-formalism). Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.

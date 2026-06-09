@@ -24,7 +24,7 @@ a different sense, it must say so locally.
 - **eventually** — guaranteed to occur in finite time, with no stated bound.
 - **within X** — at or before X has elapsed, measured by the named monotonic clock.
 - **now** — the injected clock value at action time (never read inside the
-  transition — see EXECUTION_CONTRACT.md, Logic Confinement).
+  transition — see execution-contract.md, Logic Confinement).
 - **after / before / most-recent** — by *insertion order* unless a spec explicitly
   says wall-clock order (clocks may be non-monotonic; insertion order is authoritative).
 

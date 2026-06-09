@@ -266,7 +266,7 @@ What this atom does not cover:
 - **Capability chaining and delegation.** A bearer who redeems a capability cannot use the atom to sub-allocate a narrowed capability to a third party — that would require calling `allocate` with a narrowed scope, which is a separate allocation event under a new `allocator_ref`. Whether that kind of delegation is permitted in a given system is a composing-pattern policy concern.
 - **Revocation notification.** When a capability is revoked, the atom does not notify the bearer, the allocator, or any downstream system. Notification is a composing-pattern concern.
 - **Identity-bound authorization.** If the authorization model requires knowing *who* is requesting access — not just that they hold a token — Permissions is the correct primitive, not Capability. The two atoms are structurally distinct and are not interchangeable. The OCAP model deliberately separates possession from identity; a system that needs both checks should compose both atoms.
-- **Invitation semantics.** Invitation (atom #14) is a related but distinct primitive: it also uses bearer-token transport, but the resolution of an Invitation binds an identity (`Declined` is a named terminal state; the accepting party is identified at redemption time). If what is needed is an onboarding flow that concludes with an identity binding, Invitation is the correct atom. The distinction is addressed in the Open taxonomy question in ROADMAP.md.
+- **Invitation semantics.** Invitation (atom #14) is a related but distinct primitive: it also uses bearer-token transport, but the resolution of an Invitation binds an identity (`Declined` is a named terminal state; the accepting party is identified at redemption time). If what is needed is an onboarding flow that concludes with an identity binding, Invitation is the correct atom. The distinction is addressed in the Open taxonomy question in roadmap.md.
 - **Clock accuracy and replay.** `allocated_at` and `expires_at` are captured from the deployment's clock. A token can be replayed (presented multiple times) up to `max_redemptions` and until `expires_at`; these are the only guards the atom provides. Replay protection beyond what the counter and expiry provide (e.g., nonce-based one-time-use validation) is a deployment-configuration concern.
 - **Capability store tamper-evidence.** The atom does not implement cryptographic chaining on the capability store. Composing with Tamper Evidence is available for deployments that require proof that no capability record was retroactively altered.
 
@@ -283,7 +283,7 @@ Capability is freestanding. It is the sole constituent atom of Capability-Backed
 - **[Tamper Evidence](./tamper-evidence.md)** — capability records, including the `allocator_ref` and `scope` fields, should be hash-chained in regulated deployments to ensure that the allocation provenance cannot be retroactively altered.
 - **[Privileged Access Provisioning](../compositions/privileged-access-provisioning.md)** — calls `Capability.allocate` to provision the bearer token when the Multi-Party Approval chain reaches `Approved`, `Capability.redeem` inside `exercise_access` after session validation, and `Capability.revoke` via `revoke_access`. The redeemer's identity is intentionally not recorded by this atom; attribution for the full arc is carried in the Audit Trail.
 - **Capability-Backed Sharing** *(C15 — not started)* — the composition that wires Capability redemption to Selective Disclosure, producing the bearer-token/regulated-audit worked example. The emergent invariant: the audit record reads "disclosed by bearer of capability X, allocated by actor Y" — allocator is identified, redeemer is structurally not.
-- **Invitation** *(atom #14 — not started)* — Invitation is a related bearer-token primitive for identity onboarding. See Edge cases (Invitation semantics) and the Open taxonomy question in ROADMAP.md for the Capability-vs-Invitation design boundary.
+- **Invitation** *(atom #14 — not started)* — Invitation is a related bearer-token primitive for identity onboarding. See Edge cases (Invitation semantics) and the Open taxonomy question in roadmap.md for the Capability-vs-Invitation design boundary.
 
 ---
 
@@ -327,7 +327,7 @@ A derived implementation of Capability is *acceptable* — in the regulator-acce
 
 ## Lineage notes
 
-**Conventions inherited.** This atom carries the **regulated** and **security** overlays (both derived from its composers) and includes *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.
+**Conventions inherited.** This atom carries the **regulated** and **security** overlays (both derived from its composers) and includes *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`pressure-testing.md`](../pressure-testing.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.
 
 **Structural decisions made in draft.**
 
@@ -405,7 +405,7 @@ Two emergent properties confirmed by the model and surfaced to the Invariants se
 
 No spec findings. The twelve named invariants are mutually consistent and together entail both emergent properties.
 
-**Formal-layer vote — 2026-06-03: YES (model present).** Invariant 4 (exhaustion atomicity — exactly one concurrent `redeem` succeeds at `remaining = 1`) and Invariant 2 (monotonic counter) are interleaving-safety claims; the Alloy model confirms them. Verified by the sibling formal model (`capability.als`); the pattern remains `grounded`. Vote per [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.
+**Formal-layer vote — 2026-06-03: YES (model present).** Invariant 4 (exhaustion atomicity — exactly one concurrent `redeem` succeeds at `remaining = 1`) and Invariant 2 (monotonic counter) are interleaving-safety claims; the Alloy model confirms them. Verified by the sibling formal model (`capability.als`); the pattern remains `grounded`. Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
 
 **Formal model — two corrections, 2026-06-03 (harness audit findings).** The 2026-06-03 `tools/harness/` sweep (headless Alloy via the `org.alloytools.alloy.dist` analyzer) ran `capability.als` and surfaced two defects, both now fixed in the model artifact (conflict-protocol case 2 — derived-artifact defects; the canonical English spec was untouched):
 

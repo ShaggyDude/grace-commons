@@ -37,7 +37,7 @@ A composition spec at minimum names:
 - **Examples** — concrete scenarios showing the composition in action.
 - **Edge cases** — failure modes that arise from composition, including conflicts between constituent atoms.
 
-See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the full contribution shape.
+See [`contributing.md`](../contributing.md) for the full contribution shape.
 
 ---
 

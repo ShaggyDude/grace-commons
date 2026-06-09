@@ -67,6 +67,6 @@ cut a versioned release, so everything below sits under **Unreleased**.
   events. The bug was found by the conformance validator on its first run
   (check `C1-2b`), confirmed render-specific by multi-render agreement, and fixed
   in `scripts/seed.ts` (the genesis row is now hashed with `id`, matching the
-  append path). Full account in [`DISCOVERIES.md`](./DISCOVERIES.md).
+  append path). Full account in [`discoveries.md`](./discoveries.md).
   - **Operational note:** existing seeded databases must be re-seeded
     (wipe → migrate → seed) to adopt the corrected genesis hash.

@@ -374,7 +374,7 @@ Selective Disclosure is the disclosure accountability primitive that regulated d
 
 ## Lineage notes
 
-Regulated atom. Conventions — *Regulated adversarial scenarios* and *Generation acceptance* — inherited from the methodology directly ([`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md)), baked in from the first draft. Legal Hold is the primary shape reference for this atom; Approval Step is the secondary reference for Round-2-clean conventions. No existing atom named Selective Disclosure as `*(forthcoming)*` in Composition notes.
+Regulated atom. Conventions — *Regulated adversarial scenarios* and *Generation acceptance* — inherited from the methodology directly ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft. Legal Hold is the primary shape reference for this atom; Approval Step is the secondary reference for Round-2-clean conventions. No existing atom named Selective Disclosure as `*(forthcoming)*` in Composition notes.
 
 **Pass 1 — Structural completeness (GRID).** Six findings, all closed in-pattern.
 
@@ -488,4 +488,4 @@ All five foundation extraction candidates re-evaluated independently; all conclu
 
 **Scheduled rescan: 2026-05-20 — clean.**
 
-**Formal-layer vote — 2026-06-03: NO.** Single-state append-only log; no state machine, concurrency, or ordering-across-sequences claims — all invariants are records-alone structural checks. Grounds English-only (minimum-formalism). Vote per [`PRESSURE_TESTING.md`](../PRESSURE_TESTING.md) §Formal models — The formal-layer vote.
+**Formal-layer vote — 2026-06-03: NO.** Single-state append-only log; no state machine, concurrency, or ordering-across-sequences claims — all invariants are records-alone structural checks. Grounds English-only (minimum-formalism). Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.

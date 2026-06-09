@@ -12,7 +12,7 @@ Grace Commons is a public library of **atoms** and **compositions** expressed as
 
 This is the open-foundation track of a broader architecture (the **Spec Layer**) that synthesizes formal-methods, requirements engineering, BDD, design-by-contract, and Daniel Jackson's *Essence of Software* (EOS) into one canonical English-as-truth representation. The Alloy / concept-catalog track is the formal-methods parallel; Grace Commons is the structured-natural-language parallel. Both extend the same EOS-conceptual core; neither displaces the other.
 
-The methodology, philosophy, and full inheritance are in [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md). Grace Commons is named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
+The methodology, philosophy, and full inheritance are in [`the-spec-layer.md`](./the-spec-layer.md). Grace Commons is named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
 
 ---
 
@@ -21,10 +21,10 @@ The methodology, philosophy, and full inheritance are in [`THE_SPEC_LAYER.md`](.
 If you have no prior context, read in this order:
 
 1. **[`readme.md`](./readme.md)** — architecture overview, current contents tree, the three-layers framing (atoms, applications, emergent invariants). Brief.
-2. **[`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md)** — the manifesto. The *Principles* section (information-management triad + design-quality inheritances) and *Bridges* section (load-bearing humans↔machines bridge, *does this build a bridge, or build a wall?* litmus test) anchor the framing.
-3. **[`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md)** — the three-pass methodology (GRID structural, EOS conceptual independence, Linus adversarial), the four-step authoring rubric, and the **Regulated-pattern conventions** section that canonicalizes *Regulated adversarial scenarios* and *Generation acceptance*.
-4. **[`CONTRIBUTING.md`](./CONTRIBUTING.md)** — contribution shape, the three perspectives (rigor / clarity / implementability), the quality bar, and the contribution lifecycle.
-5. **[`SPEC_FORMAT.md`](./SPEC_FORMAT.md)** — the canonical reference for the shape of a Grace Commons spec. Enumerates the three shapes (atom, composition, regulated overlay), the required sections in order, and the canonical examples to mirror. Drafter agents (human or AI) read from here.
+2. **[`the-spec-layer.md`](./the-spec-layer.md)** — the manifesto. The *Principles* section (information-management triad + design-quality inheritances) and *Bridges* section (load-bearing humans↔machines bridge, *does this build a bridge, or build a wall?* litmus test) anchor the framing.
+3. **[`pressure-testing.md`](./pressure-testing.md)** — the three-pass methodology (GRID structural, EOS conceptual independence, Linus adversarial), the four-step authoring rubric, and the **Regulated-pattern conventions** section that canonicalizes *Regulated adversarial scenarios* and *Generation acceptance*.
+4. **[`contributing.md`](./contributing.md)** — contribution shape, the three perspectives (rigor / clarity / implementability), the quality bar, and the contribution lifecycle.
+5. **[`spec-format.md`](./spec-format.md)** — the canonical reference for the shape of a Grace Commons spec. Enumerates the three shapes (atom, composition, regulated overlay), the required sections in order, and the canonical examples to mirror. Drafter agents (human or AI) read from here.
 6. **An example atom.** [`atoms/personal-todo.md`](./atoms/personal-todo.md) for the simplest atom shape with a two-iteration Lineage record. [`atoms/actor-identity.md`](./atoms/actor-identity.md) for the regulated-atom shape (carries both regulated-pattern conventions).
 7. **An example application.** [`compositions/idempotent-reservation.md`](./compositions/idempotent-reservation.md) for a two-atom composition. [`compositions/audit-trail.md`](./compositions/audit-trail.md) for the four-atom canonical regulated-audit composition.
 
@@ -71,9 +71,9 @@ Every pattern survives three pressure-testing passes before reaching `grounded`:
 - **Pass 2 — EOS conceptual independence.** Every concern belongs to *this* concept; over-absorption is extracted as a separate atom. 10-20 min once familiar with the catalog.
 - **Pass 3 — Linus adversarial.** Muddled identities, sloppy invariants, hidden decisions, happy-path-only examples — all surfaced and either fixed in-pattern or named as explicit out-of-scope. 30-60 min; most labor-intensive of the three.
 
-Each pass catches a different class of gap. Skipping is not an option. A pattern that has only survived one or two passes declares its actual status (`unresolved`, `partially resolved`) rather than false `grounded`. See [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) for the full methodology and worked examples.
+Each pass catches a different class of gap. Skipping is not an option. A pattern that has only survived one or two passes declares its actual status (`unresolved`, `partially resolved`) rather than false `grounded`. See [`pressure-testing.md`](./pressure-testing.md) for the full methodology and worked examples.
 
-**Round structure (baseline + Final Critique).** Canonicalized in [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) §Order and iteration, *Round structure and naming* (landed 2026-06-07; this file no longer carries the standing text). The load-bearing points: 3×3 baseline (three rounds, each running Pass 1 / Pass 2 / Pass 3); pass numbering resets per round so "Pass 3" always means the Linus adversarial pass; Final Critique is the AI-conducted closing round starting at Round 4; `grounded on Final Critique N` is the canonical grounding marker; older cumulative Pass 1–9 numbering carries a retro-mapping note.
+**Round structure (baseline + Final Critique).** Canonicalized in [`pressure-testing.md`](./pressure-testing.md) §Order and iteration, *Round structure and naming* (landed 2026-06-07; this file no longer carries the standing text). The load-bearing points: 3×3 baseline (three rounds, each running Pass 1 / Pass 2 / Pass 3); pass numbering resets per round so "Pass 3" always means the Linus adversarial pass; Final Critique is the AI-conducted closing round starting at Round 4; `grounded on Final Critique N` is the canonical grounding marker; older cumulative Pass 1–9 numbering carries a retro-mapping note.
 
 ---
 
@@ -90,7 +90,7 @@ Both conventions are **inherited from the methodology directly**, not re-derived
 
 ## Current state of the library
 
-[`ROADMAP.md`](./ROADMAP.md) is the **single source of truth** for the library's current state — the grounded counts, the per-category atom and composition lists, and what is in-progress, unblocked, or blocked on remaining atoms. This file deliberately does **not** restate that snapshot: a mirrored count drifts (this section long read "twenty atoms and eight compositions" while ROADMAP had moved well past both), and the library is built on DRY/SSOT — the same discipline applies to its own docs. Read ROADMAP for the current tree, counts, and sequencing.
+[`roadmap.md`](./roadmap.md) is the **single source of truth** for the library's current state — the grounded counts, the per-category atom and composition lists, and what is in-progress, unblocked, or blocked on remaining atoms. This file deliberately does **not** restate that snapshot: a mirrored count drifts (this section long read "twenty atoms and eight compositions" while ROADMAP had moved well past both), and the library is built on DRY/SSOT — the same discipline applies to its own docs. Read ROADMAP for the current tree, counts, and sequencing.
 
 The structural milestones worth carrying into any session — architectural facts rather than counts — are:
 
@@ -116,7 +116,7 @@ The structural milestones worth carrying into any session — architectural fact
 
 ## Open architectural questions
 
-Moved out of this file — CLAUDE.md stays agent-operational and is not the SSOT for canonical knowledge (the same discipline already applied to library *state*, which defers to ROADMAP). The deferred decisions — taxonomy axes, regulation-as-folder-vs-attribute, the guided-process state→phase→action mapping — and the convention for resolving them now live in [`OPEN_QUESTIONS.md`](./OPEN_QUESTIONS.md), the SSOT (the mirror of `DISCOVERIES.md`: found things vs. open things). Read it when a session might touch one of them.
+Moved out of this file — CLAUDE.md stays agent-operational and is not the SSOT for canonical knowledge (the same discipline already applied to library *state*, which defers to ROADMAP). The deferred decisions — taxonomy axes, regulation-as-folder-vs-attribute, the guided-process state→phase→action mapping — and the convention for resolving them now live in [`open-questions.md`](./open-questions.md), the SSOT (the mirror of `discoveries.md`: found things vs. open things). Read it when a session might touch one of them.
 
 ---
 
@@ -128,7 +128,7 @@ Moved out of this file — CLAUDE.md stays agent-operational and is not the SSOT
 
 The same rule applies to review *outputs*: a Round 3 review's findings are folded into Lineage notes, not written as a standalone review file alongside the pattern.
 
-The only prompt-shaped content that belongs in the repo is methodology — the three-pass question sets and authoring rubric in [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md). That content is canonical, reviewed, and edited like any other library document. Everything else is chat.
+The only prompt-shaped content that belongs in the repo is methodology — the three-pass question sets and authoring rubric in [`pressure-testing.md`](./pressure-testing.md). That content is canonical, reviewed, and edited like any other library document. Everything else is chat.
 
 ---
 
@@ -149,12 +149,12 @@ Builds proceed against the spec as written. The spec changes only through a revi
 ## Canonical documents
 
 - [`readme.md`](./readme.md) — home page, current contents snapshot, three-layers framing.
-- [`THE_SPEC_LAYER.md`](./THE_SPEC_LAYER.md) — the architectural manifesto.
-- [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md) — three-pass methodology, regulated-pattern conventions, multi-file refinement order.
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution shape, three perspectives, four-step authoring rubric, lifecycle.
-- [`SPEC_FORMAT.md`](./SPEC_FORMAT.md) — canonical reference for the three spec shapes (atom, composition, regulated overlay), required sections in order, and the canonical examples to mirror.
-- [`ROADMAP.md`](./ROADMAP.md) — planned atoms and compositions in dependency order; what each unlocks; what each blocks on.
-- [`EXECUTION_CONTRACT.md`](./EXECUTION_CONTRACT.md) — the deterministic compilation target: three primitives, four-step pipeline, atom-to-runtime mapping, conformance definition.
+- [`the-spec-layer.md`](./the-spec-layer.md) — the architectural manifesto.
+- [`pressure-testing.md`](./pressure-testing.md) — three-pass methodology, regulated-pattern conventions, multi-file refinement order.
+- [`contributing.md`](./contributing.md) — contribution shape, three perspectives, four-step authoring rubric, lifecycle.
+- [`spec-format.md`](./spec-format.md) — canonical reference for the three spec shapes (atom, composition, regulated overlay), required sections in order, and the canonical examples to mirror.
+- [`roadmap.md`](./roadmap.md) — planned atoms and compositions in dependency order; what each unlocks; what each blocks on.
+- [`execution-contract.md`](./execution-contract.md) — the deterministic compilation target: three primitives, four-step pipeline, atom-to-runtime mapping, conformance definition.
 - [`atoms/`](./atoms/) — the generated browse-by-overlay catalog (`atoms/index.md`, emitted by `tools/taxonomy/generate_views.py` from the reverse index).
 - [`compositions/README.md`](./compositions/README.md) — compositions catalog, vocabulary note.
 

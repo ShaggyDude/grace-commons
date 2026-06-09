@@ -1,6 +1,6 @@
 # Coverage cross-check — inaugural sweep (2026-06-03)
 
-The first full run of the formal-layer **coverage cross-check** (PRESSURE_TESTING.md
+The first full run of the formal-layer **coverage cross-check** (pressure-testing.md
 §"The coverage cross-check") across all 22 vote-yes models. Each per-pattern
 matrix in this directory classifies every spec invariant as `covered` /
 `by-construction` / `out-of-scope(reason)` / **GAP**. Run by fresh-context
