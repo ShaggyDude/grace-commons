@@ -1,3 +1,8 @@
+---
+title: AI Usage Log
+nav_order: 997
+---
+
 # AI Usage Log
 
 Per NLnet NGI Zero Commons Fund GenAI policy (December 2025).

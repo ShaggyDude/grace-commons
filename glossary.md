@@ -1,3 +1,8 @@
+---
+title: Glossary
+nav_order: 7
+---
+
 # Glossary
 
 Strict definitions for the handful of words where English ambiguity actually

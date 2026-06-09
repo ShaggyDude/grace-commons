@@ -1,3 +1,8 @@
+---
+title: Measurement
+nav_order: 4
+---
+
 # Measurement
 
 Companion to [`pressure-testing.md`](./pressure-testing.md): that's the quality
