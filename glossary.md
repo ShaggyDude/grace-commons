@@ -1,4 +1,4 @@
-# GLOSSARY
+# Glossary
 
 Strict definitions for the handful of words where English ambiguity actually
 leaks into specs. **Keep this small** (target ~20 terms). It is a precision tool,
