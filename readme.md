@@ -204,15 +204,23 @@ compositions/
 │                                    allocation coherence — the pool's allocated total stays
 │                                    in lockstep with the live-reservation set (no oversell,
 │                                    no leak, no double-release)
-└── immutable-transaction-ledger  — Audit Trail (substrate) + Selective Disclosure
-                                   ↳ emergent guarantees:
-                                     disclosure-accountability binding bijection — every
-                                     disclose_subset writes one Selective Disclosure record +
-                                     one ledger.disclosed event atomically (the act of
-                                     disclosing is itself an immutable ledger entry); plus
-                                     verifiable partial disclosure — a disclosed subset is
-                                     independently provable authentic against the ledger seal
-                                     while the undisclosed remainder stays undisclosed
+├── immutable-transaction-ledger  — Audit Trail (substrate) + Selective Disclosure
+│                                  ↳ emergent guarantees:
+│                                    disclosure-accountability binding bijection — every
+│                                    disclose_subset writes one Selective Disclosure record +
+│                                    one ledger.disclosed event atomically (the act of
+│                                    disclosing is itself an immutable ledger entry); plus
+│                                    verifiable partial disclosure — a disclosed subset is
+│                                    independently provable authentic against the ledger seal
+│                                    while the undisclosed remainder stays undisclosed
+└── data-subject-rights-fulfillment — Selective Disclosure + Defensible Retention
+                                      (C1, substrate) + Consent (read-only oracle)
+                                    ↳ emergent guarantees:
+                                      no-silent-omission — every in-scope record carries
+                                      exactly one recorded disposition (none silently dropped);
+                                      plus the request ⇔ complete-fulfillment binding bijection
+                                      — the disposition set, the response-disclosure, and the
+                                      sealed dsar.*_fulfilled event commit together or not at all
 ```
 
 Three layers are visible from the snapshot above: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant (a rule that must always be true — here, that deleting and undoing a task leaves it with the same identity it had before) in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail application is the most substantial: four atoms wired together produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and the application's verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Notification Fanout is structurally distinct: it is the first composition in the library where a single trigger produces a variable number of effects — the fan-out count is determined at runtime by the Active subscriber set, not at composition time — and its emergent invariants (fanout coverage, payload consistency, at-most-one per subscriber) are properties of the directed invocation graph that neither constituent atom can assert alone. Each pattern also carries **Lineage notes** (a record of what each review pass found and how it was resolved) recording its three-pass review arc; see [`PRESSURE_TESTING.md`](./PRESSURE_TESTING.md).

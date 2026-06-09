@@ -302,7 +302,7 @@ Provenance is freestanding and is the single-artifact custody primitive that sev
 
 - **[Immutable Transaction Ledger (C6)](../compositions/immutable-transaction-ledger.md)** — `grounded` (2026-06-08). Provenance enriches C6 for ledger entries that represent tracked artifacts; chain-of-custody guarantees on ledger entries compose naturally where the `artifact_ref` references a financial instrument. C6 names this enrichment in its *Single-artifact financial-instrument custody* edge case.
 
-- **Data Subject Rights Fulfillment (C7)** *(forthcoming)* — where artifacts carry personal data, Provenance's chain-of-custody record is a composing input for demonstrating lawful handling under GDPR (EU General Data Protection Regulation — Europe's data-privacy law) Article 5 data-minimization and Article 30 records-of-processing-activity requirements.
+- **[Data Subject Rights Fulfillment (C7)](../compositions/data-subject-rights-fulfillment.md)** — a composing peer (not a constituent): where artifacts carry personal data, Provenance's chain-of-custody record is a composing input for demonstrating lawful handling under GDPR (EU General Data Protection Regulation — Europe's data-privacy law) Article 5 data-minimization and Article 30 records-of-processing-activity requirements.
 
 - **[KYC / Customer Onboarding (C8)](../compositions/kyc-customer-onboarding.md)** — chain-of-custody guarantees on identity-verification documents (passports, utility bills, biometric records) are a natural Provenance use case for KYC (Know Your Customer — the verification process for establishing customer identity under anti-money-laundering regulations) workflows; Provenance optionally enriches C8's record surface with document-custody chains.
 
