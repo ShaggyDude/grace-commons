@@ -1,6 +1,7 @@
 name: Deploy Beacon (Next.js) to Fly.io
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main

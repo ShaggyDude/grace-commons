@@ -20,7 +20,9 @@ export const LoginPage: FC<Props> = ({ error }) => (
       <div class="w-full max-w-sm mx-auto px-6">
         <div class="mb-8 text-center">
           <span class="linkamation text-xl">Alloy Demo</span>
-          <p class="mt-1 text-sm text-ink-gray-500">Attributed Permissions Admin</p>
+          <p class="mt-1 text-sm text-ink-gray-500">
+            Attributed Permissions Admin
+          </p>
         </div>
 
         <form method="post" action="/login" class="flex flex-col gap-4">
@@ -31,7 +33,10 @@ export const LoginPage: FC<Props> = ({ error }) => (
           )}
 
           <div class="flex flex-col gap-1">
-            <label for="principal_ref" class="text-sm font-medium text-ink-gray-700">
+            <label
+              for="principal_ref"
+              class="text-sm font-medium text-ink-gray-700"
+            >
               Username
             </label>
             <input
@@ -40,7 +45,7 @@ export const LoginPage: FC<Props> = ({ error }) => (
               type="text"
               autocomplete="username"
               required
-              placeholder="ciso_reyes"
+              placeholder="Username"
               class="border rounded px-3 py-2 text-sm bg-ink-gray-0 focus:outline-none focus:ring-1 focus:ring-ink-gray-400"
             />
           </div>
