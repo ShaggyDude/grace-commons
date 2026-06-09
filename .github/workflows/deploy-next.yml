@@ -1,0 +1,23 @@
+name: Deploy Beacon (Next.js) to Fly.io
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "demos/clinical-trial-portal-next/**"
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy
+        working-directory: demos/clinical-trial-portal-next
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
