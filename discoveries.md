@@ -1,6 +1,6 @@
 ---
 title: Discoveries
-nav_order: 999
+nav_order: 17
 ---
 
 # Discoveries

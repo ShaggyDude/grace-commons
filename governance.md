@@ -1,6 +1,6 @@
 ---
 title: Governance
-nav_order: 9
+nav_order: 11
 has_toc: true
 toc: true
 ---

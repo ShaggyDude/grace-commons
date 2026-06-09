@@ -1,6 +1,6 @@
 ---
 title: Changelog
-nav_order: 998
+nav_order: 15
 ---
 
 # Changelog

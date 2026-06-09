@@ -1,6 +1,6 @@
 ---
 title: AI Usage Log
-nav_order: 997
+nav_order: 14
 ---
 
 # AI Usage Log
