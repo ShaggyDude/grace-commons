@@ -52,7 +52,7 @@ def main():
     P = L.append
     P("---")
     P("title: Atomic Concepts")
-    P("nav_order: 6")
+    P("nav_order: 7")
     P("has_children: true")
     P("permalink: /atoms/")
     P("has_toc: true")

@@ -1,6 +1,6 @@
 ---
 title: Compositions
-nav_order: 7
+nav_order: 8
 has_children: true
 permalink: /compositions/
 has_toc: true

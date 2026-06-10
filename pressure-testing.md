@@ -1,5 +1,5 @@
 ---
-title: Pressure Testing (The Crucible)
+title: Pressure Testing
 nav_order: 3
 has_toc: true
 toc: true
@@ -14,6 +14,7 @@ toc: true
 {:toc}
 </details>
 
+# Pressure Testing (The Crucible)
 
 > The foundation review every Grace Commons pattern survives before being considered grounded (fully reviewed, complete, and reliable). Minimum standard: three rounds of three passes (structured review sweeps) each — nine passes total. Round 1 is the foundation (Pass 1 → 2 → 3, author-led). Round 2 is at least one human refinement run; additional refinement rounds follow until a complete round surfaces no new findings. Round 3 is a mandatory AI-conducted adversarial pass (where an AI reviewer actively attacks the spec looking for weaknesses) of all three passes. The minimum is a floor: a pattern that appears clean after the foundation still completes Round 2 before proceeding to Round 3 — the clean result is the confirmation, not a reason to skip the round.
 
