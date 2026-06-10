@@ -39,3 +39,12 @@ The two twins are isolated deliberately: a single combined twin would surface on
 - by-construction flags on load-bearing invariants: none (both Invariant 2 and Invariant 7 are properly asserted).
 - Twin discipline: each load-bearing invariant has its own dedicated, isolated, checker-rejected twin (Inv 2 → `credential-buggy-toctou.tla`; Inv 7 → `credential-buggy.tla`), so neither counterexample masks the other in `audit.mjs`.
 - Result: **all load-bearing formal-layer vote claims covered.** — Coverage cross-check updated 2026-06-04 (twins split into two isolated twins 2026-06-04).
+
+## Scheduled rescan — 2026-06-10 (council-run)
+
+Formal-layer portion of the 2026-06-10 scheduled rescan (the A4 proof batch; see the pattern's Lineage §Scheduled rescan):
+
+- Correct model re-run: `PASS` ✓ (138 states at `MaxC=3`, all invariants hold — unchanged).
+- Both twins re-run with `--buggy`: rejected ✓ (`credential-buggy.tla` at 5 states; `credential-buggy-toctou.tla` at 33 states — unchanged).
+- Bound-saturation bump: `MaxC=4` → 1,089 states, all invariants hold ✓ (headroom confirmed; the slot-parametric growth noted in Step 3 still applies — no flat saturation point exists by design).
+- Matrix re-read against the spec's 2026-06-10 revision: the rescan's prose changes (injected `now`, string input policy, constant-time comparison, write-once terminal fields) add no new load-bearing temporal claim — the write-once clause is an immutability/storage-schema property (the Invariant 1/6/8/9/10 out-of-scope class), not an interleaving. Verdicts unchanged; no GAP rows.
