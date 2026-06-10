@@ -270,163 +270,60 @@ Compositions are sequenced by readiness. Of the seventeen C-numbered composition
 
 ### Grounded
 
-- **[C1. Regulated Record Retention & Defensible Deletion](./compositions/defensible-retention.md)** — `grounded` 2026-05-13. Legal Hold + Audit Trail + Retention Window. Foundation, Round 2, and AI-conducted Round 3 (Opus) all clean. Anchors SOX, HIPAA, SEC Rule 17a-4, GDPR Article 17, FRCP (Federal Rules of Civil Procedure) Rule 37(e).
-- **[C4. Multi-Party Approval](./compositions/multi-party-approval.md)** — `grounded` 2026-05-13. Approval Step + Permissions + Assignment + Audit Trail (substrate). Foundation, Round 2 (human), and Round 3 (Opus Super-Torvalds) all clean. Anchors SOX §404, FDA 21 CFR Part 11, ICH E6 GCP, ISO 9001 §8.5.1.
-- **[C5. Notification Fanout](./compositions/notification-fanout.md)** — `grounded` 2026-05-13. Subscription + Notification. Foundation plus Opus adversarial pass (26 findings, all resolved). Completes the messaging atom pair and formalizes the fan-out boundary rule from the Execution Contract.
+The fourteen grounded compositions. Each has its full spec, Lineage notes, and — where the formal-layer vote was YES — a verified model + buggy twin in its own file.
+
+- **[C1. Defensible Retention](./compositions/defensible-retention.md)** — `grounded` 2026-05-13. Legal Hold + Retention Window + Audit Trail (substrate). Hold-blocks-purge gate; lawful destruction provable from records alone. Anchors SOX §802, HIPAA §164.530(j), SEC Rule 17a-4, GDPR Article 17, FRCP Rule 37(e).
+- **[C2. Consent & Preference Management](./compositions/consent-preference-management.md)** — `grounded` 2026-06-04. Consent + Permissions + Audit Trail (substrate). `processing_permitted` gate + revocation-propagation binding bijection. TLA+ model + buggy twin. Anchors GDPR Articles 6–7, 7(3), CCPA/CPRA, HIPAA §164.508.
+- **[C3. Forensic Recovery](./compositions/forensic-recovery.md)** — `grounded` 2026-06-04. Soft Delete + Audit Trail (substrate). Every delete/restore/purge attributed, tamper-evident, `recover_history`-recoverable; no purge without an audit record. TLA+ binding-bijection model + buggy twin. Anchors GDPR Article 17, HIPAA §164.312(b), FRCP Rule 37(e), SOX §802.
+- **[C4. Multi-Party Approval](./compositions/multi-party-approval.md)** — `grounded` 2026-05-13. Approval Step + Permissions + Assignment + Audit Trail (substrate). N approval steps under a quorum rule; first composition to compose another composition. Anchors SOX §404, FDA 21 CFR Part 11, ICH E6 GCP, ISO 9001 §8.5.1.
+- **[C5. Notification Fanout](./compositions/notification-fanout.md)** — `grounded` 2026-05-13. Subscription + Notification. First composition to produce a variable number of effects from a single trigger. Completes the messaging atom pair.
+- **[C6. Immutable Transaction Ledger](./compositions/immutable-transaction-ledger.md)** — `grounded` 2026-06-08. Audit Trail (substrate) + Selective Disclosure. Disclosure-accountability binding bijection + verifiable partial disclosure; first to compose Selective Disclosure. TLA+ model + buggy twin. Anchors SEC Rule 17a-4, HIPAA §164.528, 21 CFR Part 11, GDPR Article 15.
+- **[C7. Data Subject Rights Fulfillment](./compositions/data-subject-rights-fulfillment.md)** — `grounded` 2026-06-09 (Final Critique 5). Selective Disclosure + Defensible Retention (C1, substrate) + Consent (read-only oracle). Per-record disposition with no-silent-omission + request⇔fulfillment binding bijection; erasure wraps C1's purge gate. First composition authored under the capability-provenance rule. TLA+ binding + coverage model + two buggy twins. Anchors GDPR Articles 15–17, CCPA/CPRA, HIPAA §164.524 / §164.526 / §164.528.
+- **[C8. KYC / Customer Onboarding](./compositions/kyc-customer-onboarding.md)** — `grounded` 2026-06-03 (Final Critique 4). Party Identity + Retention Window + Audit Trail (substrate). Verification-gates-activity via the composition's own case index; adverse-trigger monitoring + post-closure retention floor. Anchors FATF Recommendations 10–12, BSA/AML 31 CFR §1020.220, FinCEN 31 CFR §1010.230, EU AMLD5, GDPR Article 6(1)(c).
+- **[C9. Reservation Lifecycle](./compositions/reservation-lifecycle.md)** — `grounded` 2026-06-04. Capacity Constraint + Provisional Commitment + Duplicate Prevention + Event Log + Actor Identity. Allocation coherence (no oversell, leak, or double-release); the pool-arithmetic superset of Idempotent Reservation. TLA+ allocation-coherence model + buggy twin. Anchors ISO 9001 §8.5, PCI DSS Req. 10, IATA Resolution 830a.
+- **[C10. Stateful Workflow Execution](./compositions/stateful-workflow-execution.md)** — `grounded` 2026-06-04. Workflow / State Machine + Approval Step + Permissions + Assignment + Audit Trail (substrate). Approval-gated transitions — guard evaluation re-converges; first to compose Workflow / State Machine. TLA+ model + buggy twin. Anchors SOX §404, FDA 21 CFR Part 11, ISO 9001 §8.5.1, BPMN 2.0.
+- **[C12. Chain of Custody](./compositions/chain-of-custody.md)** — `grounded` 2026-06-04. Provenance + Audit Trail (substrate). Records-alone custody proof (`verify_custody`); pharma ≡ legal-evidence chain of custody in one composition; first to compose Provenance. TLA+ binding-bijection model + buggy twin. Anchors FDA 21 CFR Part 211, DEA 21 CFR Part 1304, FRE 901(b)(9), ISO 17025.
+- **[C13. Login](./compositions/login.md)** — `grounded` 2026-05-20. Credential + Session + Audit Trail. Verify→issue wiring; the cascade — revoking a Credential invalidates every Session derived from it. Anchors NIST SP 800-63B, OIDC Core 1.0, SAML 2.0.
+- **[C14. Session-Gated Authorization](./compositions/session-gated-authorization.md)** — `grounded` 2026-05-20. Session + Permissions. Every permission query gated on session validity; principal binding — the queried principal is always the session-extracted one. Anchors NIST SP 800-53 AC-3 + AC-12, OWASP ASVS V3.3, PCI DSS Req. 7 + 8.
+- **[C16. External Onboarding](./compositions/external-onboarding.md)** — `grounded` 2026-05-21. Invitation + Credential + Party Identity + Audit Trail. Invitation-gates-enrollment — no Party Identity without a preceding accepted Invitation in the same call. Anchors GDPR Articles 6–7, SOC 2 CC6.2, NIST SP 800-63A, SCIM 2.0.
 
 ---
 
 ### Unblocked, not started
 
-These compositions have all their constituent atoms grounded. They are ready for authoring; sequencing is by regulatory-coverage value and emergent-invariant interest.
-
-#### C2. Consent & Preference Management with Revocation Propagation
-
-**Status: `grounded` 2026-06-04.** Composes **Consent + Permissions + Audit Trail (substrate)** plus a distinct consent-record Retention Window placement; per the substrate convention, naming Audit Trail satisfies the Event Log + Actor Identity + Retention Window + Tamper Evidence prerequisites transitively. Authored end-to-end (Opus gate: Pass 1 / 2 / 3 + Final Critique; EOS Pass 2 confirmed Permissions a constituent, not a peer, and extracted downstream cessation + delivery-shaping preferences as composing concerns) → TLA+ binding-bijection model + buggy twin verified in `tools/harness/`. See [`compositions/consent-preference-management.md`](./compositions/consent-preference-management.md).
-
-**Prerequisites:** Consent + Audit Trail + Retention Window + Permissions + Event Log — all grounded.
-
-**What it adds.** Consent made operational — checked before every processing action via the `processing_permitted` gate, propagated on revocation (the `consent.revoked` event enumerates the complete downstream scope set, committed atomically with the revoke), auditable for regulatory proof. Emergent invariants: no processing action proceeds under a Consent basis without a `permitted` gate result for the relevant purpose scope; a revocation produces an audit record naming every downstream scope affected (the binding bijection); the full consent history is recoverable from the records alone; and inward (Permissions) / outward (Consent) authorization stay separate.
-
-**Standards anchored.** GDPR Articles 6–7, GDPR Article 7(3), CCPA/CPRA, HIPAA Authorization §164.508.
-
-#### C3. Forensic Recovery
-
-**Status: `grounded` 2026-06-04.** **Prerequisites:** Soft Delete + Audit Trail (substrate, → Event Log + Actor Identity + Retention Window + Tamper Evidence) — all grounded. The forensic-attribution composition: every delete/restore/purge attributed, tamper-evidently sealed, and `recover_history`-recoverable (the full ordered lifecycle Soft Delete's current-state summary cannot provide). The purge-*eligibility* gate (Legal Hold / Retention Window) is Defensible Retention (C1)'s concern, not C3's. Ships with a TLA+ binding-bijection model + buggy twin ("no purge without an audit record"). See [`compositions/forensic-recovery.md`](./compositions/forensic-recovery.md).
-
-**What it adds.** Soft deletion made forensically complete — every deletion, restoration, and purge is attribution-stamped and tamper-evident; the full lifecycle of every soft-deleted record is recoverable from the audit trail. Emergent invariant: no soft-deleted record is purged without an auditable record naming who purged it, when, and under what authority.
-
-**Standards anchored.** GDPR Article 17, HIPAA PHI (Protected Health Information) destruction, e-discovery preservation obligation.
-
-#### C6. Immutable Transaction Ledger with Selective Disclosure
-
-**Status: `grounded` 2026-06-08.** Composes **Audit Trail (substrate, → Event Log + Actor Identity + Tamper Evidence + Retention Window) + Selective Disclosure**, with Idempotent Reservation / Duplicate Prevention as optional at-most-once-append enrichment (named, not core); per the substrate convention, naming Audit Trail satisfies the Event Log + Actor Identity + Tamper Evidence + Retention Window prerequisites transitively. Authored end-to-end (Opus gate: Pass 1 / 2 / 3 + Final Critique; one foundational + two refining findings closed) → TLA+ binding-bijection model + buggy twin verified in `tools/harness/`. See [`compositions/immutable-transaction-ledger.md`](./compositions/immutable-transaction-ledger.md).
-
-**Prerequisites:** Selective Disclosure + Audit Trail (substrate, → Event Log + Actor Identity + Tamper Evidence + Retention Window) — all grounded.
-
-**What it adds.** A transaction ledger both non-repudiable and selectively shareable — the full ledger is immutable, attributed, and tamper-evident; a subset can be disclosed both *accountably* (each disclosure is itself an immutable, attributed `ledger.disclosed` event) and *verifiably* (the disclosed subset is independently provable authentic against the ledger seal), without compromising the undisclosed remainder. Two emergent invariants: the disclosure-accountability binding bijection (`disclose_subset` writes one Selective Disclosure record and one `ledger.disclosed` event atomically — the TLA+ model subject) and verifiable partial disclosure (a behavioral capability obligation on the substrate's tamper-evidence, mechanism-neutral). First composition to compose the Selective Disclosure atom.
-
-**Standards anchored.** SEC Rule 17a-4 (broker-dealer transaction records), HIPAA §164.528 (accounting of disclosures), 21 CFR Part 11 (electronic records / regulatory submissions), GDPR Article 15 (right of access), W3C Verifiable Credentials (selective-disclosure proofs).
-
-#### C7. Data Subject Rights Fulfillment (DSAR)
-
-**Prerequisites (grounded cut):** Selective Disclosure + Defensible Retention (C1, substrate → Legal Hold + Retention Window + Audit Trail, reached transitively) + Consent (read-only authority oracle) — all grounded. (The earlier flat list — Legal Hold + Consent + Selective Disclosure + Audit Trail + Retention Window + Actor Identity + Event Log — predated the substrate cut; those atoms are reached transitively through the C1 substrate, not composed directly.)
-
-**What it adds.** Data subject access and erasure made mechanically answerable as a *conflict-resolution over a record universe*: when access (Art 15), erasure (Art 17), legal hold/retention (via C1), and consent collide on a record, C7 resolves each into exactly one recorded, attributed **disposition** and guarantees **no-silent-omission** (every in-scope record dispositioned, none dropped) plus the **request ⇔ accountable-complete-fulfillment binding bijection** (disposition set + response-disclosure + sealed event commit atomically). The erasure path wraps C1's `purge_record` gate (hold-blocks-purge *is* the delete-vs-preserve resolution), adding only the Art 17(1)(b) Consent-oracle branch; Consent is read-only. Seeds a forthcoming Completeness Model atom (a shared C7/C8 enumeration primitive C7 exposes).
-
-**Standards anchored.** GDPR Articles 15–20 (incl. 15(4), 17(1)(b), 17(3) exemptions, 12(3)), CCPA/CPRA, HIPAA §164.524 (access) / §164.526 (amendment) / §164.528 (accounting of disclosures).
-
-**Status: `grounded on Final Critique 5` — 2026-06-09.** Author gating review (two foundational + five refining closed), formal-layer vote YES with a verified TLA+ binding + coverage model and two buggy twins, and a fresh-reader Opus council (Final Critique 4; three foundational findings folded, foundational to zero) all complete. The Phase-4 Opus Happy-Torvalds-X2 clearance gate cleared in a fresh session on 2026-06-09 (`claude-opus-4-8`): foundational findings at zero, six refining/rhetorical findings folded, the formal model + both buggy twins re-verified. C7 is now grounded, bringing the library to 47 grounded patterns (20 grounded compositions). C7 is the first composition authored under the capability-provenance rule.
-
-#### C8. KYC (Know Your Customer) / Customer Onboarding with Ongoing Monitoring
-
-**Prerequisites:** Party Identity + Consent + Audit Trail + Event Log + Idempotent Reservation + Retention Window + Actor Identity — all grounded (Party Identity completed 2026-05-14).
-
-**What it adds.** Customer onboarding made regulatorily complete — every identity verification step is attribution-stamped and tamper-evident; the onboarding record is immutable from the moment the customer is enrolled; ongoing screening triggers (sanctions list match, PEP (Politically Exposed Person) status change, adverse media) are recorded as events against the Party Identity record. Emergent invariant: no customer proceeds to active status without a verified Party Identity record; no Party Identity verification is performed without a corresponding Audit Trail entry.
-
-**Standards anchored.** FATF (Financial Action Task Force) Recommendations 10–12, BSA/AML (31 CFR §1020.220), FinCEN beneficial ownership rule (31 CFR §1010.230), EU 5th Anti-Money Laundering Directive.
-
-**Status: `grounded on Final Critique 4` — 2026-06-03.** Composes Party Identity + Retention Window + Audit Trail (substrate); Idempotent Reservation and Consent were evaluated as constituents and demoted to optional Duplicate Prevention enrichment and C2 composing peer respectively (see the composition's Lineage notes — Pass 2 findings). Three-pass baseline (3×3) plus the AI-conducted Final Critique; foundational findings closed in each baseline round, and the Phase-4 Opus clearance gate returned zero foundational findings.
-
-#### C9. Reservation Lifecycle
-
-**Status: `grounded` 2026-06-04.** Composes Capacity Constraint Enforcement + Provisional Commitment + Duplicate Prevention + Event Log + Actor Identity — the pool-arithmetic superset of Idempotent Reservation. Authored against Idempotent Reservation as the structural template (Opus gate: Pass 1 / 2 / 3 + Final Critique → TLA+ allocation-coherence model + buggy twin verified). The load-bearing emergent invariant is allocation coherence (`allocated` in lockstep with the live-reservation set, within `[0, capacity]`), owned via the `reservation_to_pool` binding with a `slot_released` flag; oversell, slot-leak, and double-release are each foreclosed by a named mechanism. See [`compositions/reservation-lifecycle.md`](./compositions/reservation-lifecycle.md).
-
-**Prerequisites:** Capacity Constraint Enforcement + Provisional Commitment + Duplicate Prevention + Event Log + Actor Identity — all grounded (Capacity Constraint Enforcement completed 2026-05-15).
-
-**What it adds.** The full arc of a reservation: capacity query against the pool, provisional hold against a specific slot, idempotent confirmation under concurrent demand, and eventual resolution — confirmed, cancelled, or expired. Emergent invariants: confirmed reservations never exceed pool capacity; a cancelled or expired reservation releases its slot back to the pool atomically; no reservation transitions to Confirmed unless its provisional hold is still Active at confirmation time.
-
-**Standards anchored.** Booking and ticketing systems; financial settlement (credit limit enforcement); supply chain and inventory.
-
-**Newly unblocked.** This composition was blocked on Capacity Constraint Enforcement through 2026-05-14; it is unblocked as of 2026-05-15.
-
-#### C17. Authenticated Actor
-
-**Prerequisites:** Credential (atom #11 — `grounded` 2026-05-19) + Actor Identity (grounded). Both grounded; unblocked as of 2026-05-21.
-
-**What it adds.** The formal relationship between a principal's authentication credential and their attestation key — two identity surfaces the individual atoms define independently but whose relationship they leave unspecified. Three emergent invariants the individual atoms do not own: (1) **Revocation cascade** — whether `Credential.revoke` must cascade to invalidate the Actor Identity attest surface, closing the gap where a principal whose login is revoked can still sign attestations; (2) **Secret surface separation** — whether the same cryptographic material may serve both as the Credential verifier and the Actor Identity attest key, or whether the surfaces must be distinct; (3) **Namespace binding** — how `principal_ref` (Credential's identity key) and `actor_ref` (Actor Identity's identity key) are formally bound to the same human or system principal, preventing an audit record attributed to a different identity surface than the session record it corresponds to. Implementation-discovered gap: see `demos/attributed-permissions-admin/CORNERS.md` §Cross-atom identity surface aliasing.
-
-**Standards anchored.** NIST SP 800-63B §5.2 (verifier requirements — separation of authentication secrets from signing keys); NIST SP 800-57 Part 1 (key management — key separation by purpose); PCI DSS Requirement 8.6 (management of system and application accounts and authentication factors — distinct credential surfaces for distinct purposes); FIPS 140-3 (cryptographic module separation requirements).
-
-**Newly unblocked.** Both constituent atoms grounded as of 2026-05-19. The gap was surfaced by implementation pressure on the Attributed Permissions Admin demo on 2026-05-21.
-
----
-
-#### C18. Actor Suspension
-
-**Prerequisites:** Actor Identity (grounded) + Permissions (grounded) + Session (grounded — via C13 Login) + Audit Trail (grounded). All grounded; unblocked at this entry's creation date. Optionally composes Credential (grounded) where policy requires deactivating the actor's credentials alongside their grants and sessions.
-
-**What it adds.** Coordinated deactivation of an actor's authorization and authentication surfaces in one transactional boundary, with a single tamper-evident `actor.suspended` Audit Trail event naming the full scope of what was revoked. Three emergent invariants the individual atoms do not own: (1) **Atomicity of multi-surface revocation** — after `suspend_actor` returns success, the actor holds zero active grants in Permissions and zero active sessions in Session, all written under one transaction; a partial state (grants revoked but sessions still active, or vice versa) is not a reachable post-state. (2) **Audit completeness of revocation scope** — the `actor.suspended` event enumerates every `grant_id` and `session_token` revoked by the call, so an auditor can reconstruct from records alone which surfaces were taken offline at suspension time; a revocation that touches a grant or session whose id is not in the event payload is a finding. (3) **Suspension cascade ordering** — Actor Identity's status transition (Active → Suspended) is the precondition for the cascade; the cascade reads Actor Identity status as the gate, the same way Login's `revoke_sessions_for_credential` reads credential status. An attempted cascade against an already-Suspended actor is a no-op return with `{grants_revoked: 0, sessions_revoked: 0}`, not an error. The composition's Pass-3-shaped TOCTOU concern mirrors Login's FC1: one constituent revocation succeeds, another storage-fails, actor is now in a partial state. The default discipline is all-or-nothing under a single transaction boundary (matching Login's atomic-action commit pattern); a best-effort variant with partial-state attestation is named as a deployment-policy alternative.
-
-**Standards anchored.** NIST SP 800-53 AC-2(3) (account management — disable accounts when no longer required) + AC-6(5) (least privilege — revoke unnecessary privileges); SOX §404 (internal controls over user access); HIPAA §164.308(a)(3)(ii)(C) (termination procedures — terminate access when employment ends); PCI DSS Requirement 8.1.3 (immediately revoke access for terminated users); ISO/IEC 27001 §A.9.2.6 (removal or adjustment of access rights).
-
-**Newly unblocked.** All four constituent atoms grounded as of 2026-05-21. Named as a stretch item for the Clinical Trial Portal demo (`compositions/Demo2-plan.md` §Phase 7 — "soft-revoke pattern" for coordinated revocation of an actor's grants and sessions in one transaction emitting `actor.suspended`).
-
----
-
-### Formerly blocked on remaining atoms — now grounded or unblocked
-
-#### C12. Chain of Custody
-
-**Status: `grounded` 2026-06-04.** **Prerequisites:** Provenance *(atom #7 — grounded)* + Audit Trail (substrate, supplying Actor Identity + Tamper Evidence + Retention Window transitively) — all grounded. C12 composes Provenance + Audit Trail; its emergent guarantee is records-alone custody proof (`verify_custody`), with a TLA+ binding-bijection model + buggy twin. This entry is retained under "Blocked on remaining atoms" only as history of its former state; C12 is now grounded — see [`compositions/chain-of-custody.md`](./compositions/chain-of-custody.md).
-
-**What it adds.** A complete chain-of-custody record for a thing — a physical item, a digital artifact, a sample, a document — from origin through every transfer, transformation, and terminal disposition. Every custody event is attribution-stamped and tamper-evident; the full chain is reconstructable from the records alone with no gaps permitted. Emergent invariants: no custody event is recorded without a named custodian and a timestamp; no gap between consecutive custody events is a valid state; the chain is append-only and tamper-evident at every link.
-
-**The cross-domain thesis in one example.** Pharmaceutical chain of custody (FDA 21 CFR Part 211 — drug sample from manufacturer through distributor to pharmacy) and evidence chain of custody (legal forensics — item from crime scene through lab to court) are structurally identical. Same atoms, same emergent invariants, different domain vocabulary. One grounded composition serves both. This is the library's core claim made concrete: the pattern belongs in one place, not reinvented in every domain that needs it.
-
-**Standards anchored.** FDA 21 CFR Part 211 (pharmaceutical chain of custody); DEA 21 CFR Part 1304 (controlled substance handling records); Federal Rules of Evidence 901(b)(9) (chain of custody as authentication for physical evidence); ISO 17025 (laboratory sample handling and traceability); ASTM E1492 (evidence handling in forensic science).
-
-**Unlocks.** A worked example of cross-domain pattern reuse — the library's strongest argument for the open-commons model. Natural reference case for grant submissions and early adopter conversations in healthcare and legal tech.
-
----
-
-#### C10. Stateful Workflow Execution
-
-**Status: `grounded` 2026-06-04.** **Prerequisites:** Workflow / State Machine (atom #9) + Approval Step + Permissions + Assignment + Audit Trail (substrate, → Event Log + Actor Identity + Retention Window + Tamper Evidence) — all grounded. The composition where guard *evaluation* re-converges (a guarded transition fires only when its bound Approval Step is Approved); ships with a TLA+ approval-gated-transition model + buggy twin. First composition to compose the Workflow / State Machine atom. This entry is retained under "Blocked on remaining atoms" only as history of its former state; C10 is now grounded — see [`compositions/stateful-workflow-execution.md`](./compositions/stateful-workflow-execution.md).
-
-**What it adds.** A multi-actor gated workflow made auditably complete — declared-state transitions enforced by the Workflow / State Machine atom; human approval gates enforced by Approval Step instances; assignment of work to actors enforced by Assignment; permissions to trigger transitions enforced by Permissions. Emergent invariants: no state transition proceeds without the required approval gate cleared; no approval is granted by an actor lacking the required permission; the full workflow history is tamper-evident and attribution-stamped.
-
-**Standards anchored.** SOX §404, FDA 21 CFR Part 11, ISO 9001 §8.5.1, BPMN 2.0.
+These four have all their constituent atoms grounded — ready for authoring, sequenced by regulatory-coverage value and emergent-invariant interest.
 
 #### C11. Preference-Aware Notification Fanout
 
-**Prerequisites:** Preference / Personalization *(atom #10 — `grounded` 2026-05-29)* + existing: Subscription, Notification (grounded); Notification Fanout composition (grounded). **Newly unblocked 2026-05-29** — Preference grounded on Final Critique 5; C11 is now ready for authoring and belongs with the unblocked-not-started compositions (retained under this heading only as history of its former blocked-on-atom-#10 status).
+**Prerequisites:** Preference / Personalization *(atom #10 — `grounded` 2026-05-29)* + Subscription, Notification, and the Notification Fanout composition (all grounded). Unblocked 2026-05-29 when Preference grounded.
 
 **What it adds.** Notification Fanout extended with per-subscriber delivery shaping — the fanout step consults each subscriber's Preference record and adjusts channel, format, and rate. Emergent invariants: a Suspended Preference record suppresses delivery even when Subscription is Active; frequency-cap violations are held or dropped per declared policy rather than silently delivered; the `failed` list distinguishes delivery-attempted-and-failed from delivery-suppressed-by-preference.
 
 **Standards anchored.** CAN-SPAM, TCPA, GDPR Article 7(3).
 
-#### C13. Login
-
-**Prerequisites:** Credential (atom #11 — `grounded` 2026-05-19) + Session (atom #12 — `grounded` 2026-05-19) + Audit Trail substrate (grounded). **Status: `grounded` 2026-05-20.**
-
-**What it adds.** Credential verification wired to Session issuance, both attested under the verified principal. Login is the composition where a successful `verify` produces a record that persists the authentication result — the Session — rather than returning it as a transient signal. Emergent invariant: a Session is valid only if the Credential it was derived from remains Active; revocation of a Credential invalidates every Session derived from it — the cascade rule. The cascade lives in Login's emergent state (a derivation map from credential to issued sessions), not in either constituent atom, because neither atom alone knows the other exists. A composing system that revokes a Credential without cascading to sessions has produced a record set that violates the cascade invariant but not any invariant of either constituent atom alone — the gap is exactly the composition layer's job to close.
-
-**Standards anchored.** NIST SP 800-63B (authenticator verification producing a bound session); OIDC Core 1.0 (the authorization-code login flow producing an ID token and session); SAML 2.0 (SSO authentication producing a session assertion).
-
-#### C14. Session-Gated Authorization
-
-**Prerequisites:** Session (atom #12 — `grounded` 2026-05-19) + Permissions (grounded). **Status: `grounded` 2026-05-20.**
-
-**What it adds.** Every permission check gated on session validity — expired or revoked sessions reject all permission queries before the Permissions check runs. The gate is a pre-check at the composition boundary, not inside either constituent atom. Principal binding is the load-bearing emergent invariant: the `principal_ref` passed to `Permissions.permitted` is always the principal extracted from the validated session — never a caller-supplied value. A caller cannot interrogate permissions for an arbitrary principal by presenting an arbitrary session token. The composition introduces no cross-atom state; the gate is a sequencing constraint. Forensic coverage of individual authorization decisions requires [Audit Trail](./compositions/audit-trail.md) composed in as a substrate. Four emergent invariants: session gates authorization, principal binding, denial is not rejection, default deny. Grounded on Final Critique 4; three rounds of findings (GA two-tier restructure, implementation-boundary bypass edge case, Permissions fail-safe assumption named).
-
-**Standards anchored.** NIST SP 800-53 AC-3 (Access Enforcement); NIST SP 800-53 AC-12 (Session Termination); NIST SP 800-63B §7 (session management); OWASP ASVS V3.3 (session expiry enforced at the resource level); PCI DSS Requirement 7 + 8; HIPAA §164.312(a)(1) + §164.312(d); ISO/IEC 27001 §A.9.4.1.
-
 #### C15. Capability-Backed Sharing
 
-**Prerequisites:** Capability *(atom #13 — grounded)* + Selective Disclosure (grounded) + Audit Trail substrate (grounded) — all grounded; this composition is unblocked, not started.
+**Prerequisites:** Capability *(atom #13 — grounded)* + Selective Disclosure (grounded) + Audit Trail substrate (grounded) — all grounded.
 
-**What it adds.** A capability token allocated to authorize disclosure of a record subset; redemption triggers the disclosure and the audit record in one wired step. The emergent invariant is the audit-subject asymmetry: the audit record reads "disclosed by bearer of capability X, allocated by actor Y at time T" — the allocator is identified (via the Capability atom's allocation provenance invariant), the redeemer is structurally not. This is the library's worked example of bearer-token semantics composing with regulated audit without breaking either: Selective Disclosure's invariants are satisfied (a disclosure record exists); Capability's bearer-key semantics are satisfied (no identity check at redemption); the Audit Trail records what was disclosed, by whom it was authorized, and that a bearer redeemed it. The load-bearing wiring decision: the audit-subject asymmetry is defended in-line in the composition because it is a property of the wiring, not of either constituent.
+**What it adds.** A capability token allocated to authorize disclosure of a record subset; redemption triggers the disclosure and the audit record in one wired step. The emergent invariant is the audit-subject asymmetry: the audit record reads "disclosed by bearer of capability X, allocated by actor Y at time T" — the allocator is identified (via the Capability atom's allocation provenance invariant), the redeemer is structurally not. The library's worked example of bearer-token semantics composing with regulated audit without breaking either: Selective Disclosure's invariants hold (a disclosure record exists); Capability's bearer-key semantics hold (no identity check at redemption); the Audit Trail records what was disclosed, by whom it was authorized, and that a bearer redeemed it. The asymmetry is defended in-line because it is a property of the wiring, not of either constituent.
 
-**Standards anchored.** GDPR Article 32 (security of sharing — capability tokens as access-control mechanism for regulated disclosures); HIPAA §164.514 (minimum necessary standard — a Capability can carry a scope constraint limiting what subset is accessible); OCAP literature (bearer-key authorization semantics, as anchored in Capability atom #13).
+**Standards anchored.** GDPR Article 32 (capability tokens as access-control for regulated disclosures); HIPAA §164.514 (minimum-necessary — a Capability can carry a scope constraint); OCAP literature (bearer-key authorization semantics).
 
-#### C16. External Onboarding
+#### C17. Authenticated Actor
 
-**Prerequisites:** Invitation (atom #14 — `grounded` 2026-05-19) + Credential (atom #11 — `grounded` 2026-05-19) + Party Identity (grounded) + Audit Trail substrate (grounded). **Status: `grounded` 2026-05-21.**
+**Prerequisites:** Credential (atom #11 — `grounded` 2026-05-19) + Actor Identity (grounded). Both grounded; unblocked as of 2026-05-21.
 
-**What it adds.** The full arc of admitting an external entity: invitation issued by an authorized actor, accepted (binding the invitee's external identity reference at accept time, not initiate time), Party Identity enrolled in Unverified state, credential registered, every step attested in the Audit Trail. Load-bearing emergent invariant: invitation-gates-enrollment — no Party Identity is created unless `Invitation.accept` precedes it in the same `onboard` call, and the `onboarding.completed` Audit Trail event names invitation token, accepting identity reference, party record, and credential in one tamper-evident entry. The actor credential pre-check fires before `Invitation.accept` so unauthenticated callers cannot probe invitation validity. Five emergent invariants. Three rounds of findings resolved in-pattern (audit-first step ordering, invitation-state probing prevention, `duplicate-active-credential` vs `storage-failure` distinction, Invariant 4 qualifier for background-scheduler expiry). Grounded on Final Critique 4.
+**What it adds.** The formal relationship between a principal's authentication credential and their attestation key — two identity surfaces the individual atoms define independently but whose relationship they leave unspecified. Three emergent invariants neither atom owns: (1) **Revocation cascade** — whether `Credential.revoke` must cascade to invalidate the Actor Identity attest surface, closing the gap where a principal whose login is revoked can still sign attestations; (2) **Secret surface separation** — whether the same cryptographic material may serve both as the Credential verifier and the Actor Identity attest key, or whether the surfaces must be distinct; (3) **Namespace binding** — how `principal_ref` and `actor_ref` are formally bound to the same principal, preventing an audit record attributed to a different identity surface than the session record it corresponds to. Implementation-discovered gap: see `demos/attributed-permissions-admin/CORNERS.md` §Cross-atom identity surface aliasing.
 
-**Standards anchored.** GDPR Articles 6–7; HIPAA §164.312(a)(1) + §164.312(d); SOC 2 CC6.2; NIST SP 800-63A; SCIM 2.0 RFC 7644; FATF Recommendations 10–12 (enrollment record as the CDD (Customer Due Diligence) starting point; verification is C8's concern).
+**Standards anchored.** NIST SP 800-63B §5.2 (separation of authentication secrets from signing keys); NIST SP 800-57 Part 1 (key separation by purpose); PCI DSS Requirement 8.6; FIPS 140-3 (cryptographic module separation).
+
+#### C18. Actor Suspension
+
+**Prerequisites:** Actor Identity (grounded) + Permissions (grounded) + Session (grounded — via C13 Login) + Audit Trail (grounded). All grounded. Optionally composes Credential where policy requires deactivating credentials alongside grants and sessions.
+
+**What it adds.** Coordinated deactivation of an actor's authorization and authentication surfaces in one transactional boundary, with a single tamper-evident `actor.suspended` Audit Trail event naming the full scope of what was revoked. Three emergent invariants neither atom owns: (1) **Atomicity of multi-surface revocation** — after `suspend_actor` succeeds, the actor holds zero active grants and zero active sessions, written under one transaction; a partial state is not reachable. (2) **Audit completeness of revocation scope** — the event enumerates every `grant_id` and `session_token` revoked, so an auditor can reconstruct from records alone which surfaces went offline; a revocation touching an id absent from the payload is a finding. (3) **Suspension cascade ordering** — Actor Identity's Active → Suspended transition gates the cascade (as Login's `revoke_sessions_for_credential` reads credential status); a cascade against an already-Suspended actor is a no-op `{grants_revoked: 0, sessions_revoked: 0}`, not an error. Default discipline is all-or-nothing under one transaction; a best-effort variant with partial-state attestation is a named alternative. The outbound-side counterpart to C13 Login's inbound credential cascade.
+
+**Standards anchored.** NIST SP 800-53 AC-2(3) + AC-6(5); SOX §404; HIPAA §164.308(a)(3)(ii)(C); PCI DSS Requirement 8.1.3; ISO/IEC 27001 §A.9.2.6.
 
 ---
 
