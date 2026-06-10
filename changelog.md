@@ -89,6 +89,44 @@ cut a versioned release, so everything below sits under **Unreleased**.
     the rule is stated once ([`CLAUDE.md`](./CLAUDE.md) §Current state of the
     library) and the drifted snapshots were removed from spec-format's Status
     line and the Contract's composition-types and fan-out passages.
+- **Refactor 1, methodology cluster (2026-06-10)** — the A4/A5/A6 methodology
+  refactor, closing the Refactor 1 handoff:
+  - **Scheduled-rescan automation (A4).** [`pressure-testing.md`](./pressure-testing.md)
+    §Scheduled rescan names the automated council as the default executor (Pass 3
+    in strict fresh-reader mode throughout), with the cost model stated as
+    parameters, never a snapshot: a weekly rescan budget plus risk-weighted
+    ordering when short (oldest rescan date first, tie-broken by composition
+    fan-in). Proven, not just stated — the first council-run rescan batch
+    (Credential / Session / Capability) clean-closed with Lineage entries, Status
+    bumps, coverage matrices, and measured cost in
+    [`ai-usage-log.md`](./ai-usage-log.md); the batch also closed Capability's
+    missing-buggy-twin model-present-bar violation.
+  - **Composition-layer extraction question set (A5).**
+    [`pressure-testing.md`](./pressure-testing.md) §Pass 2 gains a question set one
+    level up from the atom-level extraction questions: the trigger for retiring a
+    recurring emergent invariant or wiring decision *across compositions* into a
+    shared substrate. Four questions — invariant-level recurrence (not atom-set
+    co-occurrence; similarity ≠ recurrence), own invariant surface,
+    forthcoming-debt retired, survives Jackson's wiring-not-primitive rule — with
+    Immutable Transaction Ledger's Final Critique 5 rejected *dual-store
+    atomic-commit* extraction as the worked case that had no question set to apply.
+  - **The pressure-testing.md split — declined (A6).** The proposed three-way
+    split (a lean process document, a new `formal-layer.md`, and capability-
+    provenance / change-history relocations) was considered and **declined**; the
+    rationale is recorded in [`pressure-testing.md`](./pressure-testing.md)
+    §Recursive application as a Pass-2 self-finding against the methodology
+    document. Decisive: the formal-layer vote is a universal grounding gate that
+    does not separate from the three-pass pipeline without splitting one rule
+    across two files (the one-SSOT-per-rule violation the A7 seam just ended);
+    much of the grounded corpus links section-into-file at the sections that would
+    move, and a corrected cross-reference is itself a touch-trigger; the weakest
+    finding in the set does not justify the cost. A concrete re-open condition is
+    recorded.
+  - **Handoff retired (Meta).** `internal/refactor-1-findings.md` dispersed and
+    deleted: resolved findings live in their owning docs and the patterns'
+    Lineage notes, the mirror-check findings (MC-C12-1 / MC-C3-1) in the Chain of
+    Custody / Forensic Recovery coverage matrices, and this history here. The
+    handoff is done when the staging file has nothing left to say.
 
 ### Fixed
 
