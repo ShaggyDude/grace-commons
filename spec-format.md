@@ -46,6 +46,16 @@ The overlay is *additive*: a regulated atom carries the atom shape's sections pl
 
 ---
 
+## Ownership seam with the Execution Contract
+
+Two core documents describe a Grace Commons spec, and every rule about specs lives in exactly one of them. **This document owns the containers**: which sections exist, what each is for, their required order, the three shapes, and the three reading tiers. **The Execution Contract owns the runtime semantics of section contents**: what each section means to a conforming implementation — how it compiles, what it obligates at runtime, and what state a composition may carry ([`execution-contract.md`](./execution-contract.md)). Where a subsection here states what content must be present (a container concern), the Contract states what that content means when lowered (a semantics concern). No rule is stated in both documents. A rule that appears in both is a finding against whichever statement is not the owner's — this seam was assigned 2026-06-10 precisely because composition-state semantics had come to be claimed by both documents at once, and the two claims had diverged.
+
+**The Contract's mapping tables are the SSOT bridge.** The Contract's two section-mapping tables — atom section → compilation target, and spec section → test type — are the canonical record of the correspondence between this document's section names and the runtime, together with the section-name classification that accompanies them there (§Section-name classification in the Contract). This document never restates that correspondence. A section renamed or added here without a corresponding classification entry there is silent drift — the same failure class as a mirrored library-state count — and the section-name lint check specified alongside the Contract's classification exists to catch it mechanically.
+
+**Merge the view, not the source.** If a single unified "language reference" spanning containers and semantics is ever wanted, it is generated as a projection of this document and the Contract — text-canonical / views-derived, the library's own diagram discipline applied to its own documentation. The two sources do not merge: they serve different audiences (drafters versus implementers) and change at different rates, and a merged source would bury the human-bridge material in runtime semantics.
+
+---
+
 ## Atom shape
 
 Reference examples: [`atoms/personal-todo.md`](./atoms/personal-todo.md) for the simplest non-regulated shape; [`atoms/actor-identity.md`](./atoms/actor-identity.md) for the regulated shape with the overlay.
@@ -106,7 +116,7 @@ Reference examples: [`compositions/idempotent-reservation.md`](./compositions/id
 
 5. **Composition logic.** The main body of the composition's specification. Always contains the following named subsections, in this order:
 
-   - **Application state** — the emergent state the composition owns (maps, indexes, derived records) that does not belong to any single constituent. For each state element: what it maps, what populates it, what removes it, and what reads it. The State node's completeness rule (*what changes and under what condition*) is verified against this subsection.
+   - **Application state** — the emergent state the composition carries (maps, indexes, derived records) that does not belong to any single constituent. The *semantics* of composition state — what a composition may carry, and the rule that every element is either a **derived index** (fully rebuildable from constituent stores) or evidence of a not-yet-extracted atom — are owned by the Execution Contract: see [`execution-contract.md`](./execution-contract.md) §Composition state. This subsection is the container. For each state element: what it maps, what populates it, what removes it, what reads it, and its Contract classification — *derived index*, naming the constituent store(s) it derives from and the rebuild procedure, or *extraction-pending*, naming the proposed atom per the Contract's extraction rule. The State node's completeness rule (*what changes and under what condition*) is verified against this subsection.
 
    - **Configuration** — deployment-settable knobs. Each knob: its name, type, default value, and the rule the deployment uses to set it (regulated deployments must use *X*; deployments under regulation *Y* must not configure *Z*). The configuration surface is what a deployment touches to specialize the composition; if the spec is silent, the runtime fills the gap silently — a Pass 3 finding.
 
@@ -177,6 +187,8 @@ This document enumerates sections. It does not enumerate authoring conventions �
 
 This document also does not enumerate the *content* expected at each pass. That is the methodology's job — Pass 1's GRID completeness rules, Pass 2's EOS extraction questions, Pass 3's adversarial question set. See [`pressure-testing.md`](./pressure-testing.md).
 
+Nor does it state the runtime semantics of any section's contents — those belong to the Execution Contract per the ownership seam above (see *Ownership seam with the Execution Contract*).
+
 ---
 
 ## When to deviate
@@ -203,4 +215,4 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 
 ## Status
 
-`grounded — 2026-05-20` — first version of the canonical spec format reference. Enumerates the three shapes (atom, composition, regulated overlay) as they have been used across the library's twenty atoms and eight compositions through Defensible Retention's Round 3. Future refinements will land via the standard scheduled-rescan and touch-triggered re-pass disciplines.
+`grounded — 2026-05-20` — first version of the canonical spec format reference. Enumerates the three shapes (atom, composition, regulated overlay) as exercised across the grounded corpus through Defensible Retention's Round 3 — [`roadmap.md`](./roadmap.md) is the single source of truth for the corpus's current contents and counts; this document states no library-state snapshot. Revised 2026-06-10 (Refactor 1): the ownership seam with the Execution Contract assigned (§Ownership seam with the Execution Contract), §Application state's semantics deferred to the Contract's composition-state rule, and the drifted pattern-count snapshot this line previously carried removed under the no-snapshot rule ([`CLAUDE.md`](./CLAUDE.md) §Current state of the library). Future refinements land via the standard scheduled-rescan and touch-triggered re-pass disciplines.

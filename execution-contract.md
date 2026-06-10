@@ -145,6 +145,21 @@ The Grace Commons atom spec maps to the execution model through a direct section
 
 ---
 
+### Section-name classification — the mapping tables are the SSOT
+
+The two section-mapping tables in this document — the atom-section → compilation-target table above, and the spec-section → test-type table in the Testing model — together with the classification below are the **canonical record** of the correspondence between [`spec-format.md`](./spec-format.md)'s section names and the runtime. spec-format owns the containers (which sections exist, their order, their tiers — see its §Ownership seam with the Execution Contract); this document owns what those sections mean when lowered. The tables are keyed to spec-format's section names, which makes them the seam where the two documents can silently drift: a section renamed or added in spec-format with no entry here leaves the compiler's contract speaking about a container that no longer exists — the same failure class as a mirrored library-state count. The classification plus the lint check below make that drift mechanically catchable instead of reader-dependent.
+
+**Every section name spec-format requires is classified exactly once** — either *compiling* (a mapping-table row or a named section of this document specifies its lowering) or *non-compiling* (its content is human-tier, scope-declaring, or evidence-bearing — consumed by readers and the methodology, not by the compiler):
+
+- **Compiling — atom shape:** Identity model; Inputs and Outputs; State; Decision points; Invariants; Examples; description/validation rules within Inputs. (Rows in the two mapping tables.)
+- **Compiling — composition shape:** Composes (lowers to the constituent interface bindings and the declared instance topology — see §Substrate composition invocation); Application state (lowers per §Composition state — each derived index compiles to a rebuildable projection with its named rebuild procedure); Configuration (lowers to the deployment's named knob surface); Primitive policies (lowers to PF validation/normalization functions — the composition-boundary instance of the *Description / validation rules* row); Action wiring (lowers to the directed invocation graph plus one composition test per named action); Composition-level invariants (post-wiring assertions).
+- **Compiling — regulated overlay:** Generation acceptance (named read queries); Regulated adversarial scenarios (acceptance tests).
+- **Non-compiling (named):** Frontmatter; Title and summary blockquote; Intent; Summary; Flow, Behavior, and Feedback (narrative views of the state machine, of the transitions' observable consequences, and of the query surface — their load-bearing content compiles via the State, Outputs, and Decision points rows, and the Pass 1 reference graph is what guarantees the narrative and the compiled sections agree); Edge cases and explicit non-goals (scope declarations naming composing patterns; they do not lower); The load-bearing wiring decision (defended prose for the human tier); Composition notes; Standards references; Status; Lineage notes.
+
+**The section-name lint check (specified; sibling of the dangling-link check).** A linter pass in the same family as [`tools/linter/lint.py`](tools/linter/lint.py)'s dangling-link check and the planned dangling-capability check enforces the classification bidirectionally: (1) every required section name enumerated in spec-format's three shapes appears in the classification above, and (2) every name in the classification is still a section spec-format requires. A name failing (1) is an unclassified new or renamed section — this document has not decided what it means at runtime. A name failing (2) is a stale classification entry — this document speaks about a container that no longer exists. Either is a finding routed through the standard channel against the edit that broke the correspondence. Until the linter lands, the classification is enforced by review: any edit to spec-format's required-section lists, or to this classification, names the other document in the same change.
+
+---
+
 ### Regulated atoms
 
 Atoms carrying the regulated overlay, and any atom whose examples invoke regulated domains, compile with two additional outputs beyond the standard set:
@@ -159,9 +174,31 @@ Atoms carrying the regulated overlay, and any atom whose examples invoke regulat
 
 A composition is not a merged state machine. It is not a higher-order state machine with its own persistent state. It is a **stateless interpreter of a directed invocation graph over stateful atoms** — a function-level orchestration that sequences constituent SM transitions within the scope of a single action invocation. "Directed invocation graph" names what the composition structurally is: a graph of atom calls with explicit directed edges (sequential, conditional, or parallel — see Composition types below). The graph is a first-class compilation artifact, not prose description; the compiler reads the graph to emit the wiring code, not the other way around.
 
-The distinction is load-bearing. A formalization that gives the composition its own state set S introduces a state artifact that has no atom spec, no identity model, no durability contract, and no invariants. The question "where does the composition's orchestration state live?" has no answer within the model — and that is the model's fault, not the implementor's. Grace Commons eliminates the question by construction: **compositions have no persistent state of their own beyond their constituents' stores.** What looks like "orchestration state" — the intermediate result of a constituent call, the branch taken, the flag set mid-sequence — is ephemeral local state within a single action invocation. It lives on the call stack. When the action returns, it is gone.
+The distinction is load-bearing. A formalization that gives the composition its own state set S introduces a state artifact that has no atom spec, no identity model, no durability contract, and no invariants. The question "where does the composition's orchestration state live?" has no answer within the model — and that is the model's fault, not the implementor's. Grace Commons eliminates the question by construction: **compositions carry no persistent truth of their own beyond their constituents' stores.** What looks like "orchestration state" — the intermediate result of a constituent call, the branch taken, the flag set mid-sequence — is ephemeral local state within a single action invocation. It lives on the call stack. When the action returns, it is gone. One construct refines this rule without weakening it: a composition may carry a **derived index** — read-path state every fact of which is rebuildable from its constituents' stores — precisely because a rebuildable projection carries no truth of its own. The rule, its twin extraction rule, and the obligations they impose are in §Composition state below (adjudicated 2026-06-10).
 
 If a composition needs to record that a multi-step sequence occurred — coordination history, execution progress, ordered event trace — it does so by composing Event Log. The history belongs to Event Log's store and is governed by Event Log's invariants. The composition does not grow a second record store to hold what an atom already owns.
+
+---
+
+### Composition state — the derived-index rule and the extraction rule
+
+*(Adjudicated 2026-06-10, Refactor 1. This section is the single owner of composition-state semantics; [`spec-format.md`](./spec-format.md) §Application state is the container that documents each element against it.)*
+
+The corpus's composition specs carry an **Application state** subsection — binding maps, grant-pairing maps, attribution indexes — while the model above says a composition carries no persistent truth. Both are right, and the reconciliation is one question asked of every state element: **is every fact in this element fully derivable, at any time, from the constituents' stores through their declared read surfaces?**
+
+**Derivable → derived index (permitted construct).** A derived index is read-path acceleration over constituent truth: a map or index every fact of which is reconstructible by a named rebuild procedure over constituent query surfaces. It is explicitly a cache, and it is permitted exactly because it carries no truth — which is why it does not reintroduce the state artifact the model forbids: no identity model, durability contract, or invariant surface is *needed* for state that can be regenerated from spec-governed stores at any time. Three obligations attach:
+
+1. **Named derivation.** The spec names the constituent store(s) the index derives from and the rebuild procedure — the query enumeration that regenerates it from empty.
+2. **Outside the atomicity surface.** The index is excluded from its action's multi-write atomicity obligation: its population is *evidence* that the truth-bearing writes committed, never a peer write whose failure the compensation protocol must handle. A missing or lost entry is a rebuild trigger, not data loss; a formal model of the action models the truth-bearing stores and omits the index.
+3. **No consistency claim.** A derived index inherits the best-effort semantics of composition queries (see Boundary rules): it claims no cross-constituent transactional consistency. The moment a projection must be transactionally consistent with its sources — or readable under a guarantee a rebuild cannot honor — it is the materialized-projection *atom* of the Boundary rules, not an index.
+
+The worked example of the derivable pole is Immutable Transaction Ledger (C6)'s `disclosure_to_event`: the binding fact already lives in the substrate ledger's `ledger.disclosed` events (`data.disclosure_id`), and C6's own spec states that both orphan checks run by reading the substrate's Event Log without a separate index — the map is pure read-path acceleration over substrate truth.
+
+**Non-derivable → extracted atom (the extraction rule).** Composition state that carries truth *not* reconstructible from constituent stores is a not-yet-extracted atom. The model's original objection stands undiluted for this case — an owned truth-bearing store has no atom spec, no identity model, no durability contract, no invariant surface — and the repair is to give it one by extraction, not to bless the omission. The worked example of the non-derivable pole is Idempotent Reservation's `token_results`: token → result is new truth (*which result was returned for this token*) that no replay of Provisional Commitment + Duplicate Prevention reproduces — Duplicate Prevention answers *have I seen this identity?* (membership, no payload), and its own spec states that the concept does not act on the result. The extraction this forces — an **Idempotency Result Memo** atom (token → result, single write, window-governed eviction) — is opened as a roadmap proposal (see [`roadmap.md`](./roadmap.md)); Duplicate Prevention + the Memo together complete idempotent-replay semantics, and the wiring layer thins back toward pure orchestration.
+
+**Until an extraction lands, the exception is named, never normalized.** A composition carrying a non-derivable element declares it in Application state as *extraction-pending*, naming the proposed atom. The flag is what keeps the debt visible: an unflagged truth-bearing composition store is a conformance finding; a flagged one is recorded debt riding the extraction's schedule. Extractions touch grounded patterns and their formal models, so they ride touch-triggered re-pass rounds — budgeted, not ad hoc.
+
+This section resolves an inconsistency this document previously carried in three passages at once: the composition model's no-persistent-state rule, a wiring-layer example citing Idempotent Reservation's token-result cache approvingly, and a data-layer clause filing `token_results` under atoms with multiple stores while the A-stack section calls Idempotent Reservation the first composition. The rule above replaces all three readings: the cache is real, it is non-derivable, and it is therefore extraction-pending — not an atom's second store, and not a sanctioned composition store.
 
 ---
 
@@ -171,7 +208,7 @@ The wiring layer has three jobs:
 
 1. **Defines the composition's action surface** — the named actions in Shared Todo (`add_task`, `assign_task`, etc.), the named actions in Idempotent Reservation (`place_hold`, `confirm`, etc.).
 2. **Sequences constituent SM transitions in declared order** — `Permissions.permitted` before `PersonalTodo.add`, `DuplicatePrevention.check` before `ProvisionalCommitment.place_hold`.
-3. **Enforces application-level invariants that no constituent atom can enforce alone** — cascade-on-delete in Shared Todo (Assignment.recall before PersonalTodo.delete), exactly-once-in-window in Idempotent Reservation (the token-result cache that makes retries return the prior result).
+3. **Enforces application-level invariants that no constituent atom can enforce alone** — cascade-on-delete in Shared Todo (Assignment.recall before PersonalTodo.delete), exactly-once-in-window in Idempotent Reservation (retries return the prior result — backed by `token_results`, the worked *extraction-pending* case of §Composition state above).
 
 ---
 
@@ -183,7 +220,7 @@ Three wiring patterns cover the full space of Grace Commons compositions:
 
 **Conditional.** A pure function over current constituent state selects which atom to call, or whether to call the next atom at all. `Permissions.permitted(actor, task, write)` in Shared Todo is a conditional gate: if G returns `typed_failure`, the composition aborts without touching Personal Todo. The branch selection is a pure function — no runtime ambiguity, no stored routing decision.
 
-**Parallel.** Two or more atoms are called independently, with no output of one serving as input to the other. The composition's action surface may derive a joint projection from both results — a read query that joins constituent Q surfaces — but neither atom's transition depends on the other's. No shared state mediates the parallel calls. All current Grace Commons compositions are sequential or conditional; parallel is the anticipated pattern for notification fanout (Subscription × Notification) and similar fan-out actions, but the wiring rule is the same: independence means no shared persistent state, only a joint projection.
+**Parallel.** Two or more atoms are called independently, with no output of one serving as input to the other. The composition's action surface may derive a joint projection from both results — a read query that joins constituent Q surfaces — but neither atom's transition depends on the other's. No shared state mediates the parallel calls. Parallel wiring is governed by the fan-out boundary rule below and worked in the [Notification Fanout](./compositions/notification-fanout.md) composition (Subscription × Notification); whichever wiring pattern a composition uses, the rule is the same: independence means no shared persistent state, only a joint projection.
 
 ---
 
@@ -198,7 +235,7 @@ AtomInterface = {
 }
 ```
 
-The composition does not read the constituent atom's internal state directly. It does not perform DB joins against the atom's table outside the atom's declared Q surface. It does not inspect the atom's state schema (S). It does not call T or G directly — those are invoked by the atom's own pipeline when `accept` is called. The interface is opaque by design: a composition that reaches past it is not wiring atoms, it is coupling to implementation details and will break when the atom changes.
+The composition does not read the constituent atom's internal state directly. It does not perform DB joins against the atom's table outside the atom's declared Q surface. It does not inspect the atom's state schema (S). It does not call T or G directly — those are invoked by the atom's own pipeline when `accept` is called. The interface is opaque by design: a composition that reaches past it is not wiring atoms, it is coupling to implementation details and will break when the atom changes. For constituents that are themselves compositions — substrates — the same interface discipline generalizes; see §Substrate composition invocation below.
 
 **No cross-atom DB joins.** The prohibition follows from the interface contract. If two atoms' stores are joined outside their Q surfaces — a raw SQL join across their tables — the join logic is not governed by either atom's spec. It has no invariants, no guard semantics, no rejection reasons. When either atom's schema changes, the join breaks silently. Derived queries that need data from two atoms compose their Q surfaces in a pure function: `join(AtomA.query(name), AtomB.query(name))`. The pure join function has no IO; the two Q calls are the direct effects.
 
@@ -212,11 +249,43 @@ Derived queries (`responsible_actor`, `visible_tasks` in Shared Todo) are pure j
 
 ---
 
+### Substrate composition invocation
+
+*(Added 2026-06-10, Refactor 1.)* A composition may name another composition as a constituent — a **substrate** — rather than re-listing the substrate's own constituents. [`spec-format.md`](./spec-format.md) §Compositions of compositions owns the container convention (how the Composes section names a substrate); this section owns what the naming means at runtime. Without it the contract is silently incomplete one level up: the atom interface contract and the conformance definition speak only of constituent *atoms*, while the corpus composes compositions — Defensible Retention names Audit Trail; Data Subject Rights Fulfillment names Defensible Retention, whose own substrate is Audit Trail; Privileged Access Provisioning names Multi-Party Approval and Audit Trail at once.
+
+**The interface generalizes; opacity is preserved.** A substrate is invoked through exactly the surface its own spec declares — its named composition actions and its read surface:
+
+```
+CompositionInterface = {
+  invoke(action, params) → output | typed_failure(reason)
+  query(name, params)    → result_set
+}
+```
+
+This is the atom interface contract one level up, and every opacity clause carries over: the composing layer does not read the substrate's constituent stores directly, does not join against them outside declared read surfaces, and does not re-derive or police the substrate's internal wiring. The substrate's rejection taxonomy is whatever its action signatures declare; each rejection is mapped — propagated, renamed, or absorbed — at the composing layer's boundary, exactly as a constituent atom's rejections are.
+
+**Pipelines nest whole; they do not flatten.** A substrate action invoked in a composing action's Step 3 executes its own complete four-step pipeline — read, guard, transition-plus-write, project — inside the invocation, exactly as it would standalone. The pipeline-applies rule is invocation-scoped, not call-depth-scoped: one pipeline per action invocation, each complete, at every depth. The composing action's Step 2 guards evaluate only the composing layer's own preconditions; the substrate's guards run inside the substrate's pipeline when it is invoked, and a substrate guard failure surfaces to the composing layer as the invocation's typed failure *during Step 3* — a constituent rejection mid-sequence, handled by the composing action's declared failure path, never retroactively reclassified as a composing-layer Step 2 outcome.
+
+**Atomicity layers; it does not flatten.** Each layer owns the atomicity of exactly the write sequence *it* sequences. A substrate action that is internally multi-store (Audit Trail's `record_action` commits an event append, an attestation, a retention record, and seal coverage) discharges its own multi-write atomicity obligation inside its own Step 3. The composing layer treats the invocation as **one atomic constituent call, modulo the substrate's declared partial-failure surface** — it inherits the substrate's recovery discipline by reference and never re-derives it (Multi-Party Approval's audit-completeness invariant holding *modulo* Audit Trail's partial-attestation edge case is the worked form). The composing layer's own multi-write obligation spans its own sequence. Where every write in that sequence — including the substrate invocation's — is a recoverable store write, the implementation may discharge an all-or-nothing claim by providing a transactional boundary enclosing the whole composing Step 3 (the multi-write atomicity contract's rule: the spec names the obligation, each target supplies the mechanism; Actor Suspension's all-or-nothing multi-surface revocation is the worked form). Where an irreversible write — constituent or substrate — precedes further writes in the sequence, all-or-nothing rollback is unavailable by construction, and the composing spec must name the resulting orphan state and its compensation in a *Cross-store consistency under partial failure* edge case (sequential-with-compensation; C6's `disclose_subset` is the worked form). Two flattening reads are forbidden: claiming the composing action is atomic *because* the substrate's action is, and requiring rollback across a write the constituent's own spec declares irreversible.
+
+**Instance topology is declared; instance unity is the default.** Reaching a substrate's constituents "transitively" means: exactly one instance of each transitively-reached constituent exists at the composition — the one the substrate carries — and the composing layer never maintains an undeclared duplicate. Two consequences, both load-bearing in the corpus:
+
+1. **Declared direct invocation of a substrate constituent is permitted.** A composing layer may call a substrate constituent's own declared action directly on the instance the substrate carries — Multi-Party Approval and Data Subject Rights Fulfillment record their own events by calling `AuditTrail.record_action` on the Audit Trail their substrate carries — when three conditions hold: the capability is the constituent's *own declared* action or query (capability provenance — never an ambient "the substrate can…"); the instance is the substrate's (no second instance, no bypass copy); and the path is named in the Composes section (the reach is declared topology, not discovered plumbing). This is the established substrate-composition pattern, it is layer-count-agnostic (Data Subject Rights Fulfillment reaches Audit Trail through Defensible Retention, two layers down), and it licenses invoking declared *surfaces* only — never reading stores.
+2. **Deliberate multi-instance topologies are declared as such.** Where the same atom legitimately appears twice — a business-record Retention Window distinct from the audit-event Retention Window inside an Audit Trail substrate (Defensible Retention, KYC / Customer Onboarding) — the spec declares both instances and their distinct policies explicitly. Undeclared instance duplication is a conformance failure; declared distinct instances are correct topology. A composition naming two substrates that share a constituent declares whether the instances coincide (Privileged Access Provisioning: one Audit Trail instance serving both its own events and its Multi-Party Approval substrate's chain events).
+
+**Transitive reads go through declared read surfaces.** A composing layer may read transitively-reached state only through the substrate's declared read surface, or through a reached constituent's declared queries on the substrate's instance per the direct-invocation rule — C6 validates disclosed-subset membership by reading the substrate's Event Log filtered by `action_ref`, passed through Audit Trail's read surface. A raw join against a substrate constituent's tables is the cross-atom DB join prohibition operating one level up, and fails the same way: ungoverned by any spec, silently broken by any schema change.
+
+**Mechanism capability invocation is the named residual.** One invocation class fits neither an action call nor a query: a composition-introduced surface that consumes a *deployment-declared mechanism capability* of a constituent. C6's `verification_bundle` construction invokes the configured Tamper Evidence mechanism's inclusion-proof capability — declared by the deployment as a named configuration capability — because no constituent action produced a subset proof when the surface was introduced. This is permitted under exactly the capability-provenance discipline ([`pressure-testing.md`](./pressure-testing.md) §Capability provenance): the capability is declared (a named deployment obligation, verified by an externally-clearable check), the consuming surface is composition-introduced and specified at the composition layer, and the invocation is logic-confinement-clean — the mechanism is configured material invoked at a named step, never crypto or IO improvised inside core logic. The honest residual is also named: a recurring mechanism-capability surface is a not-yet-extracted-atom signal (C6's names the forthcoming Subset Proof atom as its retirement path), so this construct is a bridge with a named exit, not a permanent third interface.
+
+**Conformance extends recursively.** A composition is conforming when all of its constituents — atoms *and* substrate compositions, recursively — are conforming and its application-level invariants hold over the joint record set its wiring produces. A substrate's non-conformance is inherited: no composing layer is conforming over a non-conforming substrate. And no composing layer is obligated to re-verify what the substrate's own conformance already establishes — inheriting a guarantee by reference is the point of naming a substrate.
+
+---
+
 ### Boundary rules
 
 These are the hard limits where the composition model either holds or silently reintroduces hidden machinery. All four are variants of the same pressure: coordination complexity trying to migrate into the composition layer. The composition layer must not absorb it.
 
-**Fan-out is a decomposition boundary, not a transition.** No atom produces non-atomic fan-out side effects. An action that triggers delivery to N recipients is not a single transition — it is two concerns that belong to two atoms: recording the intent (one write, fully atomic, one atom) and executing per-recipient delivery (N independent state machines, one per recipient, each retryable independently). Fan-out that is modeled as a single transition with N side effects has introduced partial-write ambiguity — some recipients receive, others do not, and the atom's consistency domain is undefined. The correct decomposition: Intent atom records the trigger; Fanout composition creates N Delivery Task atoms from the intent; each Delivery Task atom owns its own state, retry, and failure. This is the Notification Fanout pattern in the roadmap.
+**Fan-out is a decomposition boundary, not a transition.** No atom produces non-atomic fan-out side effects. An action that triggers delivery to N recipients is not a single transition — it is two concerns that belong to two atoms: recording the intent (one write, fully atomic, one atom) and executing per-recipient delivery (N independent state machines, one per recipient, each retryable independently). Fan-out that is modeled as a single transition with N side effects has introduced partial-write ambiguity — some recipients receive, others do not, and the atom's consistency domain is undefined. The correct decomposition: Intent atom records the trigger; Fanout composition creates N Delivery Task atoms from the intent; each Delivery Task atom owns its own state, retry, and failure. This is the [Notification Fanout](./compositions/notification-fanout.md) pattern.
 
 **Parallel composition carries no rollback guarantee.** If A succeeds and B fails in a parallel composition, A's write stands. The composition does not roll back A. If the system requires A to be undone when B fails — if atomicity across parallel branches is a correctness requirement — that is not a composition problem. It is a new atom: a compensating state machine that must be explicitly defined, with its own states (Pending, Compensated, Unrecoverable), its own guard logic, and its own invariants. The composition invokes it. If rollback is needed, you are defining a new atom, not composing.
 
@@ -240,6 +309,8 @@ The model has exactly three kinds of runtime entity. No fourth kind is permitted
 
 If a composition seems to need persistent state, the answer is not to give the composition a store — it is to compose Event Log. The composition's "memory" of what happened is the Event Log's record set, governed by Event Log's invariants and Q surface. The composition remains stateless; the history remains auditable and spec-governed.
 
+A derived index (§Composition state) is not a fourth kind: it is a rebuildable projection of constituent stores — the same ontological status as any derived artifact — and owns neither state nor history in the table's sense. The taxonomy governs truth-bearing runtime entities; anything truth-bearing is one of the three.
+
 ---
 
 ## UI projection contract
@@ -261,7 +332,7 @@ Rules:
 ## Data layer contract
 
 The schema is derived from the SM definition. Specifically:
-- One table per atom (or per distinct record type in atoms with multiple stores — Idempotent Reservation's `token_results` is a second table).
+- One table per atom (or per distinct record type where an atom's spec names multiple stores). A composition-carried derived index (§Composition state) may compile to a table, but a rebuildable one — droppable and regenerated from constituent stores by its named rebuild procedure, never migrated as truth. A composition-carried table that *cannot* be regenerated that way is the schema-level symptom of a not-yet-extracted atom (Idempotent Reservation's `token_results` is the worked case — *extraction-pending* per §Composition state).
 - One column per field named in the atom's State section.
 - One enum (or constrained varchar) per S for the status column.
 - Timestamp columns are nullable where the atom's spec says the field is absent until a specific transition.
@@ -360,7 +431,7 @@ A runtime implementation of a Grace Commons atom is conforming when all of the f
 6. Q returns results consistent with the record set produced by the state machine's transition history. A query that disagrees with the durable record set is a conformance failure.
 7. For regulated atoms: the Generation acceptance checks pass against the record set produced by any conforming run.
 
-A composition is conforming when all constituent atoms are conforming and the application-level invariants hold over the joint record set produced by the wiring layer.
+A composition is conforming when all of its constituents — atoms and substrate compositions, recursively (§Substrate composition invocation) — are conforming and the application-level invariants hold over the joint record set produced by the wiring layer.
 
 The A-stack reference implementation is a conforming implementation. It is not the only conforming implementation. Any runtime that satisfies these seven conditions against the Grace Commons atom specs is conforming, regardless of language, database, or UI technology.
 
@@ -378,7 +449,7 @@ A-stack is the reference runtime. It is the minimal conforming implementation �
 | State machines | TypeScript discriminated unions | One union type per S; one typed function per event in E |
 | Pipeline | Explicit per-transition | Steps 1–4 written out explicitly; no framework interpolates them |
 
-The first two A-stack examples, in dependency order: **Personal Todo** (simplest atom — four actions, no regulated sections, covers the full pipeline with the description policy as a PF normalization example) and **Idempotent Reservation** (first composition — demonstrates the token-result cache, multi-write atomicity in `place_hold`, and the exactly-once emergent invariant).
+The first two A-stack examples, in dependency order: **Personal Todo** (simplest atom — four actions, no regulated sections, covers the full pipeline with the description policy as a PF normalization example) and **Idempotent Reservation** (first composition — demonstrates multi-write atomicity in `place_hold`, the exactly-once emergent invariant, and the *extraction-pending* `token_results` store that §Composition state classifies).
 
 ---
 

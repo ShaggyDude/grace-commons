@@ -190,6 +190,13 @@ Model: Claude (opus — Cowork agent session)
 Work: Mongo ghost render built and verified in-sandbox (`demos/clinical-trial-portal-mongo`): spec-derived core on the mongodb driver, replica-set transactions, the fourth serialize-clause mechanism (unique chain-position index + optimistic retry, measured by `prove-serialization.mjs`), the invariant → enforcer discovery table, validator + ghost adapters; 20/20 conformance, seven-render agreement at 100%, chain byte-identical under the JS canonical contract. Go render compiled and verified against its golden in-sandbox. Public docs updated (demos.md, discoveries.md 2026-06-07 entry); root-doc currency sweep (readme tree, CHANGELOG, EXECUTION_CONTRACT fourth mechanism, PRESSURE_TESTING round-structure canonicalization, linter TAXONOMY exclusion).
 Human decision: Author directed the render's discovery framing (findings vs CORNERS routing), committed the render after reviewing the proposed message, approved adding ghost renders to the public docs ("more evidence"), and commissioned the root-doc sweep.
 
+### Phase 7 — Refactor 1: core-doc constitutional cluster (2026-06-10)
+
+**2026-06-10**
+Model: Claude (fable — Cowork agent session)
+Work: Refactor 1, session 1, against the 2026-06-10 review handoff (`internal/refactor-1-findings.md`): the A7 ownership seam between spec-format.md and execution-contract.md (containers vs. section-content semantics; mapping tables declared SSOT; section-name lint check specified); the A3 composition-state adjudication (derived-index rule + extraction rule in the Contract's new §Composition state; spec-format §Application state deferring; Idempotency Result Memo atom proposal and methodology debt #9 opened in ROADMAP; provisional classification matrix staged at `internal/composition-state-audit.md`); the A2 §Substrate composition invocation section, pressure-tested against the fourteen substrate-using compositions; the A1 no-snapshot rule (stated once in CLAUDE.md) with the drifted snapshots removed from spec-format and the Contract. Resolved findings struck from the handoff doc.
+Human decision: Author scoped the session to the constitutional cluster only (A7+A3 → A2 → A1; no A4/A5/A6, no pattern edits), fixed the adjudication order, and adjudicated the proposed commit series.
+
 ---
 
 ## Ongoing log format

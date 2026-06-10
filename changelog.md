@@ -57,6 +57,39 @@ cut a versioned release, so everything below sits under **Unreleased**.
   ([`DEPLOY.md`](./demos/clinical-trial-portal-next/DEPLOY.md)) is the remaining
   piece.
 
+### Changed
+
+- **Refactor 1, constitutional cluster (2026-06-10)** — three core-doc
+  adjudications plus a drift sweep, from the 2026-06-10 review handoff:
+  - **Ownership seam (A7).** [`spec-format.md`](./spec-format.md) owns the
+    containers (sections, order, tiers); [`execution-contract.md`](./execution-contract.md)
+    owns the runtime semantics of section contents. The Contract's mapping
+    tables plus a new complete section-name classification are the SSOT bridge,
+    with a bidirectional section-name lint check specified (sibling of the
+    dangling-link check). No rule stated in both documents.
+  - **Composition state (A3).** New Contract §Composition state: every
+    Application-state element is either a *derived index* (fully rebuildable
+    from constituent stores — named rebuild procedure, outside the atomicity
+    surface, no consistency claim) or *extraction-pending* (a not-yet-extracted
+    atom, declared). Resolves the Contract's internal three-passage
+    inconsistency around Idempotent Reservation's `token_results`; spec-format
+    §Application state now defers to the Contract. Opens the **Idempotency
+    Result Memo** atom proposal and the corpus Application-state audit
+    (ROADMAP 2026-06-10 bullet and methodology debt #9).
+  - **Substrate invocation (A2).** New Contract §Substrate composition
+    invocation: the composition-as-constituent interface, whole-pipeline
+    nesting, layered atomicity (recoverable joint boundaries vs.
+    sequential-with-compensation), declared instance topology (instance unity;
+    declared direct invocation of substrate constituents; declared
+    multi-instance cases), transitive reads through declared surfaces only,
+    mechanism-capability invocation as the named residual, and recursive
+    conformance. Pressure-tested against the fourteen substrate-using
+    compositions.
+  - **No-snapshot rule (A1).** Core docs carry no library-state snapshots;
+    the rule is stated once ([`CLAUDE.md`](./CLAUDE.md) §Current state of the
+    library) and the drifted snapshots were removed from spec-format's Status
+    line and the Contract's composition-types and fan-out passages.
+
 ### Fixed
 
 - **clinical-trial-portal — audit-chain genesis-hash bug.** The seeded genesis
