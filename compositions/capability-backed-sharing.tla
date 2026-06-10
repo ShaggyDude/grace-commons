@@ -35,7 +35,8 @@
 \* NOT MODELED (out of scope for the load-bearing property)
 \* - the audit-subject asymmetry (Invariant 1) — a structural / by-construction
 \*   property (no redeemer field anywhere in the spec graph), Capability-model-
-\*   verified (capability.als checks Capability Invariants 3 and 5); not a
+\*   verified (capability.als enforces Capability Invariants 3 and 5 by
+\*   construction — no redeemer field, redeem takes no identity); not a
 \*   TLA+-class temporal claim.
 \* - allocation-authorization binding (Invariant 3) and scope-bounded disclosure
 \*   (Invariant 4) — single-write-path / records-shape properties.
