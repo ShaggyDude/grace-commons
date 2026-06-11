@@ -353,7 +353,7 @@ Medication Order composes naturally with the existing library:
 
 ## Status
 
-`grounded` (formal layer complete 2026-06-04 — TLA+ model `medication-order.tla` + buggy twin verified (Invariants 5, 9); Alloy model `medication-order.als` + buggy twin verified (Invariants 3, 4, 2); all GAPs from coverage cross-check 2026-06-04 closed; see Lineage §Formal model.) — foundation round, two human refinement rounds, and AI adversarial round (Torvalds X2) complete. Last full rescan: 2026-05-20.
+`grounded — 2026-05-20` (formal layer complete 2026-06-04 — TLA+ model `medication-order.tla` + buggy twin verified (Invariants 5, 9); Alloy model `medication-order.als` + buggy twin verified (Invariants 3, 4, 2); all GAPs from coverage cross-check 2026-06-04 closed; see Lineage §Formal model.) — foundation round, two human refinement rounds, and AI adversarial round (Torvalds X2) complete. Last full rescan: 2026-05-20.
 
 ---
 

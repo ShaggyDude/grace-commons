@@ -340,7 +340,7 @@ A derived implementation of Privileged Access Provisioning is *acceptable* — i
 
 ## Status
 
-`grounded on Final Critique 4` — three-pass baseline (Rounds 1–3) plus Final Critique (Round 4) complete. Thirteen findings across Rounds 1–4, all resolved. Round 5 (touch-triggered re-pass, 2026-05-23): one foundational finding (R5-F1 — `request_to_chain` declared in `vars` but not initialized in `Init`, TLA+ model unrunnable via CLI), **resolved 2026-06-03** by removing the dead variable; the model now runs clean under the `tools/harness/` WASM checker (1682 states, all seven invariants hold). Round 5 closes clean. See Lineage notes for the full finding-and-resolution record.
+`grounded on Final Critique 4 — 2026-05-23` — three-pass baseline (Rounds 1–3) plus Final Critique (Round 4) complete. Thirteen findings across Rounds 1–4, all resolved. Round 5 (touch-triggered re-pass, 2026-05-23): one foundational finding (R5-F1 — `request_to_chain` declared in `vars` but not initialized in `Init`, TLA+ model unrunnable via CLI), **resolved 2026-06-03** by removing the dead variable; the model now runs clean under the `tools/harness/` WASM checker (1682 states, all seven invariants hold). Round 5 closes clean. See Lineage notes for the full finding-and-resolution record.
 
 ---
 

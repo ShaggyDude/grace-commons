@@ -267,7 +267,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — Alloy structural model `permissions.als` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`.) — all required structural elements resolved; identity model explicit; grant and revoke action signatures with fully-named rejection taxonomies including `storage-failure`; `permitted` query with two first-class outcomes; ten invariants including grant store durability (Invariant 10); five cross-domain examples; regulated adversarial scenarios with disputed access query corrected to timestamp-based temporal form; fifteen edge cases including revoke persistence failure (security-critical, added in refinement round 1). Fourth entry in `compliance`. Survived one foundation pass and one refinement round.
+`grounded — 2026-05-20` (formal layer landed 2026-06-03 — Alloy structural model `permissions.als` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`.) — all required structural elements resolved; identity model explicit; grant and revoke action signatures with fully-named rejection taxonomies including `storage-failure`; `permitted` query with two first-class outcomes; ten invariants including grant store durability (Invariant 10); five cross-domain examples; regulated adversarial scenarios with disputed access query corrected to timestamp-based temporal form; fifteen edge cases including revoke persistence failure (security-critical, added in refinement round 1). Fourth entry in `compliance`. Survived one foundation pass and one refinement round.
 
 ---
 

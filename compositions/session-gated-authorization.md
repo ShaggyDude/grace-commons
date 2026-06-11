@@ -16,7 +16,7 @@ toc: true
 </details>
 
 
-**Status:** grounded on Final Critique 6 — 2026-05-23 · four baseline-equivalent rounds (Pass 1/2/3 each in Rounds 1–3 plus Final Critique 4) plus Round 5 (touch-triggered re-pass — Alloy artifact verification) plus Round 6 (formal-model refinement closing both Round 5 findings) complete. Round 5 surfaced two refining findings in the formal model; Round 6 closed both. Spec prose unchanged across Rounds 5 and 6; the four named application-level invariants and the three temporal claims (revocation terminal, expiry terminal, gate reflects current status) verified clean against the Alloy (a formal modeling language for checking structural and temporal properties of a design) static + dynamic-trace model — 13 commands, all matching expectation. · **Composes:** [Session](../atoms/session.md) · [Permissions](../atoms/permissions.md)
+**Composes:** [Session](../atoms/session.md) · [Permissions](../atoms/permissions.md)
 
 > A regulated application: every authorization query is gated by a mandatory session validation before the Permissions atom is consulted. An expired, revoked, or unrecognized session terminates the call before Permissions is reached. The principal presented to Permissions is always the principal the session was issued for — never a value the caller supplies. The gate and the principal binding together constitute the composition's load-bearing emergent invariant; neither belongs to Session or Permissions alone.
 
@@ -253,6 +253,12 @@ This composition introduces no per-call event log. The acceptance bar therefore 
 **Relationship to Privileged Access Provisioning.** [Privileged Access Provisioning](./privileged-access-provisioning.md) gates elevated-access provisioning behind a multi-party approval chain before issuing a time-limited Capability token. PAP's `exercise_access` action independently validates session state before permitting exercise — it is not a use of Session-Gated Authorization, but it enforces the same gate invariant at the exercise boundary. System designers building a full privileged-access surface should consider whether to share the session-gate logic via this composition or enforce it independently inside PAP; the current library treats them as independent implementations of the same principle applied at different lifecycle points.
 
 **Forthcoming-link resolution.** The Session atom's *Composition notes* listed "Session-Gated Authorization (C14 — not started)" as a forthcoming composition. That link is now live.
+
+---
+
+## Status
+
+`grounded on Final Critique 6 — 2026-05-23` — four baseline-equivalent rounds (Pass 1/2/3 each in Rounds 1–3 plus Final Critique 4) plus Round 5 (touch-triggered re-pass — Alloy artifact verification) plus Round 6 (formal-model refinement closing both Round 5 findings) complete. Round 5 surfaced two refining findings in the formal model; Round 6 closed both. Spec prose unchanged across Rounds 5 and 6; the four named application-level invariants and the three temporal claims (revocation terminal, expiry terminal, gate reflects current status) verified clean against the Alloy (a formal modeling language for checking structural and temporal properties of a design) static + dynamic-trace model — 13 commands, all matching expectation.
 
 ---
 

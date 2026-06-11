@@ -324,7 +324,7 @@ A derived implementation of Capability is *acceptable* — in the regulator-acce
 
 ## Status
 
-`grounded — 2026-06-10` (scheduled rescan, council-run — three rounds to clean, findings folded, buggy twin `capability-buggy.als` landed, first coverage matrix emitted; see Lineage §Scheduled rescan 2026-06-10). Prose grounding: `grounded on Final Critique 4` — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 complete. Seven findings total; all resolved in-pattern. Final Critique 4 closed clean (foundational findings: zero; refining findings: one documented, not blocking).
+`grounded on Final Critique 4 — 2026-06-10` (scheduled rescan, council-run — three rounds to clean, findings folded, buggy twin `capability-buggy.als` landed, first coverage matrix emitted; see Lineage §Scheduled rescan 2026-06-10). Prose grounding: `grounded on Final Critique 4` — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 complete. Seven findings total; all resolved in-pattern. Final Critique 4 closed clean (foundational findings: zero; refining findings: one documented, not blocking).
 
 *Classification (post-flatten): stored flat as `atoms/capability.md` — no category folder. Capability is an authorization primitive with significant non-regulated uses (bearer-token authorization wherever it is needed), so its **regulated** and **security** classifications are overlays derived from its composers, not a folder it is filed under. This resolves the atom's former provisional `compliance/` placement and the question of relocating it to a security folder: under the [usage-derived taxonomy](./TAXONOMY.md), `security` is an overlay it carries (derived from its identity/access standards), not a domain or a directory.*
 

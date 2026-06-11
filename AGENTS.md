@@ -53,7 +53,7 @@ Moved — no mirror kept. Atom, application/composition, freestanding, and emerg
 
 ## Authoring conventions
 
-Moved — owned by [`spec-format.md`](./spec-format.md) §What's not in this document (as of 2026-06-11). Deviations are review findings, not stylistic choices.
+Moved — owned by [`spec-format.md`](./spec-format.md) §Cross-cutting authoring conventions (as of 2026-06-11). Deviations are review findings, not stylistic choices.
 
 ## The three-pass review
 

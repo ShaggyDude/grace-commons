@@ -182,7 +182,7 @@ The two atoms it composes carry their own standards inheritance — Personal Tod
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — TLA+ model `undo-history.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
+`grounded — 2026-05-20` (formal layer landed 2026-06-03 — TLA+ model `undo-history.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — composition logic specified, seven application-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred concerns and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful application without modifying either constituent.
 
 ---
 

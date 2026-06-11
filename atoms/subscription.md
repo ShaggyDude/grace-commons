@@ -239,7 +239,7 @@ Subscription is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — Alloy structural model `subscription.als` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — structure and invariants specified; four examples including rejection path and regulated adversarial scenarios; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. First entry in `messaging`.
+`grounded — 2026-05-20` (formal layer landed 2026-06-03 — Alloy structural model `subscription.als` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — structure and invariants specified; four examples including rejection path and regulated adversarial scenarios; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. First entry in `messaging`.
 
 ---
 

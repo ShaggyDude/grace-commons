@@ -147,9 +147,9 @@ The three perspectives complement the three-pass pressure-testing methodology de
 
 Every Grace Commons pattern — atomic or application — is reviewed through three passes, each catching a different class of gap:
 
-- **Pass 1 — Structural completeness (GRID).** Are all nine GRID nodes resolved with their references intact?
-- **Pass 2 — Conceptual independence (EOS).** Does the spec absorb any concern that belongs to a separate freestanding atom?
-- **Pass 3 — Adversarial scrutiny (Linus mode).** Are there muddled identities, sloppy invariants, happy-path-only examples, or hidden load-bearing decisions?
+- **Pass 1 — Structural completeness (GRID — the nine-checkpoint completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** Are all nine GRID nodes resolved with their references intact?
+- **Pass 2 — Conceptual independence (EOS — *The Essence of Software*, Daniel Jackson's framework of freestanding, composable concepts).** Does the spec absorb any concern that belongs to a separate freestanding atom?
+- **Pass 3 — Adversarial scrutiny (Linus mode — named for Linus Torvalds's blunt, unsparing code reviews).** Are there muddled identities, sloppy invariants, happy-path-only examples, or hidden load-bearing decisions?
 
 Each pass catches a different class of gap; none substitutes for the others. One clean sweep of the three is not grounding. The full bar is a **3×3 baseline** — three rounds of the three passes, nine passes — followed by a **Final Critique**, an AI-conducted adversarial round run at Opus *Happy Torvalds X2* depth and repeated until foundational findings reach zero, plus the **formal-layer vote** (and, where it votes *yes*, a verifying derived model). See [`pressure-testing.md`](./pressure-testing.md) for the full methodology and [`atoms/personal-todo.md`](./atoms/personal-todo.md) for a worked example whose Lineage notes record the arc.
 
@@ -176,22 +176,22 @@ A pattern moves through four states: **Proposal** (an issue describing the recur
 
 ## Workflow for adding a new pattern
 
-*(Ownership moved here from `CLAUDE.md`, 2026-06-11.)*
+*(Ownership moved here 2026-06-11 from the session-bootstrap index — now `AGENTS.md`, reached via the `CLAUDE.md` shim.)*
 
 1. **Triage atom vs. application.** Apply the directory-placement test (does the specification name another pattern?) and confirm against EOS Pass 2. The deeper criterion: does the concern have its own state machine, recur across many domains, deserve its own atom?
 2. **Identify the closest existing pattern.** Read it carefully; mirror its shape, vocabulary, and conventions. [Actor Identity](./atoms/actor-identity.md) and [Retention Window](./atoms/retention-window.md) are the references for new regulated atoms; [Personal Todo](./atoms/personal-todo.md) is the reference for productivity primitives; [Idempotent Reservation](./compositions/idempotent-reservation.md) and [Audit Trail](./compositions/audit-trail.md) are the references for compositions.
-3. **Draft.** For regulated atoms or applications composing regulated atoms, bake in *Regulated adversarial scenarios* and *Generation acceptance* from the first draft. Identity model and action signatures explicit. Invariants named descriptively then numbered.
-4. **Run all three passes.** GRID first, EOS second, Linus third. Iterate until clean. Lineage notes record what each pass found and how it was resolved.
-5. **Resolve forthcoming-links.** Any existing atom whose Composition notes name the new pattern as `*(forthcoming)*` gets the marker removed and the reference linked.
-6. **Update catalog files.** Regenerate the browse-by-overlay catalog (`atoms/index.md`, via `python3 tools/taxonomy/generate_views.py .`), the top-level snapshot in `readme.md`, and — for applications — `compositions/README.md`. Add the new pattern with a one-line description and the standards it anchors. (Atom overlays are derived, so the catalog regenerates rather than being hand-maintained.)
+3. **Draft.** For regulated atoms or applications composing regulated atoms, bake in *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, and honor the cross-cutting authoring conventions owned by [`spec-format.md`](./spec-format.md) §Cross-cutting authoring conventions (identity model and action signatures explicit; invariants named descriptively then numbered; the rest of that list).
+4. **Run the three passes in order and iterate** — GRID, then EOS, then Linus — until a complete round surfaces no new findings, per [`pressure-testing.md`](./pressure-testing.md) §Order and iteration, which owns the round structure. Lineage notes record what each pass found and how it was resolved.
+5. **Resolve forthcoming-links.** Any existing pattern that names the new one as `*(forthcoming)*` gets the marker removed and the reference linked. (Discovery method: search the corpus for `(forthcoming)` near your pattern's name; the new pattern's Lineage *Structural milestone* paragraph lists what it retires — see [`spec-format.md`](./spec-format.md) §Composition shape, Lineage notes.)
+6. **Update the catalog surfaces — three different mechanisms.** (a) Add the pattern's status row and sequencing notes to [`roadmap.md`](./roadmap.md), the single source of truth for library state — the roadmap's status cell mirrors the pattern's own Status line exactly (the status-mirror lint check enforces this). (b) Regenerate the browse-by-overlay catalog: `python3 tools/taxonomy/generate_views.py .` — this rewrites `atoms/index.md` and nothing else; atom classification is derived, never hand-edited. (c) For applications only: hand-add a one-line entry naming the composition and the standards it anchors to `compositions/README.md`. (`readme.md` carries no library-state snapshot by rule — see [`pressure-testing.md`](./pressure-testing.md) §The no-snapshot rule; there is nothing to update there.)
 
 ---
 
 ## Implementation-discovered findings
 
-*(Ownership moved here from `CLAUDE.md`, 2026-06-11.)* Building demos or production systems against a spec sometimes surfaces problems the three-pass review missed. The discipline below keeps the spec-as-canonical story honest without silencing implementation discoveries.
+*(Ownership moved here 2026-06-11 from the session-bootstrap index — now `AGENTS.md`, reached via the `CLAUDE.md` shim.)* Building demos or production systems against a spec sometimes surfaces problems the three-pass review missed. The discipline below keeps the spec-as-canonical story honest without silencing implementation discoveries.
 
-A **finding** is a contradiction *inside* the spec — an action wiring and an invariant disagree, two passages describe different behavior for the same case, a CHECK and a trigger cannot both hold, an example violates an invariant, a forthcoming-link points at something that already landed under a different name. Findings are Pass-3-shaped and belong in the pattern's Lineage notes as a new pass. Log them; route them through the standard review channel; do not modify the spec mid-build.
+A **finding** is a contradiction *inside* the spec — or inside a derived artifact such as a formal model, which is the same class (the worked precedent: Privileged Access Provisioning's R5-F1, a TLA+ model whose `vars` and `Init` disagreed). An action wiring and an invariant disagree, two passages describe different behavior for the same case, a CHECK and a trigger cannot both hold, an example violates an invariant, a forthcoming-link points at something that already landed under a different name. Findings are Pass-3-shaped and belong in the pattern's Lineage notes as a new pass. Log them; route them through the standard review channel; do not modify the spec mid-build.
 
 A **preference** is anything else — *"this would be cleaner if…"*, *"I'd rather have one table than four"*, *"the column name is awkward"*, *"this collapses to a simpler form in my implementation"*. Preferences are implementation choice and belong in the implementation's own follow-up tracker (e.g., a `CORNERS.md` alongside the build), not in the spec.
 

@@ -238,7 +238,7 @@ It inherits from:
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — TLA+ model `assignment.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — all required structural elements resolved; identity model explicit; assign, recall, and reassign preconditions explicit; rejection paths exercised in examples across four domains; deferred concerns (accept/decline, expiry, assigner authorization, assigner attribution, capacity constraints, group assignment, task lifecycle, completion handling, concurrent races, reassign atomicity, clock semantics) named as out-of-scope with composing patterns where applicable. Second entry in `productivity`. Direct prerequisite for the Shared Todo composition.
+`grounded — 2026-05-20` (formal layer landed 2026-06-03 — TLA+ model `assignment.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — all required structural elements resolved; identity model explicit; assign, recall, and reassign preconditions explicit; rejection paths exercised in examples across four domains; deferred concerns (accept/decline, expiry, assigner authorization, assigner attribution, capacity constraints, group assignment, task lifecycle, completion handling, concurrent races, reassign atomicity, clock semantics) named as out-of-scope with composing patterns where applicable. Second entry in `productivity`. Direct prerequisite for the Shared Todo composition.
 
 ---
 

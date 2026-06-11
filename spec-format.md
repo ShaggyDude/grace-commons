@@ -94,7 +94,7 @@ Reference examples: [`atoms/personal-todo.md`](./atoms/personal-todo.md) for the
 
 17. **Standards references.** The regulatory or industry standards the atom's invariants satisfy or contribute toward, with section anchors where applicable. Cite only standards that genuinely apply at this layer; frame standards that belong to a composing pattern as the composing pattern's obligation.
 
-18. **Status.** A one-line status indicator (`grounded — YYYY-MM-DD` for a grounded atom, `partially resolved` for an atom that has not completed all required passes, or `draft` for a freshly authored atom). See [`pressure-testing.md`](./pressure-testing.md) for the status taxonomy.
+18. **Status.** A status line carrying exactly one token of the canonical status grammar — [`pressure-testing.md`](./pressure-testing.md) §Status line format owns the token forms and their semantics; this document requires only the container (`## Status` section, token-first line).
 
 19. **Lineage notes.** The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Pass 1 GRID findings, Pass 2 EOS extractions, Pass 3 Linus fixes, and any Round 2 / Round 3 / scheduled-rescan entries — what was found, what was closed in-pattern, what was deferred as explicit out-of-scope. The Lineage notes section is the evidence the atom has been pressure-tested; an absence here is not necessarily a problem but a rich Lineage section is provably evidence-bearing.
 
@@ -163,9 +163,9 @@ Both regulated-overlay conventions are *inherited from the methodology directly*
 
 ---
 
-## What's not in this document
+## Cross-cutting authoring conventions — and what's not in this document
 
-This document enumerates sections — and, as of 2026-06-11, it **owns the cross-cutting authoring conventions** every section must honor (ownership moved here from `CLAUDE.md`, which now carries only a pointer; [`pressure-testing.md`](./pressure-testing.md) reinforces these conventions through its pass questions). The conventions, regardless of which shape:
+This document enumerates sections — and, as of 2026-06-11, it **owns the cross-cutting authoring conventions** every section must honor (ownership moved here from the session-bootstrap index — now `AGENTS.md`, reached via the `CLAUDE.md` shim — which carries only a pointer). [`pressure-testing.md`](./pressure-testing.md) enforces these conventions through its Pass 1 and Pass 3 questions without restating them, with one named exception: the defended-in-line *rubric* (Principle / Likely objection / Mechanism / Result) is methodology and stays owned by [`pressure-testing.md`](./pressure-testing.md) §Defending each claim in-line — the bullet below points there. The conventions, regardless of which shape:
 
 - **Three reading tiers, always.** Every spec has a Summary (Tier 1 — anyone), a main text (Tier 2 — technical readers), and optional formal models (Tier 3 — experts). The Summary is plain language with zero unexplained jargon. The main text defines every non-everyday term inline at first use. Formal models are dense and expert-only. See *Three reading tiers* above.
 - **Never leave an acronym unexplained.** Every acronym or initialisation (HIPAA, GDPR, EOS, GRID, NFC, PCI DSS, FATF, BSA, AML, CDD, KYC…) must be spelled out and briefly glossed the first time it appears in the document — in any section, not just the Summary. A reader who encounters an undefined acronym has hit a wall; the library's bridge principle requires a door instead.
@@ -173,9 +173,9 @@ This document enumerates sections — and, as of 2026-06-11, it **owns the cross
 - **Assume intelligence, not vocabulary.** Write for a smart reader who may not share your specific technical vocabulary. Define key terms inline at first use — in the Summary, in the Intent, and anywhere a term is load-bearing. The spec should teach the reader the vocabulary it needs them to know, not assume they already have it. This is the mechanism by which the library teaches itself: each spec that defines its terms consistently builds the reader's vocabulary without requiring them to look anything up elsewhere.
 - Invariants named descriptively first, then numbered (never letter-prefix codes)
 - Identity model explicit, opaque-id over content-field
-- Action signatures explicit, with every rejection reason named. Queries with multiple legitimate outcomes use first-class result tags (e.g., `verified | failed-verification(reason) | not-known`) rather than a success-or-reject pair
+- Action signatures explicit, with every rejection reason named. Queries with multiple legitimate outcomes use first-class result tags rather than a success-or-reject pair; the tag set is per-query — two outcomes (`permitted | denied`), three (`verified | failed-verification(reason) | not-known`), or more (`granted | revoked | expired | not-known`) — no arm or arity is mandatory beyond fitting the query's real outcome space
 - **All references explicit in all directions.** Any step, invariant, or claim that depends on content defined elsewhere must name that section explicitly. Any section that defines a mechanism used elsewhere must be named by those users. Implicit "you know where to look" cross-references are a Pass 3 finding.
-- Defended-in-line: architectural claims state principle, likely objection, mechanism, result
+- Defended-in-line: every architectural claim follows the four-step rubric (principle, likely objection, mechanism, result) owned by [`pressure-testing.md`](./pressure-testing.md) §Defending each claim in-line
 - Edge cases name composing patterns by link
 - Standards inheritance is selective (cite what genuinely applies at this layer)
 

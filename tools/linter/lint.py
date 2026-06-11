@@ -23,6 +23,15 @@ the three-pass review otherwise has to catch by eye —
                               §Capability provenance); the broader "is this capability
                               actually declared by that constituent" check stays a
                               fresh-reader Pass-2 concern (paraphrased names defeat a regex).
+  G. Status grammar         — every pattern has a `## Status` section whose first
+                              line starts with exactly one backticked status token
+                              conforming to the pinned grammar (pressure-testing.md
+                              §Status line format, pinned 2026-06-11).
+  H. Status mirror          — a roadmap.md list entry that links a pattern and carries
+                              a backticked status token mirrors the pattern file's own
+                              token exactly (the pattern file is the source of truth).
+  I. Duplicate table rows   — no roadmap.md table names the same pattern twice
+                              (the duplicated-Login-row class).
 
 Design notes (this tool is meant to be maintained by a small/cheap model):
   - Standard library only. No deps. Runs anywhere `python3` does.
@@ -299,6 +308,151 @@ def check_rests_on_refs(patterns: dict[Path, Pattern], md_files: list[Path]) -> 
 
 
 # --------------------------------------------------------------------------- #
+# Status grammar / mirror (G, H, I)
+# --------------------------------------------------------------------------- #
+
+# the pinned status-token grammar (pressure-testing.md §Status line format)
+STATUS_TOKEN_FORMS = [
+    re.compile(r"^draft$"),
+    re.compile(r"^unresolved$"),
+    re.compile(r"^partially resolved$"),
+    re.compile(r"^grounded on Final Critique \d+ — \d{4}-\d{2}-\d{2}$"),
+    re.compile(r"^grounded — \d{4}-\d{2}-\d{2}$"),  # legacy (grandfathered, no FC number)
+    re.compile(r"^grounded \(English\) on Final Critique \d+ — \d{4}-\d{2}-\d{2} — formal layer pending$"),
+    re.compile(r"^grounded on Final Critique \d+ — \d{4}-\d{2}-\d{2} — .+ pending$"),
+]
+STATUS_SECTION = re.compile(r"^## Status\s*$", re.M)
+LEADING_TOKEN = re.compile(r"^`([^`]+)`")
+
+
+def status_token_of(text: str) -> tuple[str | None, int]:
+    """Return (token, line) of the first non-empty line after `## Status`,
+    or (None, line-of-section / 0) when the section or token is absent."""
+    m = STATUS_SECTION.search(text)
+    if not m:
+        return None, 0
+    rest = text[m.end():]
+    offset = m.end()
+    for raw in rest.split("\n"):
+        if raw.strip():
+            tok = LEADING_TOKEN.match(raw.strip())
+            return (tok.group(1) if tok else None), line_of(text, offset)
+        offset += len(raw) + 1
+    return None, line_of(text, m.start())
+
+
+def check_status_grammar(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """G. `## Status` present; first line starts with one conformant backticked token."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        m = STATUS_SECTION.search(p.text)
+        if not m:
+            findings.append(Finding(
+                p.path, 1, "G-status-section-missing",
+                "no `## Status` section (required container; a top-of-file "
+                "**Status:** line is a shape deviation)",
+            ))
+            continue
+        token, line = status_token_of(p.text)
+        if token is None:
+            findings.append(Finding(
+                p.path, line, "G-status-grammar",
+                "Status line does not start with a backticked status token",
+            ))
+            continue
+        if not any(rx.match(token) for rx in STATUS_TOKEN_FORMS):
+            findings.append(Finding(
+                p.path, line, "G-status-grammar",
+                f"token `{token}` matches no form of the pinned grammar "
+                f"(pressure-testing.md §Status line format)",
+            ))
+    return findings
+
+
+# a roadmap list entry that links a pattern AND carries a token after the em-dash:
+#   - **[Name](./compositions/x.md)** — `token` ...
+ROADMAP_LIST_ENTRY = re.compile(
+    r"^- \*\*\[[^\]]+\]\((\./(?:atoms|compositions)/[^)]+?\.md)\)\*\* — `([^`]+)`",
+    re.M,
+)
+
+
+def check_status_mirror(root: Path, patterns: dict[Path, Pattern]) -> list[Finding]:
+    """H. roadmap.md linked list entries mirror the pattern file's status token.
+
+    High precision: fires only on list entries that both link a pattern file and
+    carry a backticked token immediately after the em-dash. Unlinked table rows
+    are not checked (no machine-resolvable file mapping); the table is covered by
+    the duplicate-row check (I) and by review.
+    """
+    findings: list[Finding] = []
+    roadmap = root / "roadmap.md"
+    if not roadmap.exists():
+        return findings
+    text = roadmap.read_text(encoding="utf-8")
+    by_resolved = {p.path.resolve(): p for p in patterns.values()}
+    for m in ROADMAP_LIST_ENTRY.finditer(text):
+        rel, cell_token = m.group(1), m.group(2)
+        tgt = by_resolved.get((root / rel).resolve())
+        if tgt is None:
+            continue  # dangling link is check A's finding
+        file_token, _ = status_token_of(tgt.text)
+        if file_token is None:
+            continue  # grammar violation is check G's finding
+        if cell_token != file_token:
+            findings.append(Finding(
+                roadmap, line_of(text, m.start()), "H-status-mirror",
+                f"{Path(rel).name}: roadmap says `{cell_token}` but the pattern's "
+                f"Status line says `{file_token}` (pattern file is the source of truth)",
+            ))
+    return findings
+
+
+def check_duplicate_rows(root: Path) -> list[Finding]:
+    """I. No roadmap.md *status* table names the same pattern twice.
+
+    High precision: only tables whose header row contains a 'Status' column are
+    inspected (the duplicated-Login-row class lives there); the name column is
+    the cell to the left of nothing in particular — column 2 by the status
+    table's shape. Inventory tables whose second column legitimately repeats
+    (Type, tool names) are not status tables and are skipped.
+    """
+    findings: list[Finding] = []
+    roadmap = root / "roadmap.md"
+    if not roadmap.exists():
+        return findings
+    text = roadmap.read_text(encoding="utf-8")
+    seen: dict[str, int] = {}
+    in_table = False
+    is_status_table = False
+    for i, raw in enumerate(text.split("\n"), start=1):
+        line = raw.strip()
+        if line.startswith("|") and line.endswith("|"):
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if not in_table:
+                in_table = True
+                seen = {}
+                is_status_table = any(c.lower() == "status" for c in cells)
+                continue  # header row
+            if not is_status_table or len(cells) < 3:
+                continue
+            if set(cells[1]) <= {"-", " ", ":"}:
+                continue  # separator row
+            name = cells[1]
+            if name in seen:
+                findings.append(Finding(
+                    roadmap, i, "I-duplicate-row",
+                    f"status table names '{name}' twice (also at line {seen[name]})",
+                ))
+            else:
+                seen[name] = i
+        else:
+            in_table = False
+            is_status_table = False
+    return findings
+
+
+# --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
 
@@ -322,6 +476,9 @@ def main(argv: list[str]) -> int:
     findings += check_stale_forthcoming(root, patterns, scan)
     findings += check_counts(root, patterns)
     findings += check_rests_on_refs(patterns, scan)
+    findings += check_status_grammar(patterns)
+    findings += check_status_mirror(root, patterns)
+    findings += check_duplicate_rows(root)
 
     findings.sort(key=lambda f: (f.code, str(f.path), f.line))
     for f in findings:

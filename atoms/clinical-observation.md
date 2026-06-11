@@ -243,7 +243,7 @@ Clinical Observation composes naturally with the existing library:
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — Alloy structural model `clinical-observation.als` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — foundation passes complete (Pass 1, Pass 2, Pass 3), two human refinement rounds complete (Refinement rounds 1 and 2), and one AI-conducted adversarial round complete (Refinement round 3, Torvalds X2 posture, Claude Opus 4.7). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved, all concerns conceptually independent, all known adversarial gaps closed or named as explicit out-of-scope.
+`grounded — 2026-05-20` (formal layer landed 2026-06-03 — Alloy structural model `clinical-observation.als` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — foundation passes complete (Pass 1, Pass 2, Pass 3), two human refinement rounds complete (Refinement rounds 1 and 2), and one AI-conducted adversarial round complete (Refinement round 3, Torvalds X2 posture, Claude Opus 4.7). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved, all concerns conceptually independent, all known adversarial gaps closed or named as explicit out-of-scope.
 
 ---
 

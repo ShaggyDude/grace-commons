@@ -35,6 +35,9 @@ every push to `main` and every pull request.
 | **D-stale-forthcoming** | A link whose own `*(forthcoming)*` marker decorates a pattern file that is already `grounded`. |
 | **E-count-drift** | The latest "*NN* grounded patterns (*NN* grounded compositions)" claim in `roadmap.md` / `readme.md` does not match the real file count. (Earlier dated claims are history and are allowed to be stale.) |
 | **F-invariant-ref** | A "*Pattern* Invariant *N*" cross-reference where *N* exceeds that pattern's real invariant count — the mechanical slice of the capability-provenance rule (`pressure-testing.md` §Capability provenance). Name/number *mismatches* within range stay a fresh-reader Pass-2 concern. |
+| **G-status-grammar** | A pattern with no `## Status` section, or whose status line does not start with one backticked token conforming to the pinned grammar (`pressure-testing.md` §Status line format, pinned 2026-06-11). |
+| **H-status-mirror** | A `roadmap.md` list entry that links a pattern and carries a status token differing from the pattern file's own token (the pattern file is the source of truth). Found 25 stale mirrors on its first run. |
+| **I-duplicate-row** | A `roadmap.md` status table naming the same pattern twice (the duplicated-Login-row class). |
 
 ## Design principles (this tool is meant to be maintained by a small/cheap model)
 

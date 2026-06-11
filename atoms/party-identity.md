@@ -357,7 +357,7 @@ Party Identity is freestanding and is the external-party identity contract that 
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — TLA+ model `party-identity.tla` authored and verified, plus a buggy twin the checker rejects; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`, which it briefly held after the 2026-06-03 formal-layer vote.) — foundation round complete (Pass 1 GRID — the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof; Pass 2 EOS, Pass 3 Linus all run; findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2) ran against the foundation draft, surfaced six findings, and returned clean after all six were closed in-pattern. The gate also served as the closing AI adversarial round (Phase 3) given the gate's fresh-reader, full-three-pass coverage.
+`grounded — 2026-05-20` (formal layer landed 2026-06-03 — TLA+ model `party-identity.tla` authored and verified, plus a buggy twin the checker rejects; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`, which it briefly held after the 2026-06-03 formal-layer vote.) — foundation round complete (Pass 1 GRID — the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof; Pass 2 EOS, Pass 3 Linus all run; findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2) ran against the foundation draft, surfaced six findings, and returned clean after all six were closed in-pattern. The gate also served as the closing AI adversarial round (Phase 3) given the gate's fresh-reader, full-three-pass coverage.
 
 ---
 

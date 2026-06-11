@@ -220,7 +220,7 @@ It inherits from:
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — TLA+ model `event-log.tla` authored and verified, plus a buggy twin the checker rejects; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`, briefly held after the 2026-06-03 formal-layer vote; full prose round was `grounded — 2026-05-20`.) — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
+`grounded — 2026-05-20` (formal layer landed 2026-06-03 — TLA+ model `event-log.tla` authored and verified, plus a buggy twin the checker rejects; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`, briefly held after the 2026-06-03 formal-layer vote; full prose round was `grounded — 2026-05-20`.) — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
 
 ---
 

@@ -305,7 +305,7 @@ Approval Step is the approval-gate primitive that Multi-Party Approval and State
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — TLA+ model `approval-step.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (AI-conducted, claude-sonnet-4-6), and Round 3 (AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. First entry in `workflow`.
+`grounded — 2026-05-20` (formal layer landed 2026-06-03 — TLA+ model `approval-step.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (AI-conducted, claude-sonnet-4-6), and Round 3 (AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concerns conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. First entry in `workflow`.
 
 ---
 

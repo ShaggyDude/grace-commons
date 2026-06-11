@@ -160,7 +160,7 @@ It inherits from:
 
 ## Status
 
-`grounded` (formal layer landed 2026-06-03 — TLA+ model `duplicate-prevention.tla` + buggy twin verified; see Lineage §Formal model. One of the two clock candidates the 2026-06-03 bar reconsideration *kept* as YES — single-recording under advancing time genuinely warrants a model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — concept is freestanding, composable, and carries a verifiable invariant set. Examples cover four distinct domains. Ready for composition with Personal Todo and other patterns.
+`grounded — 2026-05-20` (formal layer landed 2026-06-03 — TLA+ model `duplicate-prevention.tla` + buggy twin verified; see Lineage §Formal model. One of the two clock candidates the 2026-06-03 bar reconsideration *kept* as YES — single-recording under advancing time genuinely warrants a model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — concept is freestanding, composable, and carries a verifiable invariant set. Examples cover four distinct domains. Ready for composition with Personal Todo and other patterns.
 
 ---
 
