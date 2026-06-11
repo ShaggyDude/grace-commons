@@ -23,7 +23,7 @@ The topological ordering principle is codified in [`pressure-testing.md`](./pres
 
 ---
 
-## Current state — 2026-06-08
+## Current state
 
 **Taxonomy flattened; status reconciled — 2026-06-08.** The `atoms/<category>/` subfolders were dissolved; atoms are stored flat (`atoms/<name>.md`) with classification derived (overlays from the composition graph; `domain` the one intrinsic, EOS-gated axis), and the per-category READMEs replaced by a generated browse-by-overlay catalog (`atoms/index.md`, via `tools/taxonomy/generate_views.py`). Corpus unchanged at **45 grounded patterns (27 atoms, 18 compositions)**; the move was path-safe — all 74 formal models still found and green. This ROADMAP's atom/composition status was then reconciled to reality: the planned-sequence atoms (#7–#14) are all grounded, and the genuine remaining composition backlog is **C6, C7, C11, C15, C17, C18** (all unblocked, none blocked on a missing atom). See [`atoms/TAXONOMY.md`](./atoms/TAXONOMY.md).
 
@@ -118,7 +118,7 @@ Tally (original aggressive bar): ~4 Alloy/Sonnet, ~21 TLA+/Opus. **Final 2026-06
 
 **Atoms partially resolved:** none — Preference / Personalization grounded on Final Critique 5 (2026-05-29); see atom #10 below.
 
-**Compositions grounded** (at `grounded` or `grounded (English) — formal layer pending`; see sweep note above)**:** Attributed Permissions Admin, Audit Trail, Chain of Custody, Consent & Preference Management, Defensible Retention, External Onboarding, Forensic Recovery, Idempotent Reservation, Immutable Transaction Ledger, KYC / Customer Onboarding, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Reservation Lifecycle, Session-Gated Authorization, Shared Todo, Stateful Workflow Execution, Undo History.
+**Compositions grounded** (at `grounded` or `grounded (English) — formal layer pending`; see sweep note above)**:** Actor Suspension, Attributed Permissions Admin, Audit Trail, Authenticated Actor, Capability-Backed Sharing, Chain of Custody, Consent & Preference Management, Data Subject Rights Fulfillment, Defensible Retention, External Onboarding, Forensic Recovery, Idempotent Reservation, Immutable Transaction Ledger, KYC / Customer Onboarding, Login, Multi-Party Approval, Notification Fanout, Privileged Access Provisioning, Reservation Lifecycle, Session-Gated Authorization, Shared Todo, Stateful Workflow Execution, Undo History.
 
 The healthcare atoms (Clinical Observation, Medication Order) are outside the core dependency-ordered sequence — they were authored as worked examples of the methodology applied to a domain where the regulatory surface is HIPAA (Health Insurance Portability and Accountability Act) and 21 CFR Part 11 rather than the BSA (Bank Secrecy Act) / AML (Anti-Money Laundering) / GDPR (General Data Protection Regulation) / SOX (Sarbanes-Oxley Act) cluster the compliance atoms anchor. They are grounded and composable; their downstream compositions (e.g., a Clinical Trial Data Capture composition, a Medication Administration Record composition) are not on this roadmap yet because the worked-example value is in the atoms themselves rather than in any specific composition the library is committed to delivering next.
 
@@ -278,7 +278,7 @@ Compositions are sequenced by readiness. Of the eighteen C-numbered compositions
 
 ### Grounded
 
-The seventeen grounded compositions. Each has its full spec, Lineage notes, and — where the formal-layer vote was YES — a verified model + buggy twin in its own file.
+The seventeen C-numbered grounded compositions are catalogued below. (Six further grounded compositions predate the C-numbering — Attributed Permissions Admin, Audit Trail, Idempotent Reservation, Privileged Access Provisioning, Shared Todo, Undo History — bringing the grounded total to twenty-three; see the summary list under *Current state* above.) Each has its full spec, Lineage notes, and — where the formal-layer vote was YES — a verified model + buggy twin in its own file.
 
 - **[C1. Defensible Retention](./compositions/defensible-retention.md)** — `grounded` 2026-05-13. Legal Hold + Retention Window + Audit Trail (substrate). Hold-blocks-purge gate; lawful destruction provable from records alone. Anchors SOX §802, HIPAA §164.530(j), SEC Rule 17a-4, GDPR Article 17, FRCP Rule 37(e).
 - **[C2. Consent & Preference Management](./compositions/consent-preference-management.md)** — `grounded` 2026-06-04. Consent + Permissions + Audit Trail (substrate). `processing_permitted` gate + revocation-propagation binding bijection. TLA+ model + buggy twin. Anchors GDPR Articles 6–7, 7(3), CCPA/CPRA, HIPAA §164.508.
@@ -368,7 +368,7 @@ This one has all its constituent atoms grounded — ready for authoring.
 
 ## Formal model coverage
 
-Per `pressure-testing.md §Formal models`, Alloy and TLA+ artifacts complement the three-pass methodology but are not prerequisites for `grounded` status. The inventory below records which grounded patterns currently ship formal-model siblings, and which have explicit deferred-formal-models entries in their Lineage notes.
+Per `pressure-testing.md §Formal models`, whether a formal model is a prerequisite for `grounded` is decided per pattern by the **formal-layer vote**: a vote-*yes* pattern (one carrying load-bearing temporal, ordering, concurrency, or safety claims) requires a verifying model before unqualified `grounded`; a vote-*no* pattern grounds English-only under the minimum-formalism principle. The inventory below records which grounded patterns currently ship formal-model siblings, and which have explicit deferred-formal-models entries in their Lineage notes.
 
 ### Shipped
 
