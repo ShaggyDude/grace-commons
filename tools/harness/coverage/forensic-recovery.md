@@ -7,6 +7,14 @@
 > finding **MC-C3-1**'s record of record (the Refactor 1 staging handoff that first logged it
 > has since been dispersed and deleted); the fix rides C3's own touch-triggered round —
 > nothing was edited in-pattern by this check.
+>
+> **RESOLVED 2026-06-11.** The touch-triggered round landed: the model was revised to
+> sequential-with-compensation covering both arms of Invariant 4 (template:
+> `immutable-transaction-ledger.tla`, the C6-2 closure), Invariant 4 was restated in the
+> English as safety + liveness, and `record_to_events` was reclassified as a derived index
+> outside the atomicity surface. Invariant 2's compensated-path coverage, which rode the GAP,
+> closed with it. The pattern returned to `grounded`. Rows below updated in place with the
+> arc preserved; see the pattern's Lineage §Formal model (2026-06-11 entry).
 
 - **Pattern:** `compositions/forensic-recovery.md`
 - **Model:** `forensic-recovery.tla` (+ buggy twin `forensic-recovery-buggy.tla`)
@@ -15,26 +23,27 @@
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../compositions/forensic-recovery.tla` → `PASS` ☑ (4 states, all invariants hold)
-- Buggy twin: `node check.mjs ../../compositions/forensic-recovery-buggy.tla --buggy` → `PASS` (rejected) ☑ (violation at 2 states)
+- Correct model: `node check.mjs ../../compositions/forensic-recovery.tla` → `PASS` ☑ (revised model 2026-06-11: 16 states, all invariants hold; was 4 states in the atomic-only form)
+- Buggy twin: `node check.mjs ../../compositions/forensic-recovery-buggy.tla --buggy` → `PASS` (rejected) ☑ (violation at 2 states — the silent unsurfaced orphan, rejected on `Inv4_SafetyBijection`)
 
 ## Step 2 — coverage matrix
 
 | Spec invariant (no. + name) | Load-bearing (vote)? | Verdict | Model construct / reason |
 |---|---|---|---|
 | Invariant 4 — binding bijection, **atomic-commit arm** | **yes** | covered | Single atomic commit action; `Inv4_BindingBijection` / `Inv_NoDanglingSoft` / `Inv_NoOrphanAudit` |
-| Invariant 4 — binding bijection, **compensated arm** ("or the failure is compensated": the *Cross-store consistency under partial failure* edge case mandates retry + surfacing + `cascade_recovery`, and the uniform rejection-mapping rule makes the orphan *reachable by design* — credential invalidity always manifests as `recording-failure` plus an orphan) | **yes** | **GAP** | The correct model commits all three sub-writes (including the `record_to_events` binding) as **one atomic action** — an idealization the spec itself qualifies ("synchronous rollback is not universally available"; Purged is terminal). The buggy twin shows sequential-*without*-compensation is unsafe; **nothing models sequential-with-compensation**, the path the spec mandates. The stakes are C3's headline invariant: the most consequential partial failure is a *purge without its audit record* (Invariant 2), and the compensated path that repairs it is exactly the unmodeled arm. Same class as C6's closed finding C6-2; the model's third sub-write also places the `record_to_events` map inside the atomicity surface, in tension with its provisional derived-index classification (`working-ideas/composition-state-audit.md` row 36). **Routed as finding MC-C3-1 — blocks unqualified `grounded` until closed; fix rides C3's own round (C6's revised model is the worked template).** |
+| Invariant 4 — binding bijection, **compensated arm** ("or the failure is compensated": the *Cross-store consistency under partial failure* edge case mandates retry + surfacing + `cascade_recovery`, and the uniform rejection-mapping rule makes the orphan *reachable by design* — credential invalidity always manifests as `recording-failure` plus an orphan) | **yes** | **GAP → resolved (2026-06-11): covered** | *Was:* the correct model committed all three sub-writes as one atomic action — the spec-mandated sequential-with-compensation path unmodeled (finding MC-C3-1, same class as C6's closed C6-2), with the stakes on C3's headline invariant (a purge without its audit record), and the third sub-write placed `record_to_events` inside the atomicity surface against its derived-index classification. *Now:* the revised model is sequential-with-compensation per the C6 template — `FailPartial` makes the orphan reachable and surfaced (for a purge: Invariant 2's worst case, visible the whole time), `RetryAudit` compensates (marked `recovered`/`cascade_recovery`, enabled in exactly the orphan configuration), and the derived index is omitted per execution-contract §Composition state obligation 2. Covered by `Inv4_SafetyBijection` / `Inv4_NoUnsurfacedOrphan` / `Inv4_RecoveryDistinguishable`; liveness's enabledness half is structural (no orphan dead end). |
 | Invariant 1 — lifecycle attribution coverage | no | out-of-scope (named reason) | Attribution is Audit Trail Invariant 1's property; not an interleaving. |
-| Invariant 2 — purge accountability | yes (structural form) | covered (via `Inv_NoDanglingSoft`) — *but inherits the GAP* | The model's `Inv_NoDanglingSoft` is Invariant 2's structural form and holds in the atomic model; on the prescribed compensating design, the purge-orphan window (a destroyed record awaiting its compensating audit event) is unmodeled — covered only on the idealized arm. Closure rides MC-C3-1. |
+| Invariant 2 — purge accountability | yes (structural form) | covered (2026-06-11 — both arms) | Rode MC-C3-1 and closed with it: the purge-orphan window (a destroyed record awaiting its compensating audit event) is now a modeled, *surfaced* configuration — `Inv4_NoUnsurfacedOrphan` is Invariant 2's compensated-path form (a Purged record's missing audit event can exist only as a visible finding under compensation), and the coherent-or-recovered end state restores the accountability record. |
 | Invariant 3 — forensic completeness / full-history recoverability | no | out-of-scope (named reason) | Replay/query-shape property over Event Log total order (Event Log Invariants 2, 3); discharged in prose + Generation acceptance. |
 | Invariant 5 — constituent invariants preserved | no | out-of-scope (named reason) | Each constituent's own bar. |
 
 ## Step 3 — bound saturation
 
-- At `Transitions = {t1, t2}`: 4 states; the property is per-transition local, insensitive to count (per the 2026-06-04 Lineage entry) → saturated ☑ *(for the atomic model as it stands; the revised compensated model will need its own saturation line, per C6's 4^n precedent).*
+- *Atomic-only model (historical):* `Transitions = {t1, t2}` → 4 states; per-transition local, insensitive to count.
+- **Revised compensated model (2026-06-11):** `Transitions = {t1, t2}` → 16 states; `{t1, t2, t3}` → 64 — the 4ⁿ per-transition-independence form, matching the C6 precedent; all invariants hold at both bounds → saturated ☑
 
 ## Outcome
 
-- GAP rows: **one** — the compensated arm (finding **MC-C3-1**, recorded in this matrix; the Refactor 1 staging handoff that first logged it has been dispersed and deleted), with Invariant 2's compensated-path coverage riding it. Per the cross-check rule a GAP blocks unqualified `grounded` until closed; the fix (Invariant 4 restated as safety + liveness; model extended with the compensation path; `record_to_events` derived-index reclassification folded per the audit matrix) rides C3's own touch-triggered round.
+- GAP rows: **zero** (was one — the compensated arm, finding **MC-C3-1**, resolved 2026-06-11: Invariant 4 restated as safety + liveness; model revised to sequential-with-compensation per the C6 template; `record_to_events` derived-index reclassification folded; Invariant 2's compensated-path coverage closed with it). The pattern returned to `grounded`.
 - by-construction flags on load-bearing invariants: none.
-- Result: **findings routed** — *"Coverage cross-check 2026-06-10 — GAP: Invariant 4's compensated arm unmodeled (atomic idealization over a compensating design); routed as MC-C3-1."*
+- Result: **clean** — *"Coverage cross-check 2026-06-10 — GAP: Invariant 4's compensated arm unmodeled; routed as MC-C3-1. Resolved 2026-06-11 — both arms covered; harness green (16 states; twin rejected at 2); pattern `grounded`."*

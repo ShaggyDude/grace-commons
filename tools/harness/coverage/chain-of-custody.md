@@ -7,6 +7,13 @@
 > finding **MC-C12-1**'s record of record (the Refactor 1 staging handoff that first logged
 > it has since been dispersed and deleted); the fix rides C12's own touch-triggered round —
 > nothing was edited in-pattern by this check.
+>
+> **RESOLVED 2026-06-11.** The touch-triggered round landed: the model was revised to
+> sequential-with-compensation covering both arms of Invariant 4 (template:
+> `immutable-transaction-ledger.tla`, the C6-2 closure), Invariant 4 was restated in the
+> English as safety + liveness, and `entry_to_event` was reclassified as a derived index
+> outside the atomicity surface. The pattern returned to `grounded`. Rows below updated in
+> place with the arc preserved; see the pattern's Lineage §Formal model (2026-06-11 entry).
 
 - **Pattern:** `compositions/chain-of-custody.md`
 - **Model:** `chain-of-custody.tla` (+ buggy twin `chain-of-custody-buggy.tla`)
@@ -15,15 +22,15 @@
 
 ## Step 1 — harness re-run (must pass)
 
-- Correct model: `node check.mjs ../../compositions/chain-of-custody.tla` → `PASS` ☑ (4 states, all invariants hold)
-- Buggy twin: `node check.mjs ../../compositions/chain-of-custody-buggy.tla --buggy` → `PASS` (rejected) ☑ (violation at 2 states)
+- Correct model: `node check.mjs ../../compositions/chain-of-custody.tla` → `PASS` ☑ (revised model 2026-06-11: 16 states, all invariants hold; was 4 states in the atomic-only form)
+- Buggy twin: `node check.mjs ../../compositions/chain-of-custody-buggy.tla --buggy` → `PASS` (rejected) ☑ (violation at 2 states — the silent unsurfaced orphan, rejected on `Inv4_SafetyBijection`)
 
 ## Step 2 — coverage matrix
 
 | Spec invariant (no. + name) | Load-bearing (vote)? | Verdict | Model construct / reason |
 |---|---|---|---|
 | Invariant 4 — binding bijection, **atomic-commit arm** | **yes** | covered | `CommitEntry`-style single atomic action; `Inv4_BindingBijection` / `Inv4_NoDanglingProv` / `Inv4_NoOrphanAudit` |
-| Invariant 4 — binding bijection, **compensated arm** ("or the failure is compensated": the *Cross-store consistency under partial failure* edge case mandates retry + surfacing + `cascade_recovery`, and the uniform rejection-mapping rule makes the orphan *reachable by design* — credential invalidity always manifests as `recording-failure` plus an orphan) | **yes** | **GAP** | The correct model commits all three sub-writes (including the `entry_to_event` binding) as **one atomic action** — an idealization the spec itself says is unrealizable (Provenance writes first, irreversibly; "synchronous rollback is not available"). The buggy twin shows sequential-*without*-compensation is unsafe; **nothing models sequential-with-compensation**, the path the spec mandates. Same class as C6's closed finding C6-2; additionally, the model's third sub-write (`bound`) models the `entry_to_event` map inside the atomicity surface, in tension with its provisional derived-index classification (`working-ideas/composition-state-audit.md` row 35). **Routed as finding MC-C12-1 — blocks unqualified `grounded` until closed; fix rides C12's own round (C6's revised model is the worked template).** |
+| Invariant 4 — binding bijection, **compensated arm** ("or the failure is compensated": the *Cross-store consistency under partial failure* edge case mandates retry + surfacing + `cascade_recovery`, and the uniform rejection-mapping rule makes the orphan *reachable by design* — credential invalidity always manifests as `recording-failure` plus an orphan) | **yes** | **GAP → resolved (2026-06-11): covered** | *Was:* the correct model committed all three sub-writes as one atomic action — the spec-mandated sequential-with-compensation path unmodeled (finding MC-C12-1, same class as C6's closed C6-2), and the third sub-write placed `entry_to_event` inside the atomicity surface against its derived-index classification. *Now:* the revised model is sequential-with-compensation per the C6 template — `FailPartial` makes the orphan reachable and surfaced, `RetryAudit` compensates (marked `recovered`/`cascade_recovery`, enabled in exactly the orphan configuration), and the derived index is omitted per execution-contract §Composition state obligation 2. Covered by `Inv4_SafetyBijection` / `Inv4_NoUnsurfacedOrphan` / `Inv4_RecoveryDistinguishable`; liveness's enabledness half is structural (no orphan dead end). |
 | Invariant 1 — attributed custody | no | out-of-scope (named reason) | Attribution is Audit Trail Invariant 1's property (substrate model + prose); not an interleaving. |
 | Invariant 2 — tamper-evident custody chain | no | out-of-scope (named reason) | Seal coverage is Audit Trail Invariant 3, modulo the unsealed tail; mechanism/records property, not TLC-class. |
 | Invariant 3 — retention-governed custody, honest disposal | no | out-of-scope (named reason) | The substrate's cascade-on-purge, modeled in `audit-trail.tla`; inherited by reference. |
@@ -32,10 +39,11 @@
 
 ## Step 3 — bound saturation
 
-- At `Entries = {e1, e2}`: 4 states; the 2026-06-04 Lineage entry records `{e1, e2, e3}` at 8 states with no new behavior → saturated ☑ *(for the atomic model as it stands; the revised compensated model will need its own saturation line, per C6's 4^n precedent).*
+- *Atomic-only model (historical):* `Entries = {e1, e2}` → 4 states; `{e1, e2, e3}` → 8, no new behavior.
+- **Revised compensated model (2026-06-11):** `Entries = {e1, e2}` → 16 states; `{e1, e2, e3}` → 64 — the 4ⁿ per-entry-independence form, matching the C6 precedent; all invariants hold at both bounds → saturated ☑
 
 ## Outcome
 
-- GAP rows: **one** — the compensated arm (finding **MC-C12-1**, recorded in this matrix; the Refactor 1 staging handoff that first logged it has been dispersed and deleted). Per the cross-check rule a GAP blocks unqualified `grounded` until closed; the fix (Invariant 4 restated as safety + liveness; model extended with the compensation path; the binding map's derived-index reclassification folded per the audit matrix) rides C12's own touch-triggered round.
+- GAP rows: **zero** (was one — the compensated arm, finding **MC-C12-1**, resolved 2026-06-11: Invariant 4 restated as safety + liveness; model revised to sequential-with-compensation per the C6 template; `entry_to_event` derived-index reclassification folded). The pattern returned to `grounded`.
 - by-construction flags on load-bearing invariants: none.
-- Result: **findings routed** — *"Coverage cross-check 2026-06-10 — GAP: Invariant 4's compensated arm unmodeled (atomic idealization over a compensating design); routed as MC-C12-1."*
+- Result: **clean** — *"Coverage cross-check 2026-06-10 — GAP: Invariant 4's compensated arm unmodeled; routed as MC-C12-1. Resolved 2026-06-11 — both arms covered; harness green (16 states; twin rejected at 2); pattern `grounded`."*
