@@ -31,3 +31,4 @@ exclude:
   - grants/
   - node_modules/
   - tools/
+  - working-ideas/
