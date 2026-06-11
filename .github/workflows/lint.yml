@@ -1,0 +1,27 @@
+name: Lint spec corpus
+
+# The mechanical cross-reference gate (tools/linter/README.md): dangling links,
+# invariant-count drift, missing models/twins, stale forthcoming-markers, count
+# drift, out-of-range invariant references. Stdlib-only, runs in milliseconds,
+# exits 1 on any finding.
+#
+# Follow-ups that ride this same gate when they land: the status-mirror and
+# table-duplicate checks (open-questions.md "Status-line grammar"), and a
+# scheduled tools/harness/ run once its JRE bootstrap is CI-shaped.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    name: Spec-corpus linter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run linter
+        run: python3 tools/linter/lint.py .
