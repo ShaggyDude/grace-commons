@@ -26,6 +26,7 @@ footer_content: 'Grace Commons — open foundation for business logic patterns.'
 markdown: kramdown
 
 exclude:
+  - AGENTS.md
   - CLAUDE.md
   - demos/
   - grants/
