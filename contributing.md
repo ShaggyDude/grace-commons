@@ -37,7 +37,7 @@ The test: does the contribution's specification name another atom? If no, it's a
 
 Atoms are freestanding: state, actions, and operational principles independent of every other atom. Personal Todo, Duplicate Prevention, Event Log.
 
-Compositions wire two or more atoms together with composition logic. Audit Trail (Event Log + retention + tamper-evidence + actor identity), Shared Todo (Personal Todo + Permissions + Assignment), Reservation Lifecycle (Reservation + Hold Window + Capacity).
+Compositions wire two or more atoms together with composition logic. Audit Trail (Event Log + retention + tamper-evidence + actor identity), Shared Todo (Personal Todo + Permissions + Assignment), Idempotent Reservation (Provisional Commitment + Duplicate Prevention).
 
 If you are not sure which side your contribution falls on, open an issue. The overhead of a conversation is lower than the overhead of placing it in the wrong folder.
 
@@ -45,7 +45,7 @@ If you are not sure which side your contribution falls on, open an issue. The ov
 
 ## What an atom looks like
 
-A pattern spec lives in the appropriate `atoms/` subdirectory. It is a structured natural language document, not code — because plain English is the form that includes every reader at once: business stakeholders, auditors, engineers, AI systems, future contributors. Inherit anything good from any source (formal-methods notation, ISO/IEEE standards, BDD, decision tables, design-by-contract, ADR templates, requirements-engineering identifiers); the output form is consistent. At minimum the spec should define:
+A pattern spec lives flat in `atoms/` as `atoms/<name>.md` — classification is derived from the composition graph, not a folder (see [`atoms/TAXONOMY.md`](./atoms/TAXONOMY.md)). It is a structured natural language document, not code — because plain English is the form that includes every reader at once: business stakeholders, auditors, engineers, AI systems, future contributors. Inherit anything good from any source (formal-methods notation, ISO/IEEE standards, BDD, decision tables, design-by-contract, ADR templates, requirements-engineering identifiers); the output form is consistent. At minimum the spec should define:
 
 - **Name** — clear, domain-neutral where possible
 - **Intent** — what business need does this pattern address
@@ -102,7 +102,7 @@ These three layers are the full verification stack. The spec is canonical; the f
 
 ## Formal-model artifacts
 
-Formal-model artifacts (Layer 2 above) are recognized companion artifacts to any Grace Commons spec. They are not prerequisites for `grounded` status, but when they exist they are first-class artifacts with their own conventions.
+Formal-model artifacts (Layer 2 above) are recognized companion artifacts to any Grace Commons spec. Whether one is a *prerequisite* for `grounded` is decided per pattern by the **formal-layer vote** (see [`pressure-testing.md`](./pressure-testing.md) §Formal models — The formal-layer vote): a pattern carrying load-bearing temporal, ordering, concurrency, or safety claims votes *yes*, and its derived model must exist and verify before the pattern reaches unqualified `grounded` (until then it is `grounded (English) — formal layer pending`); a pattern without such claims votes *no* and grounds English-only under the minimum-formalism principle. When a model exists it is a first-class artifact with its own conventions.
 
 **Recognized tools.** Alloy and TLA+ are the current recognized tools. Alloy (relational, bounded exhaustive model finder) is the right first choice for structural invariant checking — valid states, structural properties, reachability. TLA+ (temporal/behavioral model checker) is the right choice for operation-sequence properties — does a sequence of actions preserve invariants, are there liveness or fairness concerns. Other tools may be added as the library grows.
 
@@ -145,15 +145,15 @@ The three perspectives complement the three-pass pressure-testing methodology de
 
 ## The quality bar
 
-A pattern — atomic or application — is `grounded` only after surviving three pressure-testing passes:
+Every Grace Commons pattern — atomic or application — is reviewed through three passes, each catching a different class of gap:
 
 - **Pass 1 — Structural completeness (GRID).** Are all nine GRID nodes resolved with their references intact?
 - **Pass 2 — Conceptual independence (EOS).** Does the spec absorb any concern that belongs to a separate freestanding atom?
 - **Pass 3 — Adversarial scrutiny (Linus mode).** Are there muddled identities, sloppy invariants, happy-path-only examples, or hidden load-bearing decisions?
 
-Each pass catches a different class of gap. None substitutes for the others. See [`pressure-testing.md`](./pressure-testing.md) for the full methodology and [`atoms/personal-todo.md`](./atoms/personal-todo.md) for a worked example whose Lineage notes record the arc.
+Each pass catches a different class of gap; none substitutes for the others. One clean sweep of the three is not grounding. The full bar is a **3×3 baseline** — three rounds of the three passes, nine passes — followed by a **Final Critique**, an AI-conducted adversarial round run at Opus *Happy Torvalds X2* depth and repeated until foundational findings reach zero, plus the **formal-layer vote** (and, where it votes *yes*, a verifying derived model). See [`pressure-testing.md`](./pressure-testing.md) for the full methodology and [`atoms/personal-todo.md`](./atoms/personal-todo.md) for a worked example whose Lineage notes record the arc.
 
-A pattern that has only survived one or two passes is *in process* — and that is a respectable state, provided the actual state is declared honestly per MUSE's completeness states (`unresolved`, `partially resolved`, `grounded`).
+A pattern that has only survived part of that arc is *in process* — and that is a respectable state, provided the actual state is declared honestly per the status taxonomy (`unresolved`, `partially resolved`, `grounded (English) — formal layer pending`, `grounded`).
 
 ---
 
@@ -170,7 +170,7 @@ Grace Commons is a specification library. The implementations come later, elsewh
 
 ## Contribution lifecycle
 
-A pattern moves through four states: **Proposal** (an issue describing the recurring pattern) → **Draft** (a first spec, almost certainly `unresolved` or `partially resolved`) → **Pressure-tested** (three passes run, gaps fixed or deferred) → **Grounded** (all three passes clean, Lineage notes recorded). The lifecycle is iterative; a `grounded` pattern can return to `partially resolved` if LIVE evidence later contradicts an invariant.
+A pattern moves through four states: **Proposal** (an issue describing the recurring pattern) → **Draft** (a first spec, almost certainly `unresolved` or `partially resolved`) → **Pressure-tested** (the 3×3 baseline run, gaps fixed or deferred) → **Grounded** (the Final Critique clean — foundational findings at zero — with the formal-layer vote cast and any required model verifying; Lineage notes recorded). The lifecycle is iterative; a `grounded` pattern can return to `partially resolved` if LIVE evidence later contradicts an invariant, or if a touch or scheduled rescan surfaces a finding.
 
 ---
 
