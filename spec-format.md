@@ -150,15 +150,9 @@ Applies to any atom carrying the regulated overlay, any atom in another category
 
 ### Required additions
 
-**Regulated adversarial scenarios** — an Examples subsection (placed after the standard happy-path and domain examples within the Examples section). Walks three canonical adversarial reads:
+**Regulated adversarial scenarios** — an Examples subsection (placed after the standard happy-path and domain examples within the Examples section) that walks the three canonical adversarial reads: *regulator audit*, *disputed transaction or data-subject request*, and *breach or incident investigation*. All three must be walked; conflating them into one scenario loses the structural three-class requirement and is a Pass 3 finding. What each read must demonstrate — the invariant a regulator's query rests on, the structural rebuttal to a dispute, the forensic-window bound for a breach — is methodology content owned by [`pressure-testing.md`](./pressure-testing.md) §Regulated-pattern conventions; this document fixes only the subsection's placement and the three-class requirement.
 
-- *Regulator audit* — a regulator (or internal auditor) queries the records to verify a specific claim. The records must return the expected result *by virtue of an invariant*, not by the implementer's word. Names the specific invariant the query rests on.
-- *Disputed transaction or data-subject request* — an external party challenges the system's claim about a particular record (a hold was not really placed, an attestation was forged, a retention period was misapplied). The records must answer the challenge structurally; the relevant invariants are the rebuttal.
-- *Breach or incident investigation* — an investigator queries the records during or after an anomaly to reconstruct what happened. Names how the records bound the forensic window and which seal or attestation provides the integrity rebuttal.
-
-All three must be walked; conflating them into one scenario loses the structural three-class requirement and is a Pass 3 finding.
-
-**Generation acceptance** — a standalone section (placed after Examples, before Edge cases and explicit non-goals). Names what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks for atoms; for compositions, the checks split into two named subsections:
+**Generation acceptance** — a standalone section (placed after Examples, before Edge cases and explicit non-goals) naming what a derived implementation must produce. The bar — what an auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration — is methodology content owned by [`pressure-testing.md`](./pressure-testing.md) §Regulated-pattern conventions. This document fixes the section's placement and, for compositions, its two-subsection structure:
 
 - **Audit-Trail-traversal-clearable checks** — the checks an auditor can answer by reading the composition's records (including the Audit Trail substrate where applicable). Each check references the application-level invariant it verifies.
 - **Externally-clearable checks** — questions that arise around the composition but require external evidence (a Policy Registry, a Permissions registry, court documentation) to answer. These are the *audit-gap* questions — important to surface, but not the composition's own contract to satisfy.
