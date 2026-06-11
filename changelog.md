@@ -101,15 +101,17 @@ cut a versioned release, so everything below sits under **Unreleased**.
     bumps, coverage matrices, and measured cost in
     [`ai-usage-log.md`](./ai-usage-log.md); the batch also closed Capability's
     missing-buggy-twin model-present-bar violation.
-  - **Composition-layer extraction question set (A5).**
-    [`pressure-testing.md`](./pressure-testing.md) §Pass 2 gains a question set one
-    level up from the atom-level extraction questions: the trigger for retiring a
-    recurring emergent invariant or wiring decision *across compositions* into a
-    shared substrate. Four questions — invariant-level recurrence (not atom-set
-    co-occurrence; similarity ≠ recurrence), own invariant surface,
-    forthcoming-debt retired, survives Jackson's wiring-not-primitive rule — with
-    Immutable Transaction Ledger's Final Critique 5 rejected *dual-store
-    atomic-commit* extraction as the worked case that had no question set to apply.
+  - **Composition-layer extraction gate (A5).**
+    [`pressure-testing.md`](./pressure-testing.md) §Pass 2 gains an extraction
+    trigger one level up from the atom-level questions: when to retire a recurring
+    emergent invariant or wiring decision *across compositions* into a shared
+    substrate. Stated as a firing rule — a conjunction of three gates
+    (invariant-level recurrence, not atom-set co-occurrence; an emergent invariant
+    surface of its own; Jackson's freestanding-concept test, decisive) with
+    forthcoming-debt as a tie-breaker, not a gate — plus a worked case running
+    Immutable Transaction Ledger's *dual-store atomic-commit* candidate through the
+    gates to show Gate 3 declines it. Hardened under two fresh-reader Torvalds
+    (Pass 3) rounds.
   - **The pressure-testing.md split — declined (A6).** The proposed three-way
     split (a lean process document, a new `formal-layer.md`, and capability-
     provenance / change-history relocations) was considered and **declined**; the
