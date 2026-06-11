@@ -268,6 +268,12 @@ An invariant resting on anything else — *"the substrate can produce…"*, *"th
 
 ---
 
+## The no-snapshot rule — library-state facts live in ROADMAP
+
+*(Ownership moved here from `CLAUDE.md` 2026-06-11; the rule itself was generalized 2026-06-10, Refactor 1.)* [`roadmap.md`](./roadmap.md) is the single source of truth for the library's current state — grounded counts, per-category lists, sequencing. The six core docs — readme, the-spec-layer, this document, spec-format, contributing, execution-contract — carry **no library-state snapshots**: no pattern or composition counts, no present-tense corpus enumerations ("all current compositions are…"), and no "anticipated" or "forthcoming" framing for patterns that have already landed. Library-state facts are stated by reference to ROADMAP. Dated historical records ("the 2026-06-08 sweep of all eighteen then-grounded compositions…") conform — they are self-dating and cannot drift; present-tense corpus claims do not. **A snapshot found in a core doc is a finding, not a preference.** The rule earned its generality the usual way: a mirrored count in the session-bootstrap file read "twenty atoms and eight compositions" long after ROADMAP had moved past both; worked instances removed 2026-06-10 included spec-format's Status line carrying the same stale count and the Execution Contract filing Notification Fanout as "in the roadmap" after it had landed. This document is one of the six and is subject to its own rule (see §Recursive application).
+
+---
+
 ## Regulated-pattern conventions
 
 Two structural conventions emerged as Pass 3 findings on the first regulated atom in the library and have stabilized as required sections for any pattern with external acceptance bars. Both are *structural fixes* to recurring Pass 3 gaps — not optional polish.

@@ -67,6 +67,12 @@ Workflow / State Machine, Stateful Workflow Execution C10, Forensic Recovery C3)
 Provisional Commitment, Capacity Constraint), plus a triaged healthcare roadmap
 backlog. 10 patterns to unqualified `grounded` total.
 
+*(Correction note, 2026-06-11: a later coverage cross-check (2026-06-10)
+re-qualified two of the ten — Chain of Custody (C12) and Forensic Recovery (C3)
+now carry `grounded — formal coverage of Invariant 4 pending`. The token figures
+stand and the count was accurate when written; the "unqualified" claim no longer
+holds for those two until their models are extended.)*
+
 | Per-pattern | Drafter floor (hard) | All-in (est. ≈ 2.5×) |
 |---|---|---|
 | Per net-new grounded pattern (÷5) | ≈ 108 k | ≈ 270 k |

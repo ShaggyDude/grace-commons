@@ -22,7 +22,7 @@ The **RECIPE** beside each demo is the authoritative answer to *"what is this bu
 
 ## Beacon — one spec, four renders
 
-The Beacon Clinical Research Portal is rendered four ways from the *same* Grace Commons specs — same compositions, same action codes, same hash-chain contract. Only the stack changes:
+The Beacon Clinical Research Portal is rendered four ways from the *same* Grace Commons specs — same compositions, same action codes, same hash-chain contract. Only the stack changes. (The four below are the demo-grade renders; the conformance validator tracks a broader inventory that also includes headless ghost renders — [`tools/conformance`](https://github.com/scottromack/grace-commons/tree/main/tools/conformance) owns that list, and its `agree.mjs` run enumerates the current set. Render counts cited anywhere else defer to it.)
 
 | Render | Stack | Status |
 |---|---|---|

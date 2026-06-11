@@ -174,6 +174,33 @@ A pattern moves through four states: **Proposal** (an issue describing the recur
 
 ---
 
+## Workflow for adding a new pattern
+
+*(Ownership moved here from `CLAUDE.md`, 2026-06-11.)*
+
+1. **Triage atom vs. application.** Apply the directory-placement test (does the specification name another pattern?) and confirm against EOS Pass 2. The deeper criterion: does the concern have its own state machine, recur across many domains, deserve its own atom?
+2. **Identify the closest existing pattern.** Read it carefully; mirror its shape, vocabulary, and conventions. [Actor Identity](./atoms/actor-identity.md) and [Retention Window](./atoms/retention-window.md) are the references for new regulated atoms; [Personal Todo](./atoms/personal-todo.md) is the reference for productivity primitives; [Idempotent Reservation](./compositions/idempotent-reservation.md) and [Audit Trail](./compositions/audit-trail.md) are the references for compositions.
+3. **Draft.** For regulated atoms or applications composing regulated atoms, bake in *Regulated adversarial scenarios* and *Generation acceptance* from the first draft. Identity model and action signatures explicit. Invariants named descriptively then numbered.
+4. **Run all three passes.** GRID first, EOS second, Linus third. Iterate until clean. Lineage notes record what each pass found and how it was resolved.
+5. **Resolve forthcoming-links.** Any existing atom whose Composition notes name the new pattern as `*(forthcoming)*` gets the marker removed and the reference linked.
+6. **Update catalog files.** Regenerate the browse-by-overlay catalog (`atoms/index.md`, via `python3 tools/taxonomy/generate_views.py .`), the top-level snapshot in `readme.md`, and — for applications — `compositions/README.md`. Add the new pattern with a one-line description and the standards it anchors. (Atom overlays are derived, so the catalog regenerates rather than being hand-maintained.)
+
+---
+
+## Implementation-discovered findings
+
+*(Ownership moved here from `CLAUDE.md`, 2026-06-11.)* Building demos or production systems against a spec sometimes surfaces problems the three-pass review missed. The discipline below keeps the spec-as-canonical story honest without silencing implementation discoveries.
+
+A **finding** is a contradiction *inside* the spec — an action wiring and an invariant disagree, two passages describe different behavior for the same case, a CHECK and a trigger cannot both hold, an example violates an invariant, a forthcoming-link points at something that already landed under a different name. Findings are Pass-3-shaped and belong in the pattern's Lineage notes as a new pass. Log them; route them through the standard review channel; do not modify the spec mid-build.
+
+A **preference** is anything else — *"this would be cleaner if…"*, *"I'd rather have one table than four"*, *"the column name is awkward"*, *"this collapses to a simpler form in my implementation"*. Preferences are implementation choice and belong in the implementation's own follow-up tracker (e.g., a `CORNERS.md` alongside the build), not in the spec.
+
+The single distinguishing question: does the observation name a contradiction *inside* the spec, or a preference *outside* it? If the answer is not obviously the first, it is the second. The bar is "contradiction, not preference" — deliberately not "very wrong," because *very wrong* slides under any sustained effort and *contradiction* does not. A contradiction can be named by pointing at the two passages that disagree; a preference cannot.
+
+Builds proceed against the spec as written. The spec changes only through a review pass, not through a code commit. An agent that rewrites the spec inline during a build has made a process error, regardless of whether the rewrite is correct — the correct path is to log the finding, finish the build against the existing spec, and let the review channel adjudicate.
+
+---
+
 ## How to contribute
 
 Open an issue or submit a pull request. If you are unsure whether something belongs, open an issue first and describe what you have in mind. The overhead of a conversation is lower than the overhead of a rejected PR.

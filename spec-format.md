@@ -165,7 +165,7 @@ Both regulated-overlay conventions are *inherited from the methodology directly*
 
 ## What's not in this document
 
-This document enumerates sections. It does not enumerate authoring conventions — those live in [`CLAUDE.md`](./CLAUDE.md) and are reinforced by [`pressure-testing.md`](./pressure-testing.md). The conventions every section must honor (regardless of which shape) include:
+This document enumerates sections — and, as of 2026-06-11, it **owns the cross-cutting authoring conventions** every section must honor (ownership moved here from `CLAUDE.md`, which now carries only a pointer; [`pressure-testing.md`](./pressure-testing.md) reinforces these conventions through its pass questions). The conventions, regardless of which shape:
 
 - **Three reading tiers, always.** Every spec has a Summary (Tier 1 — anyone), a main text (Tier 2 — technical readers), and optional formal models (Tier 3 — experts). The Summary is plain language with zero unexplained jargon. The main text defines every non-everyday term inline at first use. Formal models are dense and expert-only. See *Three reading tiers* above.
 - **Never leave an acronym unexplained.** Every acronym or initialisation (HIPAA, GDPR, EOS, GRID, NFC, PCI DSS, FATF, BSA, AML, CDD, KYC…) must be spelled out and briefly glossed the first time it appears in the document — in any section, not just the Summary. A reader who encounters an undefined acronym has hit a wall; the library's bridge principle requires a door instead.
@@ -173,7 +173,7 @@ This document enumerates sections. It does not enumerate authoring conventions �
 - **Assume intelligence, not vocabulary.** Write for a smart reader who may not share your specific technical vocabulary. Define key terms inline at first use — in the Summary, in the Intent, and anywhere a term is load-bearing. The spec should teach the reader the vocabulary it needs them to know, not assume they already have it. This is the mechanism by which the library teaches itself: each spec that defines its terms consistently builds the reader's vocabulary without requiring them to look anything up elsewhere.
 - Invariants named descriptively first, then numbered (never letter-prefix codes)
 - Identity model explicit, opaque-id over content-field
-- Action signatures explicit, with every rejection reason named
+- Action signatures explicit, with every rejection reason named. Queries with multiple legitimate outcomes use first-class result tags (e.g., `verified | failed-verification(reason) | not-known`) rather than a success-or-reject pair
 - **All references explicit in all directions.** Any step, invariant, or claim that depends on content defined elsewhere must name that section explicitly. Any section that defines a mechanism used elsewhere must be named by those users. Implicit "you know where to look" cross-references are a Pass 3 finding.
 - Defended-in-line: architectural claims state principle, likely objection, mechanism, result
 - Edge cases name composing patterns by link

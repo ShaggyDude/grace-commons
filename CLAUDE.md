@@ -2,17 +2,13 @@
 
 > Do not cut corners unless you have VERY good reasons and in that case ask.
 
-> Standing instructions for any Claude session working on Grace Commons. Read this first; it points at the canonical documents, names the vocabulary that is load-bearing, and lists the authoring conventions every pattern follows. The repo's own documents are canonical; this file is the index that gets you to them quickly.
+> Standing instructions for any Claude session working on Grace Commons. **This file is an agent-operational index and nothing more**: it points at the canonical documents and records environment quirks. It deliberately carries no canonical content — no vocabulary mirrors, no convention restatements, no library-state snapshots. Every rule it once mirrored now lives in exactly one canonical home, linked below. (The lesson that shaped this: every mirrored sentence in this file eventually drifted from its source — stale counts, stale open-question lists, stale convention text. On 2026-06-11 the file was cut to pointers; the sections below that look like content are one-line redirects kept so historical "per CLAUDE.md §…" references in Lineage notes still resolve.)
 
 ---
 
 ## What Grace Commons is
 
-Grace Commons is a public library of **atoms** and **compositions** expressed as structured natural language. The thesis: software's canonical unit should shift from code to structured intent — a single semantic source from which code, tests, diagrams, and contracts are all derived. Code is a build artifact; the spec is canonical.
-
-This is the open-foundation track of a broader architecture (the **Spec Layer**) that synthesizes formal-methods, requirements engineering, BDD, design-by-contract, and Daniel Jackson's *Essence of Software* (EOS) into one canonical English-as-truth representation. The Alloy / concept-catalog track is the formal-methods parallel; Grace Commons is the structured-natural-language parallel. Both extend the same EOS-conceptual core; neither displaces the other.
-
-The methodology, philosophy, and full inheritance are in [`the-spec-layer.md`](./the-spec-layer.md). Grace Commons is named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
+A public library of **atoms** and **compositions** expressed as structured natural language: the spec is canonical, code is a derived build artifact. The thesis, philosophy, and inheritance are in [`the-spec-layer.md`](./the-spec-layer.md); the architecture overview is in [`readme.md`](./readme.md). Named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
 
 ---
 
@@ -20,106 +16,72 @@ The methodology, philosophy, and full inheritance are in [`the-spec-layer.md`](.
 
 If you have no prior context, read in this order:
 
-1. **[`readme.md`](./readme.md)** — architecture overview, current contents tree, the three-layers framing (atoms, applications, emergent invariants). Brief.
-2. **[`the-spec-layer.md`](./the-spec-layer.md)** — the manifesto. The *Principles* section (information-management triad + design-quality inheritances) and *Bridges* section (load-bearing humans↔machines bridge, *does this build a bridge, or build a wall?* litmus test) anchor the framing.
-3. **[`pressure-testing.md`](./pressure-testing.md)** — the three-pass methodology (GRID structural, EOS conceptual independence, Linus adversarial), the four-step authoring rubric, and the **Regulated-pattern conventions** section that canonicalizes *Regulated adversarial scenarios* and *Generation acceptance*.
-4. **[`spec-format.md`](./spec-format.md)** — the canonical reference for the shape of a Grace Commons spec. Enumerates the three shapes (atom, composition, regulated overlay), the required sections in order, and the canonical examples to mirror. Drafter agents (human or AI) read from here.
-5. **[`contributing.md`](./contributing.md)** — contribution shape, the three perspectives (rigor / clarity / implementability), the quality bar, and the contribution lifecycle.
-6. **[`execution-contract.md`](./execution-contract.md)** — the deterministic compilation target: the three runtime primitives, the four-step pipeline, the atom-to-runtime mapping, and the conformance definition. How a canonical spec lowers to a running system, and why the spec must be deterministic enough to compile. One of the core context docs.
-7. **An example atom.** [`atoms/personal-todo.md`](./atoms/personal-todo.md) for the simplest atom shape with a two-iteration Lineage record. [`atoms/actor-identity.md`](./atoms/actor-identity.md) for the regulated-atom shape (carries both regulated-pattern conventions).
-8. **An example application.** [`compositions/idempotent-reservation.md`](./compositions/idempotent-reservation.md) for a two-atom composition. [`compositions/audit-trail.md`](./compositions/audit-trail.md) for the four-atom canonical regulated-audit composition.
+1. **[`readme.md`](./readme.md)** — architecture overview, atoms vs. compositions, the three-layers framing. Brief.
+2. **[`the-spec-layer.md`](./the-spec-layer.md)** — the manifesto. *Principles* and *Bridges* anchor the framing.
+3. **[`pressure-testing.md`](./pressure-testing.md)** — the three-pass methodology, round structure and grounding semantics, formal-layer machinery, regulated-pattern conventions, capability provenance, the no-snapshot rule.
+4. **[`spec-format.md`](./spec-format.md)** — the three spec shapes, required sections in order, and the cross-cutting authoring conventions (owned there as of 2026-06-11).
+5. **[`contributing.md`](./contributing.md)** — contribution shape, the three perspectives, quality bar, lifecycle, the workflow for adding a new pattern, and the implementation-discovered-findings discipline.
+6. **[`execution-contract.md`](./execution-contract.md)** — the deterministic compilation target: three primitives, four-step pipeline, atom-to-runtime mapping, conformance.
+7. **An example atom.** [`atoms/personal-todo.md`](./atoms/personal-todo.md) (simplest shape); [`atoms/actor-identity.md`](./atoms/actor-identity.md) (regulated shape).
+8. **An example application.** [`compositions/idempotent-reservation.md`](./compositions/idempotent-reservation.md) (two-atom); [`compositions/audit-trail.md`](./compositions/audit-trail.md) (the canonical regulated-audit stack).
 
 When drafting a new pattern, additionally read the most structurally adjacent existing pattern — mirror its shape.
 
 ---
 
-## Vocabulary — load-bearing terms
+## Canonical documents — where every rule lives
 
-| Term | Meaning |
-|------|---------|
-| **Atom** | A freestanding concept with its own state, actions, invariants. Specification does not name another atom. Stored flat as `atoms/<name>.md` (no category folder; classification is derived — see [`atoms/TAXONOMY.md`](./atoms/TAXONOMY.md)). |
-| **Application** | A composition of two or more atoms. Specification names the atoms it composes. Files in `compositions/`. |
-| **Freestanding** | EOS-sense: the concept can be specified without naming any other concept. Pass 2 enforces this. |
-| **Emergent invariant** | A property that appears only at composition time and belongs to no single constituent atom. Compositions surface these explicitly under *Composition-level invariants*. |
-| **Regulated atom** | An atom carrying the regulated overlay, or one whose acceptance bar is set by an external evaluator (regulator, auditor). Carries two extra sections: *Regulated adversarial scenarios* and *Generation acceptance*. |
-| **Lineage notes** | The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Recursive: the notes themselves can be pressure-tested. |
-| **GRID** | The nine-node MUSE v1.1 completeness framework (Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof). Pass 1's checklist. |
-| **The canonical regulated-audit stack** | Event Log + Actor Identity + Retention Window + Tamper Evidence → Audit Trail. All four atoms grounded; the four-atom application landed. The library's worked example of multi-atom composition under regulated load. |
+- [`readme.md`](./readme.md) — home page, three-layers framing, atom/composition vocabulary.
+- [`the-spec-layer.md`](./the-spec-layer.md) — the architectural manifesto; principles, bridges, tone.
+- [`pressure-testing.md`](./pressure-testing.md) — three-pass methodology; round structure and `grounded` semantics; formal models, the formal-layer vote, the coverage cross-check; capability provenance; regulated-pattern conventions; the no-snapshot rule.
+- [`spec-format.md`](./spec-format.md) — the three spec shapes, required sections, reading tiers, authoring conventions.
+- [`contributing.md`](./contributing.md) — contribution lifecycle; workflow for adding a new pattern; implementation-discovered findings; formal-model artifact conventions.
+- [`execution-contract.md`](./execution-contract.md) — runtime semantics; composition state; substrate invocation; testing model; conformance.
+- [`roadmap.md`](./roadmap.md) — **single source of truth for library state**: counts, per-pattern status rows (mirroring each pattern file's Status line), sequencing, structural milestones on the pattern rows.
+- [`open-questions.md`](./open-questions.md) — SSOT for deliberately-deferred architectural decisions. Read before touching anything it names.
+- [`discoveries.md`](./discoveries.md) — dated findings log (the mirror of open-questions: found things vs. open things).
+- [`risks.md`](./risks.md) — the risk register and dated maturity estimate; owned, re-assessed on dated markers.
+- [`changelog.md`](./changelog.md) — dated change records.
+- [`governance.md`](./governance.md) — draft admission/sealing proposal. [`measurement.md`](./measurement.md) — token-cost ledger. [`demos.md`](./demos.md) — live renders. [`glossary.md`](./glossary.md) — strict definitions for load-bearing English. [`ai-usage-log.md`](./ai-usage-log.md) — AI-assistance disclosure.
+- [`atoms/index.md`](./atoms/index.md) — generated browse-by-overlay catalog (regenerate via `python3 tools/taxonomy/generate_views.py .`). [`compositions/README.md`](./compositions/README.md) — compositions catalog.
 
 ---
+
+## Vocabulary — load-bearing terms
+
+Moved — no mirror kept. Atom, application/composition, freestanding, and emergent invariant are defined in [`readme.md`](./readme.md); GRID, the three passes, `grounded`, and Lineage notes in [`pressure-testing.md`](./pressure-testing.md); the three shapes and regulated overlay in [`spec-format.md`](./spec-format.md); strict spec-language terms in [`glossary.md`](./glossary.md).
 
 ## Authoring conventions
 
-These are conventions every atom and application follows. Deviations are review findings, not stylistic choices.
-
-- **Atoms are freestanding.** The specification does not name another pattern. Directory placement is the operational form; the deeper criterion is EOS Pass 2 — does the concern have its own state machine, recur across many domains, deserve its own atom.
-- **Identity model is always explicit.** Opaque system-generated id (immutable); other fields are immutable properties of the record (set on the creating action, never change). Never use a content field as identity.
-- **Action signatures are always explicit.** `action(args) → result | rejected(reason)`. Every rejection reason is named. Queries with multiple legitimate outcomes use first-class result tags (e.g., `verified | failed-verification(reason) | not-known`) rather than a success-or-reject pair.
-- **Invariants are named descriptively first, then numbered.** Format: `**Invariant N — Descriptive name.** Statement.` Never letter-prefix codes (no Invariant A.1, B.2, etc.).
-- **Defended-in-line.** Each architectural claim states principle, likely objection, mechanism that resolves it, result. Authoring well prevents what Pass 3 would otherwise catch.
-- **Examples cover happy path and rejection path.** Regulated atoms additionally include a *Regulated adversarial scenarios* subsection walking the three canonical adversarial classes: regulator audit, disputed transaction / data-subject request, breach forensics.
-- **Edge cases name composing patterns by link.** Out-of-scope concerns name the atom or application that handles them. Forthcoming-links resolve to real links when the referenced atom lands.
-- **Standards inheritance is selective.** Cite only standards that genuinely apply to the atom; frame standards that belong to a composing pattern as the composing pattern's obligation rather than this atom's.
-- **Lineage notes record the three-pass arc.** Pass 1 GRID findings, Pass 2 EOS extractions, Pass 3 Linus fixes — what was found, what was closed in-pattern, what was deferred as explicit out-of-scope. Conventions inherited from the canonical methodology are named as such (not re-derived from predecessor atoms).
-
----
+Moved — owned by [`spec-format.md`](./spec-format.md) §What's not in this document (as of 2026-06-11). Deviations are review findings, not stylistic choices.
 
 ## The three-pass review
 
-Every pattern survives three pressure-testing passes before reaching `grounded`:
-
-- **Pass 1 — GRID structural.** All nine MUSE nodes resolved with their references intact. Mechanical; 15-30 min for an atom.
-- **Pass 2 — EOS conceptual independence.** Every concern belongs to *this* concept; over-absorption is extracted as a separate atom. 10-20 min once familiar with the catalog.
-- **Pass 3 — Linus adversarial.** Muddled identities, sloppy invariants, hidden decisions, happy-path-only examples — all surfaced and either fixed in-pattern or named as explicit out-of-scope. 30-60 min; most labor-intensive of the three.
-
-Each pass catches a different class of gap. Skipping is not an option. A pattern that has only survived one or two passes declares its actual status (`unresolved`, `partially resolved`) rather than false `grounded`. See [`pressure-testing.md`](./pressure-testing.md) for the full methodology and worked examples.
-
-**Round structure (baseline + Final Critique).** Canonicalized in [`pressure-testing.md`](./pressure-testing.md) §Order and iteration, *Round structure and naming* (landed 2026-06-07; this file no longer carries the standing text). The load-bearing points: 3×3 baseline (three rounds, each running Pass 1 / Pass 2 / Pass 3); pass numbering resets per round so "Pass 3" always means the Linus adversarial pass; Final Critique is the AI-conducted closing round starting at Round 4; `grounded on Final Critique N` is the canonical grounding marker; older cumulative Pass 1–9 numbering carries a retro-mapping note.
-
----
+Moved — owned by [`pressure-testing.md`](./pressure-testing.md): pass definitions, §Order and iteration (round structure and naming; `grounded on Final Critique N` is the canonical marker), and §What "grounded" means (the formal-layer vote and Opus clearance gate).
 
 ## Regulated-pattern conventions
 
-Two structural sections are **required** for atoms carrying the regulated overlay, atoms in other categories whose examples invoke regulated domains, and applications composing any of the above:
-
-- **Regulated adversarial scenarios** — an *Examples* subsection walking three canonical adversarial reads: *regulator audit* (a query against records that must return the expected result by virtue of an invariant), *disputed transaction or data-subject request* (an external party challenges the system's claim and the records must answer), *breach or incident investigation* (an investigator queries during or after an anomaly).
-- **Generation acceptance** — a standalone section naming what a derived implementation must produce, framed as the bar an external auditor must be able to clear *from the records alone*, with no recourse to source code, runbooks, or developer narration. Typically four-to-six checks.
-
-Both conventions are **inherited from the methodology directly**, not re-derived from predecessor atoms. Lineage notes for new regulated patterns cite the methodology, not earlier worked examples.
-
----
+Moved — owned by [`pressure-testing.md`](./pressure-testing.md) §Regulated-pattern conventions (the two required sections and when they apply); section placement by [`spec-format.md`](./spec-format.md) §Regulated overlay.
 
 ## Current state of the library
 
-[`roadmap.md`](./roadmap.md) is the **single source of truth** for the library's current state — the grounded counts, the per-category atom and composition lists, and what is in-progress, unblocked, or blocked on remaining atoms. This file deliberately does **not** restate that snapshot: a mirrored count drifts (this section long read "twenty atoms and eight compositions" while ROADMAP had moved well past both), and the library is built on DRY/SSOT — the same discipline applies to its own docs. Read ROADMAP for the current tree, counts, and sequencing.
-
-**The no-snapshot rule (generalized 2026-06-10, Refactor 1).** What this file learned about itself applies to every core doc. The six core docs — readme, the-spec-layer, pressure-testing, spec-format, contributing, execution-contract — carry **no library-state snapshots**: no pattern or composition counts, no present-tense corpus enumerations ("all current compositions are…"), and no "anticipated" or "forthcoming" framing for patterns that have already landed. Library-state facts are stated by reference to ROADMAP. Dated historical records ("the 2026-06-08 sweep of all eighteen then-grounded compositions…") conform — they are self-dating and cannot drift; present-tense corpus claims do not. A snapshot found in a core doc is a finding, not a preference. (Worked instances removed 2026-06-10: spec-format's Status line carried "twenty atoms and eight compositions"; the Execution Contract carried "all current Grace Commons compositions are sequential or conditional" with parallel "anticipated," and filed Notification Fanout as "in the roadmap," after Notification Fanout had landed.)
-
-The structural milestones worth carrying into any session — architectural facts rather than counts — are:
-
-- **Audit Trail** is the canonical regulated-audit stack — Event Log + Actor Identity + Retention Window + Tamper Evidence wired into a single application with attribution coverage, retention coverage, cascade-on-purge, and forensic completability as emergent invariants. The library's worked example of multi-atom composition under regulated load.
-- **Notification Fanout** is the first composition to produce a variable number of effects from a single trigger; it completes the messaging atom pair and formalizes the fan-out boundary rule from the Execution Contract.
-- **Multi-Party Approval** is the first composition to compose another composition (Audit Trail as substrate), establishing the substrate-composition pattern.
-- **Defensible Retention** anchors the FRCP Rule 37(e) / SOX §802 / HIPAA §164.530(j) / SEC Rule 17a-4 / GDPR Article 17 record-retention axis; retires forthcoming-links in Legal Hold, Retention Window, and Audit Trail.
-- **Attributed Permissions Admin** is the first composition to pair two compliance-infrastructure atoms (Permissions + Actor Identity) into a single administrative surface, and the first to ship with a dynamic Alloy trace model (Alloy 6 LTL) verifying its load-bearing temporal claims alongside the static structural model.
-- **KYC / Customer Onboarding (C8)** is the verification-gates-activity composition — Party Identity + Retention Window + Audit Trail (substrate) — whose gate enforces *verified-through-C8* via the composition's own case index, with a records-alone `trigger_id` lifecycle for adverse monitoring. Grounded on Final Critique 4 (2026-06-03).
-
----
+Moved — [`roadmap.md`](./roadmap.md) is the single source of truth for counts, statuses, and sequencing; structural milestones are recorded on each pattern's roadmap row. The no-snapshot rule that used to live here is owned by [`pressure-testing.md`](./pressure-testing.md) §The no-snapshot rule.
 
 ## Workflow for adding a new pattern
 
-1. **Triage atom vs. application.** Apply the directory-placement test (does the specification name another pattern?) and confirm against EOS Pass 2. The deeper criterion: does the concern have its own state machine, recur across many domains, deserve its own atom?
-2. **Identify the closest existing pattern.** Read it carefully; mirror its shape, vocabulary, and conventions. *Actor Identity* and *Retention Window* are the references for new regulated atoms; *Personal Todo* is the reference for productivity primitives; *Idempotent Reservation* and *Audit Trail* are the references for compositions.
-3. **Draft.** For regulated atoms or applications composing regulated atoms, bake in *Regulated adversarial scenarios* and *Generation acceptance* from the first draft. Identity model and action signatures explicit. Invariants named descriptively then numbered.
-4. **Run all three passes.** GRID first, EOS second, Linus third. Iterate until clean. Lineage notes record what each pass found and how it was resolved.
-5. **Resolve forthcoming-links.** Any existing atom whose Composition notes name the new pattern as `*(forthcoming)*` gets the marker removed and the reference linked.
-6. **Update catalog files.** Regenerate the browse-by-overlay catalog (`atoms/index.md`, via `python3 tools/taxonomy/generate_views.py .`), the top-level snapshot in `readme.md`, and — for applications — `compositions/README.md`. Add the new pattern with a one-line description and the standards it anchors. (Atom overlays are derived, so the catalog regenerates rather than being hand-maintained.)
-
----
+Moved — owned by [`contributing.md`](./contributing.md) §Workflow for adding a new pattern (as of 2026-06-11).
 
 ## Open architectural questions
 
-Moved out of this file — CLAUDE.md stays agent-operational and is not the SSOT for canonical knowledge (the same discipline already applied to library *state*, which defers to ROADMAP). The deferred decisions — taxonomy axes, regulation-as-folder-vs-attribute, the guided-process state→phase→action mapping — and the convention for resolving them now live in [`open-questions.md`](./open-questions.md), the SSOT (the mirror of `discoveries.md`: found things vs. open things). Read it when a session might touch one of them.
+Moved — [`open-questions.md`](./open-questions.md) is the SSOT. No list is mirrored here: the last mirrored list in this file went stale (it carried two questions as open after they were resolved and executed on 2026-06-08).
+
+## Implementation-discovered findings
+
+Moved — owned by [`contributing.md`](./contributing.md) §Implementation-discovered findings (as of 2026-06-11). The one-line form: a **finding** names a contradiction inside the spec and routes through the review channel; everything else is a **preference** and belongs in the build's own tracker; builds proceed against the spec as written.
+
+## Tone
+
+Moved — the verbosity-preserves-meaning and bridges-over-walls principles are owned by [`the-spec-layer.md`](./the-spec-layer.md) (§The Architecture, §Principles, §Bridges); complete-over-concise and the reading tiers by [`spec-format.md`](./spec-format.md). The litmus test for any addition: *does this build a bridge, or does it build a wall?*
 
 ---
 
@@ -132,44 +94,6 @@ Moved out of this file — CLAUDE.md stays agent-operational and is not the SSOT
 The same rule applies to review *outputs*: a Round 3 review's findings are folded into Lineage notes, not written as a standalone review file alongside the pattern.
 
 The only prompt-shaped content that belongs in the repo is methodology — the three-pass question sets and authoring rubric in [`pressure-testing.md`](./pressure-testing.md). That content is canonical, reviewed, and edited like any other library document. Everything else is chat.
-
----
-
-## Implementation-discovered findings
-
-Building demos or production systems against a spec sometimes surfaces problems the three-pass review missed. The discipline below keeps the spec-as-canonical story honest without silencing implementation discoveries.
-
-A **finding** is a contradiction *inside* the spec — an action wiring and an invariant disagree, two passages describe different behavior for the same case, a CHECK and a trigger cannot both hold, an example violates an invariant, a forthcoming-link points at something that already landed under a different name. Findings are Pass-3-shaped and belong in the pattern's Lineage notes as a new pass. Log them; route them through the standard review channel; do not modify the spec mid-build.
-
-A **preference** is anything else — *"this would be cleaner if…"*, *"I'd rather have one table than four"*, *"the column name is awkward"*, *"this collapses to a simpler form in my implementation"*. Preferences are implementation choice and belong in the implementation's own follow-up tracker (e.g., a `CORNERS.md` alongside the build), not in the spec.
-
-The single distinguishing question: does the observation name a contradiction *inside* the spec, or a preference *outside* it? If the answer is not obviously the first, it is the second. The bar is "contradiction, not preference" — deliberately not "very wrong," because *very wrong* slides under any sustained effort and *contradiction* does not. A contradiction can be named by pointing at the two passages that disagree; a preference cannot.
-
-Builds proceed against the spec as written. The spec changes only through a review pass, not through a code commit. An agent that rewrites the spec inline during a build has made a process error, regardless of whether the rewrite is correct — the correct path is to log the finding, finish the build against the existing spec, and let the review channel adjudicate.
-
----
-
-## Canonical documents
-
-- [`readme.md`](./readme.md) — home page, current contents snapshot, three-layers framing.
-- [`the-spec-layer.md`](./the-spec-layer.md) — the architectural manifesto.
-- [`pressure-testing.md`](./pressure-testing.md) — three-pass methodology, regulated-pattern conventions, multi-file refinement order.
-- [`contributing.md`](./contributing.md) — contribution shape, three perspectives, four-step authoring rubric, lifecycle.
-- [`spec-format.md`](./spec-format.md) — canonical reference for the three spec shapes (atom, composition, regulated overlay), required sections in order, and the canonical examples to mirror.
-- [`roadmap.md`](./roadmap.md) — planned atoms and compositions in dependency order; what each unlocks; what each blocks on.
-- [`execution-contract.md`](./execution-contract.md) — the deterministic compilation target: three primitives, four-step pipeline, atom-to-runtime mapping, conformance definition.
-- [`atoms/`](./atoms/) — the generated browse-by-overlay catalog (`atoms/index.md`, emitted by `tools/taxonomy/generate_views.py` from the reverse index).
-- [`compositions/README.md`](./compositions/README.md) — compositions catalog, vocabulary note.
-
----
-
-## Tone
-
-Grace Commons authoring is plain, dense, and defended-in-line. The architecture is software engineering one level up; the same principles that discipline good code — DRY, SSOT, explicit-over-implicit, separation of concerns, composition over inheritance, YAGNI, encapsulation, fail-fast, KISS — discipline the canonical spec. The Spec Layer's claimed contribution is the *information-management triad* (DRY/SSOT/explicit) applied at the intent level; the design-quality principles are inherited from existing practice.
-
-When in doubt, say more. Verbosity that preserves meaning is a feature, not a defect. AI summaries can shorten the canonical text for orientation; the canonical text itself stays long because it must be verifiable.
-
-The litmus test for any architectural addition is from the *Bridges* section of the manifesto: *does this build a bridge, or does it build a wall?* Walls exclude an audience to optimize for another; bridges accommodate both. The architecture optimizes for bridges by default.
 
 ---
 

@@ -29,6 +29,7 @@ exclude:
   - CLAUDE.md
   - demos/
   - grants/
+  - internal/
   - node_modules/
   - tools/
   - working-ideas/
