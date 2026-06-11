@@ -16,7 +16,7 @@ toc: true
 </details>
 
 
-Atomic patterns (concepts) and applications, expressed as structured natural language. Code is derived (generated from the spec); intent is canonical (the single authoritative source from which everything else is built).
+Atomic concepts & compositions thereof, expressed as structured natural language. Code is derived (generated from the spec); intent is canonical (the single authoritative source from which everything else is built).
 
 Named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
 
@@ -59,9 +59,9 @@ It is a specification library (a collection of precise written descriptions of h
 
 Grace Commons distinguishes **atoms** from **compositions**.
 
-An atom is freestanding — its specification can be stated without naming any other atom. Personal Todo, Duplicate Prevention, and Event Log are atoms. Each is a complete concept whose state, actions, and operational principles are independent of every other concept.
+An atom is freestanding — a concept whose specification names no other pattern. Personal Todo, Duplicate Prevention, and Event Log are atoms. Each is a complete concept whose state, actions, and operational principles are independent of every other concept.
 
-A composition depends on at least one other atom. Audit Trail composes Event Log with retention (rules about how long records must be kept), tamper-evidence (the ability to detect if records have been secretly altered), and actor identity (a verifiable link between every action and who performed it). Shared Todo composes Personal Todo with Permissions and Assignment. Compositions are where atoms come together to do real work.
+A composition is the wiring of concepts, not a new concept — its specification names other patterns and the logic that combines them. Audit Trail composes Event Log with retention (rules about how long records must be kept), tamper-evidence (the ability to detect if records have been secretly altered), and actor identity (a verifiable link between every action and who performed it). Shared Todo composes Personal Todo with Permissions and Assignment. Compositions are where atoms come together to do real work.
 
 The directory layout reflects the split:
 
@@ -101,8 +101,6 @@ If you work in a domain with well-specified standards — healthcare, finance, l
 Grace Commons is not chasing incremental improvement. The design is revolutionary by intention: the structured specification is the single source of truth, mechanically projected into working software, making the entire system legible to every stakeholder — not just developers. The methodology follows the same pattern it teaches: strong and effective now, deliberately engineered to evolve toward excellence as more authors and real-world usage shape it.
 
 This is what becomes possible when deep architectural taste meets modern AI — not as a replacement for human judgment, but as a force multiplier for it. The result is a new kind of commons: compliance logic no longer buried in opaque code, but living in clear, readable, verifiable patterns that anyone accountable for the system can actually understand.
-
-We are building the upper layer that Europe's open digital ecosystems have been missing.
 
 ---
 

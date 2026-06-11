@@ -48,6 +48,19 @@ a different sense, it must say so locally.
 - **should** — recommended; a deviation must be justified. (Avoid in invariants —
   an invariant is `must` or it is not an invariant.)
 
+## Separation
+
+- **tombstone (2026-06-11)** — the corpus does not use the working noun from
+  "Separation of Concerns" (the ancestor principle's name, permitted only in that
+  title-case form — lint rule J). The unit of separation is the **concept**
+  (realized in the library as the **atom**; a composition is the wiring of
+  concepts, never a new concept — Jackson's wiring-not-primitive rule, made
+  structural by the composition-state rule); a
+  pre-triage item in the guided tool is a **candidate concept** (a stage, consumed
+  by triage — promoted or rejected, never outliving Phase 1). Atom and composition
+  are defined in [`readme.md`](./readme.md); the thesis phrase is claimed in
+  [`the-spec-layer.md`](./the-spec-layer.md).
+
 ---
 
 *Status: stub, 2026-06-04.* Seeded from the recurring ambiguity classes (emptiness,

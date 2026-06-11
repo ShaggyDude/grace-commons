@@ -32,6 +32,16 @@ the three-pass review otherwise has to catch by eye —
                               token exactly (the pattern file is the source of truth).
   I. Duplicate table rows   — no roadmap.md table names the same pattern twice
                               (the duplicated-Login-row class).
+  J. Banned working noun    — "concern" (any case, any inflection) is banned
+                              corpus-wide as working vocabulary (vocabulary
+                              directive 2026-06-11: the unit of separation is the
+                              *concept*; pre-triage items in the guided tool are
+                              *candidate concepts*). The single permitted form is
+                              the title-case proper noun "Separation of Concerns"
+                              naming the ancestor principle (inheritance map,
+                              glossary tombstone) — mention of the ancestor,
+                              never working use. Scans the whole corpus, not just
+                              the pattern dirs.
 
 Design notes (this tool is meant to be maintained by a small/cheap model):
   - Standard library only. No deps. Runs anywhere `python3` does.
@@ -45,6 +55,7 @@ Usage:  python3 tools/linter/lint.py [repo_root]
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -452,6 +463,42 @@ def check_duplicate_rows(root: Path) -> list[Finding]:
     return findings
 
 
+BANNED_TOKEN = re.compile(r"(?i)\bconcern\w*")
+ANCESTOR_PROPER_NOUN = "Separation of Concerns"
+BANNED_TOKEN_EXCLUDED_DIRS = {".git", ".github", "node_modules", "Alloy.app",
+                              "demos", "grants", "internal", "working-ideas"}
+
+
+def check_banned_token(root: Path) -> list[Finding]:
+    """J: the working noun "concern" is banned corpus-wide (vocabulary directive
+    2026-06-11). The unit of separation is the concept; pre-triage items are
+    candidate concepts. Single exception: the exact title-case proper noun
+    "Separation of Concerns" — the ancestor principle's name — is permitted
+    (mention of the ancestor, never working use)."""
+    out: list[Finding] = []
+    md_files: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        # prune in place so excluded trees (Alloy.app, node_modules, …) are
+        # never descended into — rglob-then-filter walks them and is far too slow
+        dirnames[:] = [d for d in dirnames if d not in BANNED_TOKEN_EXCLUDED_DIRS]
+        md_files += [Path(dirpath) / f for f in filenames if f.endswith(".md")]
+    for md in sorted(md_files):
+        try:
+            text = md.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for i, line in enumerate(text.splitlines(), start=1):
+            scrubbed = line.replace(ANCESTOR_PROPER_NOUN, "")
+            for m in BANNED_TOKEN.finditer(scrubbed):
+                out.append(Finding(
+                    md, i, "J-banned-token",
+                    f'banned working noun "{m.group(0)}" — the unit of separation '
+                    f"is the concept; pre-triage items are candidate concepts "
+                    f"(vocabulary directive 2026-06-11)",
+                ))
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
@@ -479,6 +526,7 @@ def main(argv: list[str]) -> int:
     findings += check_status_grammar(patterns)
     findings += check_status_mirror(root, patterns)
     findings += check_duplicate_rows(root)
+    findings += check_banned_token(root)
 
     findings.sort(key=lambda f: (f.code, str(f.path), f.line))
     for f in findings:
