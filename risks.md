@@ -47,7 +47,7 @@ Net: **early-foundational** — inside the Years 0–3 band of [`the-spec-layer.
 
 **Status semantics rotting into quiet fiction** — Deferred work (pending formal models, qualifiers, rescan dates) rots silently; a status claims more than the records support. Observed: two compositions claimed plain `grounded` over their own recorded coverage GAPs (corrected 2026-06-10), and the guided tool's first design emitted a formal-work queue with no drainer — the same rot, by construction.
 
-*Mitigation (in place):* Honest qualified statuses (`grounded — X pending`); the coverage cross-check; staleness treated as a flagged finding. *(designed, not deployed):* Queue ownership, drain cadence, and computable staleness live in the guided tool's design document, which is not yet built. *(gap):* No automated staleness alarm — and a status fix that lands in the pattern file without propagating to the roadmap *creates* the divergence the previous entry describes. Propagation-on-fix is part of this risk, not a separate concern.
+*Mitigation (in place):* Honest qualified statuses (`grounded — X pending`); the coverage cross-check; staleness treated as a flagged finding. *(designed, not deployed):* Queue ownership, drain cadence, and computable staleness live in the guided tool's design document, which is not yet built. *(gap):* No automated staleness alarm — and a status fix that lands in the pattern file without propagating to the roadmap *creates* the divergence the previous entry describes. Propagation-on-fix is part of this risk, not a separate risk.
 
 ---
 
@@ -99,7 +99,7 @@ Net: **early-foundational** — inside the Years 0–3 band of [`the-spec-layer.
 
 **Methodology bloat / over-machinery** — Each new rule or convention adds machinery; new conventions silently duplicate rules that already exist. Observed: a proposed structural-relation rule arrived as a full convention with formal-model hooks and collapsed to one Pass-3 checklist line once the adversarial pass proved most of it restated existing disciplines.
 
-*Mitigation (in place):* Smallest-machinery-that-closes-the-gap; the EOS over-absorption check applied to conventions themselves. *(gap → proposed):* Make "is this a new rule, or an instance of existing ones?" a standing gate before any convention lands — housed in [`pressure-testing.md`](./pressure-testing.md) §Recursive application, not a new document.
+*Mitigation (in place):* Smallest-machinery-that-closes-the-gap; the EOS over-absorption check applied to conventions themselves. *(gap → proposed):* Make "is this a new rule, or an instance of existing ones?" a standing gate before any convention lands — housed in [`pressure-testing.md`](./pressure-testing.md) §The methodology applied to itself, not a new document.
 
 **Reviewer-vendor dependence** — The entire grounding gate (Final Critique, clearance gate, council rescans) runs on a single model family. Model regression, drift, or unavailability silently changes the bar `grounded` means.
 

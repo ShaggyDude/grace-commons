@@ -21,8 +21,8 @@ the three-pass review otherwise has to catch by eye —
                               pattern's real invariant count. The tractable mechanical
                               slice of the capability-provenance rule (pressure-testing.md
                               §Capability provenance); the broader "is this capability
-                              actually declared by that constituent" check stays a
-                              fresh-reader Pass-2 concern (paraphrased names defeat a regex).
+                              actually declared by that constituent" check stays
+                              fresh-reader Pass-2 work (paraphrased names defeat a regex).
   G. Status grammar         — every pattern has a `## Status` section whose first
                               line starts with exactly one backticked status token
                               conforming to the pinned grammar (pressure-testing.md
@@ -50,9 +50,11 @@ the three-pass review otherwise has to catch by eye —
                               compositions thereof. Not scanned: execution-
                               contract.md (the output level is its domain),
                               roadmap.md (dated history), glossary.md (the
-                              definition site). Inline code spans are scrubbed
-                              first (naming an external project's literal
-                              `applications/` directory is mention, not use).
+                              definition site). Inline code spans and the API
+                              acronym's canonical expansion are scrubbed first
+                              (naming an external project's literal
+                              `applications/` directory, or glossing API, is
+                              mention, not use).
 
 Design notes (this tool is meant to be maintained by a small/cheap model):
   - Standard library only. No deps. Runs anywhere `python3` does.
@@ -512,6 +514,9 @@ def check_banned_token(root: Path) -> list[Finding]:
 
 BANNED_OUTPUT_NOUN = re.compile(r"(?i)\bapplications?\b")
 CODE_SPAN = re.compile(r"`[^`]*`")
+# The canonical expansion of the API acronym is a fixed term of art — mention,
+# not working use — and is scrubbed before matching, like code spans.
+API_GLOSS = "Application Programming Interface"
 OUTPUT_NOUN_CORE_DOCS = ("readme.md", "the-spec-layer.md", "pressure-testing.md",
                          "spec-format.md", "contributing.md")
 
@@ -539,7 +544,7 @@ def check_banned_application(root: Path) -> list[Finding]:
         except OSError:
             continue
         for i, line in enumerate(text.splitlines(), start=1):
-            scrubbed = CODE_SPAN.sub("", line)
+            scrubbed = CODE_SPAN.sub("", line).replace(API_GLOSS, "")
             for m in BANNED_OUTPUT_NOUN.finditer(scrubbed):
                 out.append(Finding(
                     md, i, "K-output-noun",
