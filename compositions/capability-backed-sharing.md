@@ -9,12 +9,11 @@ toc: true
 # Capability-Backed Sharing (C15)
 
 <details markdown="block">
-  <summary>Table of contents</summary>
-  {: .text-delta }
+ <summary>Table of contents</summary>
+ {: .text-delta }
 1. TOC
 {:toc}
 </details>
-
 
 > A regulated composition that reconciles two things that look incompatible: **bearer-token sharing** (possession of a token is sufficient authorization — the redeemer's identity is never checked or recorded) and **regulated disclosure audit** (every disclosure of subject data must be accountable to a named, non-repudiable authorizing party). It composes **Capability** (the bearer token whose scope authorizes a specific disclosure), **Selective Disclosure** (the durable, append-only record that the disclosure occurred — to whom it was authorized, what scope, under what authority), and **Audit Trail** as a substrate (reaching Event Log + Actor Identity + Tamper Evidence + Retention Window transitively). The load-bearing emergent invariant is **audit-subject asymmetry**: every capability-backed disclosure record names the **allocator** — the actor who authorized the share, attested under their own credential at allocation time and carried immutably in the capability's allocation provenance — and, *by construction*, names **no redeemer**, because the bearer presents only the token and Capability performs no identity check at redemption. The composition's second load-bearing claim is the **disclosure-accountability binding bijection** (mirroring C6): each redemption-that-discloses commits the Selective Disclosure record and the sealed `sharing.disclosed` Audit Trail event together or not at all. Bearer semantics and regulated audit, neither broken. Regulated overlay required. Anchors GDPR (EU General Data Protection Regulation) Article 32, HIPAA (US Health Insurance Portability and Accountability Act) §164.514, and the object-capability (OCAP) model.
 
@@ -40,7 +39,6 @@ Capability-Backed Sharing is a regulated composition — a specification that wi
 
 Its common uses are exactly the places bearer sharing and regulated audit collide: a hospital sharing a scoped slice of a patient record with a referred specialist via a time-limited link (the minimum-necessary fields, logged against the authorizing clinician), a bank issuing a pre-signed link to disclose a customer's transaction subset to an auditor, or a controller sharing specific personal-data fields with a processor under a consent record. Any system that must share data by token *and* prove from the records who authorized each disclosure — without being able to (or wanting to) name who consumed it — is a candidate for this composition.
 
-This composition is `grounded on Final Critique 4`: the three-round baseline review, an author Final Critique, and the formal layer (a verified model with a buggy twin) are complete, and the fresh-reader Phase 4 Opus Happy-Torvalds-X2 clearance gate cleared on 2026-06-10 with foundational findings at zero.
 
 ---
 
@@ -99,14 +97,14 @@ The composition exposes four actions: one allocation-with-attestation (`authoriz
 
 ```
 authorize_sharing(allocator_ref, credential, sharing_descriptor, max_redemptions?, ttl?) →
-    {capability_token, authorization_event_id}
-  | rejected(
-      invalid-request
-    | invalid-sharing-descriptor
-    | unknown-authority-type
-    | recording-failure
-    | storage-failure
-    )
+  {capability_token, authorization_event_id}
+ | rejected(
+   invalid-request
+  | invalid-sharing-descriptor
+  | unknown-authority-type
+  | recording-failure
+  | storage-failure
+  )
 ```
 
 Allocates a bearer capability whose scope *is* an authorized disclosure, and records the allocator's non-repudiable authorization. Steps:
@@ -123,9 +121,9 @@ Allocates a bearer capability whose scope *is* an authorized disclosure, and rec
 
 ```
 redeem_and_disclose(capability_token) →
-    {disclosure_id, event_id, disclosed_scope, allocator_ref}
-  | invalid(exhausted | expired | revoked | not-known)
-  | rejected(not-authorized-sharing | recording-failure)
+  {disclosure_id, event_id, disclosed_scope, allocator_ref}
+ | invalid(exhausted | expired | revoked | not-known)
+ | rejected(not-authorized-sharing | recording-failure)
 ```
 
 Redeems the capability **by possession alone** — no identity argument — then records the disclosure accountably to the allocator while naming no redeemer, sealing the disclosure and its audit event together. This is the composition's load-bearing surface. Steps:
@@ -141,8 +139,8 @@ Redeems the capability **by possession alone** — no identity argument — then
 
 ```
 revoke_sharing(capability_token, revoked_by_ref, credential, reason) →
-    {revoked, event_id}
-  | rejected(invalid-request | already-terminal | not-known | storage-failure | recording-failure)
+  {revoked, event_id}
+ | rejected(invalid-request | already-terminal | not-known | storage-failure | recording-failure)
 ```
 
 Cancels a sharing capability before its redemptions or time are exhausted (the sharing window closes early; the data should no longer be shareable via this token). Steps: validate inputs (`invalid-request`); `Capability.revoke(capability_token, revoked_by_ref, reason)` mapping `already-terminal` / `not-known` / `storage-failure` through (the constituent's full rejection taxonomy — `storage-failure` surfaced as `storage-failure`, mirroring `authorize_sharing`'s allocate-failure mapping, so no constituent rejection drifts unmapped); then `AuditTrail.record_action(action_ref = sharing.revoked, actor_ref = revoked_by_ref, credential, data = {capability_token, reason, revoked_at = now}, retention_policy = audit_trail_retention_policy)` → `event_id` (attested under the revoker's credential — a named, accountable act, like the allocator's authorization). Return `{revoked, event_id}`. Future `redeem_and_disclose` calls for the token return `invalid(revoked)` and disclose nothing.

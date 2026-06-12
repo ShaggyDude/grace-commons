@@ -9,12 +9,11 @@ toc: true
 # Reservation Lifecycle (C9)
 
 <details markdown="block">
-  <summary>Table of contents</summary>
-  {: .text-delta }
+ <summary>Table of contents</summary>
+ {: .text-delta }
 1. TOC
 {:toc}
 </details>
-
 
 > A composition: the full arc of a reservation against a bounded pool — a capacity-gated provisional hold, an idempotent confirmation under concurrent demand, and a terminal resolution that returns the slot to the pool atomically — with every state change attributed and journaled. It wires Capacity Constraint Enforcement, Provisional Commitment, Duplicate Prevention, Event Log, and Actor Identity into the structure every booking, ticketing, and inventory system implements but no constituent owns alone. The load-bearing emergent guarantee is **allocation coherence**: the pool's running `allocated` total stays in exact lockstep with the set of live reservations (Held or Confirmed) against it — so confirmed reservations never exceed pool capacity, and a cancelled or expired reservation returns its slot to the pool exactly once, neither leaked nor double-released. Provisional Commitment owns the per-reservation state machine; Capacity Constraint owns the pool arithmetic; the binding between a reservation and the pool slot it holds belongs to neither and is this composition.
 
@@ -38,7 +37,7 @@ Reservation Lifecycle is a composition (a spec that wires two or more atoms — 
 
 The composition's defining emergent guarantee (a property that appears only when atoms are combined — no single atom carries it) is **allocation coherence**: the pool's `allocated` count stays in exact lockstep with the set of reservations in a slot-holding state (Held or Confirmed). Three consequences follow. Confirmed reservations never exceed pool capacity — every `reserve` gates on `Capacity Constraint.allocate`, which refuses past `capacity`. A cancelled or expired reservation returns its slot to the pool *exactly once* — the terminal transition and the pool `release` commit together, so no slot is leaked (a cancellation whose unit is never returned) and none is double-released (a unit returned twice, driving the count below the truth). And no reservation is confirmed unless its hold is still live at confirmation time — Provisional Commitment's confirm-within-window guarantee, surfaced at the composition layer, prevents confirming a slot that has already lapsed and been returned.
 
-Beyond coherence, the composition makes every reservation action idempotent under retry (the Idempotent Reservation precursor's contract, extended over the pool-aware surface), and records every state change as a durable, attributed Event Log entry. This composition is `grounded` (2026-06-04). Its most common uses are airline and hospitality booking, event ticketing, hospital bed and resource allocation, and warehouse and supply-chain inventory reservation. Any system that must guarantee, from the pool count alone, that it never oversells and never strands inventory across the reserve/confirm/cancel/expire arc is a candidate for this composition.
+Beyond coherence, the composition makes every reservation action idempotent under retry (the Idempotent Reservation precursor's contract, extended over the pool-aware surface), and records every state change as a durable, attributed Event Log entry. Its most common uses are airline and hospitality booking, event ticketing, hospital bed and resource allocation, and warehouse and supply-chain inventory reservation. Any system that must guarantee, from the pool count alone, that it never oversells and never strands inventory across the reserve/confirm/cancel/expire arc is a candidate for this composition.
 
 ---
 
@@ -88,24 +87,24 @@ The composition exposes five actions. Four are state-changing — each carries a
 
 ```
 reserve(
-  pool_id,
-  resource,
-  requester,
-  duration,
-  actor_ref,
-  credential,
-  idempotency_token
+ pool_id,
+ resource,
+ requester,
+ duration,
+ actor_ref,
+ credential,
+ idempotency_token
 ) →
-    reservation_id
-  | rejected(
-      invalid-request
-    | token-collision
-    | not-known
-    | pool-closed
-    | pool-capacity-exceeded
-    | resource-unavailable
-    | recording-failure
-    )
+  reservation_id
+ | rejected(
+   invalid-request
+  | token-collision
+  | not-known
+  | pool-closed
+  | pool-capacity-exceeded
+  | resource-unavailable
+  | recording-failure
+  )
 ```
 
 Takes one slot of `pool_id` and opens a provisional hold bound to it. The **capacity gate and the hold are bound**: the slot is allocated only if the hold is taken, and the hold is taken only if a slot was available.
@@ -124,8 +123,8 @@ Steps (first-invocation path):
 
 ```
 confirm_reservation(reservation_id, actor_ref, credential, idempotency_token) →
-    ok
-  | rejected(invalid-request | token-collision | not-known | not-held | window-elapsed | recording-failure)
+  ok
+ | rejected(invalid-request | token-collision | not-known | not-held | window-elapsed | recording-failure)
 ```
 
 Confirms a held reservation into a firm booking. **The slot is not released** — a Confirmed reservation keeps its pool unit (the binding allocation persists), so `allocated` is unchanged. This is the action whose `window-elapsed` rejection is the composition's *no-confirm-without-active-hold* guarantee.
@@ -136,8 +135,8 @@ Steps (first-invocation path): validate; `check`; on `not-seen`: resolve `reserv
 
 ```
 cancel_reservation(reservation_id, actor_ref, credential, idempotency_token) →
-    ok
-  | rejected(invalid-request | token-collision | not-known | not-held | recording-failure)
+  ok
+ | rejected(invalid-request | token-collision | not-known | not-held | recording-failure)
 ```
 
 Cancels a held reservation and **returns its slot to the pool atomically**.
@@ -154,8 +153,8 @@ Cache and `record`. Return `ok`. If the host cannot commit steps 1–3 atomicall
 
 ```
 expire_reservation(reservation_id, actor_ref, credential, idempotency_token) →
-    ok
-  | rejected(invalid-request | token-collision | not-known | not-held | window-not-elapsed | recording-failure)
+  ok
+ | rejected(invalid-request | token-collision | not-known | not-held | window-not-elapsed | recording-failure)
 ```
 
 The action an expiry sweeper invokes on a held reservation whose window has elapsed: it drives the Provisional Commitment `expire` transition and **returns the slot to the pool atomically**, exactly as `cancel_reservation` does, differing only in the constituent transition (`expire` rather than `release`) and the `window-not-elapsed` guard.
@@ -166,7 +165,7 @@ Steps (first-invocation path): validate; `check`; on `not-seen`: resolve `reserv
 
 ```
 query_reservation(reservation_id) →
-    {state, pool_id, slot_held} | rejected(not-known)
+  {state, pool_id, slot_held} | rejected(not-known)
 ```
 
 Read-only. **No Event Log entry is produced** — a read changes no state. Resolves `reservation_id` in `reservation_to_pool` (absent → `rejected(not-known)`), reads the commitment's current state from Provisional Commitment, and reports `{state, pool_id, slot_held = (state ∈ {Held, Confirmed} and not slot_released)}`. Callers consume this to learn whether a reservation is live and holds a slot.

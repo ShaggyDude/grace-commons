@@ -9,12 +9,11 @@ toc: true
 # Actor Suspension (C18)
 
 <details markdown="block">
-  <summary>Table of contents</summary>
-  {: .text-delta }
+ <summary>Table of contents</summary>
+ {: .text-delta }
 1. TOC
 {:toc}
 </details>
-
 
 > A regulated composition: when an actor must be deactivated — a departing employee, a compromised account, a contractor whose engagement ended — every surface through which that actor can still act must be closed in one operation, and the closure must be provable from the records. C18 is Login's outbound-side counterpart: where Login wires credential-verification to session-issuance on the way *in*, C18 wires actor-suspension to the revocation of every active **Permissions** grant and every active **Session** on the way *out*, attests the whole act through one tamper-evident **Audit Trail** event, and (optionally) revokes the actor's **Credential** so it cannot re-authenticate. It composes Actor Identity (the actor whose Active→Suspended lifecycle the composition introduces), Permissions, Session, and Audit Trail as a substrate (reaching Event Log + Actor Identity + Tamper Evidence + Retention Window transitively); Credential is an optional fifth constituent. Three emergent invariants: **atomicity of multi-surface revocation** — after `suspend_actor` succeeds, the actor has zero active grants and zero active sessions, committed as one transaction with no partial state (the load-bearing claim); **audit completeness** — the `actor.suspended` event enumerates every `grant_id` and `session_token` revoked; and **suspension cascade ordering** — the Active→Suspended transition gates the cascade, and a second `suspend_actor` against an already-Suspended actor is a no-op. The default posture is all-or-nothing under one transaction.
 
@@ -40,7 +39,6 @@ Actor Suspension is a regulated composition — a specification that wires sever
 
 It is the exact mirror of the Login pattern: Login wires up "check the credential, then start a session" on the way in; this wires up "suspend the actor, then revoke every grant and every session" on the way out. The composition's defining emergent guarantee — a property that exists only when the patterns are combined — is that single multi-surface revocation: after a successful suspension, the actor provably holds zero active grants and zero active sessions, and the audit record names every one that was revoked. Its common uses are exactly the moments compliance regimes care about most: offboarding a terminated employee (the access must be removed promptly and provably), responding to a compromised account, and ending a third-party's access. Any system that must deactivate an actor across multiple access surfaces at once — and prove from the records that nothing was missed — is a candidate for this composition.
 
-This composition is `grounded on Final Critique 4`: the three-round baseline review, an author Final Critique, the formal layer (a verified model with a buggy twin), and the fresh-reader Phase 4 Opus clearance gate are all complete.
 
 ---
 
@@ -105,13 +103,13 @@ The composition exposes three actions: one emergent multi-surface suspension (`s
 
 ```
 suspend_actor(actor_ref, suspended_by_ref, credential, reason) →
-    {suspended, revoked_grants, revoked_sessions, revoked_credential?, event_id}
-  | rejected(
-      invalid-request
-    | already-suspended
-    | revocation-failure
-    | recording-failure
-    )
+  {suspended, revoked_grants, revoked_sessions, revoked_credential?, event_id}
+ | rejected(
+   invalid-request
+  | already-suspended
+  | revocation-failure
+  | recording-failure
+  )
 ```
 
 Suspends an actor by atomically revoking every active Permissions grant and every active Session (and, optionally, the actor's Credential), transitioning the actor to Suspended, and sealing the complete revoked set into one attributed Audit Trail event. Steps:
@@ -120,9 +118,9 @@ Suspends an actor by atomically revoking every active Permissions grant and ever
 2. **Suspension-state gate (Active → Suspended; the cascade ordering, Invariant 3).** Read `actor_suspension_state[actor_ref]`. If `state = Suspended` → append `suspension_log` `{outcome: already-suspended}`; return `rejected(already-suspended)` and change no state — the cascade does **not** re-run (no-op on already-Suspended; the second suspension is idempotent). An `actor_ref` absent from the map is **Active** and proceeds.
 3. **Snapshot the active set (read-only, atomic with the cascade).** Enumerate the actor's active grants `G = {grant_id : subject_ref = actor_ref ∧ status = Active}` from the Permissions store and active sessions `S = {session_token : principal_ref = actor_ref ∧ status = Active}` from the Session store. The snapshot read and the cascade writes in steps 4–6 are **one serialized transaction keyed on `actor_ref`** (the host transaction boundary, exactly as Login's cascade and Audit Trail's cascade-on-purge commit in one transactional boundary), so no concurrently-issued grant or session is half-covered: a grant/session created *after* the snapshot is not in `G`/`S` and is not covered by this suspension (snapshot-scoped — Invariant 1's stated bound, and the *Suspension is snapshot-scoped* edge case). An empty `G` and `S` is a valid suspension (an actor with no active access is still recorded as Suspended) — distinct from any failure.
 4. **Cascade — revoke every member of both surfaces (and optionally the credential).** Within the transaction:
-   - For each `grant_id ∈ G`: `Permissions.revoke(grant_id)`. `ok` → add to `revoked_grants`. `not-active` (a concurrent revocation already terminalized it) → benign, add to `revoked_grants` (the goal is met). `not-known` → an enumeration/store inconsistency (a grant the query returned but the store no longer knows — structurally near-impossible, since Permissions never deletes grants, Invariant 10): treated as a **non-benign** failure, handled exactly as `storage-failure` — **abort** and return `rejected(revocation-failure)` under `all-or-nothing`, or record `revocation-failure(permissions)` and continue under `best-effort` — and additionally surfaced as a high-priority store-inconsistency finding in `suspension_log`. `storage-failure` → **abort** under `all-or-nothing` (roll back; the grant stays whatever it was), or record `revocation-failure(permissions)` and continue under `best-effort`.
-   - For each `session_token ∈ S`: `Session.revoke(session_token, revoked_by_ref = suspended_by_ref, reason)`. `revoked` → add to `revoked_sessions`. `already-terminal` (the TOCTOU already-terminal case — a concurrent `logout`/expiry/cascade terminalized it) → benign, add to `revoked_sessions`. `not-known` → enumeration/store inconsistency (structurally near-impossible — Session is durable, Invariant 9): a **non-benign** failure handled exactly as the grant case — **abort** and return `rejected(revocation-failure)` under `all-or-nothing`, or record `revocation-failure(session)` and continue under `best-effort` — and surfaced as a high-priority store-inconsistency finding in `suspension_log`. `storage-failure` → **abort** under `all-or-nothing`, or record `revocation-failure(session)` and continue under `best-effort`.
-   - If `revoke_credential_on_suspend` and Credential is composed: `Credential.revoke(credential_id, revoked_by_ref = suspended_by_ref, reason)`. `revoked` → set `revoked_credential = credential_id`. `already-terminal` → benign (already revoked/rotated/expired). `storage-failure` → **abort** / record per posture.
+  - For each `grant_id ∈ G`: `Permissions.revoke(grant_id)`. `ok` → add to `revoked_grants`. `not-active` (a concurrent revocation already terminalized it) → benign, add to `revoked_grants` (the goal is met). `not-known` → an enumeration/store inconsistency (a grant the query returned but the store no longer knows — structurally near-impossible, since Permissions never deletes grants, Invariant 10): treated as a **non-benign** failure, handled exactly as `storage-failure` — **abort** and return `rejected(revocation-failure)` under `all-or-nothing`, or record `revocation-failure(permissions)` and continue under `best-effort` — and additionally surfaced as a high-priority store-inconsistency finding in `suspension_log`. `storage-failure` → **abort** under `all-or-nothing` (roll back; the grant stays whatever it was), or record `revocation-failure(permissions)` and continue under `best-effort`.
+  - For each `session_token ∈ S`: `Session.revoke(session_token, revoked_by_ref = suspended_by_ref, reason)`. `revoked` → add to `revoked_sessions`. `already-terminal` (the TOCTOU already-terminal case — a concurrent `logout`/expiry/cascade terminalized it) → benign, add to `revoked_sessions`. `not-known` → enumeration/store inconsistency (structurally near-impossible — Session is durable, Invariant 9): a **non-benign** failure handled exactly as the grant case — **abort** and return `rejected(revocation-failure)` under `all-or-nothing`, or record `revocation-failure(session)` and continue under `best-effort` — and surfaced as a high-priority store-inconsistency finding in `suspension_log`. `storage-failure` → **abort** under `all-or-nothing`, or record `revocation-failure(session)` and continue under `best-effort`.
+  - If `revoke_credential_on_suspend` and Credential is composed: `Credential.revoke(credential_id, revoked_by_ref = suspended_by_ref, reason)`. `revoked` → set `revoked_credential = credential_id`. `already-terminal` → benign (already revoked/rotated/expired). `storage-failure` → **abort** / record per posture.
 5. **Transition and bind (still within the transaction).** Set `actor_suspension_state[actor_ref] = {state: Suspended, suspended_at: now, suspended_by_ref, reason, suspension_event_id: <pending>}`.
 6. **Seal the act — `record_action` carrying the complete enumeration (Invariant 2).** Call `AuditTrail.record_action(action_ref = actor.suspended, actor_ref = suspended_by_ref, credential, data = {suspended_actor: actor_ref, revoked_grants, revoked_sessions, revoked_credential?, reason, suspended_at = now})` → `event_id`; set `suspension_event_id = event_id`. The `data` carries the **complete revoked set** (or, for a very large set, a cryptographic digest of it — mechanism-neutral exactly as C6/C7 treat their large payloads), so the enumeration is sealed and tamper-evident: a later silent edit to the recorded set breaks the seal. Map the substrate's rejection: `invalid-credential` / `invalid-request` / `recording-failure` → **abort** under `all-or-nothing` (roll back the whole cascade — the suspension never happened, retry against intact state) and return `rejected(recording-failure)`; under `best-effort` the revokes have already committed and the orphan (revoked access with no sealed suspension event) is handled per the *Cross-store consistency under partial failure* edge case.
 7. Commit the transaction. Append `suspension_log` `{operation: suspend, outcome: suspended, revoked_grants, revoked_sessions, suspension_event_id: event_id}`. Return `{suspended, revoked_grants, revoked_sessions, revoked_credential?, event_id}`. The actor is now **Suspended** with zero active grants and zero active sessions (Invariant 1).
@@ -133,8 +131,8 @@ Suspends an actor by atomically revoking every active Permissions grant and ever
 
 ```
 suspension_report(actor_ref) →
-    {state, suspended_at?, suspended_by_ref?, reason?, revoked_grants?, revoked_sessions?, suspension_event_id?}
-  | rejected(invalid-request)
+  {state, suspended_at?, suspended_by_ref?, reason?, revoked_grants?, revoked_sessions?, suspension_event_id?}
+ | rejected(invalid-request)
 ```
 
 The read-only surface an auditor, operator, or the actor themselves uses to read an actor's suspension status and, if Suspended, the complete set that was revoked. Resolves `actor_suspension_state[actor_ref]`: absent or `Active` → `{state: Active}`; `Suspended` → the full suspension record including `suspended_at`, `suspended_by_ref`, `reason`, the `suspension_event_id`, and the enumerated `revoked_grants` / `revoked_sessions` (read from the sealed event the `suspension_event_id` binds, the authoritative record). **No Audit Trail event is produced** — a pure read. Logging *who read a suspension report* is a composing access-log concern, named rather than absorbed.
@@ -145,8 +143,8 @@ The read-only surface an auditor, operator, or the actor themselves uses to read
 
 ```
 reinstate_actor(actor_ref, reinstated_by_ref, credential, reason) →
-    {reinstated, event_id}
-  | rejected(invalid-request | already-active | recording-failure)
+  {reinstated, event_id}
+ | rejected(invalid-request | already-active | recording-failure)
 ```
 
 Lifts an actor's suspension by transitioning Suspended → Active and recording an attributed `actor.reinstated` event. **It does not restore any revoked grant or session** — those are terminal in their constituents (Permissions Invariant 3, Session Invariant 4) and cannot be un-revoked; re-authorizing the actor means issuing *fresh* grants and sessions through the issuance layer, which is not C18's surface. Steps: validate inputs (`invalid-request`); if `state ≠ Suspended` → `rejected(already-active)` (no-op); else record `AuditTrail.record_action(action_ref = actor.reinstated, actor_ref = reinstated_by_ref, credential, data = {reinstated_actor: actor_ref, reason, reinstated_at = now})` → `event_id`, then set `actor_suspension_state[actor_ref] = {state: Active}` (atomic with the event); append `suspension_log`; return `{reinstated, event_id}`. Reinstatement is the state-machine's reverse edge only — re-provisioning access is the composing layer's job (Edge cases — *Reinstatement does not restore access*).

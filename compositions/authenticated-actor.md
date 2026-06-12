@@ -9,12 +9,11 @@ toc: true
 # Authenticated Actor (C17)
 
 <details markdown="block">
-  <summary>Table of contents</summary>
-  {: .text-delta }
+ <summary>Table of contents</summary>
+ {: .text-delta }
 1. TOC
 {:toc}
 </details>
-
 
 > A regulated composition that wires **Credential** (the authentication surface — "does this presented material belong to this principal?") and **Actor Identity** (the attestation surface — "who authorized this action, and can you prove it?") under a single principal, owning the three concerns neither atom specifies because each is freestanding: (1) **revocation cascade** — revoking the principal's authentication credential closes the attestation surface, so a revoked login can no longer produce new signed attestations; (2) **secret-surface separation** — the authentication verifier (a login key) and the attestation key (a signing key) are distinct key surfaces the composition never cross-routes; and (3) **namespace binding** — the Credential `principal_ref` and the Actor Identity `actor_ref` are bound bijectively to one principal, so every attestation an actor produces resolves back to the authenticated principal. The load-bearing emergent guarantee is the revocation cascade: the composition gates `attest_as_actor` on the bound credential's live `Active` status, read atomically with the attestation write, so authority to sign flows from a currently-valid login rather than from a one-time binding. This composition does **not** revoke credentials, register actors in the actor registry, or evaluate authorization — each is named, not absorbed.
 
@@ -40,7 +39,6 @@ Authenticated Actor is a composition — a specification that wires two freestan
 
 The composition's defining emergent guarantee — a property that appears only when the two patterns are combined, belonging to neither alone — is that revocation cascade: a revoked login closes the signing surface. Its most common uses are regulated systems where the same person both logs in and signs actions of consequence: a clinician authenticating and then electronically signing a controlled-substance prescription, a bank officer logging in and attesting a wire approval, a developer authenticating and signing a release commit at a regulated software vendor. Any system where revoking someone's access must also stop them from producing new signed authorizations — and where an auditor must be able to trace each signature to the authenticated identity behind it — is a candidate for this composition.
 
-This composition is `partially resolved`: the three-round baseline review, an author Final Critique, and the formal layer (a verified model with a buggy twin) are complete; the fresh-reader Phase 4 clearance gate is pending in a separate session.
 
 ---
 
@@ -99,13 +97,13 @@ The composition exposes three actions: one intake (`register_authenticated_actor
 
 ```
 register_authenticated_actor(principal_ref, actor_ref, credential_material, credential_type?, expires_at?) →
-    {credential_id, actor_ref, bound_at}
-  | rejected(
-      invalid-request
-    | namespace-conflict
-    | duplicate-active-credential
-    | storage-failure
-    )
+  {credential_id, actor_ref, bound_at}
+ | rejected(
+   invalid-request
+  | namespace-conflict
+  | duplicate-active-credential
+  | storage-failure
+  )
 ```
 
 Binds an `actor_ref` to a `principal_ref` and registers the principal's authentication credential, establishing the namespace binding and the gating credential together. Steps:
@@ -122,14 +120,14 @@ Binds an `actor_ref` to a `principal_ref` and registers the principal's authenti
 
 ```
 attest_as_actor(principal_ref, action_ref, attest_credential) →
-    attestation_id
-  | rejected(
-      invalid-request
-    | not-bound
-    | credential-not-active
-    | invalid-attest-credential
-    | attest-failed
-    )
+  attestation_id
+ | rejected(
+   invalid-request
+  | not-bound
+  | credential-not-active
+  | invalid-attest-credential
+  | attest-failed
+  )
 ```
 
 Produces a non-repudiable attestation for the bound actor, **only if the principal's authentication credential is currently `Active`** — the revocation cascade, enforced as a forward gate. This action is the composition's load-bearing surface. Steps:
@@ -146,7 +144,7 @@ Produces a non-repudiable attestation for the bound actor, **only if the princip
 
 ```
 verify_actor_attestation(attestation_id) →
-    {result, actor_ref?, principal_ref?}
+  {result, actor_ref?, principal_ref?}
 ```
 where `result ∈ { verified | failed-verification(proof-invalid | actor-unknown-in-registry | registry-unavailable) | not-known }`.
 

@@ -9,6 +9,12 @@ Accidental findings during the build. Raw, dated, unpolished. Grant proposals an
 
 ---
 
+### 2026-06-12 — Status mirrors in Summaries go stale; two were already lying
+
+While landing C11, a consistency sweep found ten patterns carrying a status claim inside their Tier-1 Summary ("This composition is `grounded`…"). Two had already drifted into falsehood: Authenticated Actor's Summary still said `partially resolved` after grounding on 2026-06-10, and Data Subject Rights Fulfillment's still said "drafting in progress" after grounding on 2026-06-09. Nothing lints a Summary sentence — the status-mirror check covers only the roadmap cell against the Status token.
+
+The lesson is the no-snapshot rule wearing a new coat: any prose restatement of a status token is a mirror, and unlinted mirrors drift. Status now lives in exactly two places — the pattern's `## Status` token (source of truth) and the roadmap cell (linted mirror). All ten Summary status sentences were removed the same day; the spec-format note "(Grounded specs only)" governs when a Summary is written, never what it claims about status.
+
 ### 2026-05-19 — Readable-first and formally verifiable are the same discipline
 
 While modeling the Attributed Permissions Admin composition in Alloy and TLA+, we discovered that the English specification had already captured nearly everything the formal models required: named actions, preconditions, postconditions, and explicitly numbered invariants.

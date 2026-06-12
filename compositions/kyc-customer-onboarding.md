@@ -9,12 +9,11 @@ toc: true
 # KYC (Know Your Customer) / Customer Onboarding with Ongoing Monitoring
 
 <details markdown="block">
-  <summary>Table of contents</summary>
-  {: .text-delta }
+ <summary>Table of contents</summary>
+ {: .text-delta }
 1. TOC
 {:toc}
 </details>
-
 
 > A regulated composition: the full Customer Due Diligence arc for an external party — identity established and verified before regulated activity, the verified state gated as the single precondition any activity system may consume, ongoing monitoring driving re-verification and adverse-trigger suspension, and a post-closure retention floor that survives the relationship's end. The composition wires Party Identity, Retention Window, and the Audit Trail substrate into the structure FATF (Financial Action Task Force — the international AML standard-setter) Recommendations 10–12 and BSA/AML (Bank Secrecy Act / Anti-Money Laundering) 31 CFR (Code of Federal Regulations) §1020.220 require but neither atom names alone. The load-bearing emergent guarantee is verification-gates-activity: a party reaches regulated activity only through an attributed, tamper-evident verification recorded in the Audit Trail, and the gate query is the single surface activity systems consume. Every state-changing action — initiation, verification, monitoring trigger, review clearance, closure — is attribution-stamped and retention-bounded; every adverse monitoring trigger is ordered in the records before any suspension it precipitates; and a closed party's record cannot be purged before the BSA/AML five-year post-closure floor elapses, provable from the composition's records alone.
 
@@ -40,7 +39,7 @@ The composition's defining emergent guarantee (a property that appears only when
 
 Beyond the gate, the composition guarantees four further emergent properties. Every `Unverified → Verified` transition produces a tamper-evident Audit Trail event carrying the verification identifiers. Every adverse monitoring trigger produces an Audit Trail event ordered before any suspension it precipitates, so no trigger-driven suspension exists in the records without its precipitating trigger ordered ahead of it. A party reinstated after an adverse trigger has a `passed` verification recorded after the most recent suspend (Party Identity Invariant 4, surfaced at the composition layer with audit coverage). And a closed party's record cannot be purged before its post-closure Retention Window floor (the BSA/AML five-year period under 31 CFR §1020.220) elapses.
 
-This composition is `grounded on Final Critique 4` (2026-06-03). Its most common uses are retail and commercial bank customer onboarding under BSA/AML, broker-dealer counterparty onboarding, payments-processor merchant onboarding, and crypto-exchange customer onboarding under the EU 5th Anti-Money Laundering Directive (AMLD5). Any system that must prove, from records alone, that every party with regulated activity was verified before that activity, that adverse triggers were acted on, and that closed-party records were retained for the mandated post-closure period, is a candidate for this composition.
+ Its most common uses are retail and commercial bank customer onboarding under BSA/AML, broker-dealer counterparty onboarding, payments-processor merchant onboarding, and crypto-exchange customer onboarding under the EU 5th Anti-Money Laundering Directive (AMLD5). Any system that must prove, from records alone, that every party with regulated activity was verified before that activity, that adverse triggers were acted on, and that closed-party records were retained for the mandated post-closure period, is a candidate for this composition.
 
 ---
 
@@ -105,19 +104,19 @@ For every `AuditTrail.record_action` call below, the substrate's rejection taxon
 
 ```
 initiate_kyc(
-  party_id?,
-  enrollment_fields?,
-  actor_ref,
-  credential,
-  retention_policy_ref
+ party_id?,
+ enrollment_fields?,
+ actor_ref,
+ credential,
+ retention_policy_ref
 ) →
-    kyc_case_id
-  | rejected(
-      invalid-request
-    | party-not-known
-    | enrollment-failed(invalid-request | storage-failure)
-    | recording-failure
-    )
+  kyc_case_id
+ | rejected(
+   invalid-request
+  | party-not-known
+  | enrollment-failed(invalid-request | storage-failure)
+  | recording-failure
+  )
 ```
 
 Opens a KYC case for a party. The `party_id` argument is **optional**, and the two branches are explicit:
@@ -131,8 +130,8 @@ Steps:
 
 1. Validate `actor_ref`, `credential`, and `retention_policy_ref` per Primitive policies, and confirm `monitoring_interval` is configured and is a positive duration (the Configuration obligation that the monitoring schedule can be computed). Any failure → `rejected(invalid-request)`. Stop.
 2. Resolve the party:
-   - **If `party_id` is absent:** require `enrollment_fields` present; if absent → `rejected(invalid-request)`. Call `Party Identity.enroll(name, date_of_birth, document_type, document_ref, enrolling_actor_ref)` → `party_id` (or, on `rejected(invalid-request | storage-failure)`, surface as `rejected(enrollment-failed(<constituent-reason>))` and stop — no case is opened, no retention placed). Set `enrollment_path = direct`. (Enroll's `storage-failure` is wrapped as `enrollment-failed` rather than flattened to `recording-failure` precisely because it occurs *before* any case or retention exists — there is no orphan to recover; a `storage-failure` at retention placement (step 4) or the audit write (step 5) occurs *after* partial state and therefore surfaces as `recording-failure` with an orphan, which is the deliberate asymmetry.)
-   - **If `party_id` is present:** confirm it references a known party via the Party Identity instance; if not → `rejected(party-not-known)`. Stop. (`enrollment_fields`, if supplied on this branch, are ignored — the party already exists and Party Identity enrollment fields are immutable.) Set `enrollment_path = c16`.
+  - **If `party_id` is absent:** require `enrollment_fields` present; if absent → `rejected(invalid-request)`. Call `Party Identity.enroll(name, date_of_birth, document_type, document_ref, enrolling_actor_ref)` → `party_id` (or, on `rejected(invalid-request | storage-failure)`, surface as `rejected(enrollment-failed(<constituent-reason>))` and stop — no case is opened, no retention placed). Set `enrollment_path = direct`. (Enroll's `storage-failure` is wrapped as `enrollment-failed` rather than flattened to `recording-failure` precisely because it occurs *before* any case or retention exists — there is no orphan to recover; a `storage-failure` at retention placement (step 4) or the audit write (step 5) occurs *after* partial state and therefore surfaces as `recording-failure` with an orphan, which is the deliberate asymmetry.)
+  - **If `party_id` is present:** confirm it references a known party via the Party Identity instance; if not → `rejected(party-not-known)`. Stop. (`enrollment_fields`, if supplied on this branch, are ignored — the party already exists and Party Identity enrollment fields are immutable.) Set `enrollment_path = c16`.
 3. Generate `kyc_case_id` (opaque, fresh).
 4. Place the party record under **active-relationship retention**: `Retention Window.place_under_retention(record_ref=party_id, policy_ref=retention_policy_ref)` → `active_relationship_retention_id` (the per-call `retention_policy_ref` argument is authoritative — it carries the active-relationship policy, defaulting to the configured `active_relationship_policy_ref` when the deployment uses a single policy; the action consumes the argument so per-party CDD-tier policies are possible, and there is no silent substitution of a configured value for the caller's) (or map `invalid-policy`/`policy-not-found`/`invalid-request` to `rejected(invalid-request)` and `storage-failure` to `rejected(recording-failure)`; stop on either — if the party was enrolled in step 2's direct branch, the enrolled Party Identity record persists as an `Unverified` party with no KYC case, surfaced per the *Cross-store consistency under partial failure* edge case).
 5. Record initiation **first** (audit-first discipline, matching `trigger_monitoring_review`): `AuditTrail.record_action(action_ref=kyc.initiated, actor_ref, credential, data={kyc_case_id, party_id, enrollment_path, active_relationship_retention_id})` → `event_id`. If this call fails after steps 2 and 4 succeeded → `rejected(recording-failure)`; **no application maps are populated**, so no `kyc_case_id` becomes resolvable by a downstream action without its `kyc.initiated` event having landed, and the implementation surfaces the orphan (enrolled-and-retained party with no case and no initiation event) per the *Cross-store consistency under partial failure* edge case.
@@ -143,20 +142,20 @@ Steps:
 
 ```
 record_verification(
-  kyc_case_id,
-  verifying_actor_ref,
-  method,
-  verification_result,
-  evidence_ref,
-  credential
+ kyc_case_id,
+ verifying_actor_ref,
+ method,
+ verification_result,
+ evidence_ref,
+ credential
 ) →
-    recorded
-  | rejected(
-      not-known
-    | invalid-request
-    | already-closed
-    | recording-failure
-    )
+  recorded
+ | rejected(
+   not-known
+  | invalid-request
+  | already-closed
+  | recording-failure
+  )
 ```
 
 Records a verification result against the case's party. This is the action that drives the `Unverified → Verified` transition (when `verification_result = passed` against an `Unverified` party) and that records periodic re-verifications.
@@ -174,19 +173,19 @@ Steps:
 
 ```
 trigger_monitoring_review(
-  kyc_case_id,
-  trigger_type,
-  trigger_ref,
-  actor_ref,
-  credential
+ kyc_case_id,
+ trigger_type,
+ trigger_ref,
+ actor_ref,
+ credential
 ) →
-    recorded
-  | rejected(
-      not-known
-    | invalid-request
-    | not-verified(state)
-    | recording-failure
-    )
+  recorded
+ | rejected(
+   not-known
+  | invalid-request
+  | not-verified(state)
+  | recording-failure
+  )
 ```
 
 The entry point an external monitoring scheduler or screening system calls. **Audit-first discipline: the trigger is recorded before any resulting state transition.** This is the structural guarantee behind Invariant 3 — no trigger-driven suspension exists in the records without its precipitating trigger ordered ahead of it.
@@ -197,8 +196,8 @@ Steps:
 2. Validate `actor_ref`, `credential`, `trigger_ref` per Primitive policies. Validate `trigger_type`: it must be `periodic-review-due` or a member of `adverse_trigger_types`; otherwise → `rejected(invalid-request)`. Stop on any.
 3. **Record the trigger first:** generate `trigger_id` (fresh, opaque). `AuditTrail.record_action(action_ref=kyc.monitoring-triggered, actor_ref, credential, data={kyc_case_id, party_id, trigger_id, trigger_type, trigger_ref, triggered_at = now})` → `trigger_event_id`. If this fails → `rejected(recording-failure)` and **no state transition is attempted** (the record-first ordering guarantees that no suspension occurs without its trigger event landing). Stop.
 4. Branch on `trigger_type`:
-   - **Adverse** (`trigger_type ∈ adverse_trigger_types`): call `Party Identity.suspend(party_id, suspending_actor_ref=actor_ref, reason="monitoring-trigger:" + trigger_type + ":" + trigger_ref)`. Map rejections: `not-verifiable` (party is `Unverified` — never reached Verified, nothing to suspend) → `rejected(not-verified(Unverified))`; `already-suspended` (a concurrent or prior adverse trigger already suspended the party) → treat as success-for-idempotency: skip the suspend, proceed to add the trigger to the open set, and record the second audit event noting the party was already suspended (see step 5); `already-closed` → `rejected(not-verified(Closed))`; `not-known` → `rejected(not-known)`; `invalid-request` → `rejected(invalid-request)`; `storage-failure` → `rejected(recording-failure)`.
-   - **Periodic** (`trigger_type = periodic-review-due`): no state transition. Advance `next_review_due` in `case_to_monitoring[kyc_case_id]` to `now + monitoring_interval`. Proceed to return (the `kyc.monitoring-triggered` event recorded in step 3 is the complete record for a periodic review). Return `recorded`.
+  - **Adverse** (`trigger_type ∈ adverse_trigger_types`): call `Party Identity.suspend(party_id, suspending_actor_ref=actor_ref, reason="monitoring-trigger:" + trigger_type + ":" + trigger_ref)`. Map rejections: `not-verifiable` (party is `Unverified` — never reached Verified, nothing to suspend) → `rejected(not-verified(Unverified))`; `already-suspended` (a concurrent or prior adverse trigger already suspended the party) → treat as success-for-idempotency: skip the suspend, proceed to add the trigger to the open set, and record the second audit event noting the party was already suspended (see step 5); `already-closed` → `rejected(not-verified(Closed))`; `not-known` → `rejected(not-known)`; `invalid-request` → `rejected(invalid-request)`; `storage-failure` → `rejected(recording-failure)`.
+  - **Periodic** (`trigger_type = periodic-review-due`): no state transition. Advance `next_review_due` in `case_to_monitoring[kyc_case_id]` to `now + monitoring_interval`. Proceed to return (the `kyc.monitoring-triggered` event recorded in step 3 is the complete record for a periodic review). Return `recorded`.
 5. **Adverse path only** — record the outcome, with the event class reflecting whether a transition actually occurred. After a *successful* `suspend` (a real `Verified → Suspended` transition): `AuditTrail.record_action(action_ref=kyc.party-suspended, actor_ref, credential, data={kyc_case_id, party_id, trigger_id, trigger_type, trigger_ref, state_change_id (from suspend), suspended_at = now})`. In the *already-suspended idempotent case* (no new transition — a prior adverse trigger already suspended the party): record instead `AuditTrail.record_action(action_ref=kyc.trigger-on-suspended-party, actor_ref, credential, data={kyc_case_id, party_id, trigger_id, trigger_type, trigger_ref, prior_state=Suspended, recorded_at = now})` — a distinct event class, so a second adverse trigger is not read as a second suspension and an auditor does not miscount transitions. If either record fails → `rejected(recording-failure)`; the party is Suspended but this outcome is unattested (the precipitating `kyc.monitoring-triggered` event from step 3 already landed, so the suspension is not *uncaused* in the records, but it is *unrecorded as this trigger's outcome* — surfaced per the *Cross-store consistency under partial failure* edge case).
 6. Add the trigger to the open set: `case_to_open_triggers[kyc_case_id] ∪= {trigger_id (from step 3), trigger_type, trigger_ref, triggered_at}`.
 7. Return `recorded`.
@@ -207,23 +206,23 @@ Steps:
 
 ```
 clear_review(
-  kyc_case_id,
-  verifying_actor_ref,
-  method,
-  evidence_ref,
-  actor_ref,
-  credential,
-  reason
+ kyc_case_id,
+ verifying_actor_ref,
+ method,
+ evidence_ref,
+ actor_ref,
+ credential,
+ reason
 ) →
-    cleared
-  | rejected(
-      not-known
-    | no-open-trigger
-    | invalid-request
-    | verification-failed
-    | already-closed
-    | recording-failure
-    )
+  cleared
+ | rejected(
+   not-known
+  | no-open-trigger
+  | invalid-request
+  | verification-failed
+  | already-closed
+  | recording-failure
+  )
 ```
 
 The single emergent action that clears an adverse-trigger investigation and returns the party to `Verified`. It wraps `Party Identity.verify(passed)` + `Party Identity.reinstate` + two Audit Trail records into one named surface, so clearing a review is one auditable act rather than a sequence of leaked atom internals. Party Identity Invariant 4 requires a `passed` verification recorded after the most recent suspend before `reinstate` will succeed; this action satisfies that precondition in the same call.
@@ -245,18 +244,18 @@ Steps:
 
 ```
 close_party(
-  kyc_case_id,
-  closing_actor_ref,
-  reason,
-  credential
+ kyc_case_id,
+ closing_actor_ref,
+ reason,
+ credential
 ) →
-    closed
-  | rejected(
-      not-known
-    | not-active
-    | invalid-request
-    | recording-failure
-    )
+  closed
+ | rejected(
+   not-known
+  | not-active
+  | invalid-request
+  | recording-failure
+  )
 ```
 
 Closes the relationship and places the **post-closure retention** — the second of the two Retention Window operations, setting the BSA/AML five-year-after-relationship-end floor.
@@ -277,9 +276,9 @@ Steps:
 
 ```
 activity_permitted(party_id) →
-    permitted
-  | rejected(not-verified(state))   // state ∈ {Unverified, Suspended, Closed}
-  | rejected(not-known)             // party not governed by a C8 case
+  permitted
+ | rejected(not-verified(state))  // state ∈ {Unverified, Suspended, Closed}
+ | rejected(not-known)       // party not governed by a C8 case
 ```
 
 The read-only verification-gates-activity query. **No Audit Trail record is produced** — this is a read-only query that changes no state, and recording it would falsely populate the action record with non-actions. Activity systems consume this query as their single gate; they must not read Party Identity state directly (see Edge cases — *Activity systems reading Party Identity directly*).

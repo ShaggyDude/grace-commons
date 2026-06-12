@@ -9,12 +9,11 @@ toc: true
 # Consent & Preference Management with Revocation Propagation (C2)
 
 <details markdown="block">
-  <summary>Table of contents</summary>
-  {: .text-delta }
+ <summary>Table of contents</summary>
+ {: .text-delta }
 1. TOC
 {:toc}
 </details>
-
 
 > A regulated composition: the full operational lifecycle of consent as a lawful processing basis — consent recorded under attributed authority and held under a retention floor, a single gate query every processing system consumes before acting on personal data, and — the load-bearing emergent property — a withdrawal that propagates, recording in one atomic, tamper-evident act the complete set of downstream processing scopes the withdrawn consent governed. The composition wires Consent, Permissions, and the Audit Trail substrate into the structure GDPR Articles 6–7 and Article 7(3) require but no constituent names alone. The defining emergent guarantee is consent-gates-processing-with-propagation: a processing system reaches a consent-based action only through `processing_permitted`, which is `permitted` exactly when valid consent exists; and every `withdraw_consent` commits the Consent revocation and a `consent.revoked` propagation event — enumerating every downstream scope bound to that consent — together or not at all, so there is no revoked consent in the records without its complete, sealed propagation record, provable from the composition's records alone.
 
@@ -40,7 +39,7 @@ The composition's defining emergent guarantee (a property that appears only when
 
 Beyond the gate and the propagation, the composition guarantees that every consent grant is attributed and tamper-evidently recorded, that consent records are held under a retention floor that survives revocation (a withdrawn consent is evidence, not garbage — it must outlive its own withdrawal for the regulator's proof period), that the complete consent lifecycle is reconstructable from the records alone, and that every consent-administration action passes a Permissions check before it touches the consent store.
 
-This composition is `grounded` (2026-06-04). Its most common uses are advertising and marketing consent management under GDPR/ePrivacy, health-app and research consent under HIPAA Authorization, cookie-consent backends under the ePrivacy Directive, and any system that must prove, from records alone, that consent-based processing was gated on valid consent and that every withdrawal's downstream impact was enumerated and sealed.
+ Its most common uses are advertising and marketing consent management under GDPR/ePrivacy, health-app and research consent under HIPAA Authorization, cookie-consent backends under the ePrivacy Directive, and any system that must prove, from records alone, that consent-based processing was gated on valid consent and that every withdrawal's downstream impact was enumerated and sealed.
 
 ---
 
@@ -99,20 +98,20 @@ For every `AuditTrail.record_action` call below, the substrate's rejection taxon
 
 ```
 record_consent(
-  actor_ref,
-  subject_ref,
-  purpose,
-  credential,
-  retention_policy_ref,
-  expires_at?,
-  metadata?
+ actor_ref,
+ subject_ref,
+ purpose,
+ credential,
+ retention_policy_ref,
+ expires_at?,
+ metadata?
 ) →
-    consent_id
-  | rejected(
-      permission-denied
-    | invalid-request
-    | recording-failure
-    )
+  consent_id
+ | rejected(
+   permission-denied
+  | invalid-request
+  | recording-failure
+  )
 ```
 
 Records a data subject's consent for a purpose under an operator's authority, places the consent record under retention, and audits the grant.
@@ -131,19 +130,19 @@ Steps:
 
 ```
 register_processing(
-  actor_ref,
-  consent_id,
-  processing_scope,
-  processor_ref,
-  credential
+ actor_ref,
+ consent_id,
+ processing_scope,
+ processor_ref,
+ credential
 ) →
-    registered
-  | rejected(
-      permission-denied
-    | not-known
-    | invalid-request
-    | recording-failure
-    )
+  registered
+ | rejected(
+   permission-denied
+  | not-known
+  | invalid-request
+  | recording-failure
+  )
 ```
 
 Binds a downstream processing activity to a consent, so that a later withdrawal can enumerate it. This is the action that makes "what relied on this consent" a recorded fact rather than tribal knowledge. It does not check consent *state* — a processing activity may be registered against a Granted consent before processing begins; whether processing may actually proceed is the `processing_permitted` gate's job at processing time.
@@ -161,20 +160,20 @@ Steps:
 
 ```
 withdraw_consent(
-  actor_ref,
-  consent_id,
-  credential,
-  reason
+ actor_ref,
+ consent_id,
+ credential,
+ reason
 ) →
-    withdrawn
-  | rejected(
-      permission-denied
-    | not-known
-    | already-revoked
-    | already-expired
-    | invalid-request
-    | recording-failure
-    )
+  withdrawn
+ | rejected(
+   permission-denied
+  | not-known
+  | already-revoked
+  | already-expired
+  | invalid-request
+  | recording-failure
+  )
 ```
 
 The single emergent action that revokes a consent **and propagates the withdrawal** — recording, atomically with the revocation, the complete set of downstream processing scopes the consent governed. This is the composition's structural reason to exist; the propagation event is what makes a withdrawal's downstream impact a records-alone fact rather than a hope that every processing system re-checks the consent store.
@@ -193,16 +192,16 @@ Steps:
 
 ```
 read_consent_history(
-  actor_ref,
-  subject_ref,
-  credential
+ actor_ref,
+ subject_ref,
+ credential
 ) →
-    ordered_sequence_of_consents
-  | rejected(
-      permission-denied
-    | invalid-request
-    | recording-failure
-    )
+  ordered_sequence_of_consents
+ | rejected(
+   permission-denied
+  | invalid-request
+  | recording-failure
+  )
 ```
 
 The permission-gated read surface for compliance dashboards, DSAR (Data Subject Access Request) workflows, and regulatory reporting. Reading a data subject's consent history is itself a regulated act under several regimes, so it produces a meta-event.
@@ -219,8 +218,8 @@ Steps:
 
 ```
 processing_permitted(subject_ref, purpose) →
-    permitted
-  | rejected(not-permitted(state))   // state ∈ {revoked, expired, not-known}
+  permitted
+ | rejected(not-permitted(state))  // state ∈ {revoked, expired, not-known}
 ```
 
 The read-only consent-gates-processing query. **No Audit Trail record is produced** — this is a read-only query that changes no state, and recording it would falsely populate the action record with non-actions. Processing systems consume this query as their single consent gate; they must not read Consent state directly (see Edge cases — *Processing systems reading Consent directly*).
@@ -421,6 +420,8 @@ Regulated composition. The two regulated-overlay conventions — *Regulated adve
 
 **Formal model — 2026-06-04: TLA+ authored and verified.** Derived model [`consent-preference-management.tla`](./consent-preference-management.tla) + config + buggy twin [`consent-preference-management-buggy.tla`](./consent-preference-management-buggy.tla), checked by `tla-checker` via `tools/harness/check.mjs`. *What it checks:* per consent, three sub-writes model the withdrawal-with-propagation — `revoked` (Consent revoke committed), `propagated` (the `consent.revoked` event recorded), and `scopesComplete` (the event's `affected_scopes` equals the registered downstream set). The **correct** model commits all three as one atomic action, so every reachable state is coherent (`Inv3_BindingBijection`: a consent is revoked iff it is propagated-with-complete-scopes); no reachable state has a revoked-but-unpropagated consent (`Inv_NoDanglingRevoke`) or a propagation without its revoke (`Inv_NoOrphanPropagation`). The **buggy twin** splits the withdrawal into separate, interleavable sub-steps with no compensation (revoke, then separately propagate) — the naive non-atomic implementation the *Cross-store consistency* edge case warns against — and TLC finds the dangling partial (a revoked consent with no propagation event) that violates `Inv3_BindingBijection` and `Inv_NoDanglingRevoke`. The twin proving the checker *can* fail is the vacuity guard. *Out of model scope:* the Consent grant/expire lifecycle (see `atoms/consent.md` — voted English-only), the Permissions gate (precondition), the Audit Trail substrate internals (`audit-trail.tla`), Retention Window. *Conflict-protocol outcome:* none — the model corroborates the English; canonical English unchanged.
 
+**Forthcoming-link resolution — 2026-06-12 (cross-file fix, recorded per workflow step 5).** Two Composition-notes peer entries resolved when their compositions landed: the Preference-Aware Notification Fanout entry (C11) dropped its *forthcoming* marker and gained its live link on C11's landing; and the Data Subject Rights Fulfillment entry (C7) — found carrying a stale *forthcoming* marker **and** a mis-targeted link to the KYC file after C7 had grounded 2026-06-09 — corrected to link `data-subject-rights-fulfillment.md`. Cross-reference fixes only; no invariant, action, or example content touched.
+
 ---
 
 ## Composition notes
@@ -428,6 +429,6 @@ Regulated composition. The two regulated-overlay conventions — *Regulated adve
 These are adjacent compositions, **not** constituents of C2:
 
 - **[KYC / Customer Onboarding](./kyc-customer-onboarding.md)** (C8) — a composing peer. C8's processing basis is GDPR Article 6(1)(c) legal obligation; C2 governs the Article 6(1)(a) consent basis for downstream non-obligatory processing C8 does not touch. The two coexist for the same party: C8 gates AML-obligatory activity on verification; C2 gates marketing/profiling on consent.
-- **[Data Subject Rights Fulfillment](./kyc-customer-onboarding.md)** (C7, *forthcoming*) — answers DSAR access and erasure requests across the data estate. C2's `read_consent_history` and `consent.revoked` propagation are primary inputs to a C7 right-of-access or right-to-erasure response; C7 orchestrates the cross-system fulfillment, C2 supplies the consent surface.
-- **Preference-Aware Notification Fanout** (C11, *forthcoming*) — governs delivery-shaping preferences (channel, frequency, quiet hours) under an existing lawful basis. C2 governs consent-as-basis; C11 governs the shape of processing already lawful. The boundary is named in Edge cases — *Preference management beyond consent*.
+- **[Data Subject Rights Fulfillment](./data-subject-rights-fulfillment.md)** (C7) — answers DSAR access and erasure requests across the data estate. C2's `read_consent_history` and `consent.revoked` propagation are primary inputs to a C7 right-of-access or right-to-erasure response; C7 orchestrates the cross-system fulfillment, C2 supplies the consent surface.
+- **[Preference-Aware Notification Fanout](./preference-aware-notification-fanout.md)** (C11) — governs delivery-shaping preferences (channel, frequency, quiet hours) under an existing lawful basis. C2 governs consent-as-basis; C11 governs the shape of processing already lawful. The boundary is named in Edge cases — *Preference management beyond consent*.
 - **Downstream-action engine / Notification Fanout** — a deployment that needs guaranteed cessation (not just notice) on withdrawal wires a consumer of the `consent.revoked` propagation event that performs the downstream actions. C2 signals; the engine acts.
