@@ -49,7 +49,7 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 
 ## Vocabulary — load-bearing terms
 
-Moved — no mirror kept. Atom, application/composition, freestanding, and emergent invariant are defined in [`readme.md`](./readme.md); GRID, the three passes, `grounded`, and Lineage notes in [`pressure-testing.md`](./pressure-testing.md); the three shapes and regulated overlay in [`spec-format.md`](./spec-format.md); strict spec-language terms in [`glossary.md`](./glossary.md).
+Moved — no mirror kept. Atom (atomic concept), composition, freestanding, and emergent invariant are defined in [`readme.md`](./readme.md); GRID, the three passes, `grounded`, and Lineage notes in [`pressure-testing.md`](./pressure-testing.md); the three shapes and regulated overlay in [`spec-format.md`](./spec-format.md); strict spec-language terms in [`glossary.md`](./glossary.md).
 
 ## Authoring conventions
 

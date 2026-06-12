@@ -60,6 +60,10 @@ a different sense, it must say so locally.
   by triage — promoted or rejected, never outliving Phase 1). Atom and composition
   are defined in [`readme.md`](./readme.md); the thesis phrase is claimed in
   [`the-spec-layer.md`](./the-spec-layer.md).
+- **application** — a deployed build output; output-level vocabulary only, never
+  a spec-layer artifact. The canonical layer has exactly two artifact kinds:
+  atomic concepts and compositions thereof (lint rule K). Component / module /
+  service are likewise projection-internal — generated, never authored.
 
 ---
 

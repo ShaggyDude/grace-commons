@@ -42,6 +42,17 @@ the three-pass review otherwise has to catch by eye —
                               glossary tombstone) — mention of the ancestor,
                               never working use. Scans the whole corpus, not just
                               the pattern dirs.
+  K. Output-level noun      — "application(s)" is output-level vocabulary (a
+                              deployed build output) and is banned in the
+                              canonical layer: atoms/, compositions/, the core
+                              docs, and tools/guide. The canonical layer has
+                              exactly two artifact kinds — atomic concepts and
+                              compositions thereof. Not scanned: execution-
+                              contract.md (the output level is its domain),
+                              roadmap.md (dated history), glossary.md (the
+                              definition site). Inline code spans are scrubbed
+                              first (naming an external project's literal
+                              `applications/` directory is mention, not use).
 
 Design notes (this tool is meant to be maintained by a small/cheap model):
   - Standard library only. No deps. Runs anywhere `python3` does.
@@ -499,6 +510,47 @@ def check_banned_token(root: Path) -> list[Finding]:
     return out
 
 
+BANNED_OUTPUT_NOUN = re.compile(r"(?i)\bapplications?\b")
+CODE_SPAN = re.compile(r"`[^`]*`")
+OUTPUT_NOUN_CORE_DOCS = ("readme.md", "the-spec-layer.md", "pressure-testing.md",
+                         "spec-format.md", "contributing.md")
+
+
+def check_banned_application(root: Path) -> list[Finding]:
+    """K: "application" names only a deployed build output. The canonical layer
+    has exactly two artifact kinds — atomic concepts and compositions thereof —
+    so the word is banned there (vocabulary direction 2026-06-11). Excluded by
+    design: execution-contract.md (output level is its domain), roadmap.md
+    (dated history), glossary.md (the definition site). Code spans scrubbed:
+    a backticked external path like `applications/` is mention, not use."""
+    scoped: list[Path] = []
+    for d in PATTERN_DIRS:
+        base = root / d
+        if base.is_dir():
+            scoped += sorted(base.glob("*.md"))
+    scoped += [root / n for n in OUTPUT_NOUN_CORE_DOCS if (root / n).exists()]
+    guide = root / "tools" / "guide"
+    if guide.is_dir():
+        scoped += sorted(guide.rglob("*.md"))
+    out: list[Finding] = []
+    for md in scoped:
+        try:
+            text = md.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for i, line in enumerate(text.splitlines(), start=1):
+            scrubbed = CODE_SPAN.sub("", line)
+            for m in BANNED_OUTPUT_NOUN.finditer(scrubbed):
+                out.append(Finding(
+                    md, i, "K-output-noun",
+                    f'"{m.group(0)}" is output-level vocabulary — the canonical '
+                    f"layer has two artifact kinds: atomic concepts and "
+                    f"compositions thereof (deployed build outputs belong to "
+                    f"execution-contract.md)",
+                ))
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
@@ -527,6 +579,7 @@ def main(argv: list[str]) -> int:
     findings += check_status_mirror(root, patterns)
     findings += check_duplicate_rows(root)
     findings += check_banned_token(root)
+    findings += check_banned_application(root)
 
     findings.sort(key=lambda f: (f.code, str(f.path), f.line))
     for f in findings:
