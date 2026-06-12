@@ -1,4 +1,33 @@
-module attributed_permissions_admin
+module attributed_permissions_admin_buggy
+
+/*
+ * BUGGY TWIN — DO NOT FIX.
+ *
+ * This is attributed-permissions-admin.als with the
+ * Invariant7_Attestation_Exclusivity fact commented out (marked
+ * BUGGY below). It deliberately re-introduces the hazard the spec
+ * closed when the Round 1 model surfaced Invariant 7: with no
+ * exclusivity constraint, the state space permits one attestation
+ * to be double-spent across administrative acts — a retried
+ * issue_grant pairing one attestation with two grant records, or
+ * a revocation reusing the issuance attestation as its proof.
+ *
+ * The harness must REJECT this twin
+ * (tools/harness/check.mjs <this file> --buggy):
+ *   expected COUNTEREXAMPLE (SAT):
+ *       Issuance_Revocation_Attestations_Differ
+ *       Grant_Attribution_Injective
+ *       Issuance_Revocation_Pools_Disjoint
+ *       Invariant_7_Always
+ *   everything else: checks hold, runs satisfiable.
+ *
+ * This file is the committed form of the Round 4 regression gate
+ * and the vacuity guard required by pressure-testing.md
+ * §What "the model exists and verifies" means (criterion 2).
+ * Regenerate it from the canonical file whenever the canonical
+ * model changes: copy, rename the module, comment out the
+ * Invariant 7 fact.
+ */
 
 /*
  * Alloy model: Attributed Permissions Admin
@@ -438,16 +467,16 @@ check Issuance_Revocation_Pools_Disjoint for 5 but 1..1 steps
 -- nothing else.
 -- ==============================================================
 
-fact Invariant7_Attestation_Exclusivity {
-    -- (1) Each Attestation appears at most once in grant_attribution
-    all a : Attestation | lone System.grant_attribution.a
-
-    -- (2) Each Attestation appears at most once in revocation_attribution
-    all a : Attestation | lone System.revocation_attribution.a
-
-    -- (3) The two pools are disjoint: no attestation serves both roles
-    no (System.grant_attribution[Grant] & System.revocation_attribution[Grant])
-}
+-- BUGGY fact Invariant7_Attestation_Exclusivity {
+-- BUGGY     -- (1) Each Attestation appears at most once in grant_attribution
+-- BUGGY     all a : Attestation | lone System.grant_attribution.a
+--
+-- BUGGY     -- (2) Each Attestation appears at most once in revocation_attribution
+-- BUGGY     all a : Attestation | lone System.revocation_attribution.a
+--
+-- BUGGY     -- (3) The two pools are disjoint: no attestation serves both roles
+-- BUGGY     no (System.grant_attribution[Grant] & System.revocation_attribution[Grant])
+-- BUGGY }
 
 
 -- ==============================================================
