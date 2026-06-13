@@ -1,0 +1,167 @@
+# No global services — the four-destination decomposition (2026-06-12)
+
+> **Status: internal staging, not canonical.** Working argument for the 2026-06-24 call (Jackson + students), drilling into the claim that the architecture has no ambient services. Doubles as the skeleton answer to Jackson's "you're pushing the execution framework into explicit concepts — I don't yet see how it can work." If any of this earns canon status it folds into `execution-contract.md` (the routing rule) and `the-spec-layer.md` (the thesis framing); the call-prep framing dies with the call.
+
+---
+
+## The claim, stated carefully
+
+Global services don't get *eliminated* — they get **decomposed into four destinations**, none of which is an ambient API a concept can reach for. The slogan: **ambient mechanism below the contract, zero ambient authority above it.** "Global" survives only as mechanism without meaning: no domain state, no invariants of its own, no callable surface in the spec layer.
+
+**Read one layer down, this is a claim about authority, not services.** The four destinations are an authority taxonomy: values carry *no* authority (they're facts), concepts carry *declared* authority (state with stated invariants), callers carry *external* authority (they act from outside, through declared surfaces), and contract obligations carry *mechanical* authority (domain-blind machinery the runtime provides). The real thesis under the slogan: **the purpose of the decomposition is not to eliminate mechanism — it is to ensure every mechanism has a declared architectural role, so that no domain meaning hides inside unnamed infrastructure.** "No global services" is the surface claim; "nothing in the semantic layer may acquire undeclared authority" is the one that's hard to dismiss. (This is the no-ambient-authority rule, `pressure-testing.md` §Capability provenance, lifted from invariants to the whole execution surface.)
+
+The compression, memorable form — **concepts own meaning, callers own initiative, values own facts, obligations own mechanics.** This is why the framework survives argument: it's a *classification system*, and every objection collapses to "fine — which bucket does this belong in?" — a question with a decidable answer, not a debate. That is exactly where a sharp reader (Jackson) will push, and the right response is to welcome it: hand them a nasty service and route it live.
+
+The test that sorts any conventional global service: ask four questions in order.
+
+1. **Does it answer a question the environment knows?** → it becomes a **value**, injected at the pipeline boundary.
+2. **Does it carry domain-visible state someone's invariant rests on?** → it becomes a **concept** (atom), with the invariants stated.
+3. **Does it act on its own schedule?** → it becomes a **caller**, outside the spec layer, acting through declared surfaces.
+4. **Is it meaning-free mechanism?** → it becomes a **contract obligation** on the projector, checked by conformance — never an actor.
+
+The one sorting criterion that makes this concrete — and the fastest way to demo the test live — is that **the same word often routes to different destinations depending on whether an invariant rests on it.** "Logging" is the canonical case (worked under Destination 2): diagnostic logging is mechanism (destination 4), domain history is a concept (destination 2), and the question that separates them is *does anyone's invariant rest on it?* Run that split on the board first; it converts the test from philosophy to engineering in one example.
+
+---
+
+## Destination 1 — Values
+
+The two most universal ambient services in any stack are already gone: the clock and the ID generator are read as direct effects at Step 3 and injected into the transition as parameters (`execution-contract.md` §The execution pipeline: "T does not call the clock or entropy source internally" — Logic Confinement; `glossary.md` pins `now` as "the injected clock value at action time"). The spec layer sees `clock_t` as a *value*, never time as a *service*.
+
+Generalization: anything whose ambient form is "ask the environment" — current principal, locale, feature decision, random draw — arrives as a parameter at the boundary. The transition stays a pure function of its inputs; the formal layer gets determinism for free, which is precisely what makes the models checkable.
+
+## Destination 2 — Concepts
+
+Anything carrying domain-readable state with must-be-trues becomes an atom: logging→Event Log, attribution→Actor Identity, permission→Permissions, retention→Retention Window, secrecy-of-disclosure→Selective Disclosure. The enforcement mechanism is the **no-ambient-authority rule** (`pressure-testing.md` §Capability provenance): an invariant may rest only on explicitly declared capability. Middleware cannot exist above the contract because middleware is exactly *meaning without a declaration* — an interceptor whose behavior no spec names is an orphaned reference by definition.
+
+**The judo for the call:** this is Jackson's own move. Trash took what operating systems buried as infrastructure — deletion — and made it a user-facing concept with an operational principle. Event Log does to logging what Trash did to deletion; Actor Identity does it to attribution; Retention Window does it to the cleanup job. We are running the concept-design program further down the stack than its author did, and the execution contract is what's left when you run out of concepts.
+
+**The worked split that makes this concrete — "logging" is two different things:**
+- *Diagnostic logging* (debug traces, metrics): no domain invariant rests on it → stays below the contract as mechanism. Not a concept, never will be.
+- *Domain history* (who did what, what happened): invariants rest on it (replay, audit, undo) → Event Log, an atom with append-only/immutability/total-order invariants.
+
+Same word, two destinations, and the sorting criterion is the question in the test: *does anyone's invariant rest on it?*
+
+## Destination 3 — Callers
+
+The global services that *act* — schedulers, sweepers, retry daemons, escalation timers — leave the spec layer entirely and return as ordinary callers against declared surfaces. Two mechanisms make this possible:
+
+- **Derive, don't lag** (`pressure-testing.md` §Formal-model authoring pitfalls): expiry needs no sweeper because *expired is a predicate computed from state + injected clock*, not a flag something must remember to set. The biggest daemon in most systems dissolves into a derived query.
+- **Retry as state + whoever shows up:** the orphan log (attributed-permissions-admin) is the worked example — failed-pairing evidence is durable, attributed state with its own invariant (Invariant 8, append-only), and the retry *worker* is just a caller reading it. The spec obliges the surface, not the actor.
+
+**The honest seam here — liveness.** `glossary.md` defines *eventually* as "guaranteed to occur in finite time." Guaranteed by whom, with no daemon in the spec layer? Answer with the formal layer's own vocabulary: liveness claims are conditional on callers existing, and in TLA+ that conditionality has a name — **fairness assumptions**. A fairness assumption *is* the caller destination in formal clothing. Where a spec says "eventually," it is either (a) actually a derived predicate (no actor needed — the expiry case), or (b) an obligation on the deployment's operational surface, stated as such. We should say this plainly on the call before a student finds it: safety is unconditional in this architecture; liveness is contracted to the deployment.
+
+## Destination 4 — Contract obligations
+
+The irreducible residue: durable store, atomic multi-write at the action grain, the event loop. These stay global — as **mechanism, never meaning**. No domain state, no invariants of their own, no API a concept can call. They are obligations the projector compiles against and conformance checks (`execution-contract.md` §Conformance: pipeline order, injection, no mutation outside Step 3, named rejections, invariants hold, Q-consistency, Generation acceptance).
+
+**The line to hold when Jackson pushes on pairing-write atomicity:** a concept cannot reach for the transaction manager. The wiring *declares* atomicity at the action grain; the projector *realizes* it; conformance *checks* it. Whether the realization is a DB transaction, a saga, or a single-writer queue is below the contract — exactly as a compiler may allocate registers however it likes so long as the calling convention holds. The contract is the *calling convention*; concepts have no `beginTransaction()` in their vocabulary. The question "but who provides the transaction?" has the same answer as "who provides the stack frame?" — the runtime, by contract, invisibly to the semantics.
+
+### The membership rule — what may enter the obligation bucket (closing the escape hatch)
+
+This destination is where skeptics keep digging, and rightly: "the runtime provides it" can absorb *any* uncomfortable global concern unless entry is gated. Durable store, event loop, and atomic multi-write are not small things, and without a qualification test the bucket becomes a place to declare hard problems solved by relabeling them. So the bucket has a membership rule, and it is just the no-ambient-authority rule read as an admission test. A candidate qualifies as a contract obligation **iff it passes all five:**
+
+1. **Domain-blind.** It holds no domain-visible state and understands no domain type. The transaction manager does not know what a `grant` is. *(Fails → it carries meaning → Concept.)*
+2. **Encodes no domain meaning / bears no domain invariant of its own.** It may *realize* a behavior the spec depends on, but it carries no invariant of its own and knows nothing about the domain. *(Fails → it carries meaning → Concept.)*
+3. **Exposes no callable surface in the spec layer.** No concept can name or invoke it; it is realized by the projector, not handed to the wiring. *(Fails → it's a service with authority → Concept or Caller.)*
+4. **Domain-uniform.** It applies identically across every domain; it never needs per-domain specialization. *(Fails → the specialization is the smuggled meaning → Concept.)*
+5. **Conformance-checkable.** Its correct provision is verifiable mechanically against the conformance contract (pipeline order, action-grain atomicity), not by domain reasoning. *(Fails → it isn't an obligation, it's an unverified **assumption** — and this is why criterion 5 is not redundant with 2: 2 asks whether it carries meaning; 5 asks whether its provision can be checked. "The network is reliable" passes 1–4 and fails 5 — domain-blind but unverifiable, so an assumption, not an obligation.)*
+
+**The principle criterion 2 turns on — the spec may depend on the behavior, never on the mechanism.** This is the line that answers the strongest objection ("the whole system relies on atomicity, so how can the obligation bear no invariant?"). Resolve it by splitting atomicity in two: the *behavior* (action-grain atomicity — "these writes commit together or neither is visible") is **declared in the wiring** and **conformance-checked**, so the spec legitimately rests on it — it is not ambient, it is named at the composition layer. The *mechanism* (a DB transaction, a saga, a single-writer queue) is the **obligation** — domain-blind, the projector's free choice, bearing no invariant of its own. APA's Invariant 1 *Rests on:* action-grain atomicity (declared behavior); it does **not** rest on transactions (mechanism). The obligation owns the mechanics; the wiring owns the behavior. A concept never holds a `beginTransaction()` handle because the behavior it needs is already declared above it and realized below it.
+
+The one-line form: **the obligation bucket is for mechanism that is domain-blind; the moment a candidate needs to know what the domain means, it has failed and belongs in another destination.** This is why the bucket *can't* swallow every global concern — most uncomfortable global concerns are uncomfortable precisely *because* they carry domain meaning, and domain meaning is disqualifying on 1, 2, and 4. The test turns "the runtime handles it" from a hand-wave into a falsifiable admission test: name the candidate, run the five, and if it passes it is genuinely mechanism; if it fails, the architecture *requires* you to give it a concept or a caller — the opposite of hiding it.
+
+### Routing three nasty services live — the falsification demo (run 2026-06-12)
+
+Jackson's likely next move, anticipated: *"show me three real-world services people think are infrastructure, and route them without special pleading."* Ran his three. The pattern is the punchline: **in every case the part everyone calls "infrastructure" is actually domain meaning the architecture forces into the open, and only a thin genuinely-mechanical residue reaches the obligation bucket — or nothing does.**
+
+- **Distributed cache invalidation.** Splits in two. The cache *store* is domain-blind mechanism. But *invalidation* — knowing what to drop when X changes — is derivation knowledge, which is domain-shaped: it fails criterion 1. So it does **not** enter the obligation bucket. It is the **derived-index** construct the repo already owns (`execution-contract.md` §Composition state): a rebuildable projection with a *named rebuild procedure*, carrying no truth, best-effort-consistent per the boundary rules. The thing teams find hard about cache invalidation is hard *because* it's domain meaning masquerading as infra; the architecture makes the rebuild procedure explicit instead of hiding it behind an eviction policy.
+- **Fraud detection.** Fails criterion 1 instantly — fraud scoring is all domain meaning. Routes to **Concept + Caller**: a Risk/Fraud Assessment *concept* (the assessment record, attributed, with its own lifecycle and invariants) written by a *caller* (the scoring engine, acting on its own schedule through the assessment's declared surface). The scoring *math* is below-contract mechanism; the *assessment state* and the *act of assessing* are named. No special pleading.
+- **Search indexing.** Like the cache: a **derived index** (a rebuildable projection over the source records, reindex = the named rebuild, best-effort freshness) plus a below-contract search *engine* (inverted-index internals, ranking math) that is genuine domain-blind mechanism. The index *content* is derived; the engine *internals* are obligation-grade mechanics; the "what to index / relevance" judgment is domain meaning that surfaces as the projection's definition, not as hidden infra.
+
+Net: zero of the three land *wholly* in the obligation bucket; each decomposes into (domain meaning → concept/caller/derived-index) + (thin mechanical residue → below the contract). If the test keeps refusing to let domain-flavored "infrastructure" into the bucket across arbitrary ugly examples — and so far it does, without special pleading — then this is less a Grace Commons argument and more a general architectural theorem: **what we call infrastructure is mostly undeclared domain meaning, and a discipline that refuses to hide meaning will always force it back into the open.**
+
+---
+
+## Worked routings (the table to draw on the whiteboard)
+
+| Conventional global service | Destination | Form it takes here |
+|---|---|---|
+| Clock | Value | `clock_t` injected at Step 3 |
+| ID/entropy | Value | `id_t` injected at Step 3 |
+| Auth context ("current user") | Value + Concepts | principal injected; Session / Credential / Actor Identity carry the state |
+| Audit interceptor | Concept | Audit Trail substrate — declared, composed, invariant-bearing |
+| Domain history | Concept | Event Log |
+| Diagnostic logger | Contract-side mechanism | below the spec layer; no invariant rests on it |
+| Cron / sweeper | Caller (often dissolved) | derived predicates first; else a caller on a declared surface |
+| Retry daemon | Caller | orphan log + whoever reads it |
+| Transaction manager | Contract obligation | declared action-grain atomicity, compiled + conformance-checked |
+| ORM / lazy loading | Forbidden | implicit joins are undeclared meaning (`execution-contract.md` §Not permitted) |
+| Cache | Derived index | rebuildable projection, outside the atomicity surface, carries no truth |
+| Message bus fan-out | Decomposition boundary | fan-out is a composition property (directed invocation graph), async at the edge only |
+| Feature flags / config | Declared knob | the spec's Configuration section — looks ambient, is declared |
+
+---
+
+## "Isn't this just microservices?" — the inversion
+
+A student's likely first reflex, and the precise answer is more flattering than the loose one. An atom *is* a vertical, end-to-end slice — it owns its state, actions, guards, projection, and store, top to bottom. That's the bounded-context discipline microservices aspire to and mostly fail at. The analogy then inverts in three ways, all of which favor the architecture:
+
+- **Microservices are global-services taken to the extreme.** A real deployment runs on service mesh, API gateway, message bus, service discovery, distributed tracing — ambient infrastructure everywhere (Istio/Consul/Kafka). Atoms are microservices with the mesh *deleted* and replaced by the four destinations. This section is the no-global-services thesis restated: the mesh is exactly the ambient authority the four destinations route away.
+- **Cut on the right axis.** Microservices are decomposed by team or deploy unit — Parnas's wrong axis — and curdle into distributed monoliths. Atoms are cut by *concept* (one concept, one home), the axis along which meaning actually factors.
+- **Contract at the seam, and no distribution tax.** Microservices carry OpenAPI at best and discover their interactions in production; atoms carry named invariants and emergent-invariant accounting *at composition time*. And because an atom is a *spec*, not a process, it compiles to an in-process call or a network service at the deployment's choice — the bounded-context guarantee is enforced at the spec layer, not bought with network hops.
+
+Honest caution: "microservice" is right about the vertical-slice/own-your-state part, wrong about the distribution part — atoms do not require separate processes (async at the edge only; a composition is a stateless interpreter, often in-process). The one-liner: **microservices separate processes and need a mesh to reconnect them; atoms separate concepts and reconnect them by declared wiring — no mesh, because the no-global-services rule killed it.**
+
+## Rendering as a corollary
+
+If every visible state is a projection (Q/R over record sets), rendering is one more projection plus action dispatch back into the pipeline. The scale precedent is the spreadsheet: cells = explicit state, formulas = pure derivation, recalc = replay — the largest no-ambient-services computing tradition in history, running most of the world's business logic. Grace Commons is trying to give *behavior* the property Excel gave *calculation*.
+
+Residue, classified by our own rules: optimistic/in-flight presentation state (focus, pending indicators, render-before-commit) is ephemeral, call-stack-local, carries no truth — the composition-state rule already has a drawer for it. Worth stating as a theorem-shaped claim on the call, not a boast: *rendering is trivial exactly to the degree that no ambient state exists for it to disagree with.*
+
+### The rendering residue, drilled (2026-06-12 follow-up)
+
+Four small problems, not one; three route through existing machinery, one is a genuine boundary.
+
+1. **Optimistic rendering is safe because rejection taxonomies are closed.** The gap between act and commit shows a *prediction*. Conventional optimistic UI is risky because failure is open-ended; here every action carries a named, closed rejection set, so the pending state and every reconciliation path are *generatable from the spec*. The complete error-state inventory exists before anyone designs it.
+
+2. **Realtime mutation splits like logging did.** "The screen refreshes" is mechanism below the contract (no invariant rests on freshness; the recalc trigger is the spreadsheet's dependency graph). "The user is notified" is the Notification concept (delivery is domain truth). Cross-atom screens inherit best-effort read semantics (§Boundary rules) — momentarily torn composite views are a *design surface* (per-region freshness, visible seams), never a promised atomicity. Time-driven truth needs no push at all: the screen is a projection of (records, `now`) — time is an input to the *view*, so countdowns and expiry displays belong to rendering, not state, and even the display layer needs no sweeper.
+
+3. **Selection is a view.** Presentation state that *references* records (multi-select, focus-on-row) can be orphaned by realtime change. Derive-don't-lag applies to UI state verbatim: selection validity is computed (`selection ∩ current records`), never stored. Most collaborative "ghost row" bugs are lagging flags.
+
+4. **The genuine boundary: continuous co-editing.** The architecture's realtime is live multiplayer over *discrete actions* — collisions serialize and lose with named rejections. Character-level convergent co-editing (docs/canvas) is not wiring; it is a missing atom (convergent replicated value, CRDT-shaped), and its load-bearing property — convergence — is invariant-shaped and formally provable. Name it on the call as a known boundary with a known shape; candidate for the dream-atom backlog alongside `working-ideas/dream-compositions.md`.
+
+---
+
+## Objections to rehearse before the 24th
+
+1. **"Your atomicity obligation is a global transaction service with extra steps."** Hold the compiler analogy: declared at the wiring, realized below the contract, checked by conformance. The architectural content is that *concepts can't reach for it* — authority stays declared. The sharp form: **the contract is the calling convention; concepts have no `beginTransaction()` in their vocabulary.** There is no ambient transaction handle to grab because the wiring declares atomicity and the projector realizes it — the same way a function never allocates its own stack frame.
+2. **"Liveness is unguaranteed."** Concede by design, stated as a doublet for the formal-minded: **safety is unconditional; liveness rests on fairness assumptions.** Liveness is contracted to deployment callers, and "fairness assumption" is that contract's formal name. Counter: most systems lie about liveness anyway (the cron job that silently dies); we make the contract explicit instead of implicit.
+3. **"Cross-concept queries need a global query planner."** No cross-atom transactional read exists to plan (`execution-contract.md` §Boundary rules: best-effort projections over independent consistency domains). Anything needing more is a materialized-projection atom — named state, named invariants.
+4. **"Performance is global by nature."** True and conceded: budgets crosscut module boundaries everywhere; this architecture doesn't claim otherwise. It claims *meaning* doesn't crosscut. Performance lives with the projector and deployment, where it always lived.
+5. **"This is just dependency injection."** DI removes the *wiring* of services but keeps them services — callable, stateful, semantic. The four destinations remove the *service-ness*: values aren't callable, concepts are domain state with invariants, callers are outside, obligations aren't APIs. DI is the degenerate single-destination version.
+6. **"Feature interaction killed this dream in telecom."** The seams are budgeted: emergent invariants are named, counted per composition, and the library is the experiment — if emergent-invariant count per composition grows with corpus size, the thesis fails. 24 compositions into the measurement, it hasn't. (Counting rule and trip-wires: `working-ideas/falsifiability-metric.md`.)
+7. **"The obligation bucket is where you hide the hard parts."** GPT's challenge, and the sharpest one. Answer with the five-part membership rule above: the bucket admits only domain-blind, invariant-free, uncallable, domain-uniform, conformance-checkable mechanism. Name any candidate and run the five live — the uncomfortable global concerns a skeptic has in mind (reconciliation, scoring, entitlement) fail on domain-meaning and route to Concept or Caller, where they get named state and invariants. The rule converts "the runtime handles it" into a falsifiable admission test.
+
+---
+
+## One-page call brief (compression of the above)
+
+**Claim:** no ambient authority above the execution contract; ambient mechanism below it.
+**Mechanism:** every conventional global service routes to one of four destinations — value (injected), concept (declared state + invariants), caller (outside, acting through declared surfaces), contract obligation (compiled + conformance-checked mechanism).
+**Why it's your program, Daniel:** Trash : deletion :: Event Log : logging — concepts reclaimed from infrastructure, run further down the stack; the execution contract is what remains when you run out of concepts.
+**What we concede:** liveness is contracted, not guaranteed; performance crosscuts; the atomicity realization is the runtime's, by contract.
+**What's falsifiable:** seam growth. Emergent invariants per composition stay flat as the corpus grows, or the thesis fails. The library is the instrument.
+
+---
+
+## Open items surfaced by external review (2026-06-12, Grok pass — triaged)
+
+Kept the two with teeth; the rest of that review was call-staging advice (lead with the test, table-as-centerpiece, brief-as-handout) and is not repo content. One suggestion **rejected**: coining a noun ("observability substrate") for the below-contract mechanism layer — it cuts against `glossary.md`'s keep-it-small discipline, and the namelessness of that layer is load-bearing (the point is that diagnostic logging is *not* a named architectural citizen). "Mechanism below the contract" stays the term.
+
+Two meta-questions were already answered in canon and need no action: **invariant accounting** has a home (every composition's "Composition-level invariants" section — APA lists eight, Undo History seven), and the `beginTransaction()` / fairness-doublet sharpenings are folded above.
+
+Two are genuinely open:
+
+- **Falsifiability threshold — undefined, and the phrase is mine, not canon.** "Emergent invariants per composition stays flat" is a conversational coinage; the repo has no working definition or trip-wire. Before it can be a real claim it needs: (a) a counting rule for "emergent invariant" that isn't gameable by splitting/merging invariant statements, (b) a normalization (per-composition? per-constituent-pair? per-domain?), and (c) a declared trip-wire ("if the rolling mean of emergent-invariants-per-new-composition exceeds X over the last N groundings, the thesis is in trouble"). Cross-check against `measurement.md` and the no-snapshot rule (`pressure-testing.md`) — the metric must respect both. Until defined, present it on the call as *"the experiment is instrumented in principle; the precise trip-wire is unspecified"* — honest, and stronger than a fake number.
+
+- **Routing test as a review template + a known-boundaries page.** The four-question test (value / concept / caller / contract-obligation) could become a lightweight checklist run against every new atom and every proposed external integration — a fifth gate alongside the three composition gates, scoped to "where does this service-shaped thing go?" And the known architectural boundaries (continuous co-editing / CRDT atom; cross-atom visual atomicity; liveness-by-fairness) want a single staging page rather than being scattered across working-ideas files. Both are working-ideas-tier, not canon — sketch before proposing.
