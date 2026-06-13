@@ -9,6 +9,33 @@ Accidental findings during the build. Raw, dated, unpolished. Grant proposals an
 
 ---
 
+### 2026-06-13 — The taxonomy run in reverse: nine real systems saturate onto the atom set
+
+The forward thesis is *English spec (canonical) → model + code (derived)*. We spent a session running it **backwards** — *code → recovered concepts* — against deployed software, to try to **falsify** the taxonomy. The question, phrased to fail: as you mine real systems, does the corpus keep minting primitives the library lacks, or keep resurfacing the same atoms? This is the reverse-direction twin of the emergent-invariant saturation metric in [`working-ideas/falsifiability-metric.md`](./working-ideas/falsifiability-metric.md).
+
+Nine runs ([`working-ideas/recovery/`](./working-ideas/recovery/)), deliberately spread to break every confound a skeptic would name:
+
+- **Languages (5):** JavaScript (`pboyer/rec`), Python (`asgi-idempotency-header`, ERPNext, hrms, frappe/crm, Odoo), Java (OpenMRS), PHP (Akaunting), TypeScript (Medplum).
+- **Domains (5):** utility, ERP, CRM, clinical/EHR, accounting.
+- **Frameworks (6):** vanilla, ASGI, Frappe, Odoo-ORM, Spring/Hibernate, Laravel — and, in the final run, the **FHIR international standard** rather than any one vendor's model.
+
+The result is **saturation**: the existing atom set recurred as the substrate in every system. The load-bearing results:
+
+- **Three grounded atoms validated in the wild *and* against the standard.** Clinical Observation's branch-free amendment chain is OpenMRS `Obs.previousVersion` (Java) and FHIR `Observation` (status `final`→`amended`); Medication Order is OpenMRS `Order.Action`/`previousOrder` and FHIR `MedicationRequest`; Provenance is FHIR `Provenance` (agent/recorded/activity/entity/signature — the `signature` also cross-checks Tamper Evidence). The worked-example atoms were not idealized; they recovered how real EHRs and the interoperability standard actually model their data.
+- **The gap set converged instead of sprawling.** Mining did not keep minting un-absorbable primitives — it resurfaced the same short candidate list, and by the last two runs was producing *refinements*, not new primitives (the shape the falsifiability metric calls "thesis strengthens"). The candidates, seeded into [`roadmap.md`](./roadmap.md) §Concept-recovery atom backlog: **Acyclic Recursive Composition** (five witnesses across five systems and languages — ERPNext/Odoo BOM, OpenMRS `obsGroup`/`ConceptSet`, Akaunting `Category`, FHIR `Observation.hasMember`), **Coded Category + Terminology Binding** (whose three-part structure FHIR's `CodeSystem`/`ValueSet`/`ConceptMap` supplied), **Sequential Identifier**, the weaker Orthogonal-state and Deadline/SLA, and **Balance Ledger** as a composition pattern.
+- **Two executed bugs and a confirmed prediction**, from the small targets where the code could actually be run: a COMPOUND-return contract violation in `rec` that its types and ~1M-trial suite both missed; a bricked-idempotency-key bug in `asgi-idempotency-header`; and confirmation of the predicted *Idempotency Result Memo* atom in that middleware's response cache.
+- **Saturation includes a correct *absence*.** Single-entry Akaunting *lacks* the debit = credit binding-bijection invariant that double-entry Odoo (`account.move._check_balanced`) carries. The taxonomy expressing both — present in one system, correctly absent in the other — is a sharper result than uniform confirmation.
+
+#### Implication for Grace Commons
+
+Convergence-not-divergence is the empirical signal that the atoms carve real joints rather than fitting the library's own examples — and the strongest form of it is matching an international standard (FHIR) that a committee designed independently over a decade. This is the reverse-direction confirmation of the forward saturation thesis: the same claim, instrumented from the other end and re-runnable on any new corpus.
+
+Two honest bounds. **Depth was mostly read, not run:** on the framework-heavy targets (ERPNext, Odoo, OpenMRS, Akaunting, FHIR) tier-3 recovered invariants from source but did not execute them — only `rec` and `asgi` produced reproduced bugs; the rest are confirmations. And each **domain still rests on one or two witnesses**, so *approximately sufficient* is the honest strength, not *complete*. The recovery files are internal staging; their canon-facing residue is the seeded candidate backlog and this entry.
+
+The reverse pipeline turned out to be two things at once: a **falsification instrument** for the taxonomy (mine N systems; does the candidate set stay bounded?) and the **adoption on-ramp** the thesis most needed an answer for (code → concept-map → the four-destination audit answers "what about my legacy system"). Both were the point; neither needed the forward pipeline to be finished first.
+
+---
+
 ### 2026-06-12 — Status mirrors in Summaries go stale; two were already lying
 
 While landing C11, a consistency sweep found ten patterns carrying a status claim inside their Tier-1 Summary ("This composition is `grounded`…"). Two had already drifted into falsehood: Authenticated Actor's Summary still said `partially resolved` after grounding on 2026-06-10, and Data Subject Rights Fulfillment's still said "drafting in progress" after grounding on 2026-06-09. Nothing lints a Summary sentence — the status-mirror check covers only the roadmap cell against the Status token.
