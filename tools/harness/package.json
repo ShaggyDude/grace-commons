@@ -9,7 +9,7 @@
     "audit": "node audit.mjs"
   },
   "dependencies": {
-    "tla-checker": "*"
+    "tla-checker": "^0.5.4"
   },
   "comment-jre": "The JRE 17 (javajre-linux-64) is installed to /tmp/javajre by bootstrap.sh, NOT here: unpacking it into the mounted repo FS drops libjli.so and the launcher fails (exit 127)."
 }

@@ -1,18 +1,22 @@
----- MODULE undo-history-buggy ----
-\* Grace Commons — Undo History composition: BUGGY TWIN (vacuity guard for Inv3/Inv4).
+---- MODULE undo-history-stale-buggy ----
+\* Grace Commons — Undo History composition: BUGGY TWIN (vacuity guard for Inv2).
 \*
-\* Identical to undo-history.tla EXCEPT `DoUndo` targets the OLDEST non-undone
-\* forward event instead of the most recent. Wrong-direction targeting is the
-\* classic undo bug, and it breaks TWO load-bearing invariants at once:
-\*   - Inv3_TopSuffix: undoing a lower-index event while a higher-index forward
-\*     event is still present makes the undone set no longer a top-suffix.
-\*   - Inv4_ReplayValid: removing a *middle* event leaves a gap — e.g.
-\*     add(x), complete(x), undo-oldest removes add(x) but keeps complete(x), so
-\*     replay applies complete on an absent x, an invalid Personal Todo transition.
+\* Identical to undo-history.tla EXCEPT `DoUndo` targets the most-recent event
+\* CORRECTLY (so Inv3/Inv4 still hold) but FAILS TO RECOMPUTE the derived state —
+\* it leaves `derived` stale instead of re-deriving it by replay over the new
+\* undone-set. This is the precise hazard Invariant 2 forbids: the exposed state
+\* must equal the replay of non-undone events, and a stale undo makes the
+\* incrementally-maintained `derived` diverge from the replay (StatusOf).
 \*
-\* Expected result: VIOLATION (Inv3 and/or Inv4). If the checker reports all
-\* invariants hold here, the harness is vacuous — undoing oldest-first would be
-\* safe, which is exactly what undo targeting and replay-validity deny.
+\* This is the Inv2-specific twin the per-invariant vacuity guard requires
+\* (pressure-testing.md §the "model present" bar, criterion 2): the oldest-targeting
+\* twin breaks Inv3/Inv4 but leaves Inv2 holding (its undo still recomputes derived),
+\* so Inv2 needs its own witness that the check has teeth.
+\*
+\* Expected result: VIOLATION (Inv2 only). add(x) then undo: replay over the new
+\* undone-set says x is absent, but the un-recomputed `derived` still shows x as
+\* pending — derived # StatusOf, Inv2 broken. If the checker reports all invariants
+\* hold here, Inv2 is vacuous.
 
 EXTENDS Naturals, FiniteSets
 
@@ -101,15 +105,15 @@ ForwardFail ==
     /\ didChange' = FALSE
     /\ UNCHANGED <<ltype, lid, undone, len, phase, derived>>
 
-\* BUG: target the OLDEST (minimum-index) non-undone forward event — the unique k
-\* that is non-undone with every EARLIER slot already undone.
+\* BUG: correct most-recent targeting, but `derived` is left stale (UNCHANGED)
+\* instead of being recomputed by replay over the new undone-set.
 DoUndo ==
     /\ len > 0
     /\ \E k \in 1..len :
         /\ ~undone[k]
-        /\ \A j \in 1..len : (j < k) => undone[j]
+        /\ \A j \in 1..len : (j > k) => undone[j]
         /\ undone' = [undone EXCEPT ![k] = TRUE]
-        /\ derived' = [x \in Ids |-> StatusOf(ltype, lid, len, [undone EXCEPT ![k] = TRUE], x)]
+    /\ derived' = derived
     /\ phase' = "undoing"
     /\ didAppend' = TRUE
     /\ didChange' = TRUE

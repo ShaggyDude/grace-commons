@@ -1,18 +1,22 @@
----- MODULE undo-history-buggy ----
-\* Grace Commons — Undo History composition: BUGGY TWIN (vacuity guard for Inv3/Inv4).
+---- MODULE undo-history-phantom-buggy ----
+\* Grace Commons — Undo History composition: BUGGY TWIN (vacuity guard for Inv1).
 \*
-\* Identical to undo-history.tla EXCEPT `DoUndo` targets the OLDEST non-undone
-\* forward event instead of the most recent. Wrong-direction targeting is the
-\* classic undo bug, and it breaks TWO load-bearing invariants at once:
-\*   - Inv3_TopSuffix: undoing a lower-index event while a higher-index forward
-\*     event is still present makes the undone set no longer a top-suffix.
-\*   - Inv4_ReplayValid: removing a *middle* event leaves a gap — e.g.
-\*     add(x), complete(x), undo-oldest removes add(x) but keeps complete(x), so
-\*     replay applies complete on an absent x, an invalid Personal Todo transition.
+\* Identical to undo-history.tla EXCEPT the storage-failure branch (`ForwardFail`)
+\* leaves PHANTOM state: it updates `derived` even though Event Log's append was
+\* rejected (no event landed, len unchanged). This is exactly the hazard the
+\* spec's storage-failure wiring defends against — undo-history.md §Action wiring:
+\* "If the append returns rejected(storage-failure), return storage-failure without
+\* updating the derived state — the action did not happen."
 \*
-\* Expected result: VIOLATION (Inv3 and/or Inv4). If the checker reports all
-\* invariants hold here, the harness is vacuous — undoing oldest-first would be
-\* safe, which is exactly what undo targeting and replay-validity deny.
+\* It violates Invariant 1 (log faithfulness): a step changed the exposed state
+\* (didChange) with no append (~didAppend). As the spec's Refinement-round-1 finding
+\* records, the same hazard also violates Invariant 2 (the un-appended change makes
+\* `derived` diverge from the log-replay) — the two are linked by design. Either
+\* violation rejects the twin.
+\*
+\* Expected result: VIOLATION (Inv1, and Inv2). If the checker reports all invariants
+\* hold here, Inv1 is vacuous — committing state without a durable append would be
+\* safe, which is exactly what log faithfulness denies.
 
 EXTENDS Naturals, FiniteSets
 
@@ -94,20 +98,23 @@ DoDelete(x) ==
     /\ didChange' = TRUE
     /\ UNCHANGED <<undone, phase>>
 
+\* BUG: the storage-failure branch commits a derived-state change with no append.
+\* The correct branch (undo-history.tla) changes nothing on failure.
 ForwardFail ==
     /\ phase = "adding"
     /\ len < MaxEvents
+    /\ \E x \in Ids :
+        /\ derived[x] = "absent"
+        /\ derived' = [derived EXCEPT ![x] = "pending"]
     /\ didAppend' = FALSE
-    /\ didChange' = FALSE
-    /\ UNCHANGED <<ltype, lid, undone, len, phase, derived>>
+    /\ didChange' = TRUE
+    /\ UNCHANGED <<ltype, lid, undone, len, phase>>
 
-\* BUG: target the OLDEST (minimum-index) non-undone forward event — the unique k
-\* that is non-undone with every EARLIER slot already undone.
 DoUndo ==
     /\ len > 0
     /\ \E k \in 1..len :
         /\ ~undone[k]
-        /\ \A j \in 1..len : (j < k) => undone[j]
+        /\ \A j \in 1..len : (j > k) => undone[j]
         /\ undone' = [undone EXCEPT ![k] = TRUE]
         /\ derived' = [x \in Ids |-> StatusOf(ltype, lid, len, [undone EXCEPT ![k] = TRUE], x)]
     /\ phase' = "undoing"
