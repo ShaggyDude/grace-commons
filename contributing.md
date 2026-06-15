@@ -15,7 +15,7 @@ toc: true
 </details>
 
 
-Grace Commons is early and foundational. The pattern library is being built. This is the right time to help establish the structure — before conventions calcify and before the easy decisions get made by default.
+Grace Commons is early but stable (as of mid-June 2026). The pattern library is being built. This is the right time to help establish the structure — before conventions calcify and before the easy decisions get made by default.
 
 ---
 

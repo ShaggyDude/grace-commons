@@ -80,7 +80,7 @@ The `atoms/` + `compositions/` split mirrors the structural logic of [concept-ca
 
 ## Status
 
-Early and foundational. The architectural philosophy is in [`the-spec-layer.md`](./the-spec-layer.md). The pattern library is being built.
+Early but stable (as of mid-June 2026). The architectural philosophy is in [`the-spec-layer.md`](./the-spec-layer.md). The pattern library is being built.
 
 Contributors who understand the problem are welcome before the library is complete. That is the right time to establish the structure.
 
