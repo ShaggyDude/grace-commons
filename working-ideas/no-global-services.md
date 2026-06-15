@@ -132,6 +132,31 @@ Four small problems, not one; three route through existing machinery, one is a g
 
 ---
 
+## Answering Jackson's email — the noun / verb / adjective / mechanism grammar (2026-06-13)
+
+Jackson's 2026-06-07 reply put the sharpest version of the hold on the table (paraphrased): *you're admirably trying to push part of the basic execution framework — event logging and execution itself — into explicit concepts, and I don't yet see how it can work.* Three concrete prongs sit under it: (1) shouldn't the action that appends the undo event simply be Event Log's action? (2) what are the *syncs* that keep the actions performed aligned with what's in the log? (3) how does the actual historical trace of everything that happened relate to what's in the Event Log *concept*? The answer is a **grammar** — the generalization of the *"owns non-derivable state?"* blade the concept-recovery exercise hardened (acyclicity → 4th structural-relation invariant template, `spec-format.md` §Cross-cutting authoring conventions; the blade *refused* concept-hood to a thing recurring across six systems, purely because it owns no state — the demonstration that the test isn't special pleading).
+
+**The grammar.** Every element of a system is exactly one part of speech, sorted by what it owns:
+
+- **Noun = concept (atom).** Owns *non-derivable, truth-bearing state* plus the invariants over it. Event Log is a noun.
+- **Verb = action.** Owns no state; acts on a noun. May be *emergent* — introduced at composition, belonging to no single constituent.
+- **Adjective = invariant.** Owns no state; constrains a noun, or a relation between nouns. The structural-relation invariant templates (referential integrity, orphan-freedom, inverse consistency, acyclicity) are adjectives.
+- **Below the contract = mechanism.** Owns no domain *meaning* at all — durable store, the event loop, diagnostic logging.
+
+"Does it own non-derivable state?" is just "is it a noun?" — the noun-test is the blade, generalized.
+
+**The meta-answer to the hold.** *You don't push execution into concepts — you sort it.* The worry assumes "make logging/execution a concept" is one move that either works or fails. It isn't a move; it's a **parse**. Only the state-owning **noun** becomes a concept — Event Log is the *domain history*, the part invariants rest on. The rest of "execution" sorts elsewhere: the reversal is a **verb**, the alignment is an **adjective**, and the genuinely ambient parts (the event loop, diagnostic logging) stay **below the contract** as mechanism, never concepts. Nothing is smuggled into concept-hood that doesn't own state — and the acyclicity reclassification is the live proof the architecture will actually *refuse* the smuggling when tempted.
+
+**The three prongs, answered in the grammar:**
+
+- *Trace vs. Event Log (prong 3).* Not the same object. Event Log is the **noun** — the subset of everything-that-happened that domain invariants rest on (domain history). The remainder of the real trace (diagnostic, operational) is **mechanism below the contract**: no invariant rests on it, so it is not a concept. Discriminator: *does an invariant rest on it?* — the noun-test. The Event Log concept is a *purposeful projection* of the trace, not a mirror of it.
+- *Where the undo-append action lives (prong 1).* The *append* is Event Log's **verb** — conceded, it is Event Log's action. But `undo` is a *different* verb: it appends **and** carries replay-skipping semantics that Event Log, being content-agnostic, cannot hold. `undo` owns no new state (the undone-set is re-derived on replay — a derived index), so it earns no noun of its own; it is an **emergent composition verb** that calls Event Log's append and adds meaning at the wiring layer.
+- *The syncs aligning actions with the log (prong 2).* Not hidden glue — a named **adjective**: the log-faithfulness invariant (every performed action ↔ its append). Owns no state; constrains the relation between the composition's actions and Event Log's records. It is exactly the *relation-invariant class* the acyclicity result made first-class — so the "sync" has a name and a canonical home, not ambient coordination.
+
+**The honest residual — and why it's the reason the call matters.** Jackson named prong 1 — *compositions having actions that belong to no atom* — as the thing he most wants to dig into live, and he's right that it is the least-settled. The grammar gives `undo` a home (emergent verb) and a reason (owns no state), but *where an emergent verb lives, and what governs it, when its meaning is composition-level* is a genuine open seam (our own note: "even undo's mutation is just Event Log's append — what's genuinely composition-level is the replay semantics, so where the action lives is a real question"). Do **not** walk in claiming this is closed. Walk in with the grammar as a sharp instrument and invite him to test it on the seam — that adversarial push is precisely what has been hardening the model (the acyclicity reclassification came straight out of this kind of pressure), so the open prong is the most productive item on the agenda, not a liability to hide. He is pushing the hard bits *for* us, and the seams he finds are where the architecture earns its rigor.
+
+---
+
 ## Objections to rehearse before the 24th
 
 1. **"Your atomicity obligation is a global transaction service with extra steps."** Hold the compiler analogy: declared at the wiring, realized below the contract, checked by conformance. The architectural content is that *concepts can't reach for it* — authority stays declared. The sharp form: **the contract is the calling convention; concepts have no `beginTransaction()` in their vocabulary.** There is no ambient transaction handle to grab because the wiring declares atomicity and the projector realizes it — the same way a function never allocates its own stack frame.
