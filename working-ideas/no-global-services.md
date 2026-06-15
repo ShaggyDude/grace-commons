@@ -1,4 +1,4 @@
-# No global services — the four-destination decomposition (2026-06-12)
+# No global services? — the four-destination decomposition (2026-06-12)
 
 > **Status: internal staging, not canonical.** Working argument for the 2026-06-24 call (Jackson + students), drilling into the claim that the architecture has no ambient services. Doubles as the skeleton answer to Jackson's "you're pushing the execution framework into explicit concepts — I don't yet see how it can work." If any of this earns canon status it folds into `execution-contract.md` (the routing rule) and `the-spec-layer.md` (the thesis framing); the call-prep framing dies with the call.
 
