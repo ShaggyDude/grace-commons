@@ -9,6 +9,12 @@ Accidental findings during the build. Raw, dated, unpolished. Grant proposals an
 
 ---
 
+### 2026-06-14 — Separation-of-duty is named everywhere but enforced nowhere
+
+Witness-checking a proposed "Mutual Exclusion / Separation-of-Duty" invariant template (from the Grok strange-pattern forecast, [`working-ideas/no-global-services.md`](./working-ideas/no-global-services.md) §Strange-pattern forecast) turned up an absence: the library enforces separation-of-duty — *the actor who submits an object cannot be the actor who approves it* — **nowhere** as a standing invariant. The three places a skeptic would point to are three *different* shapes, none of them SoD: Approval Step Inv 4/5 is *authorization-exclusivity* (only the actor bound to `approver_ref` / `submitter_ref` may act — a role→actor binding that says nothing about the two being distinct); Multi-Party Approval's pairwise-distinct approvers is an `invalid-request` *validation precondition* on `initiate_chain`, not a standing invariant, and constrains distinctness *within the approver set*, not submitter-vs-approver; Assignment's "at most one Active per task" is *cardinality*. **Implication:** a builder of four-eyes / maker-checker approval must add SoD explicitly — it is not inherited from Approval Step or Multi-Party Approval. The decision this raises (enforce via a disjointness template, a composition, or leave it to callers) graduates to [`open-questions.md`](./open-questions.md) only when a pattern actually forces it; until then this is just the found fact. (By `spec-format.md`'s structural-relation promotion bar — *a relation-wide truth-condition that recurs and owns no state* — the apparent "mutual exclusion" template disaggregates: *cardinality / at-most-one* already has a clean standing witness in Assignment and is the stronger near-term fifth-template candidate, while *disjointness / SoD* is shape-valid but witness-thin.)
+
+---
+
 ### 2026-06-13 — The taxonomy run in reverse: nine real systems saturate onto the atom set
 
 The forward thesis is *English spec (canonical) → model + code (derived)*. We spent a session running it **backwards** — *code → recovered concepts* — against deployed software, to try to **falsify** the taxonomy. The question, phrased to fail: as you mine real systems, does the corpus keep minting primitives the library lacks, or keep resurfacing the same atoms? This is the reverse-direction twin of the emergent-invariant saturation metric in [`working-ideas/falsifiability-metric.md`](./working-ideas/falsifiability-metric.md).

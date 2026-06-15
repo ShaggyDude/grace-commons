@@ -37,6 +37,19 @@ The metric is not raw emergent count — it is emergent count **net of extractio
 - **Extraction-resistant rate.** Of the emergent invariants introduced over the last N groundings, what fraction are *novel and non-recurring* (genuine one-offs, fine) versus *recurring but un-extracted* (the warning sign — a seam the taxonomy should have absorbed but didn't)? A rising un-extracted-recurrence rate is the real red flag, not the raw count.
 - **Taxonomy saturation.** New-atom groundings per M new compositions. The thesis predicts this trends *down* — the vocabulary stabilizes. If every new composition still needs a new atom, concepts aren't actually freestanding/reusable.
 
+## Blade-survival rate (complementary saturation signal, added 2026-06-14)
+
+Taxonomy saturation measures the *output* side — new atoms minted per M compositions. There is a cheaper, higher-frequency signal on the *intake* side: of the candidate patterns *proposed* — concept-recovery runs, external "what's the next pattern?" forecasts, dream-compositions — what fraction **survive the blade** (the noun-test: owns non-derivable state, plus the EOS Pass-2 freestanding test) as genuine new concepts, versus sorting to verb / adjective / mechanism or folding into an existing atom? The thesis predicts the survival rate trends *toward zero* as the corpus matures: a stable vocabulary refuses most newcomers at the door. A *rising* survival rate — most proposals becoming genuine new concepts — is the same falsifier as rising taxonomy growth, seen from the front door. (This is Grok's 2026-06-14 "track concepts that survived the full blade" suggestion, routed here rather than to a fresh list — it is a saturation signal, and this is the saturation file.)
+
+Same discipline as everything else here: **derive, don't lag.** The running tally is reconstructible from the grammar-sort recorded in each forecast / recovery note (and counts resolve through `roadmap.md`), never snapshotted as a maintained number. Two guards against gaming: a "candidate" must be a *genuine proposed pattern* (a strawman padded into the denominator inflates the refusal rate), and "survived" means cleared **both** the noun-test and Pass 2 (owning state is necessary, not sufficient — it still has to be freestanding).
+
+**Dated data points (findings, not a live count):**
+
+- *2026-06-14 — Grok strange-pattern forecast:* 11 candidates → ~2–3 survived the blade (Conflict Reconciliation; Valid-Time as an overlay), ~8 sorted to verb/adjective/mechanism. Survival ≈ 2–3/11. Full grammar-sort in [`no-global-services.md`](./no-global-services.md) §Strange-pattern forecast.
+- *Prior, informal:* the reverse concept-recovery arc (roadmap §Concept-recovery; `discoveries.md` "reverse concept-recovery saturates onto the atom set, 2026-06-13") is the same signal observed across ten real-system runs — recovered concepts kept landing on the *existing* atom set rather than minting new ones, i.e. a near-zero blade-survival rate on independently-sourced candidates. That is the strongest corroboration to date; the forecast pass is a second, adversarially-sourced instance.
+
+Small N, and deliberately a *direction* not a threshold (same reasoning as the trip-wires below). But it is the cheapest instrument in this file — every forecast or recovery run already produces the grammar-sort it needs.
+
 ## Trip-wires (provisional — values are placeholders, not canon)
 
 Stated as a shape, not a snapshot (per the no-snapshot rule the *current numbers* live in the generated view, never here):
