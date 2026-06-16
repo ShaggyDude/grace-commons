@@ -1,0 +1,46 @@
+%% Grace Commons — architecture map: spec / contract / runtime, across TWO LEVELS.
+%% DERIVED PROJECTION, not canon. Orientation aid only (the-spec-layer.md §Bridges:
+%% diagrams support summaries, never replace canonical text). Must TRACK CANON —
+%% revise if the-spec-layer.md / execution-contract.md / no-global-services.md change.
+%% Staged 2026-06-14; level-stratified revision 2026-06-14 after external review.
+%%
+%% THE LEVEL DISTINCTION (the resolution to the apparent "two sources of truth"):
+%%   - DESIGN-TIME: the canonical spec (atoms + compositions) is the SSOT of
+%%     MEANING — the authored library. The Event Log ATOM lives here (a concept).
+%%   - RUNTIME (per deployed instance): the instance's Event Log is the SSOT of WHAT
+%%     HAPPENED; visible state is its replay (derived). These are truths of DIFFERENT
+%%     things at DIFFERENT levels — not competing roots.
+%%   The log records DOMAIN ACTIONS on a running instance (e.g. "add todo"), NOT spec
+%%   edits (an author changing the atom). Collapsing the two — e.g. "Event Log =
+%%   history of graph mutations" — is the same flattening as folding execution into
+%%   the canonical spec; the architecture keeps the levels apart on purpose.
+%%   Spec EVOLUTION (atoms/compositions changing over time) is a SEPARATE design-time
+%%   concern — versioning + the Migration pattern (changelog.md, pattern Lineage) —
+%%   orthogonal to runtime event replay.
+
+flowchart
+  INT["Intent — the authored spec"] --> CG["Canonical spec — atoms + compositions (the SSOT)"]
+
+  subgraph SPEC["SPEC LAYER · design-time — SSOT of MEANING"]
+    CG --> AT["Atoms = nouns: state schema + invariants (incl. the Event Log atom)"]
+    CG --> CO["Compositions = wiring: verbs act, adjectives constrain"]
+  end
+
+  SPEC ==>|"declares"| CON
+
+  subgraph CON["THE CONTRACT — the boundary, both ways"]
+    IN["Inbound: four destinations — value / concept / caller / obligation"]
+    OUT["Outbound: contract ports — liveness, offline-first, ..."]
+  end
+
+  CON ==>|"realized below, per running instance"| EX
+
+  subgraph EX["RUNTIME · per instance — realized below the contract"]
+    PROJ["Projector — picks mechanism: DB tx / saga / CRDT (no domain meaning)"]
+    ELI["Instance Event Log — SSOT of what HAPPENED here (domain actions, not spec edits)"]
+    VIS["Visible state — replay of the instance log (derived)"]
+  end
+
+  PROJ -->|"actions append"| ELI
+  ELI -->|"replay"| VIS
+  EX ==>|"conformance: output vs the contract, never the mechanism"| CON
