@@ -24,7 +24,7 @@ Named for Grace Hopper, who first argued that business logic should be readable 
 
 ## Four reasons Grace Commons is different
 
-Architects draw plans. Composers write scores. Car designers build CAD models (three-dimensional computer designs). Lawyers write statutes. Software has a Git repo and hopes the README is current.
+Architects draw plans. Composers write scores. Car designers build *[CAD] :three-dimensional computer designs models. Lawyers write statutes. Software has a Git repo and hopes the README is current.
 
 Software is the only engineering discipline operating without a canonical-intent layer — a single, authoritative description of what the software is supposed to do. We're closing the gap.
 
