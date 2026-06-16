@@ -48,6 +48,20 @@ Everyone now declares the spec a source of truth. The hard word is *truth* — a
 
 ---
 
+## The business face: kill the ransom, not the service
+
+The earned-SSOT argument has a one-sentence business translation, and it is the actual goal: **kill SaaS ransom — not cloud, not services.** Lock-in works because the vendor owns your logic's *meaning* — your business rules live inside their system, so leaving means rewriting, and the price climbs because they know it. Grace Commons inverts ownership: **you own the meaning (the canonical spec / SSOT); the service is a realization *below the contract*, conformance-checked and swappable.** Rent the mechanism, own the meaning, swap the mechanism without losing the meaning. The Beacon Mongo render is that swap *demonstrated* — same spec, engine swapped, every invariant survived — not promised.
+
+This is downstream of the earned-SSOT differentiator, not a separate claim: you can promise "swap your realization without losing your logic" *only* because the spec is verifiable and conformance-bound. SDD / Intent-Driven Development can't offer anti-lock-in — their "spec" isn't checkable, so a faithful swap can't be proven. The thing that makes the architecture different is the thing that kills the ransom.
+
+The client's choice, concretely (the Saga / Temporal case): take the spec and build the durable execution in-house, *or* tie into Temporal — and if Temporal's pricing turns hostile, swap the realization, conformance guaranteeing faithfulness. The service becomes a utility, not a captor. Not anti-Temporal; anti-*being-held-by*-Temporal.
+
+**The consequence, and the goal:** with lock-in gone, a vendor keeps your business by being *good*, not by holding your logic. **Future SaaS has to be good or die.** Stance, for the record — not anti-cloud, not anti-service: anti-ransom.
+
+*Pitch line:* "We don't kill SaaS by avoiding services — we kill the ransom. You own the spec; the service is a swappable realization you can prove conformant. A vendor keeps your business by being good, not by holding your logic."
+
+---
+
 ## Lineage sources
 
 - Behavior-driven development (the precursor, ~2006): Dan North, "Introducing BDD"; Gherkin / Cucumber (Aslak Hellesøy)
