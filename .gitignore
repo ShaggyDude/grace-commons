@@ -9,6 +9,10 @@ grants/
 # TLC model-checker on-disk metadata (created on every CLI run; not a spec artifact).
 compositions/states/
 
+# TLC-adapter output: derived camelCase copies of kebab-case .tla models for standard
+# TLC (tools/harness/tla-adapter.mjs). Derived on demand, never committed.
+build-tlc/
+
 # Demos — committed source, but exclude build artifacts and runtime data.
 demos/*/node_modules/
 demos/*/.deno/

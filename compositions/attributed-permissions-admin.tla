@@ -1,4 +1,4 @@
----- MODULE attributedPermissionsAdmin ----
+---- MODULE attributed-permissions-admin ----
 \* Grace Commons — Attributed Permissions Admin composition.
 \* Spec-level formal sibling of compositions/attributed-permissions-admin.md
 \* and compositions/attributed-permissions-admin.als.

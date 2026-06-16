@@ -9,6 +9,14 @@ Accidental findings during the build. Raw, dated, unpolished. Grant proposals an
 
 ---
 
+### 2026-06-14 — The camelCase-for-TLC naming split is gone; the adapter derives the name
+
+Supersedes the 2026-05-23 rename. That one renamed `.tla` files to lower-camelCase because standard TLA+ (SANY) requires the module name to match the filename and rejects hyphens — at the time the only way to make the models runnable under standard TLC. The cost was a naming split: kebab `.md`/`.als`, camelCase `.tla`.
+
+[`tools/harness/tla-adapter.mjs`](./tools/harness/tla-adapter.mjs) removes the trade — it *derives* a TLC-valid camelCase copy from a canonical kebab-case `.tla` on demand (rewriting the `MODULE` line; the repo's WASM checker tolerates hyphens, so the kebab file runs in-harness as-is). The three remaining camelCase models — Attributed Permissions Admin, External Onboarding, Privileged Access Provisioning — were renamed back to kebab, so every model filename now matches its `.md`/`.als` siblings while standard TLC stays reachable through the adapter (output in git-ignored `build-tlc/`). Verified faithful: all three hold at identical state counts (397 / 172 / 1682). The TLC name is now a derived artifact, not a hand-maintained variant — derive-don't-lag, applied to filenames.
+
+---
+
 ### 2026-06-14 — Separation-of-duty is named everywhere but enforced nowhere
 
 Witness-checking a proposed "Mutual Exclusion / Separation-of-Duty" invariant template (from the Grok strange-pattern forecast, [`working-ideas/no-global-services.md`](./working-ideas/no-global-services.md) §Strange-pattern forecast) turned up an absence: the library enforces separation-of-duty — *the actor who submits an object cannot be the actor who approves it* — **nowhere** as a standing invariant. The three places a skeptic would point to are three *different* shapes, none of them SoD: Approval Step Inv 4/5 is *authorization-exclusivity* (only the actor bound to `approver_ref` / `submitter_ref` may act — a role→actor binding that says nothing about the two being distinct); Multi-Party Approval's pairwise-distinct approvers is an `invalid-request` *validation precondition* on `initiate_chain`, not a standing invariant, and constrains distinctness *within the approver set*, not submitter-vs-approver; Assignment's "at most one Active per task" is *cardinality*. **Implication:** a builder of four-eyes / maker-checker approval must add SoD explicitly — it is not inherited from Approval Step or Multi-Party Approval. The decision this raises (enforce via a disjointness template, a composition, or leave it to callers) graduates to [`open-questions.md`](./open-questions.md) only when a pattern actually forces it; until then this is just the found fact. (By `spec-format.md`'s structural-relation promotion bar — *a relation-wide truth-condition that recurs and owns no state* — the apparent "mutual exclusion" template disaggregates: *cardinality / at-most-one* already has a clean standing witness in Assignment and is the stronger near-term fifth-template candidate, while *disjointness / SoD* is shape-valid but witness-thin.)
@@ -124,7 +132,7 @@ All four `.tla` files in `compositions/` had the same mismatch — kebab-case fi
 
 ### Resolution
 
-Rename the four `.tla` files to lower-camelCase to match their MODULE declarations: `login.tla`, `externalOnboarding.tla`, `attributedPermissionsAdmin.tla`, `privilegedAccessProvisioning.tla`. Paired `.cfg` files follow the same names. Every other file type — `.md`, `.als`, atom names, directory names — stays kebab-case. The exception is scoped narrowly to the file type whose parser refuses to negotiate.
+Rename the four `.tla` files to lower-camelCase to match their MODULE declarations: `login.tla`, `external-onboarding.tla`, `attributed-permissions-admin.tla`, `privileged-access-provisioning.tla`. Paired `.cfg` files follow the same names. Every other file type — `.md`, `.als`, atom names, directory names — stays kebab-case. The exception is scoped narrowly to the file type whose parser refuses to negotiate.
 
 ### Future work — adapter
 

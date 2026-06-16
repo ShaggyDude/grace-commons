@@ -1,6 +1,6 @@
 """
 privileged_access_provisioning_check.py
-Bounded model checker for privilegedAccessProvisioning.tla — runs without TLC.
+Bounded model checker for privileged-access-provisioning.tla — runs without TLC.
 BFS over all reachable states within scope. Checks all safety invariants.
 
 Scope: RequestIDs={"r1","r2"}, ApproverIDs={"a1","a2","a3"},

@@ -100,11 +100,11 @@ Tally (original aggressive bar): ~4 Alloy/Sonnet, ~21 TLA+/Opus. **Final 2026-06
 
 **Harness chosen — `tools/harness/` (2026-06-03).** One reproducible dual harness, provisioned npm-only (no firewalled downloads): TLA+ via the `tla-checker` WASM checker (extends the original `grants/tla-poc/run.mjs` approach), Alloy via the `org.alloytools.alloy.dist` jar running headless under an npm-provisioned JRE 17 (`javajre-linux-64`; the JRE lives on the native `/tmp` FS because unpacking it into the mounted repo drops `libjli.so`). `node check.mjs <model> [--buggy]` enforces correct-holds / buggy-rejected; `node audit.mjs` runs every model. Each backlog model ships with a buggy twin as the vacuity guard. See `tools/harness/README.md`.
 
-**Harness audit findings (2026-06-03).** All nine pre-existing formal models were run through the new harness. Six were clean (`session-gated-authorization.als`, `attributed-permissions-admin.als`, `login.tla`, `attributedPermissionsAdmin.tla`, `MultiPartyApproval.tla` + buggy twin). Three findings, all in patterns marked `grounded`, all outside the formal-model backlog — logged here for routing:
+**Harness audit findings (2026-06-03).** All nine pre-existing formal models were run through the new harness. Six were clean (`session-gated-authorization.als`, `attributed-permissions-admin.als`, `login.tla`, `attributed-permissions-admin.tla`, `MultiPartyApproval.tla` + buggy twin). Three findings, all in patterns marked `grounded`, all outside the formal-model backlog — logged here for routing:
 
 - **`capability.als` — never-typechecked assertion (fixed).** Line 193 read `r.status = Revoked implies no (r.status = Expired)` — `no` applied to a boolean. The file never typechecked under the CLI, so assertion `A_TerminalModesDistinguishable` was *never actually checked* despite Capability shipping `grounded on Final Critique 4`. Corrected to `r.status != Expired` (case-2 model mis-encoding; English untouched). With it fixed, all 22 `check` assertions now run and hold — but the run surfaced a *second* finding: **4 vacuous `run` commands** (`ShowExhaustionTransition`, `ShowMultiUsePartialRedeem`, `ShowRevokeTransition`, `ShowExpireTransition`) — transition examples with no instance in scope. Needs case-1-vs-2 diagnosis; not hand-patched.
-- **`privilegedAccessProvisioning.tla` — not verifiable under the chosen checker.** Its `.cfg` uses `ACTION_CONSTRAINT`, which the WASM checker does not support; the model returns `NoInitialStates` and is effectively unverified by this harness. Resolution is either the official `tla2tools.jar` (a firewalled download, unavailable in-sandbox) or a model rewrite expressing the constraint as an invariant.
-- **`externalOnboarding.tla` — low state count.** Passes but explores only 44 states; worth confirming the bounds actually exercise the interleavings the English defends.
+- **`privileged-access-provisioning.tla` — not verifiable under the chosen checker.** Its `.cfg` uses `ACTION_CONSTRAINT`, which the WASM checker does not support; the model returns `NoInitialStates` and is effectively unverified by this harness. Resolution is either the official `tla2tools.jar` (a firewalled download, unavailable in-sandbox) or a model rewrite expressing the constraint as an invariant.
+- **`external-onboarding.tla` — low state count.** Passes but explores only 44 states; worth confirming the bounds actually exercise the interleavings the English defends.
 
 **Atoms grounded** (at `grounded` or `grounded (English) — formal layer pending`; see sweep note above)**:**
 
@@ -374,10 +374,10 @@ Per `pressure-testing.md §Formal models`, whether a formal model is a prerequis
 | Pattern | Type | Alloy | TLA+ | Files |
 |---|---|---|---|---|
 | Capability | Atom | ✓ | — | `atoms/capability.als` + `capability_check.py` |
-| Attributed Permissions Admin | Composition | ✓ | ✓ | `compositions/attributed-permissions-admin.als`, `attributedPermissionsAdmin.tla` + `.cfg` |
-| Privileged Access Provisioning | Composition | — | ✓ | `compositions/privilegedAccessProvisioning.tla` + `.cfg` + `privileged_access_provisioning_check.py` |
+| Attributed Permissions Admin | Composition | ✓ | ✓ | `compositions/attributed-permissions-admin.als`, `attributed-permissions-admin.tla` + `.cfg` |
+| Privileged Access Provisioning | Composition | — | ✓ | `compositions/privileged-access-provisioning.tla` + `.cfg` + `privileged_access_provisioning_check.py` |
 | Login | Composition | — | ✓ | `compositions/login.tla` + `.cfg` |
-| External Onboarding | Composition | — | ✓ | `compositions/externalOnboarding.tla` + `.cfg` |
+| External Onboarding | Composition | — | ✓ | `compositions/external-onboarding.tla` + `.cfg` |
 | Session-Gated Authorization | Composition | ✓ | — | `compositions/session-gated-authorization.als` |
 
 ### Deferred — recorded in Lineage notes

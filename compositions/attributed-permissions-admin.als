@@ -50,7 +50,7 @@ module attributed_permissions_admin
  *
  * If a `check` comes back clean: no counterexample within scope.
  * That's strong evidence, not a proof. (For proofs: Alloy* or
- * TLA+ — see the TLA+ sibling, attributedPermissionsAdmin.tla.)
+ * TLA+ — see the TLA+ sibling, attributed-permissions-admin.tla.)
  * If a `check` finds a counterexample: a real trace violates the
  * claim. Either the claim is wrong or a constraint is missing.
  *

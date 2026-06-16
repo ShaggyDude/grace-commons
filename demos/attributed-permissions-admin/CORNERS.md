@@ -143,7 +143,7 @@ problems follow:
 
 1. **The application-layer check is non-atomic.** The SELECT runs before
    `tx()`, so two concurrent actors can both pass it and race. The TLA+
-   model in `compositions/attributedPermissionsAdmin.tla` does not
+   model in `compositions/attributed-permissions-admin.tla` does not
    model the SQL UNIQUE INDEX; in that model two concurrent
    `IssueGrant` actions produce two active grants for the same pair —
    which the spec allows, so no invariant is violated. With the UNIQUE

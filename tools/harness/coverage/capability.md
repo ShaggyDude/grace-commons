@@ -33,7 +33,7 @@ The rescan surfaced a **model-present bar violation** before any council pass ra
 | Emergent — zero counter ⇒ Redeemed | yes | **covered** | `A_ZeroCounterMeansRedeemed` + `fact ZeroCounterImpliesRedeemed`; twin breaks it. |
 | Emergent — Revoked ⇒ remaining > 0 | yes | **covered** | `A_RevokedHasPositiveRemaining` on the revoke transition. |
 
-Out-of-scope residual, named: the **concurrent-redeem interleaving** (Invariant 4's two-callers-at-`remaining = 1` race) is a TLC-class question a static Alloy model cannot ask. It is exercised operationally where it is load-bearing at the composition layer — `capability-backed-sharing.tla` (C15) models the redemption-decrement inside its binding-bijection transaction, and `privilegedAccessProvisioning.tla` exercises redeem under interleaving. Not a GAP: deliberate tool-split, reason recorded.
+Out-of-scope residual, named: the **concurrent-redeem interleaving** (Invariant 4's two-callers-at-`remaining = 1` race) is a TLC-class question a static Alloy model cannot ask. It is exercised operationally where it is load-bearing at the composition layer — `capability-backed-sharing.tla` (C15) models the redemption-decrement inside its binding-bijection transaction, and `privileged-access-provisioning.tla` exercises redeem under interleaving. Not a GAP: deliberate tool-split, reason recorded.
 
 ## Step 3 — bound saturation (scope bump)
 
