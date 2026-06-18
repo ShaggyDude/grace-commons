@@ -15,7 +15,7 @@ toc: true
 </details>
 
 
-> A productivity primitive: a binding of a unit of work to the actor responsible for completing it. Each assignment has an opaque immutable id; the task reference and assignee reference are immutable properties set at assignment time. An assignment is Active until recalled or transferred. At most one assignment is Active per task at any time.
+> A productivity primitive: a binding of a unit of work to the actor responsible for completing it. Each assignment has an opaque immutable id host-allocated at the I/O seam (injected into the transition, not generated inside it); the task reference and assignee reference are immutable properties set at assignment time. An assignment is Active until recalled or transferred. At most one assignment is Active per task at any time.
 
 ---
 
@@ -39,7 +39,7 @@ Assignment records who is responsible for a piece of work and the full history o
 
 ### Identity model
 
-Every assignment known to the system has an **`assignment_id`** — an opaque, immutable, system-generated identifier produced by `assign`. The id is the assignment's identity; the task reference and assignee reference are immutable *properties* of the assignment, not its identity.
+Every assignment known to the system has an **`assignment_id`** — an opaque, immutable identifier host-allocated at the I/O seam (injected into the transition, not generated inside it). The id is the assignment's identity; the task reference and assignee reference are immutable *properties* of the assignment, not its identity.
 
 Two assignments for the same task have different ids — a reassignment creates a new record with its own id, its own `assigned_at`, and its own lifecycle. Ids are not reused after an assignment reaches a terminal state.
 
@@ -53,7 +53,7 @@ The opaque-id model is load-bearing. Identifying an assignment by `task_ref` wou
   - `assign(task_ref, assignee_ref) → assignment_id | rejected(invalid-request | already-assigned | storage-failure)`
   - `recall(assignment_id) → ok | rejected(not-known | not-active | storage-failure)`
   - `reassign(assignment_id, new_assignee_ref) → new_assignment_id | rejected(not-known | not-active | invalid-request | storage-failure)`
-- An implicit clock providing wall-time timestamps.
+- A clock providing wall-time timestamps and an id source for `assignment_id` allocation, both injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock and allocates the `assignment_id` at the seam before the transition runs; the pure transition receives `now` and `assignment_id` as inputs and reads no clock and mints no id internally. Neither is supplied by the business caller — which keeps the transition deterministic.
 
 ### Outputs
 
@@ -63,6 +63,9 @@ The opaque-id model is load-bearing. Identifying an assignment by `task_ref` wou
 - `assign` returns the new `assignment_id` on success, or a rejection naming the failed precondition.
 - `recall` returns `ok` on success, or a rejection.
 - `reassign` returns the new `assignment_id` on success, or a rejection.
+- Named read queries:
+  - `active_for(task_ref) → assignment | none` — returns the at-most-one Active assignment for the given `task_ref`, or `none` if the task is currently unassigned.
+  - `history_for(task_ref) → [assignment]` — returns all assignments (Active, Recalled, Transferred) for the given `task_ref`, ordered by `assigned_at`. The complete responsibility history for the task.
 
 ### State
 
@@ -76,7 +79,7 @@ Recalled and Transferred are distinct terminal states because the organizational
 
 Each assignment carries:
 
-- **`assignment_id`** — opaque, immutable, system-generated. Set on `assign` or the `assign` inside `reassign`. Never changes.
+- **`assignment_id`** — opaque, immutable, host-allocated at the I/O seam (injected into the transition, not generated inside it). Set on `assign` or the `assign` inside `reassign`. Never changes.
 - **`task_ref`** — opaque reference to the unit of work. Set on creation. Never changes.
 - **`assignee_ref`** — opaque reference to the responsible actor. Set on creation. Never changes.
 - **`assigned_at`** — wall-time (clock time as a human would read it, not an internal counter) when the assignment was created. Set on creation. Never changes.
@@ -86,9 +89,9 @@ Each assignment carries:
 
 Transitions:
 
-- `assign(task_ref, assignee_ref)` → a new assignment is created in Active with a fresh `assignment_id`, the supplied `task_ref` and `assignee_ref`, and `assigned_at = now`. Returns `assignment_id`.
-- `recall(assignment_id)` → the assignment at `assignment_id` moves Active → Recalled; `recalled_at = now`. Returns `ok`. The task is now unassigned.
-- `reassign(assignment_id, new_assignee_ref)` → atomically: the assignment at `assignment_id` moves Active → Transferred (`transferred_at = now`); a new assignment is created in Active for the same `task_ref` with `new_assignee_ref` and `assigned_at = now`. Returns the new `assignment_id`.
+- `assign(task_ref, assignee_ref)` → a new assignment is created in Active with a fresh `assignment_id`, the supplied `task_ref` and `assignee_ref`, and `assigned_at` stamped from the injected `now`. Returns `assignment_id`.
+- `recall(assignment_id)` → the assignment at `assignment_id` moves Active → Recalled; `recalled_at` stamped from the injected `now`. Returns `ok`. The task is now unassigned.
+- `reassign(assignment_id, new_assignee_ref)` → atomically: the assignment at `assignment_id` moves Active → Transferred (`transferred_at` stamped from the injected `now`); a new assignment is created in Active for the same `task_ref` with `new_assignee_ref` and `assigned_at` stamped from the injected `now`. Returns the new `assignment_id`.
 
 ### Flow
 
@@ -116,6 +119,7 @@ Observed behavior, derived from how work-distribution systems are actually used:
 - The atom does not model completion. When the task completes (in Personal Todo or the host task system), the assignment record is not automatically resolved. The composing system decides: leave the Active assignment as a record of who completed the task, or call `recall` to close the assignment record. Both are valid operational patterns; the atom supports either.
 - An assignee may be assigned multiple tasks simultaneously. The at-most-one invariant is per task, not per assignee. A single actor holding Active assignments on ten tasks is unremarkable; each task's assignment is independent.
 - The full assignment history for any task is recoverable from the assignment store: all assignments (Active, Recalled, Transferred) where `assignment.task_ref = task_ref`, ordered by `assigned_at`. The chain of responsibility is complete.
+- **Time and id are injected at the seam, not generated inside the transition.** Per the Logic Confinement Principle (`execution-contract.md`), the host reads the clock and allocates the `assignment_id` at the deployment seam before the transition runs; `assigned_at`, `recalled_at`, and `transferred_at` are stamped from the injected `now`, and the core transition reads no wall clock and mints no id internally. This is the determinism the execution contract requires, and it leaves the caller signatures (`assign`, `recall`, `reassign`) unchanged.
 
 ### Feedback
 
@@ -129,6 +133,10 @@ Each rejected action produces an observable refusal naming the failed preconditi
 
 The Active assignment set is queryable. The full assignment store (Active, Recalled, Transferred) is queryable for audit. Per-assignment fields are observable to operators and — where appropriate — to the assignee and assigner.
 
+Named read queries:
+- `active_for(task_ref)` — returns the at-most-one Active assignment for `task_ref`, or `none`. The result is consistent with Invariant 1: at most one assignment in Active state per task.
+- `history_for(task_ref)` — returns all assignments for `task_ref` ordered by `assigned_at`. The result is the complete responsibility chain required by Invariant 9.
+
 ### Invariants
 
 The following hold across all valid sequences of actions and constitute the verification surface of the atom:
@@ -140,7 +148,7 @@ The following hold across all valid sequences of actions and constitute the veri
 - **Invariant 5 — Id stability.** An assignment's `assignment_id` is set on creation and never changes.
 - **Invariant 6 — No id reuse.** No two assignments share an `assignment_id` across the lifetime of the system.
 - **Invariant 7 — Reassign atomicity.** After a successful `reassign`, exactly one assignment is Active for the affected `task_ref` — the new one. The old assignment is in Transferred. There is no observable state in which both are Active, or in which neither is Active.
-- **Invariant 8 — Timestamp ordering.** For any assignment in Recalled state, `assigned_at ≤ recalled_at`. For any assignment in Transferred state, `assigned_at ≤ transferred_at`. Both are best-effort under non-monotonic clocks.
+- **Invariant 8 — Timestamp ordering.** For any assignment in Recalled state, `assigned_at ≤ recalled_at`. For any assignment in Transferred state, `assigned_at ≤ transferred_at`. Both are best-effort under non-monotonic clocks; each timestamp is stamped once from the injected `now`, never re-derived from the current clock.
 - **Invariant 9 — Complete responsibility history.** For any `task_ref`, the set of all assignments where `assignment.task_ref = task_ref` records the complete chain of responsibility: every actor who held the assignment, when they received it, and when and how it ended.
 - **Invariant 10 — Assignment store durability.** Once recorded, an assignment is never deleted from the store. `recall` transitions an assignment from Active to Recalled; `reassign` transitions an assignment from Active to Transferred and creates a new Active assignment. Neither operation removes any record. The total assignment count is monotonically non-decreasing.
 
@@ -176,8 +184,9 @@ A single sequence exercising all rejection reasons:
 - `reassign(a1, dev_c)` → rejected `not-active` (a1 is terminal).
 - `assign(task_t1, dev_b) → a2` — accepted; `task_t1` is now unassigned so a fresh assignment is allowed.
 - `reassign(a2, "")` → rejected `invalid-request` (empty assignee).
+- `assign(task_t2, dev_c)` → rejected `storage-failure` (store write fails; no assignment created; `task_t2` remains unassigned).
 
-All four rejection reasons (`invalid-request`, `already-assigned`, `not-known`, `not-active`) exercised in one thread.
+All five rejection reasons (`invalid-request`, `already-assigned`, `not-known`, `not-active`, `storage-failure`) exercised in one thread.
 
 ---
 
@@ -195,8 +204,8 @@ What this atom does not cover:
 - **Completion handling.** When a task is completed (in Personal Todo or the host system), the assignment is not automatically recalled. The composing system decides whether to recall the assignment on completion. Both patterns — leaving it Active as a completion-attribution record, or recalling it to close the assignment lifecycle — are valid.
 - **Concurrent assign races.** Two simultaneous `assign` calls for the same `task_ref` resolve serially under the host environment's serialization guarantees. The first wins; the second receives `already-assigned`.
 - **Reassign atomicity and crash semantics.** `reassign` is specified as atomic. A crash between marking the old assignment Transferred and creating the new Active one would leave the task unassigned and Invariant 1 vacuously satisfied but Invariant 7 violated. The implementor is responsible for the transactional boundary that makes atomicity hold.
-- **Reassign storage failure.** A store-write failure during `reassign` is a two-write scenario: the old assignment must be marked Transferred and a new Active assignment must be created. If either write fails, the atom returns `rejected(storage-failure)` and both writes must be rolled back — the old assignment remains Active and no new assignment is created. A partial state where the old assignment is Transferred but no new Active assignment exists violates Invariant 7 (the task is unassigned after a `reassign` call that the caller may believe succeeded). Implementations that cannot provide full transactional rollback must detect and repair this partial state on recovery before accepting new requests.
-- **Clock semantics.** `assigned_at`, `recalled_at`, and `transferred_at` are wall-time from the implicit clock. Skew, monotonicity, and timezone handling are deployment concerns. Invariant 8 is best-effort under non-monotonic clocks.
+- **Reassign storage failure.** A store-write failure during `reassign` is a two-write scenario: the old assignment must be marked Transferred and a new Active assignment must be created. If either write fails, the atom returns `rejected(storage-failure)` and both writes must be rolled back — the old assignment remains Active and no new assignment is created. A partial state where the old assignment is Transferred but no new Active assignment exists violates Invariant 7 (the task is unassigned after a `reassign` call that the caller may believe succeeded). Implementations that cannot provide full transactional rollback must detect and repair this partial state on recovery before accepting new requests. The two-write transactional obligation is the instance of the multi-write atomicity rule described in [`execution-contract.md`](../execution-contract.md) §Multi-write atomicity.
+- **Clock semantics.** `assigned_at`, `recalled_at`, and `transferred_at` are wall-time stamped from the injected `now` (see Inputs and Behavior). Skew, monotonicity, and timezone handling are deployment concerns. Invariant 8 is best-effort under non-monotonic clocks.
 
 Where the atom breaks down: when responsibility is genuinely shared simultaneously (requiring group assignment); when assignment must be time-bounded without external revocation (requiring temporal grant); when the assigner must be authorized before assigning (requiring permissions composition); when the assignee must consent (requiring workflow composition).
 
@@ -238,7 +247,7 @@ It inherits from:
 
 ## Status
 
-`grounded — 2026-05-20` (formal layer landed 2026-06-03 — TLA+ model `assignment.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — all required structural elements resolved; identity model explicit; assign, recall, and reassign preconditions explicit; rejection paths exercised in examples across four domains; deferred concerns (accept/decline, expiry, assigner authorization, assigner attribution, capacity constraints, group assignment, task lifecycle, completion handling, concurrent races, reassign atomicity, clock semantics) named as out-of-scope with composing patterns where applicable. Second entry in `productivity`. Direct prerequisite for the Shared Todo composition.
+`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 3 foundational finding(s): clock + `assignment_id` host-injected at the seam, `storage-failure` rejection example added, named read queries `active_for`/`history_for` declared; caller signatures unchanged; see Lineage. Formal-layer vote stands YES (TLA+ model present); the time/id seam is out of model scope, so F1 does not reopen it. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; assign, recall, and reassign preconditions explicit; rejection paths exercised in examples across four domains; deferred concerns (accept/decline, expiry, assigner authorization, assigner attribution, capacity constraints, group assignment, task lifecycle, completion handling, concurrent races, reassign atomicity, clock semantics) named as out-of-scope with composing patterns where applicable. Second entry in `productivity`. Direct prerequisite for the Shared Todo composition.
 
 ---
 
@@ -281,3 +290,5 @@ The strongest temptation was absorbing accept/decline — many real systems trea
 **Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 7 (reassign atomicity — exactly one Active per task, no observable both/neither state) and Invariant 1 (at-most-one-Active) are concurrency/exclusivity claims. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
 
 **Formal model — 2026-06-03: TLA+ authored and verified; pattern promoted to `grounded`.** Derived model [`assignment.tla`](./assignment.tla) + config [`assignment.cfg`](./assignment.cfg), checked by `tla-checker` via `tools/harness/check.mjs`. *What it checks:* a single task with up to `MaxA = 3` assignment slots; the load-bearing **Invariant 1** (at most one Active per task) under every interleaving of `assign`, `recall`, and atomic `reassign`. The correct `reassign` moves old→Transferred and new→Active in one step. Exhaustive: 47 states, holds. *Buggy twin* [`assignment-buggy.tla`](./assignment-buggy.tla) splits `reassign` so the new Active is created before the old is retired — the two-Active window **Invariant 7** (reassign atomicity) forbids; rejected at 6 states. The twin mechanizes why reassign must be atomic: a non-atomic reassign reachably violates at-most-one-Active. *Out of model scope:* multiple tasks (Inv 1 is per-task), id immutability/no-reuse/timestamp ordering (Inv 2,5,6,8 — structural/clock). *Conflict-protocol outcome:* none — the model **corroborates** the English (atomic reassign holds Inv 1 through the handoff); canonical English unchanged.
+
+**AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This atom grounded 2026-05-20 under the early process — foundation plus refinement, with no fresh-reader AI adversarial round — and carried the legacy grandfathered token. This round is that missing AI-conducted adversarial round (fresh-reader Opus, Happy-Torvalds-X2); it is the atom's Final Critique 4 (Rounds 1–3 the foundation/refinement baseline, per pressure-testing.md §Round structure). Three foundational findings closed: F1 Logic Confinement (clock and `assignment_id` now host-injected at the I/O seam, not generated inside the transitions); F2 the `storage-failure` rejection reason is now exercised in the example thread; F3 the `active_for`/`history_for` read queries the compositions call are now declared in Outputs. Refining: Invariant 8 given clock-safe wording; a cross-reference to execution-contract.md §Multi-write atomicity added for reassign. Caller signatures unchanged and the invariant set held at 10, so the fixes are additive with no constituent-change cascade. Formal-layer vote stands YES (TLA+ model present); the time/id seam is out of model scope, so F1 does not reopen it. Confirming fresh-reader Opus clearance gate (2026-06-18): CLEAR, 0 foundational, no new surface. Compositions affected — confirming check only, NOT a re-pass: Shared Todo, Multi-Party Approval, Stateful Workflow Execution. Grounds at Final Critique 4.

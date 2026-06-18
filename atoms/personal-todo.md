@@ -15,7 +15,7 @@ toc: true
 </details>
 
 
-> A productivity primitive: single-user task tracking with pending / done / removed states, edit-while-pending, and timestamps. Each unit has an opaque immutable id; description is a mutable property under explicit normalization rules.
+> A productivity primitive: single-user task tracking with pending / done / removed states, edit-while-pending, and timestamps. Each unit has an opaque immutable id host-allocated at the I/O seam; description is a mutable property under explicit normalization rules.
 
 ---
 
@@ -35,7 +35,7 @@ Personal Todo is a single-person to-do list: one user records tasks, edits them 
 
 ### Identity model
 
-Every unit known to the system has an **`id`** — an opaque, immutable, system-generated identifier produced by `add`. The id is the unit's identity; description is a mutable property of the unit, not its identity.
+Every unit known to the system has an **`id`** — an opaque, immutable identifier host-allocated at the I/O seam (injected into the transition, not generated inside it) on `add`. The id is the unit's identity; description is a mutable property of the unit, not its identity.
 
 - Two units with the same description value have different ids.
 - An id is returned to the caller by `add` and used to reference the unit in `edit`, `complete`, and `delete`.
@@ -62,10 +62,10 @@ The user-facing display preserves the normalized form (post-trim, post-NFC) — 
 - A user-supplied description for each unit of work.
 - User-initiated actions:
   - `add(description) → id | rejected(invalid-description | duplicate-active | storage-failure)`
-  - `edit(id, newDescription) → ok | rejected(not-known | not-pending | not-editable | invalid-description | duplicate-active | storage-failure)`
+  - `edit(id, newDescription) → ok | rejected(not-known | not-editable | invalid-description | duplicate-active | storage-failure)`
   - `complete(id) → ok | rejected(not-known | not-pending | storage-failure)`
   - `delete(id) → ok | rejected(not-known | storage-failure)`
-- An implicit clock providing wall-time (clock time as a human would read it, not an internal counter) timestamps.
+- A clock providing wall-time (clock time as a human would read it, not an internal counter) timestamps, and an id source for `id` allocation — both injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock and allocates the `id` at the seam before the transition runs; the pure transition receives `now` and `id` as inputs and reads no clock and mints no id internally. Neither is supplied by the business caller — which keeps the transition deterministic.
 
 ### Outputs
 
@@ -85,7 +85,7 @@ A unit leaves the system entirely when deleted. Deletion is terminal within this
 
 Each unit carries:
 
-- **`id`** — opaque, immutable, system-generated. Set on `add`. Never changes.
+- **`id`** — opaque, immutable, host-allocated at the I/O seam (injected into the transition, not generated inside it). Set on `add`. Never changes.
 - **`description`** — normalized text. Set on `add`, mutable via `edit` while in Pending.
 - **`added_at`** — set on `add`, immutable.
 - **`last_edited_at`** — set on `edit`, absent if never edited.
@@ -93,14 +93,14 @@ Each unit carries:
 
 Transitions:
 
-- `add(description)` → unit enters Pending with a fresh `id`, normalized `description`, and `added_at = now`. Returns `id`.
-- `edit(id, newDescription)` → unit's `description` is replaced with the normalized `newDescription`; `last_edited_at = now`. State unchanged. Returns `ok`.
-- `complete(id)` → unit moves Pending → Done; `completed_at = now`. Returns `ok`.
+- `add(description)` → unit enters Pending with a fresh `id`, normalized `description`, and `added_at` stamped from the injected `now`. Returns `id`.
+- `edit(id, newDescription)` → unit's `description` is replaced with the normalized `newDescription`; `last_edited_at` stamped from the injected `now`. State unchanged. Returns `ok`.
+- `complete(id)` → unit moves Pending → Done; `completed_at` stamped from the injected `now`. Returns `ok`.
 - `delete(id)` → unit leaves the system; id is retired. Returns `ok`.
 
 ### Flow
 
-1. **Add.** The user records a new unit. The system normalizes the description, generates an id, places the unit in Pending with `added_at`, and returns the id. *(Start.)*
+1. **Add.** The user records a new unit. The host allocates an `id` and reads the clock at the seam; the transition normalizes the description, places the unit in Pending with the injected `id` and `added_at`, and returns the id. *(Start.)*
 2. **Edit (optional, while Pending).** The user revises the description. The system normalizes the new description, replaces the existing one, and updates `last_edited_at`. The unit remains Pending. May happen any number of times before completion or deletion.
 3. **Complete or abandon.** The user marks it done (Pending → Done with `completed_at`) or deletes it without completing (abandonment branch).
 4. **Delete.** The user removes the unit from the system. Id is retired. *(End.)*
@@ -110,7 +110,7 @@ Transitions:
 Each action carries an explicit precondition. Violations are rejected, not silently absorbed.
 
 - **At `add(description)`** — `description` after normalization must satisfy the description policy (non-empty, within length); otherwise rejected as `invalid-description`. The normalized description must not match the normalized description of any unit currently in Pending or Done; otherwise rejected as `duplicate-active`. If the store write fails, the atom returns `rejected(storage-failure)`; no unit is created.
-- **At `edit(id, newDescription)`** — `id` must reference a known unit; otherwise `not-known`. The unit must be in Pending; otherwise `not-editable` (Done) or `not-pending` (not in Pending for any other reason). `newDescription` after normalization must satisfy the description policy and the same active-set uniqueness as `add`, excluding the unit at `id` itself; otherwise `invalid-description` or `duplicate-active`. A normalized `newDescription` equal to the unit's current normalized description is accepted as a no-op (state unchanged, `last_edited_at` unchanged; no write occurs and `storage-failure` cannot result). For non-no-op edits, if the store write fails, the atom returns `rejected(storage-failure)`; the unit is unchanged.
+- **At `edit(id, newDescription)`** — `id` must reference a known unit; otherwise `not-known`. The unit must be in Pending; otherwise `not-editable` (the state model has exactly two live states — Pending and Done — so a non-Pending live unit is necessarily Done). `newDescription` after normalization must satisfy the description policy and the same active-set uniqueness as `add`, excluding the unit at `id` itself; otherwise `invalid-description` or `duplicate-active`. A normalized `newDescription` equal to the unit's current normalized description is accepted as a no-op (state unchanged, `last_edited_at` unchanged; no write occurs and `storage-failure` cannot result). For non-no-op edits, if the store write fails, the atom returns `rejected(storage-failure)`; the unit is unchanged.
 - **At `complete(id)`** — `id` must reference a known unit; otherwise `not-known`. The unit must be in Pending; otherwise `not-pending`. If the store write fails, the atom returns `rejected(storage-failure)`; the unit remains in Pending.
 - **At `delete(id)`** — `id` must reference a known unit in Pending or Done; otherwise `not-known`. If the store write fails, the atom returns `rejected(storage-failure)`; the unit is unchanged.
 
@@ -125,6 +125,7 @@ Observed behavior, derived from how single-user task systems are actually used:
 - The user expects timestamps to be visible and uses them to reason about staleness.
 - The user occasionally re-adds a unit with the same description as one previously deleted. Personal Todo on its own accepts this — there is no temporal memory of deleted units, and a new id is issued. Containing systems that need recency-based duplicate prevention compose this pattern with [Duplicate Prevention](./duplicate-prevention.md); see Composition notes.
 - The user pastes descriptions from external sources. Different sources produce different Unicode normal forms (NFC vs. NFD). The pattern's NFC normalization ensures that *"café"* typed and *"café"* pasted from a different source compare equal under the active-set uniqueness check.
+- **Time and `id` are injected at the seam, not generated inside the transition.** Per the Logic Confinement Principle (`execution-contract.md`), the host reads the clock and allocates the `id` at the deployment seam before the transition runs; `added_at`, `last_edited_at`, and `completed_at` are stamped from the injected `now`, and the core transition reads no wall clock and mints no id internally. The caller signatures (`add`, `edit`, `complete`, `delete`) are unchanged — time and id are host-injected, not caller-supplied — so the fix is additive with no caller-change cascade.
 
 ### Feedback
 
@@ -189,7 +190,7 @@ The same user, exercising the rejection surface in one short sequence:
 - Tries to complete an unknown id — rejected as `not-known`.
 - Deletes `r1`. Now *"buy milk"* is no longer in the active set; a fresh `add("buy milk")` would succeed with a new id (id `r2`).
 
-This sequence covers all five rejection reasons (`invalid-description`, `duplicate-active`, `not-pending`, `not-editable`, `not-known`) in a single thread of user action.
+This sequence covers four of the rejection reasons (`invalid-description`, `duplicate-active`, `not-editable`, `not-known`) in a single thread of user action. The fifth reason, `not-pending`, is exercised separately — for example, attempting to `complete` an id that is already Done.
 
 ---
 
@@ -207,7 +208,7 @@ What this pattern does not cover:
 - **Description versioning / edit history.** Only `last_edited_at` is retained; prior descriptions are not. Versioning belongs to a separate History pattern.
 - **Concurrent action sequences.** The pattern assumes a linear sequence of actions from a single actor. Multiple concurrent clients (two browser tabs, mobile + desktop) producing simultaneous actions on the same unit fall outside this concept; coordination belongs to a Concurrency-Resolution pattern that composes.
 - **Atomicity and crash semantics.** State transitions are specified as atomic. A crash mid-transition that leaves a unit in neither Pending nor Done violates membership exclusivity; the implementor is responsible for the transactional boundary that makes it hold. The spec does not define recovery semantics.
-- **Clock semantics.** Timestamps are wall-time from the implicit clock. Clock skew, monotonicity, and timezone handling are deployment concerns the spec does not address. Timestamp monotonicity assumes a non-decreasing clock; if the underlying clock can move backward, the invariant is best-effort, not guaranteed.
+- **Clock semantics.** `added_at`, `last_edited_at`, and `completed_at` are wall-time stamped from the injected `now` (see Inputs and Behavior). Clock skew, NTP adjustments, monotonicity, and timezone handling are deployment concerns the spec does not address. Invariant 7 (timestamp monotonicity) is best-effort under non-monotonic clocks; a clock that moves backward between transitions can violate the inequalities. Trusted timestamping is a composing pattern that supplies a verifiable time-anchor if the timeline must be adversarially defensible.
 - **Case-insensitive matching, fuzzy matching, locale-aware comparison.** The description policy specifies NFC + trim + case-sensitive. Variants belong to wrapping patterns.
 
 Where the pattern breaks down: in any system with multiple actors, where "completion" is not a binary state, where description is not a sufficient property under uniqueness constraint, or where the host environment cannot supply the atomic state transitions membership exclusivity depends on. Each takes a different pattern.
@@ -245,7 +246,7 @@ A formal-methods version of a similar concept exists in [concept-catalog](https:
 
 ## Status
 
-`grounded — 2026-05-20` — all required structural elements resolved; identity model explicit; description policy explicit; rejection paths exercised in examples; deferred concerns (concurrency, atomicity, clock semantics) named as out-of-scope. The pattern is freestanding and composable. Extensions (recency guard, history, priority, dependencies, recurrence, reopening, concurrency resolution) are separate concepts, listed in Composition notes.
+`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 2 foundational finding(s): `id` and clock now host-injected at the I/O seam, and unreachable `not-pending` rejection removed from `edit`; caller signatures unchanged; see Lineage. Formal-layer vote stands NO (English-only, minimum-formalism). The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; description policy explicit; rejection paths exercised in examples; deferred concerns (concurrency, atomicity, clock semantics) named as out-of-scope. The pattern is freestanding and composable. Extensions (recency guard, history, priority, dependencies, recurrence, reopening, concurrency resolution) are separate concepts, listed in Composition notes.
 
 ---
 
@@ -284,3 +285,5 @@ The two passes together exercise the architecture as designed: GRID's (the nine-
 **Scheduled rescan: 2026-05-20 — clean.**
 
 **Formal-layer vote — 2026-06-03: NO.** Single-state structural invariants (membership exclusivity, id stability, active-set uniqueness) plus timestamp inequalities, fully exercised by records-alone checks; the methodology's own minimum-formalism reference. Grounds English-only (minimum-formalism). Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
+
+**AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This atom grounded 2026-05-20 under the early process — foundation plus refinement, with no fresh-reader AI adversarial round — and carried the legacy grandfathered token. This round is that missing AI-conducted adversarial round (fresh-reader Opus, Happy-Torvalds-X2); it is the atom's Final Critique 4 (Rounds 1–3 the foundation/refinement baseline, per pressure-testing.md §Round structure). Two foundational findings closed: F1 Logic Confinement (`id` and the clock now host-injected at the I/O seam, was 'implicit clock'/'system-generated'); F2 the unreachable `not-pending` rejection removed from `edit` (the two-live-state model makes a non-Pending live unit necessarily Done → `not-editable`); `complete`'s reachable `not-pending` is preserved. Caller signatures unchanged and the invariant set held at 8, so the fixes are additive with no constituent-change cascade. Formal-layer vote stands NO (English-only, minimum-formalism). Confirming fresh-reader Opus clearance gate (2026-06-18): CLEAR, 0 foundational, no new surface. Compositions affected — confirming check only, NOT a re-pass: Shared Todo, Undo History. Note: Shared Todo and Undo History propagated the same `not-pending` into their own `edit` taxonomy; that is flagged for their own re-pass and is non-breaking (an unreachable arm, not a lost outcome). Grounds at Final Critique 4.
