@@ -244,7 +244,7 @@ It inherits from:
 
 ## Status
 
-`grounded — 2026-05-20` — three foundation passes complete; Opus adversarial pass (26 findings, all resolved); architectural decisions applied (Event Log optional, fanout_id ephemeral correlation handle with Event Log as durable identity when composed, subscribers-unavailable treated as explicit error).
+`grounded on Final Critique 4 — 2026-05-20` — three foundation passes complete; Opus adversarial pass (26 findings, all resolved); architectural decisions applied (Event Log optional, fanout_id ephemeral correlation handle with Event Log as durable identity when composed, subscribers-unavailable treated as explicit error). Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Opus adversarial pass is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
 
 ---
 
