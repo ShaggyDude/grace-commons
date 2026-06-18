@@ -15,7 +15,7 @@ toc: true
 </details>
 
 
-> A compliance primitive: a verifiable binding of an action to the actor who authorized it. Each binding is an *attestation* with an opaque (system-generated, with no meaningful content) immutable id; the action reference, actor reference, proof, and timestamp are immutable properties, set at attest time. Verification is a read-only query, not a state transition. The contract the atom enforces is **non-repudiation** — a verified attestation binds the named actor to the named action and the actor cannot plausibly deny it.
+> A compliance primitive: a verifiable binding of an action to the actor who authorized it. Each binding is an *attestation* with an opaque, host-allocated immutable id (no meaningful content); the action reference, actor reference, proof, and timestamp are immutable properties, set at attest time. Verification is a read-only query, not a state transition. The contract the atom enforces is **non-repudiation** — a verified attestation binds the named actor to the named action and the actor cannot plausibly deny it.
 
 ---
 
@@ -39,7 +39,7 @@ Actor Identity answers one question: "who authorized this action, and can you pr
 
 ### Identity model
 
-Every attestation known to the system has an **`attestation_id`** — an opaque, immutable, system-generated identifier produced by `attest`. The id is the attestation's identity; the action reference, actor reference, proof, and timestamp are immutable *properties* of the attestation, not its identity.
+Every attestation known to the system has an **`attestation_id`** — an opaque, immutable identifier allocated by the host id source at the I/O seam on `attest` (per the Logic Confinement Principle in [`execution-contract.md`](../execution-contract.md), the id is injected into the transition, not generated inside it; see Inputs and Behavior). The id is the attestation's identity; the action reference, actor reference, proof, and timestamp are immutable *properties* of the attestation, not its identity.
 
 Two attestations for the same action by the same actor have different ids — re-attestations after credential rotation, retries after partial failures, and multi-action sequences are distinct attestations with their own records. Ids are not reused.
 
@@ -53,7 +53,7 @@ The opaque-id model matters here for the same reason it mattered in Provisional 
 - Actions:
   - `attest(action_ref, actor_ref, credential) → attestation_id | rejected(invalid-request | invalid-credential | storage-failure)`
   - `verify(attestation_id) → verified | failed-verification(proof-invalid | actor-unknown-in-registry | registry-unavailable) | not-known`
-- An implicit clock providing wall-time timestamps.
+- A clock providing wall-time timestamps, an id source for `attestation_id` allocation, and the cryptographic primitive (and any entropy) the proof computation requires — all injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock, allocates the `attestation_id`, and supplies the cryptographic material at the seam, *before* the transition runs; the pure transition receives them as inputs and reads no clock, mints no id, and generates no randomness internally. None is supplied by the business caller (the credential remains the only caller-supplied secret) — which keeps the transition deterministic.
 
 ### Outputs
 
@@ -68,7 +68,7 @@ A single stable state: **Attested**. There are no transitions out of Attested �
 
 Each attestation carries:
 
-- **`attestation_id`** — opaque, immutable, system-generated. Set on `attest`. Never changes.
+- **`attestation_id`** — opaque, immutable, host-allocated at the seam (see Inputs). Set on `attest`. Never changes.
 - **`action_ref`** — opaque reference to the action being attested. Set on `attest`. Never changes.
 - **`actor_ref`** — opaque reference to the actor doing the attesting. Set on `attest`. Never changes.
 - **`proof`** — the cryptographic or procedural artifact that binds `actor_ref` to `action_ref`. Set on `attest`. Never changes.
@@ -76,7 +76,7 @@ Each attestation carries:
 
 Transitions:
 
-- `attest(action_ref, actor_ref, credential)` → a new attestation is recorded in Attested with a fresh `attestation_id`, the supplied `action_ref` and `actor_ref`, the proof computed from the credential, and `attested_at = now`. Returns `attestation_id`.
+- `attest(action_ref, actor_ref, credential)` → a new attestation is recorded in Attested with the injected `attestation_id`, the supplied `action_ref` and `actor_ref`, the proof computed from the credential and the injected cryptographic material, and `attested_at` stamped from the injected clock (all read at the seam before the transition; see Inputs). Returns `attestation_id`.
 - *(no other transitions)*
 
 ### Flow
@@ -99,6 +99,7 @@ Observed behavior, derived from how regulated systems use attestations:
 - Verification needs no out-of-band lookup at verify time beyond the actor registry's public material. The attestation is self-contained relative to the registry; a verifier with the attestation and the registry's view of the actor can decide.
 - `attest` never modifies an existing attestation. It always creates a new one. Re-attesting the same action by the same actor produces a separate record with its own id — useful for credential-rotation scenarios where multiple proofs over the same action accumulate.
 - The credential is consumed by `attest` and never persisted by the atom. Credential management — storage, rotation, recovery, HSM (Hardware Security Module — a dedicated tamper-resistant device for storing keys and performing cryptographic operations) binding — is an entirely separate concern.
+- **Time, id, and cryptographic material are injected at the seam, not generated inside the transition.** Per the Logic Confinement Principle (`execution-contract.md`), the host reads the clock, allocates the `attestation_id`, and supplies the cryptographic primitive and entropy at the deployment seam before `attest`'s transition runs; `verify`'s cryptographic check likewise runs against injected primitive material. The core transition is a pure function of its caller inputs and these injected inputs — it reads no wall clock, mints no id, and improvises no crypto internally. This is the determinism the execution contract requires, and it leaves the caller signatures (`attest`, `verify`) unchanged.
 - `verify` results depend on the actor registry's current view of `actor_ref`. If the registry's public material for the actor changes (key rotation), previously-verified attestations may begin to fail verification under the new key, unless the registry maintains historical material. Whether the registry does so is the registry's concern, not the atom's.
 - The atom does not retroactively invalidate attestations made with a credential later determined to have been compromised. That reinterpretation belongs to a Compromise Disclosure composing pattern; see Edge cases.
 
@@ -163,6 +164,8 @@ The mechanic is identical across all five. What differs: the credential mechanis
 
 **`verify` — `not-known`:** A composing pattern references an `attestation_id` that was never written (a partial-failure scenario where `attest` returned `storage-failure` and the composing pattern cached the id before confirming success). `verify(attestation_a_unknown)` returns `not-known` — the id is not in the attestation store. This is structurally distinct from `failed-verification`: the id does not reference any attestation. The composing pattern must treat `not-known` as a missing record (requiring re-attestation) rather than a verification failure.
 
+**`attest` — `rejected(invalid-credential)`:** A supervisor approves a high-value wire using a credential that was rotated out earlier that day. `attest(wire_w55, supervisor_s12, rotated_credential)` → the credential fails to validate against the registry's current public material for `supervisor_s12`; the atom returns `rejected(invalid-credential)`. No attestation is recorded — `invalid-credential` is a guard rejection that fails before any store write (see Decision points); the composing workflow prompts re-attestation with the current credential.
+
 ### Regulated adversarial scenarios
 
 Three scenarios the atom must survive in regulated contexts:
@@ -184,7 +187,7 @@ What this atom does not cover:
 - **Multi-actor attestation.** Witness signatures, m-of-n approvals, co-signed contracts, dual-control workflows — each `attest` call records one actor's binding. Multi-actor schemes compose with a Witness / Co-signature pattern.
 - **Retroactive credential revocation.** As discussed above, attestations are immutable; reinterpretation under compromise belongs to Compromise Disclosure.
 - **Tamper-evidence on the attestation store.** The bare atom assumes the attestation store has not been rewritten by an adversary with write access. Cryptographic hash chains, Merkle trees, and timestamp-authority anchoring belong to a Tamper Evidence composing pattern. (Many credential mechanisms — qualified signatures, blockchain-anchored attestations — provide tamper-evidence as a side effect; the atom does not require it but composes naturally with it.)
-- **Time-of-attestation veracity.** `attested_at` is captured from the implicit clock. Whether that clock is honest, monotonic, or synchronized is a deployment concern. Trusted timestamping (RFC 3161 — the Internet standard, "Request for Comments" document 3161, defining a trusted time-stamping protocol) is a composing pattern that supplies a verifiable time-anchor.
+- **Time-of-attestation veracity.** `attested_at` is stamped from the injected clock at the seam (see Inputs and Behavior); clock *access* is confined to the seam, but clock *quality* — whether that clock is honest, monotonic, or synchronized — is a deployment concern. Trusted timestamping (RFC 3161 — the Internet standard, "Request for Comments" document 3161, defining a trusted time-stamping protocol) is a composing pattern that supplies a verifiable time-anchor.
 - **Action-content immutability.** The atom binds `action_ref`, not action content. If the action's content can be mutated after attestation (an editable document, a modifiable transaction record), the binding loses meaning. The host pattern is responsible for either binding to immutable content (e.g., a content hash) or composing with a Content Lock pattern.
 - **Cross-system identity portability.** `actor_ref` is opaque to the atom; portability across trust domains (federated identity, cross-organizational verification) belongs to an Identity Federation pattern.
 - **Group attestations, pseudonyms, anonymous credentials.** Single actor reference per attestation. Group signatures, ring signatures, and selective-disclosure credentials are separate concepts.
@@ -256,7 +259,7 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded — 2026-05-20` — all required structural elements resolved; identity model explicit; attest and verify action signatures with fully-named rejection and outcome reasons; nine invariants including attestation durability (Invariant 9); five cross-domain examples spanning banking, healthcare, payments, legal, and source control; regulated adversarial scenarios cover regulator audit, disputed transaction, and compromised credential; fifteen edge cases including certificate revocation status and attestation store durability (named in refinement round 1). First entry in `compliance`. Survived one foundation pass and one refinement round.
+`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed three foundational logic-confinement findings: clock, cryptographic material, and `attestation_id` are now host-injected at the I/O seam rather than generated inside the `attest` transition; caller signatures unchanged; see Lineage. Formal-layer vote is NO, 2026-06-03 — English-only, minimum-formalism. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; attest and verify action signatures with fully-named rejection and outcome reasons; nine invariants including attestation durability (Invariant 9); five cross-domain examples spanning banking, healthcare, payments, legal, and source control, plus an `attest` rejection-path example; regulated adversarial scenarios cover regulator audit, disputed transaction, and compromised credential; fifteen edge cases including certificate revocation status and attestation store durability. First entry in `compliance`.
 
 ---
 
@@ -305,3 +308,13 @@ Pass 2 was clean: no new over-absorptions surfaced. All six fixes are in-pattern
 **Scheduled rescan: 2026-05-20.** Pass 1 clean. Pass 2 clean. Pass 3 surfaced one refining finding: the main Examples section contained five domain examples showing only successful `attest` + `verify → verified` paths; no concrete example showed `verify → failed-verification` or `verify → not-known`. The regulated adversarial scenarios section covered the adversarial paths conceptually (disputed transaction and compromised credential), but without a concrete action-call-and-result walkthrough of the failure outcomes. Resolved: two rejection-path examples added to the Examples section — `verify → failed-verification(proof-invalid)` (key rotation scenario) and `verify → not-known` (missing attestation id from a storage-failure scenario). No foundational findings. Status date updated to 2026-05-20.
 
 **Formal-layer vote — 2026-06-03: NO.** Invariants are single-state immutability and a monotonically non-decreasing attestation store; `verify` is a pure query with no state transitions, concurrency, or ordering-across-sequences surface. Grounds English-only (minimum-formalism). Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
+
+**AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This atom grounded 2026-05-20 under the early process — one foundation pass plus one refinement round, with Pass 3 "Linus mode" author-conducted and no fresh-reader AI adversarial round — and carried the legacy `grounded — 2026-05-20` token (grandfathered). This round is that missing AI-conducted adversarial round, run by a fresh-reader Opus (Happy-Torvalds-X2); it is the atom's Final Critique 4 (Rounds 1–3 being the foundation/refinement baseline, per `pressure-testing.md` §Round structure). Three foundational findings, all the same root — the atom predated the Logic Confinement Principle and described time, identity, and cryptographic material as generated *inside* the `attest` transition — all closed in-pattern by adopting the corpus-canonical host-injected-at-seam formulation (as in Session and Capability):
+
+- *F4-1 — clock.* `attested_at = now` / "implicit clock" → the clock is injected at the I/O seam and `attested_at` is stamped from it before the transition runs (Inputs, State transition, Edge cases *Time-of-attestation veracity*).
+- *F4-2 — cryptographic material.* The proof was "computed from the credential" with no seam declaration → the cryptographic primitive and any entropy are deployment-supplied at the seam, `verify`'s check runs against injected primitive material, and the core transition improvises no crypto (Inputs, new Behavior bullet).
+- *F4-3 — `attestation_id`.* "system-generated … produced by `attest`" (minted in-transition) → allocated by the host id source at the seam and injected (Identity model, State, blockquote).
+
+The caller signatures `attest(action_ref, actor_ref, credential)` and `verify(attestation_id)` are unchanged — time/id/crypto are host-injected, not caller-supplied. The confinement commitment is pinned in a Behavior bullet rather than a new numbered invariant, so the invariant set stays at nine and dependents' "Actor Identity invariants (1–9)" references (Authenticated Actor, Audit Trail) remain accurate. Refining/rhetorical folded: an `attest → rejected(invalid-credential)` rejection-path example; the *Time-of-attestation veracity* edge case reworded to the access-confined / quality-deployment distinction; "system-generated" → "host-allocated" throughout.
+
+Confirming fresh-reader Opus clearance gate (2026-06-18): **CLEAR, 0 foundational** — all three fixes verified genuinely closed against the canonical reference atoms and the execution contract, caller signatures and invariant numbering confirmed stable at all wrap sites, no new surface. **Compositions affected — confirming check only, NOT a re-pass** (signatures, invariant set/numbering, states, and transitions all stable): Authenticated Actor, Actor Suspension, Audit Trail, Attributed Permissions Admin, Reservation Lifecycle, and the patterns reached through Audit Trail. Grounds at Final Critique 4.
