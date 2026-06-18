@@ -39,7 +39,7 @@ Event Log is an append-only record: anything written to it stays, in the order i
 
 ### Identity model
 
-Each event recorded in an Event Log has an opaque, immutable, system-generated `event_id` — assigned on `append`, never reused, never reassigned. The id is the event's identity; data is a property of the event, not its identity.
+Each event recorded in an Event Log has an opaque, immutable `event_id` — allocated by the host-injected id source at the I/O seam on `append` (not generated inside the core transition; see Inputs and the Logic Confinement Principle in [`execution-contract.md`](../execution-contract.md)), never reused, never reassigned. `event_id`s support equality comparison (Invariant 6 depends on it) but carry no ordering semantics — ordering is `sequence_number`'s job alone. The id is the event's identity; data is a property of the event, not its identity.
 
 Each Event Log is itself a named instance. Multiple instances coexist in real systems (one per audited subsystem, one per user history, one per replication stream). The atom specifies what *one* instance is and how it behaves; composing patterns decide how many instances to instantiate and with what configuration.
 
@@ -47,7 +47,7 @@ Each Event Log is itself a named instance. Multiple instances coexist in real sy
 
 - A sequence of `append` calls from composing patterns.
 - A `read` API for retrospective query.
-- An implicit clock providing wall-time (clock time as a human would read it, not an internal counter) timestamps.
+- A clock providing wall-time (clock time as a human would read it, not an internal counter) timestamps, and an id source for `event_id` allocation — both injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock and allocates the `event_id` at the seam, *before* the transition runs; the pure transition receives `recorded_at` and `event_id` as inputs. Neither is read or generated inside the core transition, and neither is supplied by the business caller — which keeps the transition deterministic and forecloses caller-supplied timestamp or id lying.
 
 ### Actions
 
@@ -67,7 +67,7 @@ The log is a totally ordered sequence of events. Each event has:
 
 - **`event_id`** — opaque, immutable, unique within the log.
 - **`sequence_number`** — strictly increasing integer assigned at append. Determines total order.
-- **`recorded_at`** — wall-time when the event was appended. Annotates time but is not the source of total order.
+- **`recorded_at`** — wall-time when the event was appended (a UTC instant; resolution is implementation-defined). Annotates time but is not the source of total order.
 - **`data`** — opaque payload supplied by the composing pattern. The Event Log does not interpret it.
 
 The log itself has:
@@ -82,20 +82,20 @@ There is no `delete` or `edit` surface. Once recorded, events remain; the log on
 The Event Log has no user-driven flow of its own; it is invoked by composing patterns.
 
 1. **Composing pattern observes a state change.** It calls `append(data)` with a payload describing what happened.
-2. **Event Log records the event.** Assigns `event_id`, `sequence_number = next_sequence_number`, `recorded_at = now`. Increments `next_sequence_number`. Returns `event_id`.
+2. **Event Log records the event.** The host reads the clock and allocates the `event_id` at the seam; the transition then writes the event with that `event_id`, `sequence_number = next_sequence_number`, and `recorded_at` stamped from the injected clock. Increments `next_sequence_number`. Returns `event_id`.
 3. **Time passes; more appends happen.** Each receives a fresh, strictly larger `sequence_number`.
 4. **A composing pattern queries the log.** Calls `read(query)`. Receives an ordered sequence of matching events.
 
 ### Decision points
 
-- **At `append(data)`** — `data` must satisfy the configured payload constraints (default: max 64 KB, opaque bytes; configurable per instance). Otherwise rejected as `invalid-payload`. There are no other preconditions; appends never fail for ordering or contention reasons — the underlying implementation must serialize them. If the store write fails after all preconditions are satisfied, the atom returns `rejected(storage-failure)`. The `event_id` is not returned; the caller must treat `storage-failure` as definitive — the event did not land. A sequence number may have been allocated and consumed; see Edge cases.
+- **At `append(data)`** — `data` must satisfy the configured payload constraints (default: max 64 KB, opaque bytes; configurable per instance). Empty `data` (zero bytes) is a valid payload — the atom records it; rejecting meaningless events is the composing pattern's job. Otherwise rejected as `invalid-payload`. There are no other preconditions; appends never fail for ordering or contention reasons. **A single Event Log instance serializes all appends — this is the load-bearing precondition for Invariants 3 and 4 (total order and monotonicity); neither holds without it.** If the store write fails after all preconditions are satisfied, the atom returns `rejected(storage-failure)`. The `event_id` is not returned; the caller must treat `storage-failure` as definitive — the event did not land. A sequence number may have been allocated and consumed; see Edge cases.
 - **At `read(query)`** — `query` parameters must be well-formed (sequence-number range valid, time range valid, predicate parseable). Otherwise rejected as `invalid-query`. A well-formed query that matches no events returns an empty sequence, not a rejection.
 
 ### Behavior
 
 How the concept appears to composing patterns:
 
-- **Append is durable on success.** Once the caller receives an `event_id`, the event is in the log and will appear in subsequent reads.
+- **Append is durable on success** *to the extent the deployment supplies durability* (see Edge cases — *Durability across crashes*). Once the caller receives an `event_id`, the event is in the log and will appear in subsequent reads.
 - **Reads are repeatable and monotonic.** Reading the same query at two different times returns at least the events from the earlier read, plus any events appended in between. The log only grows.
 - **Order is total.** Any two distinct events have a defined relative position via `sequence_number`. Ties never occur, even for events appended in the same wall-time instant.
 - **Wall-time is best-effort.** `recorded_at` is non-decreasing under a well-behaved clock. Under an unreliable or adversarial clock, `recorded_at` may not be monotonic; `sequence_number` remains the source of truth for ordering.
@@ -103,7 +103,7 @@ How the concept appears to composing patterns:
 
 ### Feedback
 
-- After `append(data)` — a new event exists in the log with a fresh `event_id`, `sequence_number = previous_next`, `recorded_at = now`. `next_sequence_number` increments by 1. The event is immediately visible to subsequent reads.
+- After `append(data)` — a new event exists in the log with a fresh `event_id`, `sequence_number = previous_next`, and `recorded_at` stamped from the injected clock. `next_sequence_number` increments by 1. The event is immediately visible to subsequent reads.
 - After `read(query)` — a sequence of matching events in ascending `sequence_number` order. The state of the log is unchanged.
 
 Each rejected action produces an observable refusal naming the failed precondition (`invalid-payload`, `invalid-query`, or `storage-failure`).
@@ -114,7 +114,7 @@ Each rejected action produces an observable refusal naming the failed preconditi
 - **Invariant 2 — Event immutability.** After a successful `append`, the event's `event_id`, `sequence_number`, `recorded_at`, and `data` never change.
 - **Invariant 3 — Total order.** For any two distinct events `e1` and `e2`, exactly one of `e1.sequence_number < e2.sequence_number` or `e1.sequence_number > e2.sequence_number` holds.
 - **Invariant 4 — Sequence-number monotonicity.** If `e1` was appended before `e2`, then `e1.sequence_number < e2.sequence_number`.
-- **Invariant 5 — Read consistency.** A `read` issued at time `t` returns every event with `sequence_number ≤ next_sequence_number − 1` whose data matches the query, ordered by `sequence_number` ascending.
+- **Invariant 5 — Read consistency.** A `read` issued at time `t` returns every *successfully-appended* event whose data matches the query, ordered by `sequence_number` ascending. The bound is the set of landed events, not the allocator value: an allocated-but-unlanded `sequence_number` (a `storage-failure` gap; see Edge cases) corresponds to no returned event. (Like Invariant 4, this holds over successfully appended events only.)
 - **Invariant 6 — No id reuse.** No two events in the log share an `event_id`.
 - **Invariant 7 — Wall-time best-effort monotonicity.** Under a non-decreasing clock, `recorded_at` is non-decreasing in append order. Under an unreliable clock, this is best-effort and `sequence_number` is the authoritative order.
 
@@ -194,7 +194,9 @@ Forthcoming compositions in `compositions/`:
 - **Activity Feed** — Event Log + Subscriber pattern + Filter.
 - **Event-Sourced Reservation** — Event Log + Snapshot + Reservation atom.
 
-In all four, Event Log is the substrate; the application adds the policy.
+In all four, Event Log is the substrate; the composing pattern adds the policy.
+
+**The invariant set is a frozen contract surface.** Undo History, Audit Trail, Saga, and Reservation Lifecycle cite Event Log's invariants wholesale (e.g. Saga Invariant 9 cites "Event Log Invariants 1–7"; Reservation Lifecycle cites the full constituent set). Additive growth — a new invariant — is forward-compatible via the "all invariants from [Atom]" form, but any *renumber* or content change to an existing invariant is a breaking cascade that re-passes those compositions. Treat the numbering as stable.
 
 ---
 
@@ -220,7 +222,7 @@ It inherits from:
 
 ## Status
 
-`grounded — 2026-05-20` (formal layer landed 2026-06-03 — TLA+ model `event-log.tla` authored and verified, plus a buggy twin the checker rejects; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`, briefly held after the 2026-06-03 formal-layer vote; full prose round was `grounded — 2026-05-20`.) — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
+`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed two foundational findings: F-1 logic-confinement and F-2 read-consistency scope; see Lineage. Formal layer landed 2026-06-03 — TLA+ model `event-log.tla` + a buggy twin the checker rejects, see Lineage §Formal model. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
 
 ---
 
@@ -257,6 +259,15 @@ The pattern is `grounded — 2026-05-13` after one round.
 *What it checks.* The log is modeled as an insertion-ordered function `1..MaxLen -> {eid, seq}` with `len` landed events and monotonic allocators `next_seq`/`next_eid` (the Sequences module is avoided to stay within the checker's supported fragment). Two append modes are modeled: `AppendOk` (allocate `seq = next_seq`, land at the tail) and `AppendStorageFail` (a sequence number is allocated and consumed but no event lands — the *Sequence-number gaps on storage failure* edge case). Three named safety invariants are checked under every interleaving: the load-bearing **Invariant 4** (sequence-number monotonicity — earlier insertion position ⇒ strictly smaller `sequence_number`), **Invariant 3** (total order — distinct landed events have distinct `sequence_number`s), and **Invariant 6** (no `event_id` reuse). The model confronts the subtle claim directly: monotonicity holds over *successfully appended* events even when storage-failure gaps the dense sequence.
 
 *Bounds and scope.* `MaxLen = 4`, `MaxSeq = 6` (room for gaps). Exhaustive: 119 reachable states, all invariants hold. **Invariant 1** (append-only) and **Invariant 2** (event immutability) are enforced by construction (no action removes a landed event or rewrites a filled slot — `AppendOk` only writes position `len+1`) rather than asserted as state predicates. Deliberately **out of model scope**: payload/query validation guards (`invalid-payload`, `invalid-query` — input checks, not ordering); read consistency (Invariant 5 — relies on exactly the ordering checked here); wall-time best-effort monotonicity (Invariant 7 — explicitly best-effort, with `sequence_number` authoritative).
+
+**AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This pattern grounded 2026-05-20 under the early process — foundation plus refinement passes, with Pass 3 "Linus mode" author-conducted and no fresh-reader AI adversarial round — and carried the legacy `grounded — 2026-05-20` token (grandfathered). This round is that missing AI-conducted adversarial round, run by a fresh-reader Opus (Happy-Torvalds-X2); it is the pattern's Final Critique 4 (Rounds 1–3 being the foundation/refinement baseline, per `pressure-testing.md` §Round structure). Two foundational findings, both closed in-pattern:
+
+- *F-1 — Logic Confinement.* The atom read the clock (`recorded_at = now`) and generated `event_id` inside the `append` transition (an "implicit clock"), violating the Logic Confinement Principle (`execution-contract.md` §3) that Pass 3 checks. Fixed by adopting the corpus-canonical host-injected-at-seam formulation (as in Session, Capability, Preference): the host reads the clock and allocates `event_id` at the I/O seam before the transition; the pure transition receives both as inputs; the caller signature `append(data)` is unchanged — timestamps and ids are never caller-supplied. Inputs, Identity model, Flow step 2, and Feedback updated.
+- *F-2 — Read consistency (Invariant 5).* Invariant 5 was stated over `next_sequence_number − 1` (the allocator high-water mark), which the atom's own storage-failure gap edge case makes a non-corresponding term. Re-scoped to successfully-appended events, mirroring Invariant 4; now internally consistent with the gap edge case, and the formal model's Invariant-5-out-of-scope note is unaffected.
+
+Four refining findings folded: empty `data` is a valid payload (rejecting meaningless events is the composing pattern's job); `event_id` supports equality but carries no ordering; the single-instance-serialization precondition for Invariants 3/4 was promoted to load-bearing (bolded in Decision points); a Composition note records that the invariant set is a frozen contract surface dependents cite wholesale. Two rhetorical: the durability guarantee was qualified; the Status token migrated to the canonical Final Critique form. GRID Friction and System are discharged within Intent and Structure (noted here per the round; no restructure needed).
+
+Confirming fresh-reader Opus clearance gate (2026-06-18): **CLEAR, 0 foundational** — both foundational fixes verified genuinely closed against the canonical reference atoms, the execution-contract pipeline, the TLA+ model + buggy twin + coverage matrix, and all four dependents; the folds opened no new surface. **Compositions affected — confirming check only, NOT a re-pass** (caller signature and invariant numbering stable; no dependent relies on Invariant 5's prior content; the F-1 fold actively corroborates Undo History's existing composition text): Undo History, Audit Trail, Saga, Reservation Lifecycle. Grounds at Final Critique 4.
 
 *Buggy twin (vacuity guard).* [`event-log-buggy.tla`](./event-log-buggy.tla) adds the `VolatileRestart` action the English explicitly warns against (State §`next_sequence_number`: "Volatile implementations that reset to 1 on restart violate this invariant across the lifetime of the log instance"). The checker rejects it at 14 states with the counterexample `AppendOk → VolatileRestart → AppendOk`: position 1 and position 2 both carry `seq = 1`, so `log[1].seq < log[2].seq` fails. The twin's rejection confirms the correct model's clean pass is non-vacuous and turns the spec's prose warning into a mechanical regression guard.
 
