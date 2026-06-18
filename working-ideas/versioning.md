@@ -22,7 +22,7 @@ Versioning governs *specs*, not *ideas*. The stage before a spec exists is the *
 
 A sketch that clears Gate 3 ([`pressure-testing.md`](../pressure-testing.md) §the three gates) **earns a spec**. The pencil goes to ink and the **version is born at `1.0.0-beta`** the moment the spec exists — the bit-flip: **structured English exists when the file carries an Intent and at least one *substantive* Invariant** (a `not-yet-drafted` stub does not count; for a composition, a Composition-level invariant). It stays "wet" — `-beta`, freely revisable, no number bumps — through the passes, and **dries at `1.0.0`** when it grounds.
 
-**Re-entry.** Grounding is one lap, not the end. Any later edit to a grounded spec touch-triggers a full re-pass ([`pressure-testing.md`](../pressure-testing.md) §Touch triggers re-pass), which downgrades its Status token to `partially resolved` — and that token projects to `-beta` (§3). So the spec re-enters: `1.0.0` → (edit) → `1.1.0-beta` → (re-pass closes clean, token returns to grounded) → `1.1.0`. The re-pass trigger is **binary** — *any* touch re-passes, including a render-only PATCH — and is **orthogonal to the version level**: a PATCH re-enters `-beta` and re-passes too, but carries no blast radius and no governance, dropping back to no suffix as `1.0.1` on a clean pass. "Grounded ⇔ no pre-release suffix" therefore holds at every moment.
+**Re-entry.** Grounding is one lap, not the end — but only a **behavioral** change re-enters the pipeline. A **MINOR or MAJOR** touch-triggers a full re-pass ([`pressure-testing.md`](../pressure-testing.md) §Touch triggers re-pass), which downgrades the Status token to `partially resolved` → projecting to `-beta` (§3); the spec re-enters `1.0.0` → `1.1.0-beta` → (clean re-pass, token back to grounded) → `1.1.0`. A **PATCH** — render, prose, a rename, a metadata stamp — has **nothing to re-validate**, so it does *not* re-pass: it bumps the patch number and **stays grounded** (`1.0.0` → `1.0.1`, no suffix). *A name change is not an edit.* (This narrows the methodology's touch-trigger from "any edit" to "any *behavioral* edit"; the narrowing lands in `pressure-testing.md` — §7 residual.) "Grounded ⇔ no pre-release suffix" holds at every moment.
 
 ```
    sketch            →   spec exists           →   grounded
@@ -30,7 +30,7 @@ A sketch that clears Gate 3 ([`pressure-testing.md`](../pressure-testing.md) §t
    working-ideas/        atoms/ | compositions/
    dated free-text       version is identity; "when" → changelog (§5)
 
-   re-entry:  1.0.0  --edit (token → partially resolved)-->  1.1.0-beta  -->  1.1.0
+   re-entry (MINOR/MAJOR):  1.0.0  -->  1.1.0-beta  -->  1.1.0      PATCH:  1.0.0  -->  1.0.1  (stays grounded)
 ```
 
 ---
@@ -93,7 +93,7 @@ There is **one** pre-release suffix, `-beta`, and it is **not** a second maturit
 
 So **no suffix ⇔ the token is a fully-grounded form** — a clean biconditional, because every not-fully-grounded token (including the two qualified-grounded forms that carry a trailing `pending`) projects to `-beta`. The earlier `alpha/beta/rc` gradation is **dropped**: it required maturity tokens the grammar does not have ("modeled"), which would have re-created the very second track this resolution forbids. `-beta` says exactly one thing — *pre-release, not yet fully grounded* — and the Status token carries every finer fact (which round, formal-pending, `<named item>` pending).
 
-**Grounded is machine-checkable:** grounded ⇔ no pre-release suffix ⇔ the Status token is a fully-grounded form. A spec is born at `1.0.0-beta` (the bit-flip, §0) and **first grounds at `1.0.0`** (suffix dropped); numbers begin bumping only on changes after it (re-entry, §0).
+**Grounded is machine-checkable:** grounded ⇔ no pre-release suffix ⇔ the Status token is a fully-grounded form. A spec is born at `1.0.0-beta` (the bit-flip, §0) and **first grounds at `1.0.0`** (suffix dropped); numbers begin bumping only on changes after it (re-entry, §0). A PATCH bumps the number but never the suffix — it stays grounded, with nothing to re-validate; only a MINOR or MAJOR re-enters `-beta`.
 
 ### Build metadata
 
@@ -111,7 +111,7 @@ This is the cascade [`pressure-testing.md`](../pressure-testing.md) §Constituen
 
 ## 5. Audit as the version source
 
-A change to a spec triggers an audit; the audit *classifies* the change, and the classification **is** the version bump. The bump is **emitted by whichever council round the change triggers — a touch-triggered re-pass or a scheduled rescan — at its consolidate step** ([`pressure-testing.md`](../pressure-testing.md) §The default executor), never an unnamed manual step. (Emitting a version bump is a council capability to declare in `pressure-testing.md`; see §7.) Every audit produces three things:
+A change to a spec triggers an audit; the audit *classifies* the change, and the classification **is** the version bump. A **PATCH** auto-classifies (below) and the audit **emits it directly** — no re-pass, the spec stays grounded. A **MINOR or MAJOR** is a behavioral change, so it is emitted by the re-pass round it triggers, at that round's consolidate step ([`pressure-testing.md`](../pressure-testing.md) §The default executor) — never an unnamed manual step. (Emitting a version bump is a council capability to declare in `pressure-testing.md`; see §7.) Every audit produces three things:
 
 1. **A version bump** — PATCH auto-classifies off the formal diff *plus* the prose-structural surface (§3); the council proposes MINOR; **only MAJOR, and genuinely ambiguous cases, need a human** — councils conduct, humans triage.
 2. **A changelog entry** — `unit · old → new · level · what changed · timestamp`. Generated by the consolidate step, never hand-maintained, so it cannot drift.
@@ -151,9 +151,9 @@ A change to a spec triggers an audit; the audit *classifies* the change, and the
 
 - **Single `-beta` suffix** — the projection is now total over the canonical tokens (grounded-unqualified → no suffix; everything else → `-beta`), which makes *grounded ⇔ no suffix* a true biconditional and retires the invented vocabulary (§3).
 - **MAJOR-only human classification** — PATCH auto, council proposes MINOR, human only on MAJOR/ambiguity, so a human is not gated onto every additive edit (§5).
-- **Forced corrections:** the bump is emitted by the *triggering* council round, touch or scheduled (§5); re-entry runs through the `partially resolved` token (§0); PATCH and the re-pass trigger are orthogonal — a PATCH still re-passes and re-enters `-beta` but carries no blast radius (§0); plus refining fixes (seal-pins-bytes / PATCH-re-seals / pre-release-unsealed §1; visibility flips at grounding §1; substantive-invariant + composition bit-flip §0; the `+build` datestamp note §3).
+- **Forced corrections:** a MINOR/MAJOR bump is emitted by the re-pass round it triggers, a PATCH directly by the audit (§5); re-entry runs through the `partially resolved` token on a MINOR/MAJOR (§0); **a PATCH — render / rename / metadata — does *not* re-pass: it bumps the number and stays grounded**, narrowing the methodology's touch-trigger to behavioral edits (residual e; the call: *a name change is not an edit* — superseding the round-2 reader's "any touch re-passes / orthogonal" framing); plus refining fixes (seal-pins-bytes / PATCH-re-seals / pre-release-unsealed §1; visibility flips at grounding §1; substantive-invariant + composition bit-flip §0; the `+build` datestamp note §3).
 
-**Mechanical residuals** (to *build*, not decide): (a) the **stale-pin lint check** — flag a `local` extension whose pinned major line was superseded or deprecated; the CI analog of `D-stale-forthcoming`, enforcing §4. (b) **Align `contributing.md`** — alias its *Proposal* to **sketch** so the corpus uses one word. (c) The **retro-version migration sweep** — assign each grounded pattern `1.0.0` by projecting its Status token through §3's table; worker-tier, Opus-gated, on the scheduled-rescan automation. (d) **Declare the council's "emit a version bump" capability** in `pressure-testing.md` (capability provenance — §5 leans on a consolidate-step capability the methodology does not yet grant).
+**Mechanical residuals** (to *build*, not decide): (a) the **stale-pin lint check** — flag a `local` extension whose pinned major line was superseded or deprecated; the CI analog of `D-stale-forthcoming`, enforcing §4. (b) **Align `contributing.md`** — alias its *Proposal* to **sketch** so the corpus uses one word. (c) The **retro-version migration sweep** — stamp each grounded pattern `1.0.0` (plus Visibility `published`, Scope `universal`, and its seal) by projecting its Status token through §3's table; worker-tier, Opus-gated. The bootstrap is a metadata stamp, **not** a behavioral edit, so it does not touch-trigger a re-pass — a name/version label is not an edit. (d) **Declare the council's "emit a version bump" capability** in `pressure-testing.md` (capability provenance — §5 leans on a consolidate-step capability the methodology does not yet grant). (e) **Narrow `pressure-testing.md`'s touch-trigger** from "any edit" to "any *behavioral* edit" (MINOR/MAJOR), so a rename / render / metadata change does not re-pass — the call: *a name change is not an edit*.
 
 ---
 
