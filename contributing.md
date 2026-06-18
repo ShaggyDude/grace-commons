@@ -162,7 +162,6 @@ A pattern that has only survived part of that arc is *in process* — and that i
 - Code implementations
 - Framework integrations
 - Language bindings
-- Tooling
 
 Grace Commons is a specification library. The implementations come later, elsewhere. Formal-model artifacts (Alloy, TLA+) are not code in this sense — they are formal specifications, not implementations, and they are welcome per the *Formal-model artifacts* section above.
 
