@@ -1,6 +1,6 @@
 # Versioning — Direction
 
-**Status:** Direction — **decisions resolved (2026-06-16); awaiting a confirming fresh-reader re-pass before it grounds.** The eleven seams the torvalds pass surfaced (§7) have been decided and folded into §1–6; §7 now records the decisions and the mechanical residuals. On a clean re-pass it grounds and moves to its canonical home (a root `versioning.md`, with the field/grammar pieces folding into [`spec-format.md`](../spec-format.md) and [`pressure-testing.md`](../pressure-testing.md)). Until then it stays here in `working-ideas/` and does not yet bind.
+**Status:** Direction — **round-2 confirming re-pass folded (2026-06-16); awaiting a third confirming re-pass before it grounds.** The torvalds pass's eleven seams were decided and folded; the confirming re-pass then found the fold had opened a connected cluster (all rooted in conflating versioning's graded axis with the methodology's binary touch-trigger), now resolved by two further decisions — a single `-beta` suffix, and MAJOR-only human classification — plus forced corrections (§7). On a clean re-pass it grounds and moves to its canonical home (a root `versioning.md`, with the field/grammar pieces folding into [`spec-format.md`](../spec-format.md) and [`pressure-testing.md`](../pressure-testing.md)). Until then it stays here in `working-ideas/` and does not yet bind.
 
 **Covers:** how every spec is versioned, how versions relate across the graph, how the audit produces them, and where the *pre-spec* (sketch) stage hands off to the version pipeline.
 
@@ -18,19 +18,19 @@
 
 ## 0. Lifecycle — pencil, ink, dry
 
-Versioning governs *specs*, not *ideas*. The stage before a spec exists is the **sketch**: a pre-spec idea, in pencil, dated free-text in `working-ideas/` — the stage [`contributing.md`](../contributing.md) currently calls *Proposal* (aligned to one word; §7). Most sketches go in the trash; that is the expected outcome. A sketch carries no version — there is nothing to version yet.
+Versioning governs *specs*, not *ideas*. The stage before a spec exists is the **sketch**: a pre-spec idea, in pencil, dated free-text in `working-ideas/` — the stage [`contributing.md`](../contributing.md) calls *Proposal*, to be aliased to one word (§7). Most sketches go in the trash; that is the expected outcome. A sketch carries no version — there is nothing to version yet.
 
-A sketch that clears Gate 3 ([`pressure-testing.md`](../pressure-testing.md) §the three gates) **earns a spec**. The pencil goes to ink and the **version is born at `-alpha`** the moment the spec exists — defined crisply (the bit-flip): **structured English exists when the file carries an Intent and at least one Invariant, not merely an empty template.** It stays "wet" through `-alpha → -beta → -rc` (revisable, no number bumps — pre-release is unstable by SemVer) and **dries at `1.0.0`** — grounded, in the canon.
+A sketch that clears Gate 3 ([`pressure-testing.md`](../pressure-testing.md) §the three gates) **earns a spec**. The pencil goes to ink and the **version is born at `1.0.0-beta`** the moment the spec exists — the bit-flip: **structured English exists when the file carries an Intent and at least one *substantive* Invariant** (a `not-yet-drafted` stub does not count; for a composition, a Composition-level invariant). It stays "wet" — `-beta`, freely revisable, no number bumps — through the passes, and **dries at `1.0.0`** when it grounds.
 
-**Re-entry.** Grounding is not the end of the pipeline; it is one lap of it. Any later edit to a grounded spec **re-enters** the pipeline — `1.0.0` → `1.1.0-alpha → … → 1.1.0` — because the methodology touch-triggers a full re-pass on every edit to a grounded pattern ([`pressure-testing.md`](../pressure-testing.md) §Touch triggers re-pass). The suffix drops again only when that re-pass closes clean. So "grounded ⇔ no pre-release suffix" holds at every moment, first grounding and every re-pass after.
+**Re-entry.** Grounding is one lap, not the end. Any later edit to a grounded spec touch-triggers a full re-pass ([`pressure-testing.md`](../pressure-testing.md) §Touch triggers re-pass), which downgrades its Status token to `partially resolved` — and that token projects to `-beta` (§3). So the spec re-enters: `1.0.0` → (edit) → `1.1.0-beta` → (re-pass closes clean, token returns to grounded) → `1.1.0`. The re-pass trigger is **binary** — *any* touch re-passes, including a render-only PATCH — and is **orthogonal to the version level**: a PATCH re-enters `-beta` and re-passes too, but carries no blast radius and no governance, dropping back to no suffix as `1.0.1` on a clean pass. "Grounded ⇔ no pre-release suffix" therefore holds at every moment.
 
 ```
-   sketch            →   draft spec            →   grounded
-   (pencil, no ver)      -alpha → -beta → -rc       1.0.0
+   sketch            →   spec exists           →   grounded
+   (pencil, no ver)      1.0.0-beta   (wet)         1.0.0   (dry)
    working-ideas/        atoms/ | compositions/
    dated free-text       version is identity; "when" → changelog (§5)
 
-   re-entry:  1.0.0  --edit-->  1.1.0-alpha → -beta → -rc  -->  1.1.0
+   re-entry:  1.0.0  --edit (token → partially resolved)-->  1.1.0-beta  -->  1.1.0
 ```
 
 ---
@@ -45,9 +45,9 @@ Every **spec** (not a sketch) carries three fields, recorded in **spec metadata 
 | **Scope** | semantic | `universal` · `local` | Shared commons, or local to one org? |
 | **Version** | identity | SemVer string (§3) | Which one, and what changed? |
 
-Scope and Visibility are independent (a `universal` spec can be `draft`; a `local` spec can be `published`). Version and Visibility are *correlated*, not free — an `-alpha` spec is effectively never `published` — so treat the table as three axes with a sparse reachable-state product, not three fully-orthogonal dials.
+Scope and Visibility are independent (a `universal` spec can be `draft`; a `local` spec can be `published`). Version and Visibility are *correlated*, not free — a `-beta` (pre-release) spec is effectively never `published`, and **Visibility flips `draft → published` at grounding** (for a `universal` spec, on Council admission — [`governance.md`](../governance.md)). So treat the table as three axes with a sparse reachable-state product, not three fully-orthogonal dials.
 
-**Two identities, complementary (not competing).** The **Version** is the spec's *semantic* identity — which one, and what changed. [`governance.md`](../governance.md)'s content-hash **seal** is the *cryptographic* identity of a specific reviewed artifact at that version — the tamper-proof fingerprint of the exact bytes that were reviewed. Every grounded version is sealed; the version names it, the seal pins it. A new grounded version takes a new seal; "pin to a sealed version" (governance) means pin the `(version, seal)` pair.
+**Two identities, complementary (not competing).** The **Version** is the spec's *semantic* identity — which one, and what changed. [`governance.md`](../governance.md)'s content-hash **seal** is the *cryptographic* identity of a specific reviewed artifact — the tamper-proof fingerprint of the exact bytes that were reviewed. The two answer different questions: a consumer wanting *identical behavior* pins the version; one wanting *identical bytes* pins the seal. Consequences, stated so they're not surprises: a PATCH (new version, same behavior, changed prose) **re-seals** (the bytes changed); and pre-release (`-beta`) versions are **unsealed** by construction (sealing happens at grounding/admission), so extensions pin only grounded (sealed) versions — the `(version, seal)` pair governance speaks of exists only at grounding.
 
 ---
 
@@ -55,13 +55,13 @@ Scope and Visibility are independent (a `universal` spec can be `draft`; a `loca
 
 - **The atom is the unit.** An atom versions on changes to its own behavior. The corpus is never versioned as a whole — that would bump unrelated atoms (a Retention change forcing a new Consent) and re-introduce the coupling the corpus exists to remove.
 - **Compositions version independently.** A composition carries its own version; changing it never bumps the atoms it relates. The thing versioned is a **graph**: atoms and compositions as nodes, *references* as edges, each node versioned on its own behavior. Edges point at versioned nodes — **including composition→composition edges** (a composition naming a substrate composition, e.g. Defensible Retention → Audit Trail) — so it is not a clean atoms-nodes / compositions-edges bipartite split.
-- **Extensions pin with a caret.** A `local` extension names the *versioned* universal spec it extends and, where it relies on a relationship, the *versioned* composition too. The pin is a **caret range — `^2.3` (`>=2.3.0 <3.0.0`)**, not `2.x`: if the extension relies on a feature added in a MINOR, it is not safe below that minor, and the pin must say so. It MUST name every dependency it actually has.
+- **Extensions pin with a caret.** A `local` extension names the *versioned* universal spec it extends and, where it relies on a relationship, the *versioned* composition too. The pin is a **caret range — `^2.3` (`>=2.3.0 <3.0.0`)**, not `2.x`: if the extension relies on a feature added in a MINOR, it is not safe below that minor, and the pin must say so. It MUST name every dependency it actually has — and pin only grounded (sealed) versions (§1).
 
 ---
 
 ## 3. The version string
 
-`MAJOR.MINOR.PATCH[-prerelease][+build]` — standard SemVer. The numbers say *what the behavior is*; the pre-release suffix says *how far through grounding it is*. Orthogonal: hardening `alpha → beta` never bumps the numbers.
+`MAJOR.MINOR.PATCH[-prerelease][+build]` — standard SemVer. The numbers say *what the behavior is*; the pre-release suffix says *whether it is grounded yet* — a single `-beta` (pre-release) or none (grounded). The two are orthogonal: revising within `-beta` never bumps the numbers.
 
 ### Numbers — defined behaviorally
 
@@ -75,29 +75,29 @@ MAJOR's definition is load-bearing: the seam pin (§2) and the propagation casca
 
 **Classifying PATCH — pinned to a concrete surface.** Diff the formal artifact (Alloy / TLA+) first; if it changed, the change is MINOR or MAJOR. But formal-byte-identical does **not** by itself prove PATCH — the formal model is a *partial* oracle (every coverage matrix lists invariants it doesn't model). So:
 
-> **PATCH** = formal artifact byte-identical (where one exists) **AND** no change to any **invariant, action signature, precondition, state, transition, or permission** in the prose. For vote-*no* (English-only) specs, that prose-structural surface — the numbered Invariant headers, the action-signature lines, the named states/transitions/permissions — stands alone. Only then may the audit auto-classify (§5).
+> **PATCH** = formal artifact byte-identical (where one exists) **AND** no change to the prose-structural surface — the numbered Invariant *statements*, the action-signature lines, the named states/transitions/permissions. Only then may the audit auto-classify (§5).
 
-### Pre-release suffix — a *derived projection* of the status grammar
+A change to a **precondition** that lives only in prose (no canonical section owns it) is **not** mechanically diffable, so it is *not* auto-PATCH — it goes to the council's MINOR/MAJOR judgment (§5).
 
-The suffix is **not** a second maturity track. The canonical maturity vocabulary is the CI-pinned Status grammar ([`pressure-testing.md`](../pressure-testing.md) §Status line format; the SSOT decision is [`open-questions.md`](../open-questions.md) §Status-line grammar, which pinned *one* grammar and CI-linted it to end six competing shapes). **The Status token is canonical; the suffix is read off it** — a lossy projection for the version string's convenience, never a competitor:
+### Pre-release suffix — a single `-beta`, derived from the status grammar
 
-| Status token (canonical) | → suffix (derived) |
+There is **one** pre-release suffix, `-beta`, and it is **not** a second maturity track: it is read off the canonical, CI-pinned Status grammar ([`pressure-testing.md`](../pressure-testing.md) §Status line format; SSOT [`open-questions.md`](../open-questions.md) §Status-line grammar). The projection is **total over the canonical tokens** and trivial:
+
+| Status token (canonical) | → version |
 |---|---|
-| *(sketch — pre-spec)* | no version |
-| `draft` (Intent + ≥1 Invariant; no model) | `-alpha` |
-| modeled, not yet pressure-tested (vote-*yes* only) | `-beta` |
-| `partially resolved` / cleared the passes, awaiting Phase 4 | `-rc` |
-| `grounded on Final Critique N` | *(none)* — `1.0.0` first time |
-| `grounded (English) — formal layer pending` | *(none, with the formal qualifier carried by the **token**, not the suffix)* |
-| `grounded — <named item> pending` | *(none, qualifier on the token)* |
+| *(sketch — pre-spec, no spec file)* | no version |
+| `draft` · `unresolved` · `partially resolved` | `…-beta` |
+| `grounded (English) … — formal layer pending` | `…-beta` (not fully grounded) |
+| `grounded … — <named item> pending` | `…-beta` (not fully grounded) |
+| `grounded on Final Critique N — YYYY-MM-DD` (or legacy `grounded — YYYY-MM-DD`) | *(no suffix)* |
 
-Because the token carries states a single linear suffix cannot (formal-pending; a bounded `<named item> pending`), the **token is consulted for those finer facts**; the suffix only ever answers "pre-release or not." `-beta` is conditional on the formal-layer vote being *yes* (a vote-*no* spec grounds English-only and never has one).
+So **no suffix ⇔ the token is a fully-grounded form** — a clean biconditional, because every not-fully-grounded token (including the two qualified-grounded forms that carry a trailing `pending`) projects to `-beta`. The earlier `alpha/beta/rc` gradation is **dropped**: it required maturity tokens the grammar does not have ("modeled"), which would have re-created the very second track this resolution forbids. `-beta` says exactly one thing — *pre-release, not yet fully grounded* — and the Status token carries every finer fact (which round, formal-pending, `<named item>` pending).
 
-**Grounded is machine-checkable:** a spec is grounded iff its version has no pre-release suffix — which, since the suffix is derived, is true iff its Status token is a grounded form. **First grounding is `1.0.0`**; numbers begin bumping only on changes after it (re-entry, §0).
+**Grounded is machine-checkable:** grounded ⇔ no pre-release suffix ⇔ the Status token is a fully-grounded form. A spec is born at `1.0.0-beta` (the bit-flip, §0) and **first grounds at `1.0.0`** (suffix dropped); numbers begin bumping only on changes after it (re-entry, §0).
 
 ### Build metadata
 
-`+build` is the only place a literal datestamp may appear *in the version string* (e.g. `1.2.0+20260616`); never affects precedence, not used by default. (This scopes the version string only — the canonical Status token still carries its mandated `YYYY-MM-DD`, §5.)
+`+build` is the only place a literal datestamp may appear *in the version string* (e.g. `1.2.0+20260616`); never affects precedence, not used by default, and never a substitute for the changelog timestamp or the Status token's date (§5).
 
 ---
 
@@ -111,13 +111,13 @@ This is the cascade [`pressure-testing.md`](../pressure-testing.md) §Constituen
 
 ## 5. Audit as the version source
 
-A change to a spec triggers an audit; the audit *classifies* the change, and the classification **is** the version bump. **The scheduled-rescan automated council emits the bump** as part of its consolidate step ([`pressure-testing.md`](../pressure-testing.md) §The default executor) — not an unnamed manual step. Every audit produces three things:
+A change to a spec triggers an audit; the audit *classifies* the change, and the classification **is** the version bump. The bump is **emitted by whichever council round the change triggers — a touch-triggered re-pass or a scheduled rescan — at its consolidate step** ([`pressure-testing.md`](../pressure-testing.md) §The default executor), never an unnamed manual step. (Emitting a version bump is a council capability to declare in `pressure-testing.md`; see §7.) Every audit produces three things:
 
-1. **A version bump** — PATCH auto-classifies off the formal diff *plus* the prose-structural surface (§3); **MINOR vs MAJOR is a human classification** (the irreducible triage judgment — *humans triage, councils conduct*).
-2. **A changelog entry** — `unit · old → new · level · what changed · timestamp`. Generated by the council's consolidate step, never hand-maintained, so it cannot drift.
+1. **A version bump** — PATCH auto-classifies off the formal diff *plus* the prose-structural surface (§3); the council proposes MINOR; **only MAJOR, and genuinely ambiguous cases, need a human** — councils conduct, humans triage.
+2. **A changelog entry** — `unit · old → new · level · what changed · timestamp`. Generated by the consolidate step, never hand-maintained, so it cannot drift.
 3. **A blast-radius list** — every downstream artifact flagged for re-examination (§4), read off the version graph. Empty for PATCH and MINOR by construction; populated only on MAJOR.
 
-**Datestamps: the changelog and the Status token, nowhere else in the version string.** "When" is the changelog timestamp (a fact about a release) and the date mandated inside the canonical Status token (`grounded on Final Critique N — YYYY-MM-DD`). The version string carries no datestamp except `+build`. Date-stamped *identifiers* are removed from spec text — the version graph is the system of record for identity, the changelog for history. The Version and the seal both live in **frontmatter**; git tags are publication artifacts, not canonical.
+**Datestamps: the changelog and the Status token, nowhere else.** "When" is the changelog timestamp (a fact about a release) and the date mandated inside the canonical Status token (`grounded on Final Critique N — YYYY-MM-DD`). The version string carries no datestamp except `+build`. Date-stamped *identifiers* are removed from spec text — the version graph is the system of record for identity, the changelog for history. The Version and the seal both live in **frontmatter**; git tags are publication artifacts, not canonical.
 
 ---
 
@@ -129,28 +129,32 @@ A change to a spec triggers an audit; the audit *classifies* the change, and the
 
 ---
 
-## 7. Resolved (2026-06-16) — decisions folded, residuals, and the torvalds trail
+## 7. Resolution record, residuals, and the review trail
 
-The eleven seams the torvalds pass raised were decided and folded into §1–6. The record:
+**Torvalds pass — fresh-reader Opus, 2026-06-16 (round 1).** Confirmed the spine sound (SemVer-whole, version-as-derived, per-unit, MAJOR-drives-the-cascade, the PATCH partial-oracle catch) and surfaced eleven seams; the original sketch documented the *entry* into versioning and rationalized past the *steady state*. Decided and folded into §1–6:
 
-| # | Seam | Decision (folded into) |
+| # | Seam | Decision |
 |---|---|---|
-| 1 | Suffix vs. status grammar | Status grammar is canonical; the suffix is a **derived projection** of the token (§3). |
-| 2 | Subsequent-change re-entry | Any edit to a grounded spec **re-enters** the pipeline — `1.1.0-alpha → … → 1.1.0` (§0). |
-| 3 | Audit runner / classifier | The **scheduled-rescan council emits** the bump; **humans classify MINOR vs MAJOR** (§5). |
-| 4 | Seal vs. version identity | Version = **semantic** identity; seal = **cryptographic** identity of a reviewed artifact version; complementary (§1, §5). |
-| 5 | Lifecycle word | Use **sketch** for the pre-spec stage (the pencil metaphor; already half-adopted via "gate-sketched") and align `contributing.md`'s *Proposal* to it (§0). |
-| 6 | First-version numbering | `1.0.0-alpha → 1.0.0` (§3). |
-| 7 | The `-alpha` bit-flip | A spec exists at **Intent + ≥1 Invariant**, not an empty template (§0). |
-| 8 | PATCH surface | No change to invariants, action signatures, preconditions, states, transitions, or permissions (§3). |
+| 1 | Suffix vs. status grammar | Status grammar canonical; suffix a **derived projection** — settled to a single `-beta` in round 2 (§3). |
+| 2 | Subsequent-change re-entry | Any edit re-enters the pipeline `1.1.0-beta → 1.1.0` via the `partially resolved` token (§0). |
+| 3 | Audit runner / classifier | The triggering council round **emits** the bump; PATCH auto, council proposes MINOR, **only MAJOR + ambiguity need a human** (§5). |
+| 4 | Seal vs. version identity | Version = **semantic** identity; seal = **cryptographic** identity of the reviewed bytes; complementary (§1). |
+| 5 | Lifecycle word | Use **sketch** for the pre-spec stage; alias `contributing.md`'s *Proposal* to it (§0; residual b). |
+| 6 | First-version numbering | Born `1.0.0-beta`, first grounds `1.0.0` (§0, §3). |
+| 7 | The bit-flip | A spec exists at **Intent + ≥1 substantive Invariant** (§0). |
+| 8 | PATCH surface | Formal diff + the prose-structural surface; a prose-only precondition routes to the council (§3, §5). |
 | 9 | Pin lower bound | Caret **`^2.3`**, not `2.x` (§2). |
-| 10 | Version provenance | Version and seal live in **frontmatter**; git tags are publication artifacts (§1, §5). |
-| 11 | Universal MAJOR | Requires **governance sign-off** ([`governance.md`](../governance.md)); migration path alone insufficient (§6). |
+| 10 | Version provenance | Version and seal in **frontmatter**; git tags publication-only (§1, §5). |
+| 11 | Universal MAJOR | Requires **governance sign-off** (§6). |
 
-**Mechanical residuals** (to *build*, not decide): (a) the **stale-pin lint check** — flag a `local` extension whose pinned major line was superseded or deprecated; the CI analog of `D-stale-forthcoming`, enforcing §4. (b) **Align `contributing.md`**: the pre-spec stage is **sketch** — rename or alias its *Proposal* so the corpus uses one word. (c) The **retro-version migration sweep** — assign each grounded pattern a starting version (`1.0.0`) by projecting its current Status token through §3's table; a worker-tier sweep, Opus-gated, ridden on the scheduled-rescan automation.
+**Confirming re-pass — fresh-reader Opus, 2026-06-16 (round 2).** Confirmed the spine again, but found the round-1 fold had opened a connected foundational cluster, **all rooted in one confusion** — treating versioning's graded axis (PATCH/MINOR/MAJOR) and the methodology's binary one (*any touch re-passes*) as the same axis. The lever was a non-total projection table that re-invented a maturity vocabulary (`alpha/beta/rc` against tokens the grammar lacks). Resolved by two decisions and forced corrections, now folded:
 
-**Torvalds pass — fresh-reader Opus, 2026-06-16 (history).** A fresh reader ran a hard X2 adversarial pass and confirmed the spine sound (SemVer-whole, version-as-derived-artifact, per-unit versioning, MAJOR-drives-the-cascade, the PATCH partial-oracle catch), while surfacing that the original sketch documented the *entry* into versioning and rationalized past the *steady state*. Its three foundational catches — subsequent-change re-entry, the audit runner, and the seal-vs-version identity — are resolved above (#2, #3, #4). It also corrected two author errors since fixed: the datestamp claim (the Status token mandates a date) and the orthogonality overstatement (Version and Visibility are correlated). Its single highest-leverage instruction — subordinate the suffix to the pinned grammar — is decision #1.
+- **Single `-beta` suffix** — the projection is now total over the canonical tokens (grounded-unqualified → no suffix; everything else → `-beta`), which makes *grounded ⇔ no suffix* a true biconditional and retires the invented vocabulary (§3).
+- **MAJOR-only human classification** — PATCH auto, council proposes MINOR, human only on MAJOR/ambiguity, so a human is not gated onto every additive edit (§5).
+- **Forced corrections:** the bump is emitted by the *triggering* council round, touch or scheduled (§5); re-entry runs through the `partially resolved` token (§0); PATCH and the re-pass trigger are orthogonal — a PATCH still re-passes and re-enters `-beta` but carries no blast radius (§0); plus refining fixes (seal-pins-bytes / PATCH-re-seals / pre-release-unsealed §1; visibility flips at grounding §1; substantive-invariant + composition bit-flip §0; the `+build` datestamp note §3).
+
+**Mechanical residuals** (to *build*, not decide): (a) the **stale-pin lint check** — flag a `local` extension whose pinned major line was superseded or deprecated; the CI analog of `D-stale-forthcoming`, enforcing §4. (b) **Align `contributing.md`** — alias its *Proposal* to **sketch** so the corpus uses one word. (c) The **retro-version migration sweep** — assign each grounded pattern `1.0.0` by projecting its Status token through §3's table; worker-tier, Opus-gated, on the scheduled-rescan automation. (d) **Declare the council's "emit a version bump" capability** in `pressure-testing.md` (capability provenance — §5 leans on a consolidate-step capability the methodology does not yet grant).
 
 ---
 
-*Decisions resolved; the next gate is a confirming fresh-reader re-pass on this resolved version. On a clean pass it inks fully — moves to a root `versioning.md`, the field/grammar pieces fold into `spec-format.md` and `pressure-testing.md`, and the residuals above run as a worker-tier sweep.*
+*Round-2 fixes folded; the next gate is a third confirming fresh-reader re-pass on this version. On a clean pass it inks fully — moves to a root `versioning.md`, the field/grammar pieces fold into `spec-format.md` and `pressure-testing.md`, and the residuals run as a worker-tier sweep.*
