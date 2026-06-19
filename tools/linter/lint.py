@@ -480,6 +480,11 @@ ANCESTOR_PROPER_NOUN = "Separation of Concerns"
 BANNED_TOKEN_EXCLUDED_DIRS = {".git", ".github", "node_modules", "Alloy.app",
                               "demos", "grants", "internal", "working-ideas"}
 
+# Lineage notes are dated historical narration (like roadmap.md, already exempt);
+# the vocabulary rules J/K govern the live spec body, not the record of past rounds.
+# A pattern's Lineage is its last section, so scanning stops at its heading.
+LINEAGE_HEADING = re.compile(r"^##\s+Lineage\b", re.IGNORECASE)
+
 
 def check_banned_token(root: Path) -> list[Finding]:
     """J: the working noun "concern" is banned corpus-wide (vocabulary directive
@@ -500,6 +505,8 @@ def check_banned_token(root: Path) -> list[Finding]:
         except OSError:
             continue
         for i, line in enumerate(text.splitlines(), start=1):
+            if LINEAGE_HEADING.match(line):
+                break  # live body only — Lineage is dated history
             scrubbed = line.replace(ANCESTOR_PROPER_NOUN, "")
             for m in BANNED_TOKEN.finditer(scrubbed):
                 out.append(Finding(
@@ -516,6 +523,13 @@ CODE_SPAN = re.compile(r"`[^`]*`")
 # The canonical expansion of the API acronym is a fixed term of art — mention,
 # not working use — and is scrubbed before matching, like code spans.
 API_GLOSS = "Application Programming Interface"
+# Standards proper-nouns / org names containing "application" are fixed terms of
+# art — mention, not working use — like the API gloss; scrubbed before matching.
+STANDARDS_PROPER_NOUNS = re.compile(
+    r"(?i)Open Worldwide Application Security Project"
+    r"|Application Security Verification Standard"
+    r"|System and Application Access Control"
+    r"|software applications?")
 OUTPUT_NOUN_CORE_DOCS = ("readme.md", "the-spec-layer.md", "pressure-testing.md",
                          "spec-format.md", "contributing.md")
 
@@ -543,7 +557,10 @@ def check_banned_application(root: Path) -> list[Finding]:
         except OSError:
             continue
         for i, line in enumerate(text.splitlines(), start=1):
-            scrubbed = CODE_SPAN.sub("", line).replace(API_GLOSS, "")
+            if LINEAGE_HEADING.match(line):
+                break  # live body only — Lineage is dated history
+            scrubbed = STANDARDS_PROPER_NOUNS.sub(
+                "", CODE_SPAN.sub("", line).replace(API_GLOSS, ""))
             for m in BANNED_OUTPUT_NOUN.finditer(scrubbed):
                 out.append(Finding(
                     md, i, "K-output-noun",

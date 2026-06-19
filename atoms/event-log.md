@@ -222,7 +222,7 @@ It inherits from:
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed two foundational findings: F-1 logic-confinement and F-2 read-consistency scope; see Lineage. Formal layer landed 2026-06-03 — TLA+ model `event-log.tla` + a buggy twin the checker rejects, see Lineage §Formal model. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced applications.
+`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed two foundational findings: F-1 logic-confinement and F-2 read-consistency scope; see Lineage. Formal layer landed 2026-06-03 — TLA+ model `event-log.tla` + a buggy twin the checker rejects, see Lineage §Formal model. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — concept is freestanding, composable, has a verifiable invariant set, and four cross-domain examples spanning productivity, compliance, healthcare, and finance. Ready for composition with Undo History, Audit Trail, Activity Feed, and event-sourced systems.
 
 ---
 

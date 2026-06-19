@@ -59,6 +59,22 @@ cut a versioned release, so everything below sits under **Unreleased**.
 
 ### Changed
 
+- **Vocabulary sweep: `application` → `composition`; J/K scoped to the live body
+  (2026-06-18).** Swept the banned output-noun "application" to the canonical
+  "composition" across the live body of every atom and composition — a composed
+  pattern is a *composition*, not an "application" — and migrated the legacy
+  "Application state" section heading to the canonical "Composition state" (per
+  [`execution-contract.md`](./execution-contract.md) §Composition state).
+  Presentation-only: no invariant, signature, or grounding change, no re-pass.
+  The vocabulary lint rules **J** ("concern") and **K** ("application") are now
+  scoped to the live spec body, **exempting Lineage notes** (dated historical
+  narration, like `roadmap.md` and `glossary.md` already are), and **K** scrubs
+  standards proper-nouns (OWASP *Application Security Verification Standard*,
+  ISO/IEC 27001 *System and Application Access Control*, DoD *software applications*)
+  as fixed terms of art — same mechanism as the existing "Application Programming
+  Interface" gloss. Result: `K-output-noun` 428 → 0. (A `J` "concern" sweep of the
+  live body remains a separate future pass.)
+
 - **Grandfathering retired (2026-06-18).** Every pattern grounded before the AI
   adversarial round was codified — the 13 under-vetted specs plus 2 that were
   ambiguous on inspection — received its first real fresh-reader Final Critique

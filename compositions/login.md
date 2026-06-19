@@ -226,7 +226,7 @@ This is the generator's contract: any implementation derived from this compositi
 
 ## Status
 
-`grounded on Final Critique 5 — 2026-05-23` — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 plus Round 5 (touch-triggered re-pass — TLA+ operational-peer verification) complete. Twelve findings across baseline + Final Critique 4; all resolved in-pattern. Round 5 closed clean with no new findings: TLC verified the seven named application-level invariants and TypeOK across 1188 reachable distinct states under exhaustive-interleaving semantics at bounds `CredentialIds = {c1, c2}`, `SessionTokens = {s1, s2, s3}`, `MaxClock = 3`. FC1's TOCTOU race (Logout × cascade) and the step-5 map-write-failure path are both exercised in the interleaving model and discharge cleanly.
+`grounded on Final Critique 5 — 2026-05-23` — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 plus Round 5 (touch-triggered re-pass — TLA+ operational-peer verification) complete. Twelve findings across baseline + Final Critique 4; all resolved in-pattern. Round 5 closed clean with no new findings: TLC verified the seven named composition-level invariants and TypeOK across 1188 reachable distinct states under exhaustive-interleaving semantics at bounds `CredentialIds = {c1, c2}`, `SessionTokens = {s1, s2, s3}`, `MaxClock = 3`. FC1's TOCTOU race (Logout × cascade) and the step-5 map-write-failure path are both exercised in the interleaving model and discharge cleanly.
 
 ---
 

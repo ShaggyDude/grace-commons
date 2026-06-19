@@ -23,7 +23,7 @@ A composition names at least one other pattern in its specification. Where atoms
 
 Each file in this folder declares the atoms it composes and the logic that wires them together.
 
-*Vocabulary note.* EOS literature and [concept-catalog](https://github.com/dpapathanasiou/concept-catalog) use *applications* for the same artifact. Grace Commons uses *compositions* because these files are structurally compositions — formal combinations of independently valid patterns — not deployable products. The underlying mechanism is identical; only the label differs.
+*Vocabulary note.* EOS literature and [concept-catalog](https://github.com/dpapathanasiou/concept-catalog) use `applications` for the same artifact. Grace Commons uses *compositions* because these files are structurally compositions — formal combinations of independently valid patterns — not deployable products. The underlying mechanism is identical; only the label differs.
 
 ---
 

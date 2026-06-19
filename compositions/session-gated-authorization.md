@@ -258,7 +258,7 @@ This composition introduces no per-call event log. The acceptance bar therefore 
 
 ## Status
 
-`grounded on Final Critique 6 — 2026-05-23` — four baseline-equivalent rounds (Pass 1/2/3 each in Rounds 1–3 plus Final Critique 4) plus Round 5 (touch-triggered re-pass — Alloy artifact verification) plus Round 6 (formal-model refinement closing both Round 5 findings) complete. Round 5 surfaced two refining findings in the formal model; Round 6 closed both. Spec prose unchanged across Rounds 5 and 6; the four named application-level invariants and the three temporal claims (revocation terminal, expiry terminal, gate reflects current status) verified clean against the Alloy (a formal modeling language for checking structural and temporal properties of a design) static + dynamic-trace model — 13 commands, all matching expectation.
+`grounded on Final Critique 6 — 2026-05-23` — four baseline-equivalent rounds (Pass 1/2/3 each in Rounds 1–3 plus Final Critique 4) plus Round 5 (touch-triggered re-pass — Alloy artifact verification) plus Round 6 (formal-model refinement closing both Round 5 findings) complete. Round 5 surfaced two refining findings in the formal model; Round 6 closed both. Spec prose unchanged across Rounds 5 and 6; the four named composition-level invariants and the three temporal claims (revocation terminal, expiry terminal, gate reflects current status) verified clean against the Alloy (a formal modeling language for checking structural and temporal properties of a design) static + dynamic-trace model — 13 commands, all matching expectation.
 
 ---
 
