@@ -41,7 +41,7 @@ Notification records whether a single piece of information actually reached a si
 
 ### Identity model
 
-Every notification known to the system has a **`notification_id`** — an opaque, immutable, system-generated identifier produced by `create`. The id is the notification's identity; the recipient reference and payload are immutable *properties* of the notification, not its identity.
+Every notification known to the system has a **`notification_id`** — an opaque, immutable, host-allocated at the I/O seam (injected into the transition, not generated inside it) identifier produced by `create`. The id is the notification's identity; the recipient reference and payload are immutable *properties* of the notification, not its identity.
 
 The opaque-id model follows the same discipline used across the library. Identifying a notification by (recipient_ref, payload) would collapse independently-created notifications into a single record — a recipient may be notified of the same event scope multiple times (e.g., after re-subscribing), and each delivery attempt is a distinct record with its own outcome. Opaque ids preserve one-notification-one-id discipline.
 
@@ -58,7 +58,9 @@ Ids are not reused after a notification reaches a terminal state.
   - `expire(notification_id) → ok | rejected(reason)`
   - `status_of(notification_id) → {notification_id, recipient_ref, payload, created_at, status, delivered_at?, failed_at?, expired_at?} | not-known`
   - `pending_for(recipient_ref) → [notification_id, ...]`
-- An implicit clock providing wall-time timestamps.
+- A clock providing wall-time timestamps, and an id source for `notification_id` allocation — both injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock and allocates the `notification_id` at the seam, *before* the transition runs; the pure transition receives the timestamps and `notification_id` as injected inputs. Neither is read or generated inside the core transition, and neither is supplied by the business caller — which keeps the transition deterministic and forecloses caller-supplied timestamp or id lying.
+
+**String input policy (applies to `recipient_ref` and `payload`).** Values are treated byte-exact: no trimming, no Unicode normalization, no case folding is applied before storage or comparison. A whitespace-only string counts as empty for the presence check and is rejected wherever non-empty is required (i.e., `recipient_ref`). The deployment sets a maximum length per string input; a value exceeding it is rejected as `invalid-request`. Callers own canonicalization — two `recipient_ref` values differing only in case or normalization form are two distinct recipients to this atom.
 
 ### Outputs
 
@@ -80,7 +82,7 @@ A notification occupies one of four named states:
 
 Each notification carries:
 
-- **`notification_id`** — opaque, immutable, system-generated. Set on `create`. Never changes.
+- **`notification_id`** — opaque, immutable, host-allocated at the I/O seam (injected into the transition, not generated inside it). Set on `create`. Never changes.
 - **`recipient_ref`** — opaque reference to the intended recipient. Set on `create`. Never changes.
 - **`payload`** — opaque content of the notification. Set on `create`. Never changes.
 - **`created_at`** — wall-time when the notification was created. Set on `create`. Never changes.
@@ -91,10 +93,10 @@ Each notification carries:
 
 Transitions:
 
-- `create(recipient_ref, payload)` → a new notification is recorded in Pending with a fresh `notification_id`, the supplied `recipient_ref` and `payload`, and `created_at = now`. Returns `notification_id`.
-- `deliver(notification_id)` → the notification at `notification_id` moves Pending → Delivered; `delivered_at = now`. Returns `ok`. If `notification_id` is not known, returns `rejected(not-known)`. If the notification is not in Pending, returns `rejected(not-pending)`. State is unchanged on rejection.
-- `fail(notification_id)` → the notification at `notification_id` moves Pending → Failed; `failed_at = now`. Returns `ok`. Same preconditions and rejection behavior as `deliver`.
-- `expire(notification_id)` → the notification at `notification_id` moves Pending → Expired; `expired_at = now`. Returns `ok`. Same preconditions and rejection behavior as `deliver`.
+- `create(recipient_ref, payload)` → a new notification is recorded in Pending with a fresh `notification_id`, the supplied `recipient_ref` and `payload`, and `created_at` stamped from the injected clock. Returns `notification_id`.
+- `deliver(notification_id)` → the notification at `notification_id` moves Pending → Delivered; `delivered_at` stamped from the injected clock. Returns `ok`. If `notification_id` is not known, returns `rejected(not-known)`. If the notification is not in Pending, returns `rejected(not-pending)`. State is unchanged on rejection.
+- `fail(notification_id)` → the notification at `notification_id` moves Pending → Failed; `failed_at` stamped from the injected clock. Returns `ok`. Same preconditions and rejection behavior as `deliver`.
+- `expire(notification_id)` → the notification at `notification_id` moves Pending → Expired; `expired_at` stamped from the injected clock. Returns `ok`. Same preconditions and rejection behavior as `deliver`.
 - `status_of(notification_id)` → read-only query; no state change. Returns the full notification record for the given id, or `not-known` if no notification exists for that id.
 - `pending_for(recipient_ref)` → read-only query; no state change. Returns the list of `notification_id` values for all Pending notifications where `notification.recipient_ref = recipient_ref`.
 
@@ -110,12 +112,14 @@ Transitions:
 
 ### Decision points
 
-- **At `create(recipient_ref, payload)`** — `recipient_ref` must be non-empty — specifically, not null, undefined, or the empty string; otherwise `invalid-request`. The atom does not parse or interpret the opaque value beyond this presence check. `payload` must be present — null or absent is rejected as `invalid-request`; any non-null payload, including an empty string or empty object, is accepted. The atom does not inspect, validate, or parse payload content. There is no uniqueness constraint: multiple notifications may be created for the same recipient with the same payload — each is a distinct delivery attempt with its own id and outcome.
+- **At `create(recipient_ref, payload)`** — `recipient_ref` must be non-empty — specifically, not null, undefined, the empty string, or whitespace-only (per the String input policy); otherwise `invalid-request`. The atom does not parse or interpret the opaque value beyond this presence check. `payload` must be present — null or absent is rejected as `invalid-request`; any non-null payload, including an empty string or empty object, is accepted. The atom does not inspect, validate, or parse payload content. There is no uniqueness constraint: multiple notifications may be created for the same recipient with the same payload — each is a distinct delivery attempt with its own id and outcome.
 - **At `deliver(notification_id)`** — `notification_id` must reference a known notification; otherwise `not-known`. The notification must be in Pending; transitioning a non-Pending notification is rejected as `not-pending`.
 - **At `fail(notification_id)`** — same preconditions as `deliver`: `not-known` or `not-pending`.
 - **At `expire(notification_id)`** — same preconditions: `not-known` or `not-pending`.
 - **At `status_of(notification_id)`** — no precondition. Empty or malformed `notification_id` returns `not-known` — no notification has an empty id, so the result is structurally `not-known`. Both `not-known` and the full record are first-class outcomes; neither is a rejection.
 - **At `pending_for(recipient_ref)`** — no precondition. Empty or malformed `recipient_ref` returns an empty list — no notification has an empty recipient, so the result is structurally empty. Returns an empty list if no Pending notifications exist for the recipient. The query is read-only.
+
+**Single-record transition serialization is the load-bearing precondition for status monotonicity (Invariant 2) and terminal exclusivity (Invariant 3).** Each terminal transition (`deliver`, `fail`, `expire`) must execute as an atomic, serialized unit per `notification_id`; without this guarantee, two concurrent transitions could both observe Pending and both proceed, producing two terminal timestamps and violating both invariants. The host environment supplies this serialization; the atom specifies the requirement.
 
 ### Behavior
 
@@ -132,6 +136,7 @@ Observed behavior, derived from how notification delivery systems are actually d
 - A Failed notification does not automatically trigger a retry. If retry is desired, the composing system creates a new notification record for the retry attempt — a distinct record with a distinct id and its own outcome (see Edge cases).
 - Payload is stored and returned opaque. The atom does not parse, validate, or act on payload content. Whether the payload is a JSON object, a plain string, or a reference to another record is defined entirely by the composing system.
 - `status_of` is a read-only query with no side effects. It returns all stored fields — including the opaque payload — for any notification in any state: Pending, Delivered, Failed, or Expired. No notification becomes inaccessible via `status_of` after reaching a terminal state; the record is durable for the lifetime of the system.
+- Time and `notification_id` are injected at the I/O seam: the host reads the clock and allocates `notification_id` before the transition runs; the core transition receives both as inputs and neither reads a clock nor mints an id. Caller signatures (`create(recipient_ref, payload)` and all other actions) are unchanged — timestamps and ids are never caller-supplied.
 - A notification may remain in Pending indefinitely. The atom does not impose a maximum lifetime; whether and when a Pending notification reaches a terminal state depends on the composing system's delivery layer and any scheduled-expiry process. A store with long-lived Pending records is not a spec violation — composing systems that need bounded Pending lifetimes wire a scheduled-expiry process that calls `expire` at deadline.
 
 ### Feedback
@@ -221,7 +226,7 @@ What this atom does not cover:
 - **Bulk expiry.** There is no bulk-expire surface. Expiring all Pending notifications past a deadline requires querying `pending_for` for each recipient and calling `expire(notification_id)` for each eligible id.
 - **Atomicity and crash semantics.** Each terminal transition changes two fields simultaneously: `status` and one terminal timestamp. A crash mid-`deliver` that sets `delivered_at` without updating `status`, or vice versa, violates Invariant 4 (terminal timestamps match status). The implementor is responsible for the transactional boundary that makes both fields change together. The spec does not define recovery semantics for partial writes.
 - **Payload data retention.** The notification store retains payload data for every notification for the lifetime of the system (Invariant 9). If payloads contain sensitive data — PII, financial records, medical information — the composing system is responsible for the retention policy. Retention Window is the composing pattern that bounds how long records must be kept and when they may be purged. The bare atom does not implement payload expiry or redaction.
-- **Clock semantics.** `created_at`, `delivered_at`, `failed_at`, and `expired_at` are wall-time from the implicit clock. Clock skew, NTP adjustments, and timezone handling are deployment concerns. Invariant 8 is best-effort under non-monotonic clocks.
+- **Clock semantics.** `created_at`, `delivered_at`, `failed_at`, and `expired_at` are wall-time from the injected clock. Clock skew, NTP (Network Time Protocol) adjustments, and timezone handling are deployment concerns. Invariant 8 is best-effort under non-monotonic clocks.
 
 ---
 
@@ -269,7 +274,7 @@ Notification is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded — 2026-05-20` (formal layer landed 2026-06-03 — Alloy structural model `notification.als` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — structure and invariants specified; `status_of` query added after Pass 2 identified the missing read surface; Invariant 8 corrected to conditional-per-state form after Pass 1 identified the set-notation error; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. Second entry in `messaging`.
+`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed one foundational logic-confinement finding: the clock and `notification_id` are now host-injected at the I/O seam rather than generated inside the transitions; caller signatures unchanged and the invariant set held at 9; see Lineage. Formal layer landed 2026-06-03 — Alloy structural model `notification.als` + buggy twin verified, see Lineage §Formal model. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — structure and invariants specified; `status_of` query added after Pass 2 identified the missing read surface; Invariant 8 corrected to conditional-per-state form after Pass 1 identified the set-notation error; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. Second entry in `messaging`.
 
 ---
 
@@ -327,3 +332,5 @@ This atom is the second entry in the `messaging/` category, drafted alongside Su
 **Formal-layer vote — 2026-06-03: YES (model pending).** Invariant 2 (status monotonicity Pending→exactly one terminal, no return), Invariant 3 (terminal exclusivity), and atomic status+timestamp form a state-machine absorption claim. Load-bearing temporal/ordering/safety claims a derived formal model would verify; none exists yet, so the pattern is downgraded to `grounded (English) — formal layer pending` until the model is authored and verifies (findings flow back into this English spec per the conflict protocol). Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
 
 **Formal model — 2026-06-03: Alloy structural model authored and verified; pattern promoted to `grounded`.** Derived model [`notification.als`](./notification.als) + buggy twin [`notification-buggy.als`](./notification-buggy.als), checked headless by the `org.alloytools.alloy.dist` analyzer via `tools/harness/check.mjs` (drafted by a Sonnet subagent, gated by Opus review + an independent buggy-twin run). *What it checks:* a static structural model of notification records over the status lifecycle {Pending, Delivered, Failed, Expired} with transitions as pre/post predicates. Nineteen named `check` asserts cover **Invariant 2** (status monotonicity — every transition requires a Pending source; no two terminal statuses co-occur), **Invariant 3** (terminal exclusivity — at most one terminal timestamp; each terminal status carries only its own timestamp), Invariant 4 (timestamp ⇔ status biconditional), Invariant 6 (store-level id uniqueness), and transition correctness — all UNSAT. Nine `run` predicates are all satisfiable (non-vacuity), including the three transition runs, so the lifecycle checks are not vacuous. *Buggy twin* weakens the `TimestampStatusCoherence` `delivered_at` arm from a biconditional (`iff`) to a one-way implication, letting a Failed/Expired/Pending record also carry `delivered_at`; the checker finds counterexamples on five asserts (`A_Inv3_AtMostOneTerminalTimestamp`, `A_Inv3_FailedHasOnlyFailedAt`, `A_Inv3_ExpiredHasOnlyExpiredAt`, `A_Inv3_PendingHasNoTimestamps`, `A_Inv4_DeliveredAtIffDelivered`). *Out of model scope:* wall-clock timestamp ordering (Invariant 8 — best-effort; a deployment-level concern). *Conflict-protocol outcome:* none — the model **corroborates** the English; canonical English unchanged.
+
+**AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This atom grounded 2026-05-20 under the early process — its only prior "adversarial rerun" was author-conducted (no AI model credited; the sole AI involvement was the Alloy formal model) — and carried the legacy grandfathered token. This round is its first AI-conducted adversarial round (fresh-reader Opus, Happy-Torvalds-X2); it is the atom's Final Critique 4. One foundational finding closed: F1 — Logic Confinement: the clock and `notification_id` were read/minted inside the transitions ("implicit clock" / "= now" / "system-generated"); they are now host-injected at the I/O seam, with the caller signature `create(recipient_ref, payload)` unchanged. Refining: a byte-exact string-input policy for `recipient_ref`/`payload`; single-record transition serialization named as the load-bearing precondition for Invariants 2 and 3; an acronym gloss. The invariant set held at 9, so the fix is additive with no constituent-change cascade. Formal-layer vote stands YES (Alloy model present); the time/id seam is out of model scope, so F1 does not reopen it. Confirming fresh-reader Opus clearance gate (2026-06-18): CLEAR, 0 foundational. Compositions affected — confirming check only, NOT a re-pass (the `create` signature and the nine-invariant count are unchanged): Notification Fanout, Preference-Aware Notification Fanout. Grounds at Final Critique 4.
