@@ -98,9 +98,11 @@ If you work in a domain with well-specified standards — healthcare, finance, l
 
 ## Where this is going
 
-Grace Commons is not chasing incremental improvement. The design is revolutionary by intention: the structured specification is the single source of truth, mechanically projected into working software, making the entire system legible to every stakeholder — not just developers. The methodology follows the same pattern it teaches: strong and effective now, deliberately engineered to evolve toward excellence as more authors and real-world usage shape it.
+The bet is not incremental: the structured specification is the single source of truth, mechanically projected into working software — so the system is legible to everyone accountable for it, not only the people who can read the code. Compliance logic stops living buried in opaque implementations and starts living in clear, inspectable patterns.
 
-This is what becomes possible when deep architectural taste meets modern AI — not as a replacement for human judgment, but as a force multiplier for it. The result is a new kind of commons: compliance logic no longer buried in opaque code, but living in clear, readable, verifiable patterns that anyone accountable for the system can actually understand.
+Because the spec is the source and the code is derived, Grace binds to no stack, language, or era. A single specification already drives seven independent implementations — across SQLite, PostgreSQL, MongoDB, and an append-only flat-file log — with their agreement *measured* at 20/20, not asserted. Whatever the future runs on, the pattern plugs into it at the seam. Grace is built to outlive its own implementations.
+
+And it does not claim to be finished — it says so in the open. Every pattern carries a measured quality grade, today 92–99%, against a published rubric anyone can re-run, and it names the assumptions and the work it still owes. The methodology follows the pattern it teaches: strong now, evolving under discipline as more authors and real use bear on it. The homework is done in public, and the means to prove it wrong come with it.
 
 ---
 
