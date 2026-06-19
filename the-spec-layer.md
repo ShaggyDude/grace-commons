@@ -254,7 +254,7 @@ These three together solve the multi-artifact-truth-distribution problem the Spe
 
 **The design-quality principles** are inherited rather than reinvented. They apply at every abstraction level — code, design, architecture, intent — without needing a special intent-level reframing:
 
-- **Separation of Concerns** → **separation of concepts.** Jackson framed concepts as the instrument that makes the old separation idiom useful, with the substance being separated left undefined; our phrase closes his loop — the unit of separation *is* the concept, and there is no residual undefined stuff. One letter of drift from a forty-year-old idiom: a shibboleth to readers who know the lineage, self-explanatory English to readers who don't. Enforced by Pass 2 of the pressure-test.
+- **Separation of Concerns** → **separation of concepts.** Jackson framed concepts as the instrument that makes the old separation idiom useful, with the substance being separated left undefined; our phrase closes his loop — the unit of separation *is* the concept, and there is no residual undefined stuff. A two-letter drift (`concerns` → `concepts`) from a forty-year-old idiom: a shibboleth to readers who know the lineage, self-explanatory English to readers who don't. Enforced by Pass 2 of the pressure-test.
 - **Composition over Inheritance** → atom plus composition, never atom-extending-atom.
 - **YAGNI** (You Aren't Gonna Need It — don't build things until you actually need them) → edge cases as explicit out-of-scope rather than over-specified.
 - **Encapsulation** → internals are implementation policy; the atom exposes only its contract.

@@ -15,7 +15,7 @@ toc: true
 </details>
 
 
-> A messaging primitive: the delivery record for a single notification to a single recipient. Each notification has an opaque immutable id; the recipient reference and payload are immutable properties set at create time. The atom records *whether a piece of information reached a recipient*. The transport mechanism — WebSocket, webhook, email, push — is a deployment concern outside this atom's scope.
+> A messaging primitive: the delivery record for a single notification to a single recipient. Each notification has an opaque immutable id; the recipient reference and payload are immutable properties set at create time. The atom records *whether a piece of information reached a recipient*. The transport mechanism — WebSocket, webhook, email, push — is handled at the deployment layer, outside this atom's scope.
 
 ---
 
@@ -49,7 +49,7 @@ Ids are not reused after a notification reaches a terminal state.
 
 ### Inputs
 
-- A recipient reference identifying *who* the notification is addressed to. Opaque — the actor registry is a separate concern. The atom requires only that recipient references support equality testing (so `pending_for` and `status_of` queries can filter and look up by recipient); it does not parse, normalize, or otherwise interpret their contents.
+- A recipient reference identifying *who* the notification is addressed to. Opaque — the actor registry is a separate concept. The atom requires only that recipient references support equality testing (so `pending_for` and `status_of` queries can filter and look up by recipient); it does not parse, normalize, or otherwise interpret their contents.
 - A payload carrying *what* is being communicated. Opaque — the composing system defines payload structure and content. This atom stores and returns the payload unchanged; it does not inspect, parse, or validate its contents.
 - Actions:
   - `create(recipient_ref, payload) → notification_id | rejected(reason)`
@@ -129,7 +129,7 @@ Observed behavior, derived from how notification delivery systems are actually d
 - The three terminal states are mutually exclusive. A notification transitions from Pending to exactly one terminal state. Once terminal, no further transition is possible; `deliver`, `fail`, or `expire` called on a non-Pending notification returns `not-pending`.
 - **`fail` vs. `expire` — a deployment policy.** Failed indicates an explicit delivery attempt that produced a definitive negative outcome (HTTP 5xx response, bounced email, invalid token, connection refused). Expired indicates that the allowed window elapsed without either a successful delivery or a recorded failure. Whether a connection timeout is `fail` or `expire` is the composing system's call; the atom only records the outcome, not how it was determined.
 - Concurrent `deliver`, `fail`, or `expire` calls for the same `notification_id` resolve serially under the host environment's serialization guarantees. The first transition wins; subsequent calls receive `not-pending`.
-- Who calls `deliver`, `fail`, or `expire` is a deployment concern. In a push model, the delivery layer calls these after attempting to push. In a pull model, the host system calls `deliver` when the recipient reads the notification. In a scheduled-expiry model, a background process calls `expire` for notifications past their deadline. The atom records the transition; the caller is the composing system's responsibility.
+- Who calls `deliver`, `fail`, or `expire` is handled at the deployment layer. In a push model, the delivery layer calls these after attempting to push. In a pull model, the host system calls `deliver` when the recipient reads the notification. In a scheduled-expiry model, a background process calls `expire` for notifications past their deadline. The atom records the transition; the caller is the composing system's responsibility.
 - The atom does not enforce who may call `create` — any caller may create a notification for any recipient. Authorization to create belongs to the composing system.
 - Multiple Pending notifications for the same recipient are allowed and independent. Each has its own id, payload, and delivery lifecycle. `pending_for` returns all of them; the composing system decides the delivery order.
 - No notification is deleted. All terminal records — Delivered, Failed, Expired — remain in the store for audit and operational purposes. `pending_for` excludes them; `status_of(notification_id)` returns them.
@@ -215,18 +215,18 @@ What this atom does not cover:
 
 - **Routing and subscription evaluation.** This atom creates and tracks delivery records; it does not evaluate subscriptions or determine who should be notified. That belongs to a Notification Fanout composing pattern that wires Subscription + Notification + an event source.
 - **Retry scheduling.** A Failed notification does not trigger a retry. The composing system creates a new notification record for the retry attempt: `create(recipient_ref, payload) → new_notification_id`. The retry is a distinct record with a distinct id and its own outcome. Both the original Failed record and the retry record are preserved in the store.
-- **Transport mechanism.** Whether delivery is via WebSocket, webhook, email, push notification, in-app message, or SMS (Short Message Service — text messaging) is a deployment concern. The atom records the outcome (`deliver`, `fail`, `expire`); the mechanism that produces that outcome is out of scope.
+- **Transport mechanism.** Whether delivery is via WebSocket, webhook, email, push notification, in-app message, or SMS (Short Message Service — text messaging) is handled at the deployment layer. The atom records the outcome (`deliver`, `fail`, `expire`); the mechanism that produces that outcome is out of scope.
 - **`fail` vs. `expire` boundary.** Whether a connection timeout, an invalid token, or a rate-limit response is `fail` or `expire` is a deployment policy the composing system defines. The atom only records which terminal transition was called; it does not inspect or validate the reason.
 - **Delivery ordering guarantees.** Multiple Pending notifications for the same recipient may be delivered in any order. If delivery ordering matters, the composing system is responsible for imposing it. `pending_for` returns an unordered list; the composing system sorts by `created_at` if ordered delivery is required.
 - **Recipient read confirmation vs. system delivery confirmation.** `deliver` covers system-level confirmation that the transport layer accepted the notification. Deployments that additionally require read confirmation (the recipient explicitly acknowledged the notification) should create two separate notification records: one for the push attempt (resolved with `deliver` or `fail` at push time) and one for the read-acknowledgement (resolved with `deliver` when the recipient acknowledges). The bare atom does not distinguish delivery from reading; the distinction requires two records.
 - **Payload validation and schema.** Payload is opaque. Whether a payload is well-formed, type-safe, or complete is the composing system's responsibility before calling `create`.
 - **Notification deduplication.** Multiple `create` calls for the same (recipient_ref, payload) pair produce multiple distinct Pending notifications. Composing systems that require at-most-once delivery for a given event should use Duplicate Prevention to guard the `create` call.
-- **Recipient registration and lifecycle.** `recipient_ref` is opaque. Whether a recipient exists or has been deprovisioned is an Actor Registry concern.
+- **Recipient registration and lifecycle.** `recipient_ref` is opaque. Whether a recipient exists or has been deprovisioned belongs to Actor Registry.
 - **Authorization to create.** The atom does not enforce who may call `create`. Any caller may create a notification for any recipient. Authorization to create belongs to the composing system.
 - **Bulk expiry.** There is no bulk-expire surface. Expiring all Pending notifications past a deadline requires querying `pending_for` for each recipient and calling `expire(notification_id)` for each eligible id.
 - **Atomicity and crash semantics.** Each terminal transition changes two fields simultaneously: `status` and one terminal timestamp. A crash mid-`deliver` that sets `delivered_at` without updating `status`, or vice versa, violates Invariant 4 (terminal timestamps match status). The implementor is responsible for the transactional boundary that makes both fields change together. The spec does not define recovery semantics for partial writes.
 - **Payload data retention.** The notification store retains payload data for every notification for the lifetime of the system (Invariant 9). If payloads contain sensitive data — PII, financial records, medical information — the composing system is responsible for the retention policy. Retention Window is the composing pattern that bounds how long records must be kept and when they may be purged. The bare atom does not implement payload expiry or redaction.
-- **Clock semantics.** `created_at`, `delivered_at`, `failed_at`, and `expired_at` are wall-time from the injected clock. Clock skew, NTP (Network Time Protocol) adjustments, and timezone handling are deployment concerns. Invariant 8 is best-effort under non-monotonic clocks.
+- **Clock semantics.** `created_at`, `delivered_at`, `failed_at`, and `expired_at` are wall-time from the injected clock. Clock skew, NTP (Network Time Protocol) adjustments, and timezone handling are handled at the deployment layer. Invariant 8 is best-effort under non-monotonic clocks.
 
 ---
 

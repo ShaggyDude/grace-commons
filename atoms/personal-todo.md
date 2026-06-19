@@ -208,7 +208,7 @@ What this pattern does not cover:
 - **Description versioning / edit history.** Only `last_edited_at` is retained; prior descriptions are not. Versioning belongs to a separate History pattern.
 - **Concurrent action sequences.** The pattern assumes a linear sequence of actions from a single actor. Multiple concurrent clients (two browser tabs, mobile + desktop) producing simultaneous actions on the same unit fall outside this concept; coordination belongs to a Concurrency-Resolution pattern that composes.
 - **Atomicity and crash semantics.** State transitions are specified as atomic. A crash mid-transition that leaves a unit in neither Pending nor Done violates membership exclusivity; the implementor is responsible for the transactional boundary that makes it hold. The spec does not define recovery semantics.
-- **Clock semantics.** `added_at`, `last_edited_at`, and `completed_at` are wall-time stamped from the injected `now` (see Inputs and Behavior). Clock skew, NTP adjustments, monotonicity, and timezone handling are deployment concerns the spec does not address. Invariant 7 (timestamp monotonicity) is best-effort under non-monotonic clocks; a clock that moves backward between transitions can violate the inequalities. Trusted timestamping is a composing pattern that supplies a verifiable time-anchor if the timeline must be adversarially defensible.
+- **Clock semantics.** `added_at`, `last_edited_at`, and `completed_at` are wall-time stamped from the injected `now` (see Inputs and Behavior). Clock skew, NTP adjustments, monotonicity, and timezone handling are handled at the deployment layer; the spec does not address them. Invariant 7 (timestamp monotonicity) is best-effort under non-monotonic clocks; a clock that moves backward between transitions can violate the inequalities. Trusted timestamping is a composing pattern that supplies a verifiable time-anchor if the timeline must be adversarially defensible.
 - **Case-insensitive matching, fuzzy matching, locale-aware comparison.** The description policy specifies NFC + trim + case-sensitive. Variants belong to wrapping patterns.
 
 Where the pattern breaks down: in any system with multiple actors, where "completion" is not a binary state, where description is not a sufficient property under uniqueness constraint, or where the host environment cannot supply the atomic state transitions membership exclusivity depends on. Each takes a different pattern.
@@ -217,7 +217,7 @@ Where the pattern breaks down: in any system with multiple actors, where "comple
 
 ## Composition notes
 
-Personal Todo is a freestanding concept and is designed to compose with other concepts rather than absorb their concerns:
+Personal Todo is a freestanding concept and is designed to compose with other concepts rather than absorb what belongs to them:
 
 - **[Duplicate Prevention](./duplicate-prevention.md)** — adds a temporally-bounded recency guard against rapid re-adds of recently-deleted descriptions. The container calls `record(normalized_description)` on every successful `delete` and `check(normalized_description)` before every `add`. If `check` returns `seen`, the add is rejected as `duplicate-recent`. This produces the *"buy milk twice in the same morning is rejected; twice in the same week is allowed"* user experience. Personal Todo's MVP can ship without this composition; the v1.1 polish brings it in.
 - **[Undo History](../compositions/undo-history.md)** — wires Personal Todo with Event Log to preserve each deletion as a recoverable event. The deleted unit's id, description, and timestamps are appended to the Event Log on every successful `delete`, making the full deletion history reconstructable from records alone and enabling restoration by an administrator or the author.
@@ -235,7 +235,7 @@ Personal Todo is a freestanding concept and is designed to compose with other co
 
 Personal Todo is a primitive, not a regulated business pattern. It has no direct ISO / IEEE / regulatory anchor. It inherits from:
 
-- **Daniel Jackson, *The Essence of Software*** — the conception of a "concept" as a composable, behavioral, freestanding unit of software design. The discipline of *not* absorbing concerns that belong to other concepts.
+- **Daniel Jackson, *The Essence of Software*** — the conception of a "concept" as a composable, behavioral, freestanding unit of software design. The discipline of *not* absorbing concepts that belong to other concepts.
 - **Eiffel's design-by-contract** — preconditions on `add`, `edit`, `complete`, `delete`.
 - **Linear temporal logic** — Add-then-Pending and Complete-then-Done expressed as `until` properties.
 - **Unicode Standard Annex #15** — NFC normalization for the description policy.
@@ -246,7 +246,7 @@ A formal-methods version of a similar concept exists in [concept-catalog](https:
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 2 foundational finding(s): `id` and clock now host-injected at the I/O seam, and unreachable `not-pending` rejection removed from `edit`; caller signatures unchanged; see Lineage. Formal-layer vote stands NO (English-only, minimum-formalism). The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; description policy explicit; rejection paths exercised in examples; deferred concerns (concurrency, atomicity, clock semantics) named as out-of-scope. The pattern is freestanding and composable. Extensions (recency guard, history, priority, dependencies, recurrence, reopening, concurrency resolution) are separate concepts, listed in Composition notes.
+`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 2 foundational finding(s): `id` and clock now host-injected at the I/O seam, and unreachable `not-pending` rejection removed from `edit`; caller signatures unchanged; see Lineage. Formal-layer vote stands NO (English-only, minimum-formalism). The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; description policy explicit; rejection paths exercised in examples; deferred concepts (concurrency, atomicity, clock semantics) named as out-of-scope. The pattern is freestanding and composable. Extensions (recency guard, history, priority, dependencies, recurrence, reopening, concurrency resolution) are separate concepts, listed in Composition notes.
 
 ---
 

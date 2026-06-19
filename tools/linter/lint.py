@@ -507,7 +507,7 @@ def check_banned_token(root: Path) -> list[Finding]:
         for i, line in enumerate(text.splitlines(), start=1):
             if LINEAGE_HEADING.match(line):
                 break  # live body only — Lineage is dated history
-            scrubbed = line.replace(ANCESTOR_PROPER_NOUN, "")
+            scrubbed = CODE_SPAN.sub("", line).replace(ANCESTOR_PROPER_NOUN, "")
             for m in BANNED_TOKEN.finditer(scrubbed):
                 out.append(Finding(
                     md, i, "J-banned-token",

@@ -48,7 +48,7 @@ The opaque-id model preserves the same per-event audit discipline the other regu
 ### Inputs
 
 - A record reference identifying *what* is being retained. The atom treats this as opaque — the host system defines what counts as a record and how to reference it.
-- A policy reference identifying *which retention rules apply*. Also opaque — the policy registry is a separate concern. The atom requires only that the policy expose a `duration` (the retention period) and a `max_purge_delay` (the maximum allowed lag between retention-end and purge).
+- A policy reference identifying *which retention rules apply*. Also opaque — the policy registry is a separate concept. The atom requires only that the policy expose a `duration` (the retention period) and a `max_purge_delay` (the maximum allowed lag between retention-end and purge).
 - Actions:
   - `place_under_retention(record_ref, policy_ref) → retention_id | rejected(invalid-request | invalid-policy | policy-not-found | storage-failure)`
   - `purge(retention_id) → ok | rejected(not-retained | not-known | retention-period-not-elapsed | storage-failure)`
@@ -68,7 +68,7 @@ A retention, once created, occupies exactly one of two states:
 - **Retained** — the record is under active retention obligation. The retention window may or may not have elapsed; purge has not yet occurred.
 - **Purged** — the record has been purged; the retention is terminal.
 
-Two states only. *Storage tier* (active storage vs. cold storage) is a separate axis, owned by a Storage Tier composing pattern — a record may move from active to cold storage at any time without changing its retention state. This is the Pass 2 finding documented in Lineage notes: archive-as-state-transition would absorb a concern that recurs across many regulated records and belongs to its own atom.
+Two states only. *Storage tier* (active storage vs. cold storage) is a separate axis, owned by a Storage Tier composing pattern — a record may move from active to cold storage at any time without changing its retention state. This is the Pass 2 finding documented in Lineage notes: archive-as-state-transition would absorb a concept that recurs across many regulated records and belongs to its own atom.
 
 Each retention carries:
 
@@ -152,7 +152,7 @@ A hospital places each patient encounter record under retention with the maximum
 
 ### Payments — cardholder-data retention under PCI DSS
 
-A payment processor places cardholder-data records (PAN — Primary Account Number, the card number; expiration; CVV-substitute tokens — stand-ins for the card security code) under retention with the *shortest* viable policy — typically days for transient transaction data, never longer than business need requires. PCI DSS (Payment Card Industry Data Security Standard — the card networks' mandatory security rules for handling cardholder data) Requirement 3.1 mandates data minimization. The atom's no-early-purge invariant becomes less relevant here (windows are short); the overshoot metric becomes the audit's primary concern, surfacing any cardholder data still Retained past `purge_deadline`.
+A payment processor places cardholder-data records (PAN — Primary Account Number, the card number; expiration; CVV-substitute tokens — stand-ins for the card security code) under retention with the *shortest* viable policy — typically days for transient transaction data, never longer than business need requires. PCI DSS (Payment Card Industry Data Security Standard — the card networks' mandatory security rules for handling cardholder data) Requirement 3.1 mandates data minimization. The atom's no-early-purge invariant becomes less relevant here (windows are short); the overshoot metric is what the audit primarily surfaces — any cardholder data still Retained past `purge_deadline`.
 
 ### Communications — broker-dealer communications under SEC Rule 17a-4
 
@@ -211,7 +211,7 @@ What this atom does not cover:
 - **Purge persistence failure.** If the Retained → Purged state transition is computed but the store write fails, the atom returns `rejected(storage-failure)` and the retention remains in Retained — the underlying record is not destroyed. Unlike `grant` storage failures, this is not a security failure but a data-minimization failure: the record should have been destroyed but wasn't. Callers must treat `storage-failure` from `purge` as unresolved and retry. High-assurance deployments should alert on `storage-failure` from `purge` and implement automatic retry.
 - **Divergence between retention state and underlying record.** If the retention transitions to Purged but the storage layer fails to actually destroy the underlying record, the audit shows "purged" but the data still exists — a compliance failure. The atom's `purge` action signals the storage layer to destroy the record, but the atom has no way to confirm the destruction succeeded. The storage layer's destruction confirmation and the retention state transition must be coordinated; if the storage layer cannot confirm destruction, the `purge` must return `rejected(storage-failure)` rather than `ok`. The implementation owns this coordination; see *What counts as "purged"* above.
 
-Where the atom breaks down: when the retention obligation is a function of *content* (records about minors might extend retention until the minor's age of majority, requiring policy lookup against the record itself); when the storage layer cannot guarantee irrecoverability after `purge` succeeds (append-only logs, distributed replicas, backup systems with their own retention); when the regulatory clock and the system clock are dramatically out of sync (a deployment-shaped concern that breaks every wall-time-based deadline).
+Where the atom breaks down: when the retention obligation is a function of *content* (records about minors might extend retention until the minor's age of majority, requiring policy lookup against the record itself); when the storage layer cannot guarantee irrecoverability after `purge` succeeds (append-only logs, distributed replicas, backup systems with their own retention); when the regulatory clock and the system clock are dramatically out of sync (a deployment-shaped condition that breaks every wall-time-based deadline).
 
 ---
 

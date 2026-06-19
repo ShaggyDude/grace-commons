@@ -48,7 +48,7 @@ The opaque-id model is load-bearing. Identifying an assignment by `task_ref` wou
 ### Inputs
 
 - A task reference identifying the unit of work being assigned. Opaque — the atom does not know what a task is or how its lifecycle is managed.
-- An assignee reference identifying the actor being assigned responsibility. Opaque — the actor registry is a separate concern.
+- An assignee reference identifying the actor being assigned responsibility. Opaque — the actor registry is a separate concept.
 - Actions:
   - `assign(task_ref, assignee_ref) → assignment_id | rejected(invalid-request | already-assigned | storage-failure)`
   - `recall(assignment_id) → ok | rejected(not-known | not-active | storage-failure)`
@@ -115,7 +115,7 @@ Observed behavior, derived from how work-distribution systems are actually used:
 
 - A task is either unassigned (no Active assignment) or assigned (exactly one Active assignment). There is no in-between, and there is no second assignment that could produce ambiguity about who is responsible.
 - Reassign is the preferred mechanism for handing off responsibility. It is atomic — there is no window between the old assignment's Transferred state and the new assignment's Active state where the task is unassigned. Composing systems that implement recall-then-assign introduce a gap during which the task has no responsible actor; reassign eliminates the gap.
-- The atom does not model whether the assignee has accepted responsibility. `assign` creates the binding immediately; whether the assignee is notified, whether they must acknowledge, whether they can decline — all are composing concerns. The base atom models the binding as unilateral: the assigner assigns, and the assignment is Active.
+- The atom does not model whether the assignee has accepted responsibility. `assign` creates the binding immediately; whether the assignee is notified, whether they must acknowledge, whether they can decline — all are composing concepts. The base atom models the binding as unilateral: the assigner assigns, and the assignment is Active.
 - The atom does not model completion. When the task completes (in Personal Todo or the host task system), the assignment record is not automatically resolved. The composing system decides: leave the Active assignment as a record of who completed the task, or call `recall` to close the assignment record. Both are valid operational patterns; the atom supports either.
 - An assignee may be assigned multiple tasks simultaneously. The at-most-one invariant is per task, not per assignee. A single actor holding Active assignments on ten tasks is unremarkable; each task's assignment is independent.
 - The full assignment history for any task is recoverable from the assignment store: all assignments (Active, Recalled, Transferred) where `assignment.task_ref = task_ref`, ordered by `assigned_at`. The chain of responsibility is complete.
@@ -205,7 +205,7 @@ What this atom does not cover:
 - **Concurrent assign races.** Two simultaneous `assign` calls for the same `task_ref` resolve serially under the host environment's serialization guarantees. The first wins; the second receives `already-assigned`.
 - **Reassign atomicity and crash semantics.** `reassign` is specified as atomic. A crash between marking the old assignment Transferred and creating the new Active one would leave the task unassigned and Invariant 1 vacuously satisfied but Invariant 7 violated. The implementor is responsible for the transactional boundary that makes atomicity hold.
 - **Reassign storage failure.** A store-write failure during `reassign` is a two-write scenario: the old assignment must be marked Transferred and a new Active assignment must be created. If either write fails, the atom returns `rejected(storage-failure)` and both writes must be rolled back — the old assignment remains Active and no new assignment is created. A partial state where the old assignment is Transferred but no new Active assignment exists violates Invariant 7 (the task is unassigned after a `reassign` call that the caller may believe succeeded). Implementations that cannot provide full transactional rollback must detect and repair this partial state on recovery before accepting new requests. The two-write transactional obligation is the instance of the multi-write atomicity rule described in [`execution-contract.md`](../execution-contract.md) §Multi-write atomicity.
-- **Clock semantics.** `assigned_at`, `recalled_at`, and `transferred_at` are wall-time stamped from the injected `now` (see Inputs and Behavior). Skew, monotonicity, and timezone handling are deployment concerns. Invariant 8 is best-effort under non-monotonic clocks.
+- **Clock semantics.** `assigned_at`, `recalled_at`, and `transferred_at` are wall-time stamped from the injected `now` (see Inputs and Behavior). Skew, monotonicity, and timezone handling are handled at the deployment layer. Invariant 8 is best-effort under non-monotonic clocks.
 
 Where the atom breaks down: when responsibility is genuinely shared simultaneously (requiring group assignment); when assignment must be time-bounded without external revocation (requiring temporal grant); when the assigner must be authorized before assigning (requiring permissions composition); when the assignee must consent (requiring workflow composition).
 
@@ -240,14 +240,14 @@ Assignment is a productivity primitive with broad operational anchoring and ligh
 
 It inherits from:
 
-- **Daniel Jackson, *The Essence of Software*** — freestanding-atom posture; the discipline of keeping accept/decline, authorization, capacity, and expiry as composing concerns rather than absorbing them.
+- **Daniel Jackson, *The Essence of Software*** — freestanding-atom posture; the discipline of keeping accept/decline, authorization, capacity, and expiry as composing concepts rather than absorbing them.
 - **Eiffel's design-by-contract** — preconditions on `assign`, `recall`, `reassign`; named rejection reasons.
 
 ---
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 3 foundational finding(s): clock + `assignment_id` host-injected at the seam, `storage-failure` rejection example added, named read queries `active_for`/`history_for` declared; caller signatures unchanged; see Lineage. Formal-layer vote stands YES (TLA+ model present); the time/id seam is out of model scope, so F1 does not reopen it. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; assign, recall, and reassign preconditions explicit; rejection paths exercised in examples across four domains; deferred concerns (accept/decline, expiry, assigner authorization, assigner attribution, capacity constraints, group assignment, task lifecycle, completion handling, concurrent races, reassign atomicity, clock semantics) named as out-of-scope with composing patterns where applicable. Second entry in `productivity`. Direct prerequisite for the Shared Todo composition.
+`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 3 foundational finding(s): clock + `assignment_id` host-injected at the seam, `storage-failure` rejection example added, named read queries `active_for`/`history_for` declared; caller signatures unchanged; see Lineage. Formal-layer vote stands YES (TLA+ model present); the time/id seam is out of model scope, so F1 does not reopen it. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; assign, recall, and reassign preconditions explicit; rejection paths exercised in examples across four domains; deferred candidate concepts (accept/decline, expiry, assigner authorization, assigner attribution, capacity constraints, group assignment, task lifecycle, completion handling, concurrent races, reassign atomicity, clock semantics) named as out-of-scope with composing patterns where applicable. Second entry in `productivity`. Direct prerequisite for the Shared Todo composition.
 
 ---
 

@@ -66,14 +66,27 @@ cut a versioned release, so everything below sits under **Unreleased**.
   "Application state" section heading to the canonical "Composition state" (per
   [`execution-contract.md`](./execution-contract.md) §Composition state).
   Presentation-only: no invariant, signature, or grounding change, no re-pass.
-  The vocabulary lint rules **J** ("concern") and **K** ("application") are now
+  The vocabulary lint rules **J** (working-noun → canonical: "concept") and **K** ("application") are now
   scoped to the live spec body, **exempting Lineage notes** (dated historical
   narration, like `roadmap.md` and `glossary.md` already are), and **K** scrubs
   standards proper-nouns (OWASP *Application Security Verification Standard*,
   ISO/IEC 27001 *System and Application Access Control*, DoD *software applications*)
   as fixed terms of art — same mechanism as the existing "Application Programming
-  Interface" gloss. Result: `K-output-noun` 428 → 0. (A `J` "concern" sweep of the
-  live body remains a separate future pass.)
+  Interface" gloss. Result: `K-output-noun` 428 → 0. (The **J** sweep of the
+  live body was completed as a separate pass — see entry below.)
+
+- **`concern` → `concept` sweep; linter green (2026-06-18).** Completed the **J**
+  half of the vocabulary work: the banned working-noun "concern" → the canonical
+  "concept" across the live body of every spec — *"the unit of separation is the
+  concept"* ([`the-spec-layer.md`](./the-spec-layer.md)). "separation of concerns" →
+  "separation of concepts"; the "matter handled at layer X" sense was rephrased
+  (e.g. "a deployment concern" → "handled at the deployment layer") rather than
+  synonym-swapped; "Separation of Concerns" kept only as the Dijkstra citation;
+  pre-triage items → "candidate concept". `lint.py`'s **J** rule now also scrubs
+  code spans (a backticked mention is not working use — matching **K**), and
+  the-spec-layer's "one letter of drift" was corrected to "a two-letter drift"
+  (`concerns` → `concepts`). Presentation-only, no re-pass. The vocabulary linter is
+  now **green — 0 findings** (J, K, and the status-mirror check all at zero).
 
 - **Grandfathering retired (2026-06-18).** Every pattern grounded before the AI
   adversarial round was codified — the 13 under-vetted specs plus 2 that were
