@@ -59,6 +59,21 @@ cut a versioned release, so everything below sits under **Unreleased**.
 
 ### Changed
 
+- **Grandfathering retired (2026-06-18).** Every pattern grounded before the AI
+  adversarial round was codified — the 13 under-vetted specs plus 2 that were
+  ambiguous on inspection — received its first real fresh-reader Final Critique
+  (Opus, Happy-Torvalds-X2) under the 92%-good threshold and now carries a
+  canonical `grounded on Final Critique N` token (mostly 4; Capacity Constraint
+  Enforcement at 5); 12 already-vetted specs were retro-relabeled to the canonical
+  form rather than re-passed. The recurring root defect was Logic Confinement
+  (time / ids / cryptographic material generated *inside* the transition), fixed
+  corpus-wide to the host-injected-at-seam form with caller signatures unchanged
+  (additive, no constituent cascade). With no spec left on the legacy form, the
+  **§Grandfathered-patterns clause and the legacy `grounded — YYYY-MM-DD` status
+  form** are removed from [`pressure-testing.md`](./pressure-testing.md), the
+  legacy-form regex is removed from [`tools/linter/lint.py`](./tools/linter/lint.py),
+  and roadmap methodology-debt #3 is resolved.
+
 - **Refactor 1, constitutional cluster (2026-06-10)** — three core-doc
   adjudications plus a drift sweep, from the 2026-06-10 review handoff:
   - **Ownership seam (A7).** [`spec-format.md`](./spec-format.md) owns the

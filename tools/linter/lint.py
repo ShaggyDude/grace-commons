@@ -341,7 +341,6 @@ STATUS_TOKEN_FORMS = [
     re.compile(r"^unresolved$"),
     re.compile(r"^partially resolved$"),
     re.compile(r"^grounded on Final Critique \d+ — \d{4}-\d{2}-\d{2}$"),
-    re.compile(r"^grounded — \d{4}-\d{2}-\d{2}$"),  # legacy (grandfathered, no FC number)
     re.compile(r"^grounded \(English\) on Final Critique \d+ — \d{4}-\d{2}-\d{2} — formal layer pending$"),
     re.compile(r"^grounded on Final Critique \d+ — \d{4}-\d{2}-\d{2} — .+ pending$"),
 ]
