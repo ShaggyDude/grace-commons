@@ -16,7 +16,7 @@ toc: true
 </details>
 
 
-> An application: every Personal Todo action is reversible. Composes Personal Todo with Event Log to give the user a familiar Cmd+Z experience without modifying either constituent atom.
+> A composition: every Personal Todo action is reversible. Composes Personal Todo with Event Log to give the user a familiar Cmd+Z experience without modifying either constituent atom.
 
 ---
 
@@ -24,9 +24,9 @@ toc: true
 
 The user expects a familiar undo capability — the ability to take back the last thing they did. Personal Todo on its own does not provide this: each action is committed and there is no native "undo" surface. Event Log on its own provides a faithful record of what happened but does not act on it.
 
-This application composes the two. Every action the user takes against Personal Todo is recorded in an Event Log instance owned by the application. An additional `undo` action consults the log, identifies the most recent forward action not already undone, and adjusts the application's derived Personal Todo state to be equivalent to the state had that action never occurred.
+This composition composes the two. Every action the user takes against Personal Todo is recorded in an Event Log instance owned by the composition. An additional `undo` action consults the log, identifies the most recent forward action not already undone, and adjusts the composition's derived Personal Todo state to be equivalent to the state had that action never occurred.
 
-The application is event-sourced (state is derived by replaying a log of recorded events rather than storing the current state directly). Personal Todo state at any moment is defined as the result of replaying the log's non-undone events from the beginning. Forward actions append events; undo appends compensating events; replay produces the current state. Personal Todo's atom spec is unchanged. Event Log's atom spec is unchanged. The application is the wiring.
+The composition is event-sourced (state is derived by replaying a log of recorded events rather than storing the current state directly). Personal Todo state at any moment is defined as the result of replaying the log's non-undone events from the beginning. Forward actions append events; undo appends compensating events; replay produces the current state. Personal Todo's atom spec is unchanged. Event Log's atom spec is unchanged. The composition is the wiring.
 
 ---
 
@@ -38,8 +38,8 @@ Undo History combines two simpler patterns — a single-user task list (Personal
 
 ## Composes
 
-- **[Personal Todo](../atoms/personal-todo.md)** — provides the substrate state machine, transition rules, and all its invariants. The application maintains a Personal Todo–shaped state derived from the Event Log.
-- **[Event Log](../atoms/event-log.md)** — provides the durable, append-only record of every action. The application owns one Event Log instance for each Personal Todo it operates on.
+- **[Personal Todo](../atoms/personal-todo.md)** — provides the substrate state machine, transition rules, and all its invariants. The composition maintains a Personal Todo–shaped state derived from the Event Log.
+- **[Event Log](../atoms/event-log.md)** — provides the durable, append-only record of every action. The composition owns one Event Log instance for each Personal Todo it operates on.
 
 ---
 
@@ -47,7 +47,7 @@ Undo History combines two simpler patterns — a single-user task list (Personal
 
 ### Event schemas
 
-The application writes five event types into its Event Log instance:
+The composition writes five event types into its Event Log instance:
 
 ```
 {type: "add",      event_id, recorded_at, id, description}
@@ -61,7 +61,7 @@ The application writes five event types into its Event Log instance:
 
 ### Action wiring
 
-The application replaces Personal Todo's direct API surface. Users call the application's actions; the application updates both the Event Log and the derived state.
+The composition replaces Personal Todo's direct API surface. Users call the composition's actions; the composition updates both the Event Log and the derived state.
 
 - **`add(description) → id | rejected(invalid-description | duplicate-active | storage-failure)`** — Validate against Personal Todo's `add` precondition (description policy + active-set uniqueness against the *current derived state*); reject with `invalid-description` or `duplicate-active` if the precondition fails. On success, the host allocates the new unit `id` at the composition's I/O seam (injected before the action's transition; not generated inside it), append `{type: "add", id, description}` to the Event Log. If the append returns `rejected(storage-failure)`, return `storage-failure` to the caller without updating the derived state — the action did not happen. On successful append, update the derived state, return `id`.
 - **`edit(id, newDescription) → ok | rejected(not-known | not-editable | invalid-description | duplicate-active | storage-failure)`** — Validate against Personal Todo's `edit` precondition; reject with `not-known`, `not-editable`, `invalid-description`, or `duplicate-active` if the precondition fails. On success, capture the unit's current description as `prior_description`, append `{type: "edit", id, prior_description, new_description}`. If the append returns `rejected(storage-failure)`, return `storage-failure` without updating the derived state. On successful append, update the derived state, return `ok`.
@@ -91,7 +91,7 @@ Replay assumes events were recorded only on successful actions, which guarantees
 
 The decision the composition exists to enforce: **identity preservation across delete and undo is achieved through replay of the original event sequence rather than through state restoration from a snapshot**.
 
-*Principle.* When a user undoes a `delete`, the deleted unit must be restored at its original `id`, with its original `added_at`, `last_edited_at` (if any), and state intact — not as a fresh unit with a new id and reset timestamps. This identity preservation is the property users expect from undo and the property that makes the composition useful as a building block for audit-trail-adjacent applications.
+*Principle.* When a user undoes a `delete`, the deleted unit must be restored at its original `id`, with its original `added_at`, `last_edited_at` (if any), and state intact — not as a fresh unit with a new id and reset timestamps. This identity preservation is the property users expect from undo and the property that makes the composition useful as a building block for audit-trail-adjacent uses.
 
 *Likely objection.* "Couldn't the `delete` action save a snapshot and `undo` restore from it?" Per-action snapshots (the Memento pattern) restore state but produce a new copy of the unit — a fresh `add` against Personal Todo would issue a new id, resetting timestamps and losing the unit's historical identity.
 
@@ -106,12 +106,12 @@ The decision the composition exists to enforce: **identity preservation across d
 These invariants emerge from the composition. None of them belong to a single constituent atom; each requires both atoms working together to hold.
 
 - **Invariant 1 — Log faithfulness.** Every successful user action (forward or undo) appends exactly one event to the Event Log. No event appears in the log without a corresponding user action; no user action goes unrecorded.
-- **Invariant 2 — State equivalence.** At any time, the application's exposed Personal Todo state equals the result of replaying the Event Log's non-undone events from the beginning under the replay semantics above. The state is not stored separately; it is *defined* by the log.
+- **Invariant 2 — State equivalence.** At any time, the composition's exposed Personal Todo state equals the result of replaying the Event Log's non-undone events from the beginning under the replay semantics above. The state is not stored separately; it is *defined* by the log.
 - **Invariant 3 — Undo targets the most recent forward event.** Each `undo` event's `undone_event_id` references the most recent forward event whose `event_id` was not already in the undone set at the time the undo was issued.
 - **Invariant 4 — Personal Todo's invariants are preserved.** All invariants from Personal Todo hold over the derived state at every moment. Replay never produces an invalid Personal Todo state, because every recorded forward event was a successful action against a then-valid state.
-- **Invariant 5 — Event Log's invariants are preserved.** All invariants from Event Log hold. The application never deletes or rewrites events; undo is implemented via compensating appends (new events that logically cancel a prior event, leaving the original record intact), not via mutation.
+- **Invariant 5 — Event Log's invariants are preserved.** All invariants from Event Log hold. The composition never deletes or rewrites events; undo is implemented via compensating appends (new events that logically cancel a prior event, leaving the original record intact), not via mutation.
 - **Invariant 6 — Identity preservation across delete/undo.** Undoing a `delete` restores the unit at its original `id` with its original `added_at`, `last_edited_at` (if any), and prior state (Pending or Done). The original `add` event remains in the log; replay skipping the `delete` reconstructs the unit faithfully. Personal Todo on its own cannot do this — its `delete` is terminal and a fresh `add` produces a new id. The composition with Event Log buys back identity preservation as an emergent property.
-- **Invariant 7 — Reachability of prior states.** From any point in the user's history, the user can return to any prior application-visible state via a finite sequence of `undo` calls — provided no further forward actions intervene. After any forward action following undos, the previously-undone events remain in the log but cannot be reached via `undo` (that would require a separate Redo pattern).
+- **Invariant 7 — Reachability of prior states.** From any point in the user's history, the user can return to any prior composition-visible state via a finite sequence of `undo` calls — provided no further forward actions intervene. After any forward action following undos, the previously-undone events remain in the log but cannot be reached via `undo` (that would require a separate Redo pattern).
 
 ---
 
@@ -135,7 +135,7 @@ A user adds *"buy milk"* (id `m1`), completes `m1`, deletes `m1`. The Event Log 
 
 ### Audit-as-side-effect
 
-A user later asks *"what did I do this week?"* The application calls `read_history({recorded_at: last_7_days})` and returns the full sequence including undos. Same Event Log instance, no additional atoms required. If the user later wants the history protected for compliance, composing this application's Event Log with [Audit Trail](./audit-trail.md) adds attribution, retention, and tamper-evidence without changing the composition above.
+A user later asks *"what did I do this week?"* The composition calls `read_history({recorded_at: last_7_days})` and returns the full sequence including undos. Same Event Log instance, no additional atoms required. If the user later wants the history protected for compliance, composing this composition's Event Log with [Audit Trail](./audit-trail.md) adds attribution, retention, and tamper-evidence without changing the composition above.
 
 ### Rejection paths
 
@@ -151,17 +151,17 @@ Storage failure path: the user calls `add("walk dog")` and Event Log's `append` 
 
 ## Edge cases and explicit non-goals
 
-What this application does not cover:
+What this composition does not cover:
 
-- **Redo.** Once an action is undone and a new forward action is taken, the undone action cannot be re-applied via this application. Redo requires a Redo Stack pattern that interprets a different class of compensating events. The current application's `undo` is one-directional.
+- **Redo.** Once an action is undone and a new forward action is taken, the undone action cannot be re-applied via this composition. Redo requires a Redo Stack pattern that interprets a different class of compensating events. The current composition's `undo` is one-directional.
 - **Branching history.** No support for "go back in time and take a different action." The log is linear; alternate timelines are out of scope.
 - **Selective undo.** `undo` always targets the most recent non-undone forward event. Undoing a specific earlier action while preserving more recent actions ("undo my edit from twenty minutes ago, keep everything since") is not supported — it would require event-dependency analysis and is a separate pattern.
 - **Undo of undo.** Forward events can be undone; undo events cannot. Reversing an undo is the redo operation, out of scope.
-- **Persistence across restarts.** The application assumes the Event Log is durable across application restarts (a deployment property of the Event Log instance). If the log is volatile, the undo history resets at restart, which most users will not expect.
-- **Initialization from an existing log.** The application assumes its Event Log instance is either fresh (no events) at start, or an existing log whose events represent the prior history of the same Personal Todo. Inheriting an Event Log from a different application or substrate, or merging logs across substrates, is out of scope — that is an Import or Migration pattern.
+- **Persistence across restarts.** The composition assumes the Event Log is durable across composition restarts (a deployment property of the Event Log instance). If the log is volatile, the undo history resets at restart, which most users will not expect.
+- **Initialization from an existing log.** The composition assumes its Event Log instance is either fresh (no events) at start, or an existing log whose events represent the prior history of the same Personal Todo. Inheriting an Event Log from a different system or substrate, or merging logs across substrates, is out of scope — that is an Import or Migration pattern.
 - **Concurrent actors.** Single-actor only, inherited from Personal Todo. Multi-actor undo (one user undoes another user's action) requires composing Shared Todo + Event Log + a Concurrency Resolution pattern.
 - **Long-history performance.** Replay from the beginning of the log is O(n) in log size. For systems with millions of events, compose with a Snapshot pattern (forthcoming) that periodically captures the derived state and lets replay start from the most recent snapshot.
-- **User expectation of undo scope.** The application's rule — *"most recent forward event not already undone"* — is unambiguous, but in long sequences with multiple undos the rule may not match user intuition (which often imagines undo as walking back through *visible* history rather than *unredacted* history). The mapping between this rule and the surface UX is a presentation-layer concern, not a spec concern.
+- **User expectation of undo scope.** The composition's rule — *"most recent forward event not already undone"* — is unambiguous, but in long sequences with multiple undos the rule may not match user intuition (which often imagines undo as walking back through *visible* history rather than *unredacted* history). The mapping between this rule and the surface UX is a presentation-layer concern, not a spec concern.
 
 Where the composition breaks down: when the underlying Event Log cannot guarantee durability or total order; when Personal Todo is replaced with a substrate whose actions are not all reversible by replay (actions with external side effects — sending emails, charging cards — where the side effect is not reversible by skipping the event).
 
@@ -172,9 +172,9 @@ Where the composition breaks down: when the underlying Event Log cannot guarante
 This composition draws on:
 
 - **Event sourcing** (Greg Young, Martin Fowler) — the architectural pattern of deriving state from an append-only log of events. Undo via compensating events is a classical event-sourcing technique.
-- **Memento pattern** (GoF) — the object-oriented antecedent: capture state before each action, restore on undo. Memento is per-object and ephemeral; event-sourcing generalizes it across the whole application and persists it.
+- **Memento pattern** (GoF) — the object-oriented antecedent: capture state before each action, restore on undo. Memento is per-object and ephemeral; event-sourcing generalizes it across the whole composition and persists it.
 - **Command pattern** (GoF) — actions as first-class objects. Each forward event in the log is essentially a serialized command.
-- **Vim's undo tree, Emacs's undo ring** — practical implementations of linear and branching undo in editor history. Linear undo is the closest analogue to this application; branching is out of scope.
+- **Vim's undo tree, Emacs's undo ring** — practical implementations of linear and branching undo in editor history. Linear undo is the closest analogue to this composition; branching is out of scope.
 
 The two atoms it composes carry their own standards inheritance — Personal Todo (Jackson / EOS — the Essence of Software, Daniel Jackson's concept framework; Eiffel design-by-contract; LTL — linear temporal logic, a formal notation for reasoning about sequences of states) and Event Log (ISO/IEC 27001 — the International Organization for Standardization / International Electrotechnical Commission information-security standard; NIST SP 800-92 — National Institute of Standards and Technology log-management guidance; W3C — World Wide Web Consortium — Activity Streams 2.0; write-ahead logging literature).
 

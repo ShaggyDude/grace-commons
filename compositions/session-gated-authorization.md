@@ -18,7 +18,7 @@ toc: true
 
 **Composes:** [Session](../atoms/session.md) · [Permissions](../atoms/permissions.md)
 
-> A regulated application: every authorization query is gated by a mandatory session validation before the Permissions atom is consulted. An expired, revoked, or unrecognized session terminates the call before Permissions is reached. The principal presented to Permissions is always the principal the session was issued for — never a value the caller supplies. The gate and the principal binding together constitute the composition's load-bearing emergent invariant; neither belongs to Session or Permissions alone.
+> A regulated composition: every authorization query is gated by a mandatory session validation before the Permissions atom is consulted. An expired, revoked, or unrecognized session terminates the call before Permissions is reached. The principal presented to Permissions is always the principal the session was issued for — never a value the caller supplies. The gate and the principal binding together constitute the composition's load-bearing emergent invariant; neither belongs to Session or Permissions alone.
 
 ---
 
@@ -55,7 +55,7 @@ The constituent atoms are unaware of each other. Session does not know that a pe
 
 ---
 
-## Application state
+## Composition state
 
 This composition introduces no cross-atom persistent state. There is no index, map, or log at the composition boundary. The gate is a sequencing constraint over the constituent atoms' own state, not a new data structure.
 

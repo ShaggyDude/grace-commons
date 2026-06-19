@@ -47,7 +47,7 @@ The most common uses are compliance and policy-change broadcast systems where ev
 
 ## Composition logic
 
-### Application state
+### Composition state
 
 None. Notification Fanout has no persistent state of its own beyond its constituents' stores. The Subscription store owns who is subscribed; the Notification store owns what was created and its delivery outcome. The composition is a stateless interpreter of a directed invocation graph over these two stateful atoms.
 
@@ -256,7 +256,7 @@ The fan-out decomposition model was formalized in [`execution-contract.md`](../e
 
 **Conventions inherited from prior work.** *Regulated adversarial scenarios* and *Generation acceptance* are included because the compliance system example invokes a regulated domain (policy broadcast with mandated delivery to compliance officers), per the conventions in [`pressure-testing.md`](../pressure-testing.md). Inherited from the methodology directly; not re-derived from Notification or Subscription.
 
-**Pass 1 — Structural completeness (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** Clean. All nine GRID nodes resolved. Intent is testable and falsifiable via Invariant 1. Decision points cover all branching paths: `subscribers-unavailable` (abort before any creates), empty subscriber list (return empty result), `storage-failure` on a create (continue to next subscriber), `invalid-request` on a create (structural inconsistency — treated as `storage-failure`). Proof is measurable: generation acceptance names five checks an external auditor can run against the subscriber and notification stores. Application state is explicitly none; the rationale (Event Log and Duplicate Prevention as optional composing patterns) is named.
+**Pass 1 — Structural completeness (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** Clean. All nine GRID nodes resolved. Intent is testable and falsifiable via Invariant 1. Decision points cover all branching paths: `subscribers-unavailable` (abort before any creates), empty subscriber list (return empty result), `storage-failure` on a create (continue to next subscriber), `invalid-request` on a create (structural inconsistency — treated as `storage-failure`). Proof is measurable: generation acceptance names five checks an external auditor can run against the subscriber and notification stores. Composition state is explicitly none; the rationale (Event Log and Duplicate Prevention as optional composing patterns) is named.
 
 **Pass 2 — Conceptual independence (EOS — the Essence of Software, Daniel Jackson's concept framework).** Clean. No concerns are absorbed that belong elsewhere. Idempotency (Duplicate Prevention), audit history (Event Log), delivery transport (deployment concern), scope hierarchy (composing pattern), and authorization (composing system) are all correctly named as out-of-scope. The `{created, failed}` return structure is a return value from a single action invocation, not persistent state — no hidden store exists or is implied.
 

@@ -58,7 +58,7 @@ A surface C15 needs that **no constituent provides** is the *interpretation of a
 
 ## Composition logic
 
-### Application state
+### Composition state
 
 The composition owns emergent state that wires the constituents into one accountable-bearer-sharing surface. None of this state belongs to a single constituent.
 
@@ -184,7 +184,7 @@ These invariants emerge from the composition; none belongs to a single constitue
 
 - **Invariant 4 — Scope-bounded disclosure.** The `scope` of every Selective Disclosure record produced by `redeem_and_disclose` equals the `disclosed_scope` parsed from the capability's authorized scope (per `sharing_scope_grammar`) — no disclosure exceeds, narrows arbitrarily, or diverges from what the allocator authorized; the capability's immutable scope (Capability Invariant 8 — scope immutability) is the upper bound, and the redemption envelope (`max_redemptions`, `expires_at`) bounds how many disclosures and for how long. *Defended in-line:* `redeem_and_disclose` step 2 derives the disclosure descriptor solely from the capability's scope via the grammar; it accepts no caller-supplied scope override. *Rests on:* Capability **Invariant 8 (scope immutability)** and the **redemption envelope** (`max_redemptions`/`expires_at`, Capability Invariants 2/10), and the deployment-declared **`sharing_scope_grammar`** configuration capability (the parse from capability scope to disclosure descriptor).
 
-- **Invariant 5 — Constituent invariants preserved.** All Capability invariants (1–12) hold over the capability store, all Selective Disclosure invariants (1–6) hold over the disclosure store, and all Audit Trail application-level invariants (1–8) hold over the substrate (transitively all Event Log, Actor Identity, Tamper Evidence, and Retention Window invariants). C15 weakens no constituent invariant. *Rests on:* each constituent's own Generation acceptance bar over its store instance.
+- **Invariant 5 — Constituent invariants preserved.** All Capability invariants (1–12) hold over the capability store, all Selective Disclosure invariants (1–6) hold over the disclosure store, and all Audit Trail composition-level invariants (1–8) hold over the substrate (transitively all Event Log, Actor Identity, Tamper Evidence, and Retention Window invariants). C15 weakens no constituent invariant. *Rests on:* each constituent's own Generation acceptance bar over its store instance.
 
 Invariant 1 (audit-subject asymmetry) is the emergent property the composition exists to provide — the reconciliation of bearer semantics with regulated audit. Invariant 2 (binding bijection) makes each disclosure an inseparable, tamper-evident, accountable act; Invariant 3 (allocation-authorization binding) is what makes the allocator's accountability non-repudiable; Invariant 4 (scope-bounded disclosure) holds the disclosure to what was authorized. Invariant 5 preserves every constituent guarantee underneath.
 

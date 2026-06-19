@@ -44,7 +44,7 @@ Soft Delete splits apart the two things an ordinary "delete" lumps together: hid
 
 ### Store instance model
 
-The Soft Delete atom operates against a named store instance. A `store_name` identifies the instance; multiple instances coexist in real systems — one per data domain or application boundary. `record_id` values are unique within a store instance; uniqueness across instances is a composing concern. The atom tracks lifecycle state and attribution for records whose content is managed by the host system — Soft Delete is a lifecycle overlay, not a content store. Calls implicitly target a single routed instance; instance selection is a deployment-routing concern.
+The Soft Delete atom operates against a named store instance. A `store_name` identifies the instance; multiple instances coexist in real systems — one per data domain or system boundary. `record_id` values are unique within a store instance; uniqueness across instances is a composing concern. The atom tracks lifecycle state and attribution for records whose content is managed by the host system — Soft Delete is a lifecycle overlay, not a content store. Calls implicitly target a single routed instance; instance selection is a deployment-routing concern.
 
 ### Identity model
 
@@ -58,7 +58,7 @@ Each record tracked by the atom has an opaque `record_id` — the identity of th
 
 ### Inputs
 
-- `soft_delete` calls from application logic, moderation systems, administrative interfaces, and automated lifecycle pipelines, each carrying a record id, deleting actor, optional reason, and optional explicit timestamp.
+- `soft_delete` calls from host-system logic, moderation systems, administrative interfaces, and automated lifecycle pipelines, each carrying a record id, deleting actor, optional reason, and optional explicit timestamp.
 - `restore` calls from undo mechanisms, administrative recovery workflows, and appeal resolutions, carrying the record id, restoring actor, optional reason, and optional explicit timestamp.
 - `purge` calls from data destruction workflows, GDPR erasure processors, retention-window expiry handlers, and administrative purge tools, carrying the record id, purging actor, required reason, and optional explicit timestamp.
 - `read` queries from audit tools, moderation dashboards, compliance workflows, and DSAR (Data Subject Access Request — a request by an individual to see, correct, or erase the personal data an organization holds about them) processors.

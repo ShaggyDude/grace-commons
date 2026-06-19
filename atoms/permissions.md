@@ -94,7 +94,7 @@ Transitions:
 ### Flow
 
 1. **An administrator or composing pattern issues a grant.** Calls `grant(subject_ref, action_scope)` — the atom records the grant in Active and returns the id.
-2. **Time passes; the grant persists.** The host application stores the `grant_id` alongside whatever policy or role record necessitated the grant.
+2. **Time passes; the grant persists.** The host system stores the `grant_id` alongside whatever policy or role record necessitated the grant.
 3. **An action is attempted.** The composing pattern calls `permitted(subject_ref, action_scope)` before allowing the action. `permitted` → proceed; `denied` → refuse.
 4. **At some point, the grant is withdrawn.** Calls `revoke(grant_id)`. The grant moves to Revoked; subsequent `permitted` queries for that (subject, scope) pair no longer see it.
 

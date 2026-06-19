@@ -21,7 +21,7 @@ toc: true
 
 ## Intent
 
-Systems that authenticate principals once and then permit them to act across multiple requests for some bounded period — a browser session, an API (Application Programming Interface) access window, a mobile application login — need a way to answer the question *"is this principal still authenticated?"* without repeating the full credential verification on every request. The answer to that question is a session: a bounded-lifetime record attesting that a principal completed authentication at a specific time and that the result has not been invalidated since.
+Systems that authenticate principals once and then permit them to act across multiple requests for some bounded period — a browser session, an API (Application Programming Interface) access window, a mobile-client login — need a way to answer the question *"is this principal still authenticated?"* without repeating the full credential verification on every request. The answer to that question is a session: a bounded-lifetime record attesting that a principal completed authentication at a specific time and that the result has not been invalidated since.
 
 The pattern isolates that bounded-lifetime attestation from the surrounding machinery. Session does not perform credential verification — that is Credential's surface. Session does not decide what the authenticated principal may do — that is Permissions' surface. Session does not implement the login flow that sequences credential checking, multi-factor challenges, and session issuance — that is Login's surface (C13). Session answers one structural question: *given this session token, is there an active, non-expired, non-revoked session for a known principal?* The answer is one of four first-class outcomes, derivable from stored records alone.
 
@@ -189,7 +189,7 @@ The session store is queryable. Per-record fields (all fields except the deploym
 
 **Invariant 8 — Revocation attribution completeness.** Every session record in `Revoked` status has non-null `revoked_at`, `revoked_by_ref`, and `revocation_reason`. A `Revoked` record missing any of these fields is evidence of a process violation; the atom's `revoke` action enforces the non-null constraint at call time.
 
-**Invariant 9 — Session durability.** Once `issue` returns a `session_token`, the session record is durably persisted. A `storage-failure` rejection guarantees no partial record was written. The record count is monotonically non-decreasing; the atom provides no deletion surface. Cascading deletion under a retention policy is the composing application's responsibility.
+**Invariant 9 — Session durability.** Once `issue` returns a `session_token`, the session record is durably persisted. A `storage-failure` rejection guarantees no partial record was written. The record count is monotonically non-decreasing; the atom provides no deletion surface. Cascading deletion under a retention policy is the composing pattern's responsibility.
 
 **Invariant 10 — Every session has a finite lifetime.** `expires_at` is never null. Every session issued by this atom has a deterministic expiry time. Sessions that do not expire are not expressible; an implementation that issues sessions without an `expires_at` has violated this invariant.
 
@@ -205,21 +205,21 @@ Invariants 1, 2, and 10 together give the *temporal auditability* property — e
 
 A user logs in via the Login composition. After successful credential verification, Login calls `issue(principal_ref: user_u91, issued_by_ref: login_svc_l01, session_duration: 3600) → session_token: tok_abc123`. The atom creates a session record: `status: Active`, `issued_at: 2026-09-01T10:00:00Z`, `expires_at: 2026-09-01T11:00:00Z`. The token is delivered to the user's browser as a session cookie.
 
-Twenty minutes later, the user requests a protected page. The application calls `validate(session_token: tok_abc123) → valid(principal_ref: user_u91, expires_at: 2026-09-01T11:00:00Z)`. The atom finds the record, confirms `status = Active` and `now (10:20Z) < expires_at (11:00Z)`, and returns the result. No state changes. The application serves the page to user_u91.
+Twenty minutes later, the user requests a protected page. The host system calls `validate(session_token: tok_abc123) → valid(principal_ref: user_u91, expires_at: 2026-09-01T11:00:00Z)`. The atom finds the record, confirms `status = Active` and `now (10:20Z) < expires_at (11:00Z)`, and returns the result. No state changes. The host system serves the page to user_u91.
 
 ### Logout — revoke
 
-The user clicks "Log out." The application calls `revoke(session_token: tok_abc123, revoked_by_ref: user_u91, reason: "user-initiated-logout") → revoked`. The atom transitions the record to `Revoked`, writing `revoked_at: 2026-09-01T10:45:00Z`, `revoked_by_ref: user_u91`, `revocation_reason: "user-initiated-logout"`. The record's `expires_at` is unchanged at `2026-09-01T11:00:00Z` — that field is immutable.
+The user clicks "Log out." The host system calls `revoke(session_token: tok_abc123, revoked_by_ref: user_u91, reason: "user-initiated-logout") → revoked`. The atom transitions the record to `Revoked`, writing `revoked_at: 2026-09-01T10:45:00Z`, `revoked_by_ref: user_u91`, `revocation_reason: "user-initiated-logout"`. The record's `expires_at` is unchanged at `2026-09-01T11:00:00Z` — that field is immutable.
 
 If the user's browser re-presents the old cookie: `validate(session_token: tok_abc123) → invalid(revoked)`. The revoked status takes precedence; the atom does not return `invalid(expired)` even though the session could have expired naturally in 15 minutes.
 
 ### Session expiry — lazy path
 
-The user closes their browser without logging out. The session expires at `11:00Z`. No `expire` call is made. At `11:30Z`, the user opens a new browser tab that still has the cookie and makes a request. The application calls `validate(session_token: tok_abc123) → invalid(expired)`. The atom finds the record: `status = Active` (not yet formally transitioned), `expires_at = 2026-09-01T11:00:00Z`, and `now = 2026-09-01T11:30:00Z`. Since `now >= expires_at`, the atom atomically transitions the record to `Expired` (writing `expired_at: 2026-09-01T11:30:00Z`) and returns `invalid(expired)`. The application redirects to re-authentication.
+The user closes their browser without logging out. The session expires at `11:00Z`. No `expire` call is made. At `11:30Z`, the user opens a new browser tab that still has the cookie and makes a request. The host system calls `validate(session_token: tok_abc123) → invalid(expired)`. The atom finds the record: `status = Active` (not yet formally transitioned), `expires_at = 2026-09-01T11:00:00Z`, and `now = 2026-09-01T11:30:00Z`. Since `now >= expires_at`, the atom atomically transitions the record to `Expired` (writing `expired_at: 2026-09-01T11:30:00Z`) and returns `invalid(expired)`. The host system redirects to re-authentication.
 
 ### Rejection paths
 
-**`issue` — `invalid-request` (zero-duration):** An application accidentally calls `issue(principal_ref: svc_s03, issued_by_ref: api_gateway_g01, session_duration: 0) → rejected(invalid-request)`. A zero-duration session is not a valid operating state; the atom rejects it at issue time.
+**`issue` — `invalid-request` (zero-duration):** A host system accidentally calls `issue(principal_ref: svc_s03, issued_by_ref: api_gateway_g01, session_duration: 0) → rejected(invalid-request)`. A zero-duration session is not a valid operating state; the atom rejects it at issue time.
 
 **`revoke` — `already-terminal`:** An incident-response script attempts to revoke a session that already expired naturally: `revoke(session_token: tok_abc123, revoked_by_ref: admin_a01, reason: "incident-response") → rejected(already-terminal)`. The session is already in `Expired` status; the atom rejects the revoke call. The session's `revocation_reason` is not set — the session was not revoked, it expired. If the composing system needs to record an administrative annotation on an expired session, that is a composing-pattern concern outside the atom's scope.
 

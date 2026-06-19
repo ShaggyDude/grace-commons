@@ -16,7 +16,7 @@ toc: true
 </details>
 
 
-> A regulated application: a principal's presented credential material is verified against the durable binding in Credential, then — on success — a time-limited Session is issued and both lifecycle events are recorded in one tamper-evident Audit Trail. Revocation of a Credential cascades to every Session derived from it: the composition maintains a `credential_to_sessions` map that `revoke_sessions_for_credential` walks to invalidate the full derived set in a single operation. The cascade is the composition's load-bearing emergent invariant — it belongs to neither constituent atom alone.
+> A regulated composition: a principal's presented credential material is verified against the durable binding in Credential, then — on success — a time-limited Session is issued and both lifecycle events are recorded in one tamper-evident Audit Trail. Revocation of a Credential cascades to every Session derived from it: the composition maintains a `credential_to_sessions` map that `revoke_sessions_for_credential` walks to invalidate the full derived set in a single operation. The cascade is the composition's load-bearing emergent invariant — it belongs to neither constituent atom alone.
 
 ---
 
@@ -50,7 +50,7 @@ Login wires together the full lifecycle of logging in: checking the presented cr
 
 ## Composition logic
 
-### Application state
+### Composition state
 
 The composition owns emergent state that is not representable inside any single constituent atom:
 
@@ -58,7 +58,7 @@ The composition owns emergent state that is not representable inside any single 
 
 - **`session_to_credential`** — reverse map from `session_token → credential_id`. Maintained as the strict inverse of `credential_to_sessions`: every atomic write that adds a `session_token` to a `credential_id`'s set also writes the corresponding entry to `session_to_credential` in the same transaction. Used for per-session traceability — given a `session_token`, an auditor can recover the `credential_id` that produced it without a full scan. Entries are immutable once written and never deleted.
 
-- **`login_event_log`** — append-only record of every `login` call, whether successful or failed. Each entry carries: `event_id` (opaque, system-generated), `principal_ref`, `credential_type`, `outcome` (one of: `success` | `success-with-map-failure` | `failed-verification(reason)` | `failed-storage-failure(stage)`), `credential_id` (null on credential-verification failure), `session_token` (null on failure; present on `success` and `success-with-map-failure`), `attempted_at`. `success-with-map-failure` means `Session.issue` succeeded and the session was returned to the caller, but the cascade-map write (step 5) failed; `failed-storage-failure(stage)` means the call failed at the named stage (`credential-id-lookup` or `session-issue`) before any session was issued. This log is the composition's own state; the Audit Trail is the regulated-audit record of the same events. The two are redundant by design: the `login_event_log` is the application-layer fast query surface; the Audit Trail is the tamper-evident external-auditor surface.
+- **`login_event_log`** — append-only record of every `login` call, whether successful or failed. Each entry carries: `event_id` (opaque, system-generated), `principal_ref`, `credential_type`, `outcome` (one of: `success` | `success-with-map-failure` | `failed-verification(reason)` | `failed-storage-failure(stage)`), `credential_id` (null on credential-verification failure), `session_token` (null on failure; present on `success` and `success-with-map-failure`), `attempted_at`. `success-with-map-failure` means `Session.issue` succeeded and the session was returned to the caller, but the cascade-map write (step 5) failed; `failed-storage-failure(stage)` means the call failed at the named stage (`credential-id-lookup` or `session-issue`) before any session was issued. This log is the composition's own state; the Audit Trail is the regulated-audit record of the same events. The two are redundant by design: the `login_event_log` is the composition-layer fast query surface; the Audit Trail is the tamper-evident external-auditor surface.
 
 ### Configuration
 
@@ -138,11 +138,11 @@ The composition owns emergent state that is not representable inside any single 
 
 ### Successful login and session use
 
-A user enters their password in a financial application. The application calls `login(principal_ref: user_u91, credential_type: "password", presented_material: <raw-password>, issued_by_ref: login_svc_l01)`.
+A user enters their password in a financial system. The host system calls `login(principal_ref: user_u91, credential_type: "password", presented_material: <raw-password>, issued_by_ref: login_svc_l01)`.
 
 Step 2: `Credential.verify(user_u91, "password", <raw-password>) → verified`. Step 3: credential store query returns `credential_id: cred_c01`. Step 4: `Session.issue(user_u91, login_svc_l01, 3600) → session_token: tok_abc123`. Step 5: `credential_to_sessions[cred_c01]` = `{tok_abc123}`; `session_to_credential[tok_abc123]` = `cred_c01`. Steps 6–7: `login_event_log` entry and Audit Trail `login_succeeded` event recorded. Return: `tok_abc123`.
 
-The application sets a session cookie. On the next request, the application (or Privileged Access Provisioning) calls `Session.validate(tok_abc123) → valid(principal_ref: user_u91, expires_at: 2026-09-01T11:00:00Z)`.
+The host system sets a session cookie. On the next request, the host system (or Privileged Access Provisioning) calls `Session.validate(tok_abc123) → valid(principal_ref: user_u91, expires_at: 2026-09-01T11:00:00Z)`.
 
 ### Failed login — wrong password
 
@@ -150,7 +150,7 @@ The user enters an incorrect password. `login(user_u91, "password", <wrong-passw
 
 ### Logout
 
-The user clicks "Log out." The application calls `logout(session_token: tok_abc123, actor_ref: user_u91, reason: "user-initiated-logout")`. Step 2: `Session.revoke(tok_abc123, user_u91, "user-initiated-logout") → revoked`. Step 3: Audit Trail `logout_event`. Return: `logged-out`. Subsequent `Session.validate(tok_abc123) → invalid(revoked)`.
+The user clicks "Log out." The host system calls `logout(session_token: tok_abc123, actor_ref: user_u91, reason: "user-initiated-logout")`. Step 2: `Session.revoke(tok_abc123, user_u91, "user-initiated-logout") → revoked`. Step 3: Audit Trail `logout_event`. Return: `logged-out`. Subsequent `Session.validate(tok_abc123) → invalid(revoked)`.
 
 ### Cascading revocation — compromise response
 
@@ -198,7 +198,7 @@ What this composition does not cover:
 - **OWASP ASVS V3.1 (Authentication) and V3.3 (Session Termination)** — the OWASP (Open Worldwide Application Security Project) Application Security Verification Standard; the `login` action's sequencing (verify then issue, with failed attempts recorded) and `logout`'s full revocation (not just cookie deletion) correspond to ASVS requirements for authentication event logging and session invalidation on logout.
 - **GDPR (EU General Data Protection Regulation — the European Union's data-privacy law) Article 32 (Security of Processing)** — the `login_event_log` and Audit Trail recording of all authentication events, including failures, contribute to the "appropriate technical measures" Article 32 requires. The `revoke_sessions_for_credential` cascade is a breach-response mechanism that reduces the blast radius of a compromised credential.
 - **HIPAA (US Health Insurance Portability and Accountability Act) §164.312(d) (Person or Entity Authentication)** — the composition's `Credential.verify → Session.issue` wiring is the structural implementation of this requirement: a session is issued only after the principal's identity is confirmed. The Audit Trail records the authentication event for post-incident investigation.
-- **PCI DSS (Payment Card Industry Data Security Standard — the card networks' mandatory security rules for cardholder data) Requirement 8.2 (User Identification and Authentication)** and **Requirement 8.6 (Session Management)** — authentication event logging (all login attempts, successful and failed), session termination on logout, and revocation on credential change correspond to PCI DSS structural requirements. The `login_event_log` is the application-layer record; the Audit Trail is the tamper-evident external-auditor record.
+- **PCI DSS (Payment Card Industry Data Security Standard — the card networks' mandatory security rules for cardholder data) Requirement 8.2 (User Identification and Authentication)** and **Requirement 8.6 (Session Management)** — authentication event logging (all login attempts, successful and failed), session termination on logout, and revocation on credential change correspond to PCI DSS structural requirements. The `login_event_log` is the composition-layer record; the Audit Trail is the tamper-evident external-auditor record.
 - **SOX §302 / §404 (Internal Controls)** — the `credential_to_sessions` map and its cascade action are the structural mechanism for ensuring that a compromised credential's access window can be closed completely and auditedly. An auditor can verify cascade completeness from the Audit Trail records alone without consulting the incident-response team.
 - **OpenID Connect Core 1.0** — the composition is the Grace Commons expression of the OIDC (OpenID Connect — an identity layer built on OAuth 2.0) login flow: authorization code exchange (credential verification), session establishment (session issuance), and session revocation on logout or token revocation. The atoms' `principal_ref` maps to the OIDC `sub` claim.
 
@@ -241,7 +241,7 @@ This is the generator's contract: any implementation derived from this compositi
 - *`login` returns `session_token` even if map write fails (step 5).* A principal who successfully authenticated should receive their session token even if the cascade-map write fails; denying a valid session because of a bookkeeping write failure would be a worse outcome than the map inconsistency. The write failure is surfaced in the Audit Trail as a finding for remediation.
 - *`logout` does not require the caller to own the session.* The action takes `actor_ref` as the revocation identity and passes it to `Session.revoke`. Whether the `actor_ref` is the session's own `principal_ref` or an administrative identity is not checked by Login — that authorization check is the composing layer's concern (e.g., a Permissions check before calling `logout`). Login's job is to wire the revocation and the audit record, not to authorize who may perform it.
 - *`revoke_sessions_for_credential` returns `{revoked: 0, skipped: 0}` when `credential_id` has no map entry.* A credential that was registered but never used to log in (no sessions issued) produces an empty map entry. Returning `rejected(not-known)` for this case would conflate "no sessions exist" with "the credential itself doesn't exist," which are structurally different situations the composition cannot distinguish without querying the Credential store. The composition does not perform that check; the caller handles it. A no-op return is correct: the cascade is vacuously satisfied when there are no sessions to revoke.
-- *Failed login attempts are recorded in both `login_event_log` and Audit Trail (when configured).* The `login_event_log` is the application-layer query surface for rate-limiting and lockout logic. The Audit Trail is the tamper-evident external-auditor surface. Both record the same event in different stores because the two audiences have different query patterns and trust models.
+- *Failed login attempts are recorded in both `login_event_log` and Audit Trail (when configured).* The `login_event_log` is the composition-layer query surface for rate-limiting and lockout logic. The Audit Trail is the tamper-evident external-auditor surface. Both record the same event in different stores because the two audiences have different query patterns and trust models.
 
 **Forthcoming-link resolution.** This composition is the `Login (C13 — not started)` reference in Credential's Composition notes and Session's Composition notes. Both atoms now have a live target. The update to those atoms' Composition notes (removing `*(not started)*` markers and linking to this file) is a separate task.
 
@@ -255,7 +255,7 @@ This is the generator's contract: any implementation derived from this compositi
 
 *Pass 3 — Linus adversarial.* Three findings.
 
-- **F2 — `login_event_log` outcome vocabulary undefined for failure paths in steps 3, 4, and 5:** The Application state section defined `outcome` as `success | failed-verification(reason)`, but the action wiring's failure paths at steps 3, 4, and 5 used unspecified outcome values ("append failed event," "record the inconsistency"). Fixed: extended vocabulary to `success | success-with-map-failure | failed-verification(reason) | failed-storage-failure(stage)`; named the specific outcome in each failure path.
+- **F2 — `login_event_log` outcome vocabulary undefined for failure paths in steps 3, 4, and 5:** The Composition state section defined `outcome` as `success | failed-verification(reason)`, but the action wiring's failure paths at steps 3, 4, and 5 used unspecified outcome values ("append failed event," "record the inconsistency"). Fixed: extended vocabulary to `success | success-with-map-failure | failed-verification(reason) | failed-storage-failure(stage)`; named the specific outcome in each failure path.
 - **F3 — Invariant 2a violated by step-5 failure path:** Invariant 2a asserted "No session produced by a `login` call against this credential is absent from the set" — a claim refuted by the step-5 map write failure, which produces exactly such an absent session. Fixed: qualified Invariant 2a with the map-write-failure exception; `login_map_write_failure` Audit Trail events are named as the canonical remediation signal.
 - **F4 — `revoke_sessions_for_credential` `rejected(not-known)` conflates two unrelated situations:** Returning `not-known` when a `credential_id` has no map entry conflates "no sessions issued" with "the credential doesn't exist" — two situations the composition cannot distinguish without querying the Credential store (which it does not do). A caller receiving `not-known` cannot tell which case applies. Fixed: step 2 now returns `{revoked: 0, skipped: 0}` when the map has no entry (the cascade is vacuously satisfied); `not-known` removed from the action's rejection vocabulary; structural decisions note updated.
 
@@ -310,7 +310,7 @@ Final Critique 4 closed clean. Foundational findings: zero remaining. Refining f
 
 **Pass 1 — Structural completeness (GRID), Round 5 (touch-triggered re-pass, 2026-05-23).** *Complete.* No findings. All nine GRID nodes still resolved after the prior four rounds. The TLA+ Lineage entry above carries the plain-English summary, artifact locations, bounds, scope exclusions, and result per `contributing.md` §Formal-model artifacts.
 
-**Pass 2 — Conceptual independence (EOS), Round 5.** *Complete.* No findings. The TLA+ artifact introduces no new concept embedded in the composition that requires extraction as a separate atom. The state variables (`cred_status`, `session_status`, `session_to_cred`, `cred_to_sessions`, `map_write_failed`, `log_sessions`, `cascade_initiated`, `cascade_revoked`, `clock`) all map to constituent-atom state or to the composition's own emergent state already named in §Application state.
+**Pass 2 — Conceptual independence (EOS), Round 5.** *Complete.* No findings. The TLA+ artifact introduces no new concept embedded in the composition that requires extraction as a separate atom. The state variables (`cred_status`, `session_status`, `session_to_cred`, `cred_to_sessions`, `map_write_failed`, `log_sessions`, `cascade_initiated`, `cascade_revoked`, `clock`) all map to constituent-atom state or to the composition's own emergent state already named in §Composition state.
 
 **Pass 3 — Adversarial (Linus), Round 5.** *Complete.* No findings. TLC's exhaustive enumeration of 1188 reachable distinct states at the chosen bounds produced no counterexample to any of the seven named invariants or to TypeOK. The two load-bearing concurrent paths the prose review explicitly defended — FC1's TOCTOU race (Logout × cascade) and the step-5 map-write-failure asymmetry — both survive every interleaving the bounded model can produce. No new spec finding. No new model finding. The verification is reproducible from a fresh checkout: `java -cp tla2tools.jar tlc2.TLC -config login.cfg -workers 4 login.tla` against the canonical files produces the identical state count.
 

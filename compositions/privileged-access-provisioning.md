@@ -16,7 +16,7 @@ toc: true
 </details>
 
 
-> A regulated application: a principal's request for elevated access to a protected resource is gated by a mandatory multi-party approval chain; only after all required approvals commit does the composition allocate a time-limited, scoped Capability token to the requesting principal. Session validity is checked before every access exercise. The full arc — request, approvals, provisioning, access exercise, expiry, and revocation — is auditable from records alone, with attribution at every decision point.
+> A regulated composition: a principal's request for elevated access to a protected resource is gated by a mandatory multi-party approval chain; only after all required approvals commit does the composition allocate a time-limited, scoped Capability token to the requesting principal. Session validity is checked before every access exercise. The full arc — request, approvals, provisioning, access exercise, expiry, and revocation — is auditable from records alone, with attribution at every decision point.
 
 ---
 
@@ -56,7 +56,7 @@ Privileged Access Provisioning governs the full life of a request for elevated a
 
 ## Composition logic
 
-### Application state
+### Composition state
 
 The composition owns emergent state that wires the constituent atoms into one queryable access-request surface:
 
@@ -392,7 +392,7 @@ A derived implementation of Privileged Access Provisioning is *acceptable* — i
 
 - **F4 — trailing-decision re-fire.** `approve_step` step 5 fired the provisioning cascade on any chain reaching `Approved`, including trailing decisions on an already-`Approved` chain (Multi-Party Approval trailing-decision semantics). Fixed: added idempotency guard checking `request_store[request_id].state` before cascade fires — skips if already `Provisioned` or `ProvisioningFailed`.
 
-- **F5 — undefined inverse map.** `exercise_access` step 2 referenced "inverse lookup on `request_to_capability`" without defining the inverse map. Fixed: `capability_to_request` added to Application state as the explicitly maintained strict inverse, updated atomically with `request_to_capability`.
+- **F5 — undefined inverse map.** `exercise_access` step 2 referenced "inverse lookup on `request_to_capability`" without defining the inverse map. Fixed: `capability_to_request` added to Composition state as the explicitly maintained strict inverse, updated atomically with `request_to_capability`.
 
 Pre-test fixes (applied before Round 1 from GPT peer review): exercise_access logging gap (log moved to record both success and failure results; `access_exercise_failed` Audit Trail event added); missing `Permissions.permitted` call in `request_access` step 2; `Approved` state clarified as internal transient in Summary.
 

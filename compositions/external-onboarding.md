@@ -16,7 +16,7 @@ toc: true
 </details>
 
 
-> A regulated application: the full arc of admitting an external entity to a system — invitation issued by an authorized actor, accepted by the invitee (establishing the single identity binding), Party Identity enrolled in Unverified state, credential registered, every step attested in the Audit Trail. The load-bearing emergent invariant is invitation-gates-enrollment: no Party Identity is created via this composition unless an Invitation's Accepted transition precedes it, and the Audit Trail completion record names the specific invitation, the accepting identity, the party record, and the credential in one tamper-evident entry. Without the composition, any of these steps can occur independently, in any order, without a documented chain; the composition is what makes the chain mandatory and auditable.
+> A regulated composition: the full arc of admitting an external entity to a system — invitation issued by an authorized actor, accepted by the invitee (establishing the single identity binding), Party Identity enrolled in Unverified state, credential registered, every step attested in the Audit Trail. The load-bearing emergent invariant is invitation-gates-enrollment: no Party Identity is created via this composition unless an Invitation's Accepted transition precedes it, and the Audit Trail completion record names the specific invitation, the accepting identity, the party record, and the credential in one tamper-evident entry. Without the composition, any of these steps can occur independently, in any order, without a documented chain; the composition is what makes the chain mandatory and auditable.
 
 **Composes:** [Invitation](../atoms/invitation.md) · [Credential](../atoms/credential.md) · [Party Identity](../atoms/party-identity.md) · [Audit Trail](./audit-trail.md)
 
@@ -66,7 +66,7 @@ Four actions form the onboarding boundary. Each wraps one or more constituent at
 
 ---
 
-## Application state
+## Composition state
 
 This composition introduces no cross-atom persistent state beyond what the constituent atoms and the Audit Trail substrate maintain. There is no composition-owned index or map.
 
@@ -461,7 +461,7 @@ The `actor_credential` pre-check order (R2F1) is the most security-significant f
 
 **Pass 1 — Structural completeness (GRID), Round 5 (touch-triggered re-pass, 2026-05-23).** *Complete.* No findings. All nine GRID nodes still resolved. The `.cfg` CONSTANTS materialization and `NULL = NullMV` override are tool-compatibility changes that do not alter the spec body. Formal model Lineage entry carries the plain-English summary, artifact location, bounds, scope exclusions, and result per `contributing.md` §Formal-model artifacts.
 
-**Pass 2 — Conceptual independence (EOS), Round 5.** *Complete.* No findings. The TLA+ artifact introduces no new concept requiring extraction as a separate atom. The state variables (`invitations`, `parties`, `credentials`, `audit_accepted`, `audit_declined`, `audit_revoked`, `audit_interrupted`, `clock`) all map to constituent-atom stores or to the Audit Trail event surface already named in §Application state. The `OnboardInterrupted` action models a failure branch within the composition's own scope; no new atom surface is implied.
+**Pass 2 — Conceptual independence (EOS), Round 5.** *Complete.* No findings. The TLA+ artifact introduces no new concept requiring extraction as a separate atom. The state variables (`invitations`, `parties`, `credentials`, `audit_accepted`, `audit_declined`, `audit_revoked`, `audit_interrupted`, `clock`) all map to constituent-atom stores or to the Audit Trail event surface already named in §Composition state. The `OnboardInterrupted` action models a failure branch within the composition's own scope; no new atom surface is implied.
 
 **Pass 3 — Adversarial scrutiny (Linus mode), Round 5.** *Complete.* No findings. TLC's exhaustive enumeration of 44 distinct states at the chosen bounds produced no counterexample to any of the ten invariants. The single-resolution property (`Single_Resolution`) — the composition's primary concurrency safety claim — holds across all interleavings: no invitation ever produces more than one enrolled Party Identity record. `Credential_Follows_Party` holds in every reachable state including `OnboardInterrupted` paths, confirming the enrollment-before-credential ordering is enforced structurally by the action preconditions. No spec finding surfaced. The verification is reproducible from a fresh checkout: `java -cp tla2tools.jar tlc2.TLC -config external-onboarding.cfg -workers 4 external-onboarding.tla`.
 

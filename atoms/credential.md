@@ -186,7 +186,7 @@ The following invariants constitute the verification surface of the pattern:
 
 **Invariant 9 — Revocation attribution completeness.** Every credential record in `Revoked` status has non-null `revoked_at`, `revoked_by_ref`, and `revocation_reason`. A revocation record without all three fields present is evidence of a process violation; the atom's `revoke` action enforces the non-null constraint at call time.
 
-**Invariant 10 — Credential durability.** Once `register` returns a `credential_id`, the credential record is durably persisted. A `storage-failure` rejection guarantees no partial record was written. The record count is monotonically non-decreasing; the atom provides no deletion surface. Cascading deletion under a retention policy is the composing application's responsibility, not the atom's.
+**Invariant 10 — Credential durability.** Once `register` returns a `credential_id`, the credential record is durably persisted. A `storage-failure` rejection guarantees no partial record was written. The record count is monotonically non-decreasing; the atom provides no deletion surface. Cascading deletion under a retention policy is the composing pattern's responsibility, not the atom's.
 
 **Invariant 11 — Expiry absorbing.** Once a credential record's status is `Expired`, no subsequent `verify` call returns `verified` via that record. Because at most one `Active` record exists per pair (Invariant 2), expiry of the Active record means no `verified` result is possible until a new credential is registered. The guarantee does not wait on the lazy `Expired` transition: even when the record still reads `Active` past its `expires_at`, the `verify` Decision points run the expiry check (`now >= expires_at`) *before* any verifier comparison, so no `verified` can be returned in the window between clock advance and the status write — that check ordering is the load-bearing mechanism, not the status field. This invariant is the expiry analog of Invariant 4 (Revocation absorbing); both are structural consequences of terminal finality (Invariant 5) combined with active uniqueness (Invariant 2), made explicit here so the verification surface is symmetrically stated across all terminal states that preclude further verification.
 
@@ -198,9 +198,9 @@ Invariants 2 and 3 together give the *authentication integrity* property — a p
 
 ### Password authentication — registration and verification
 
-A user creates an account in a financial application. The application calls `register(principal_ref: user_u91, credential_material: <raw-password>, credential_type: "password") → credential_id: cred_c01`. The atom derives the salted hash (the verifier) from the raw password and discards the raw password. The record is `Active`.
+A user creates an account in a financial system. The host system calls `register(principal_ref: user_u91, credential_material: <raw-password>, credential_type: "password") → credential_id: cred_c01`. The atom derives the salted hash (the verifier) from the raw password and discards the raw password. The record is `Active`.
 
-Two hours later, the user logs in. The application calls `verify(principal_ref: user_u91, credential_type: "password", presented_material: <presented-password>) → verified`. The atom finds the one `Active` password credential for user_u91, derives the hash of the presented password, and compares it to the stored verifier. Match confirmed; `verified` is returned. No state changes.
+Two hours later, the user logs in. The host system calls `verify(principal_ref: user_u91, credential_type: "password", presented_material: <presented-password>) → verified`. The atom finds the one `Active` password credential for user_u91, derives the hash of the presented password, and compares it to the stored verifier. Match confirmed; `verified` is returned. No state changes.
 
 ### Public-key authentication — rotation
 

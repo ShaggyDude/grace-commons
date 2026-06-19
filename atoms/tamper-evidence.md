@@ -227,7 +227,7 @@ Tamper Evidence is freestanding and is the integrity contract every regulated re
 - **Trusted Timestamping** *(forthcoming, per RFC 3161)* — verifiable time-anchor for `sealed_at` and `anchored_at`.
 - **Mechanism Registry** *(forthcoming)* — manages the definition, versioning, and deprecation of seal mechanisms (hash function families, signature schemes, anchoring providers).
 
-This atom completes the canonical regulated-audit stack: [Event Log](./event-log.md) + [Actor Identity](./actor-identity.md) + [Retention Window](./retention-window.md) + Tamper Evidence as four freestanding atoms. The **[Audit Trail](../compositions/audit-trail.md)** application is the wiring; with all four atoms grounded, the composition lands as the canonical regulated-audit primitive the library has been forecasting.
+This atom completes the canonical regulated-audit stack: [Event Log](./event-log.md) + [Actor Identity](./actor-identity.md) + [Retention Window](./retention-window.md) + Tamper Evidence as four freestanding atoms. The **[Audit Trail](../compositions/audit-trail.md)** composition is the wiring; with all four atoms grounded, the composition lands as the canonical regulated-audit primitive the library has been forecasting.
 
 ---
 

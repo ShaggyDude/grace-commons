@@ -16,7 +16,7 @@ toc: true
 </details>
 
 
-> An application: a forward sequence of local steps — reserve, charge, ship — each paired with a recorded *compensating action* (a step that reverses the first one's effect, e.g. charge → refund), made eventually all-or-nothing across failure without a distributed transaction. Composes Workflow / State Machine with Event Log so that, on failure or cancel, every completed step whose effect already escaped the system is reversed by running its compensating action — not by forgetting the step. This is the **external-side-effect complement of Undo History**: Undo reverses by *replay-skip* (recompute as if the action never happened), which works only while the effect lives in the log; Saga reverses by an *explicit compensating action* precisely because the effect escaped the log. Neither constituent atom is modified; the composition is the wiring.
+> A composition: a forward sequence of local steps — reserve, charge, ship — each paired with a recorded *compensating action* (a step that reverses the first one's effect, e.g. charge → refund), made eventually all-or-nothing across failure without a distributed transaction. Composes Workflow / State Machine with Event Log so that, on failure or cancel, every completed step whose effect already escaped the system is reversed by running its compensating action — not by forgetting the step. This is the **external-side-effect complement of Undo History**: Undo reverses by *replay-skip* (recompute as if the action never happened), which works only while the effect lives in the log; Saga reverses by an *explicit compensating action* precisely because the effect escaped the log. Neither constituent atom is modified; the composition is the wiring.
 
 ---
 

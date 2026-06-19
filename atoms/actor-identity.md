@@ -83,7 +83,7 @@ Transitions:
 
 1. **Composing pattern initiates an action that requires attribution** (attribution — the binding of an action to the actor who performed it). It calls `attest(action_ref, actor_ref, credential)` with the actor's credential in hand.
 2. **Atom validates the credential and computes the proof.** If the credential does not validate against the actor's public material, the call is rejected. Otherwise the atom records the attestation and returns the id.
-3. **Time passes; the attestation persists.** The host application stores the `attestation_id` alongside whatever it represents (the commitment record, the event log entry, the contract artifact).
+3. **Time passes; the attestation persists.** The host system stores the `attestation_id` alongside whatever it represents (the commitment record, the event log entry, the contract artifact).
 4. **An auditor, verifier, or composing pattern queries the attestation.** Calls `verify(attestation_id)`. The atom retrieves the attestation, checks the proof against `action_ref` and `actor_ref` using the actor registry's public material, and returns the verification result.
 
 ### Decision points
@@ -126,7 +126,7 @@ The following invariants (conditions that must always hold, regardless of what s
 - **Invariant 6 — Self-containment.** `verify(attestation_id)` requires only the attestation's stored fields and the actor registry's public material for `actor_ref`. No additional out-of-band data is consulted at verify time. This holds for the atom's design; specific credential mechanisms (X.509 certificate-based credentials requiring revocation status checks) may require additional data at verify time if revocation status is not embedded in the proof — see *Certificate revocation status* in Edge cases.
 - **Invariant 7 — Verification consistency under fixed registry state.** For any attestation and any fixed view of the actor registry, repeated `verify` calls return the same result.
 - **Invariant 8 — Non-repudiation contract.** If `verify(attestation_id)` returns `verified`, then under the assumption that the actor's credential was not compromised at or before `attested_at`, the actor referenced by `actor_ref` authorized the action referenced by `action_ref` at `attested_at`. The contract is conditional on credential integrity; reinterpretation under compromise belongs to a Compromise Disclosure composing pattern.
-- **Invariant 9 — Attestation durability.** Once recorded, an attestation is never deleted by the atom. The attestation store's record count is monotonically non-decreasing. The atom provides no deletion surface; cascading deletion under a retention policy is the composing application's responsibility (see Tamper Evidence and Retention Window in Composition notes). An `attestation_id` returned by a successful `attest` call is durably persisted; a `storage-failure` rejection guarantees no partial record was written.
+- **Invariant 9 — Attestation durability.** Once recorded, an attestation is never deleted by the atom. The attestation store's record count is monotonically non-decreasing. The atom provides no deletion surface; cascading deletion under a retention policy is the composing pattern's responsibility (see Tamper Evidence and Retention Window in Composition notes). An `attestation_id` returned by a successful `attest` call is durably persisted; a `storage-failure` rejection guarantees no partial record was written.
 
 Action binding and actor binding together give the *attribution* property — the regulator's question *"who authorized this action?"* has a structural answer rather than a procedural one. Attestation immutability and self-containment together give the *survivability* property — attestations remain verifiable independent of the system that recorded them. The non-repudiation contract names the regulatory bar the atom is built to clear.
 
@@ -215,7 +215,7 @@ Actor Identity is freestanding and is the non-repudiation contract that several 
 - **[Tamper Evidence](./tamper-evidence.md)** — cryptographic chaining (or Merkle-tree commitment, or external anchoring) of the attestation store, so that any rewrite of recorded attestations is detectable from the records alone.
 - **Trusted Timestamping** *(forthcoming, per RFC 3161)* — verifiable time-anchor for `attested_at`.
 
-The canonical regulated-audit stack composes [Event Log](./event-log.md) + Actor Identity + [Retention Window](./retention-window.md) + [Tamper Evidence](./tamper-evidence.md) as four freestanding atoms; the **[Audit Trail](../compositions/audit-trail.md)** application is the wiring.
+The canonical regulated-audit stack composes [Event Log](./event-log.md) + Actor Identity + [Retention Window](./retention-window.md) + [Tamper Evidence](./tamper-evidence.md) as four freestanding atoms; the **[Audit Trail](../compositions/audit-trail.md)** composition is the wiring.
 
 ---
 
