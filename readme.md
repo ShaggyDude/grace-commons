@@ -16,7 +16,7 @@ toc: true
 </details>
 
 
-Atomic concepts & compositions thereof, expressed as structured natural language. Code is derived (generated from the spec); intent is canonical (the single authoritative source from which everything else is built).
+Atomic concepts & compositions thereof, expressed as structured natural language. Code is derived (generated from the spec); intent is canonical (the single authoritative source from which everything else is built). This is **Intent-Driven Design (IDD)** — the design discipline that authors the intent first and in full, upstream of how any system is later built.
 
 Named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
 
