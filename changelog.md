@@ -76,11 +76,11 @@ cut a versioned release, so everything below sits under **Unreleased**.
   live body was completed as a separate pass — see entry below.)
 
 - **`concern` → `concept` sweep; linter green (2026-06-18).** Completed the **J**
-  half of the vocabulary work: the banned working-noun "concern" → the canonical
+  half of the vocabulary work: the banned working-noun `concern` → the canonical
   "concept" across the live body of every spec — *"the unit of separation is the
-  concept"* ([`the-spec-layer.md`](./the-spec-layer.md)). "separation of concerns" →
+  concept"* ([`the-spec-layer.md`](./the-spec-layer.md)). `separation of concerns` →
   "separation of concepts"; the "matter handled at layer X" sense was rephrased
-  (e.g. "a deployment concern" → "handled at the deployment layer") rather than
+  (e.g. `a deployment concern` → "handled at the deployment layer") rather than
   synonym-swapped; "Separation of Concerns" kept only as the Dijkstra citation;
   pre-triage items → "candidate concept". `lint.py`'s **J** rule now also scrubs
   code spans (a backticked mention is not working use — matching **K**), and
