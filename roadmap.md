@@ -327,24 +327,24 @@ The nineteen C-numbered grounded compositions are catalogued below (C1–C18, pl
 |---|---------|------|--------|------------------|
 | — | Personal Todo, Assignment | Atoms | Personal Todo: `grounded` 2026-05-13; Assignment: `grounded` 2026-05-13 | `productivity` |
 | — | Duplicate Prevention, Event Log | Atoms | `grounded` 2026-05-13 | `temporal` |
-| — | Provisional Commitment | Atom | `grounded` 2026-05-13 | `resource-lifecycle` |
-| — | Actor Identity, Retention Window, Tamper Evidence, Permissions | Atoms | Actor Identity, Tamper Evidence: `grounded` 2026-05-13; Retention Window, Permissions: `grounded` 2026-05-13 | `compliance` |
+| — | Provisional Commitment | Atom | `grounded on Final Critique 5 — 2026-06-23` | `resource-lifecycle` |
+| — | Actor Identity, Retention Window, Tamper Evidence, Permissions | Atoms | Actor Identity, Tamper Evidence, Permissions: `grounded` 2026-05-13; Retention Window: `grounded on Final Critique 5 — 2026-06-23` | `compliance` |
 | — | Subscription, Notification | Atoms | `grounded` 2026-05-13 | `messaging` |
 | — | Clinical Observation, Medication Order | Atoms | `grounded` 2026-05-13 | `healthcare` (outside core sequence) |
 | 1 | Legal Hold | Atom | `grounded — 2026-05-20` | C1, C7 |
-| 2 | Consent | Atom | `grounded — 2026-05-20` | C2, C7, C8 |
+| 2 | Consent | Atom | `grounded on Final Critique 5 — 2026-06-23` | C2, C7, C8 |
 | 3 | Soft Delete | Atom | `grounded — 2026-05-20` | C3 |
 | 4 | Approval Step | Atom | `grounded — 2026-05-20` | C4 |
-| 5 | Selective Disclosure | Atom | `grounded — 2026-05-20` | C6, C7 |
+| 5 | Selective Disclosure | Atom | `grounded on Final Critique 5 — 2026-06-23` | C6, C7 |
 | 6 | Party Identity | Atom | `grounded — 2026-05-20` | C8 |
 | 7 | Provenance | Atom | `grounded` 2026-06-04 | Unblocks C12 (Chain of Custody); enriches C6, C7, C8; Alloy model + buggy twin |
 | 8 | Capacity Constraint Enforcement | Atom | `grounded — 2026-05-20` | C9 |
 | 9 | Workflow / State Machine | Atom | `grounded` 2026-06-04 | Unblocks C10; resolves workflow-category one-atom question; Alloy model + buggy twin |
 | 10 | Preference / Personalization | Atom | `grounded` 2026-05-29 | C11; grounded on Final Critique 5; ten hard invariants + Temporal property 11 |
-| 11 | Credential | Atom | `grounded` 2026-05-19 | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
-| 12 | Session | Atom | `grounded` 2026-05-19 | C13 (Login), C14 (Session-Gated Authorization) |
-| 13 | Capability | Atom | `grounded` 2026-05-19 | C15 (Capability-Backed Sharing) |
-| 14 | Invitation | Atom | `grounded` 2026-05-19 | C16 (External Onboarding) |
+| 11 | Credential | Atom | `grounded on Final Critique 5 — 2026-06-23` | C13 (Login); enriches C16; retires Authentication forthcoming-link in actor-identity.md |
+| 12 | Session | Atom | `grounded on Final Critique 5 — 2026-06-23` | C13 (Login), C14 (Session-Gated Authorization) |
+| 13 | Capability | Atom | `grounded on Final Critique 5 — 2026-06-23` | C15 (Capability-Backed Sharing) |
+| 14 | Invitation | Atom | `grounded on Final Critique 5 — 2026-06-23` | C16 (External Onboarding) |
 | — | Undo History | Composition | `grounded` 2026-05-13 | Personal Todo + Event Log |
 | — | Idempotent Reservation | Composition | `grounded` 2026-05-13 | Provisional Commitment + Duplicate Prevention |
 | — | Audit Trail | Composition | `grounded` 2026-05-13 | Event Log + Actor Identity + Retention Window + Tamper Evidence |

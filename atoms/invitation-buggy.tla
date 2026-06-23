@@ -10,6 +10,11 @@
 \* resolution = Declined. If the checker reports all invariants hold here, the
 \* harness is vacuous: a re-resolvable invitation would be safe, which is exactly
 \* what single-resolution by write denies.
+\*
+\* The DERIVATION here is left CORRECT (EffStatus surfaces Expired properly), so
+\* this twin isolates the single-resolution defect only. The derivation defect is
+\* isolated in invitation-buggy-derivation.tla (FC F2). Tick is clamped at
+\* ExpiresAt + 1 to mirror invitation.tla's saturated bound.
 
 EXTENDS Naturals
 
@@ -32,8 +37,11 @@ Init ==
     /\ resolution = "none"
     /\ now = 0
 
+Lapsed(c)    == (state = "Pending") /\ (c >= ExpiresAt)
+EffStatus(c) == IF Lapsed(c) THEN "Expired" ELSE state
+
 Tick ==
-    /\ now < MaxClock
+    /\ now < ExpiresAt + 1
     /\ now' = now + 1
     /\ UNCHANGED <<state, resolution>>
 
@@ -61,11 +69,13 @@ Spec == Init /\ [][Next]_vars
 
 Inv_SingleResolution == (resolution # "none") => (state = resolution)
 Inv_NoStoredExpired == state \in StoredStates
-Inv_DerivedExpiryCoherent == (state \in StoredTerminals) => ((IF (state = "Pending") /\ (now >= ExpiresAt) THEN "Expired" ELSE state) = state)
+Inv_DerivedExpiryCoherent == (state \in StoredTerminals) => (EffStatus(now) = state)
+Inv_LapsedReadsExpired == Lapsed(now) => (EffStatus(now) = "Expired")
 
 Safety ==
     /\ TypeOK
     /\ Inv_SingleResolution
     /\ Inv_NoStoredExpired
     /\ Inv_DerivedExpiryCoherent
+    /\ Inv_LapsedReadsExpired
 ====

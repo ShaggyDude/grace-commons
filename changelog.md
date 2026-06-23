@@ -59,6 +59,8 @@ cut a versioned release, so everything below sits under **Unreleased**.
 
 ### Changed
 
+- **Methodology recalibration: reference-first gating, batched re-gate, load-bearing-vs-editorial touch trigger (2026-06-23).** [`pressure-testing.md`](./pressure-testing.md) §Order and iteration and §Touch triggers re-pass. Motivated by the *derive expiry at read time* initiative's churn — a cross-cutting signature decision propagated across eight atoms before it was gated, then reverted across all eight. Three changes: (1) **reference-first** — a cross-cutting change is applied to one reference pattern and cleared by the closing fresh-reader round *before* the sweep, so a wrong call costs one pattern, not the corpus; (2) **batched re-gate** — a swept cross-cutting change earns one closing round over the touched set, not an independent full cycle per pattern; (3) **touch-trigger calibration** — only *load-bearing* edits (invariant / state / action-signature / decision-rule, or anything the pass questions check) trigger a full re-pass and `partially resolved` downgrade, while purely editorial edits (prose, comments, Lineage notes, meaning-preserving cross-reference fixes) are recorded but do not. Separates *confirming* stable patterns (the scheduled cadence) from *propagating* a cross-cutting change.
+
 - **Vocabulary sweep: `application` → `composition`; J/K scoped to the live body
   (2026-06-18).** Swept the banned output-noun "application" to the canonical
   "composition" across the live body of every atom and composition — a composed

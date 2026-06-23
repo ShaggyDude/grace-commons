@@ -51,18 +51,18 @@ Tokens are not reused after an invitation reaches a terminal state.
 
 ### Inputs and Outputs
 
-**Actions:** Every action receives the current clock reading `now` as an **injected input** (the pipeline's `clock_t`, supplied at the I/O seam — not read inside the transition, not trusted from the caller). `now` is consumed for two clearly separated purposes: stamping immutable timestamps on a write (execution time), and evaluating the pure expiry derivation in a guard (no write). See the Logic-confinement note in Decision points.
+**Actions:** The current clock reading and the token are **pipeline-injected at the I/O seam** (the execution contract's `clock_t` and `id_t`, supplied at Step 3 — not read inside the transition, not trusted from the caller, and **not** action parameters). The injected clock is consumed for two clearly separated purposes: stamping immutable timestamps on a write (execution time), and evaluating the pure expiry derivation in a guard (no write). It therefore appears in no signature below. See the Logic-confinement note in Decision points.
 
-- `initiate(inviter_ref, invitee_ref, context, ttl, now) → invitation_token | rejected(invalid-request | storage-failure)`
-- `accept(invitation_token, accepting_identity_ref, now) → accepted | rejected(invalid-request | expired | already-resolved(state) | not-known | storage-failure)`
-- `decline(invitation_token, now) → declined | rejected(expired | already-resolved(state) | not-known | storage-failure)`
-- `revoke(invitation_token, revoked_by_ref, reason, now) → revoked | rejected(invalid-request | expired | already-resolved(state) | not-known | storage-failure)`
+- `initiate(inviter_ref, invitee_ref, context, ttl) → invitation_token | rejected(invalid-request | storage-failure)`
+- `accept(invitation_token, accepting_identity_ref) → accepted | rejected(invalid-request | expired | already-resolved(state) | not-known | storage-failure)`
+- `decline(invitation_token) → declined | rejected(expired | already-resolved(state) | not-known | storage-failure)`
+- `revoke(invitation_token, revoked_by_ref, reason) → revoked | rejected(invalid-request | expired | already-resolved(state) | not-known | storage-failure)`
 
 There is **no `expire` action**. A lapsed invitation needs no write to become Expired; expiry is surfaced by the read projection below. `already-resolved(state)` names a *stored* terminal only — `Accepted`, `Declined`, or `Revoked`; the lapsed-window case is the distinct `expired` rejection.
 
 **Read surface (render time):**
 
-- `read(filter, now) → records` — each returned record carries its stored fields plus a derived **`effective_status`**: `Expired` when `status = Pending ∧ now ≥ expires_at`, otherwise the stored `status`. `effective_status` is a pure projection over the record and the injected `now`; it is never stored.
+- `read(filter) → records` — each returned record carries its stored fields plus a derived **`effective_status`**: `Expired` when `status = Pending ∧ now ≥ expires_at`, otherwise the stored `status`. `effective_status` is a pure projection over the record and the pipeline-injected clock `now` (supplied at the I/O seam, not a parameter); it is never stored.
 
 **Inputs:**
 
@@ -74,7 +74,7 @@ There is **no `expire` action**. A lapsed invitation needs no write to become Ex
 - `accepting_identity_ref` — an opaque reference to the identity that is accepting the invitation. Supplied to `accept`. This is the binding: whoever calls `accept` provides the identity that will be permanently recorded as having accepted. Non-null and non-empty required.
 - `revoked_by_ref` — opaque reference to the actor withdrawing the invitation. Non-null and non-empty required.
 - `reason` — caller-supplied reason for revocation. Non-null and non-empty required.
-- `now` — the injected clock reading (`clock_t`), supplied by the pipeline at the I/O seam on every action. It is **not** caller-trusted and is **not** read inside any transition. It is used only to stamp immutable write timestamps (execution time) and to evaluate the pure expiry derivation in a guard and in `read`'s `effective_status` projection (no write).
+- `now` *(not a parameter — pipeline-injected)* — the clock reading (`clock_t`), supplied by the pipeline at the I/O seam, not passed by the caller and not present in any action signature. It is **not** caller-trusted and is **not** read inside any transition. It is used only to stamp immutable write timestamps (execution time) and to evaluate the pure expiry derivation in a guard and in `read`'s `effective_status` projection (no write).
 
 **Outputs:**
 
@@ -96,12 +96,14 @@ Each invitation record carries a stored `status` field. The state machine has on
 
 Transitions (every write below stamps its timestamp from the injected `now`; no transition reads the clock internally):
 
-- `initiate(inviter_ref, invitee_ref, context, ttl, now)` → a new invitation record is created in `Pending` status with a fresh injected `invitation_token`, the supplied `inviter_ref`, `invitee_ref` (nullable), `context`, `initiated_at = now`, and `expires_at = now + ttl` (or default). Returns `invitation_token`.
-- `accept(invitation_token, accepting_identity_ref, now)` → permitted only when stored `status = Pending` **and** `now < expires_at`; status transitions from `Pending` to `Accepted`; `accepting_identity_ref` and `accepted_at = now` are recorded. Returns `accepted`. (When `now ≥ expires_at` the guard returns `expired` and writes nothing.)
-- `decline(invitation_token, now)` → permitted only when stored `status = Pending` **and** `now < expires_at`; status transitions from `Pending` to `Declined`; `declined_at = now` is recorded. Returns `declined`.
-- `revoke(invitation_token, revoked_by_ref, reason, now)` → permitted only when stored `status = Pending` **and** `now < expires_at`; status transitions from `Pending` to `Revoked`; `revoked_at = now`, `revoked_by_ref`, and `revocation_reason` are recorded. Returns `revoked`.
+- `initiate(inviter_ref, invitee_ref, context, ttl)` → a new invitation record is created in `Pending` status with a fresh injected `invitation_token`, the supplied `inviter_ref`, `invitee_ref` (nullable), `context`, `initiated_at = now`, and `expires_at = now + ttl` (or default) — where `now` is the pipeline-injected clock at the seam. Returns `invitation_token`.
+- `accept(invitation_token, accepting_identity_ref)` → permitted only when stored `status = Pending` **and** `now < expires_at`; status transitions from `Pending` to `Accepted`; `accepting_identity_ref` and `accepted_at = now` are recorded. Returns `accepted`. (When `now ≥ expires_at` the guard returns `expired` and writes nothing.)
+- `decline(invitation_token)` → permitted only when stored `status = Pending` **and** `now < expires_at`; status transitions from `Pending` to `Declined`; `declined_at = now` is recorded. Returns `declined`.
+- `revoke(invitation_token, revoked_by_ref, reason)` → permitted only when stored `status = Pending` **and** `now < expires_at`; status transitions from `Pending` to `Revoked`; `revoked_at = now`, `revoked_by_ref`, and `revocation_reason` are recorded. Returns `revoked`.
 - **Expiry is not a transition.** When `now ≥ expires_at`, a `Pending` record is *shown* as `Expired` by `read`'s `effective_status` projection; nothing is written, no scheduler is required, and there is no `expire` action. This is the "derive the idealization, do not lag it with a stored flag" discipline — the lapsed state is computed from `expires_at` and the clock, not remembered.
 - *(no transitions out of Accepted, Declined, or Revoked; `Expired` is derived, so nothing transitions into or out of it.)*
+
+The non-mutating render-time surface of this state machine is **`read(filter)`** (defined in Inputs and Outputs): it reads stored state and computes each record's derived `effective_status` against the pipeline-injected clock. `read` fires no transition and writes nothing; it is the only surface that surfaces the derived `Expired` status.
 
 Each invitation record carries:
 
@@ -129,16 +131,16 @@ Each invitation record carries:
 
 ### Decision points
 
-**Logic confinement (clock and id).** The clock and the token are **injected inputs at the I/O seam**, never produced inside a transition. `now` (`clock_t`) is read once by the pipeline and passed to the action; the `invitation_token` is the injected `id_t`. A guard's expiry test is a **pure function of the stored record and the injected `now`** — `is_expired(record, now) ≜ record.status = Pending ∧ now ≥ record.expires_at` — and it **writes nothing**. The only clock *writes* are the immutable timestamp stamps inside a committed transition (`initiated_at`, `accepted_at`, `declined_at`, `revoked_at`), each set from the same injected `now`. Expiry itself never writes; it is surfaced only by `read`'s `effective_status` projection. Rejection priority for the resolving writes: `not-known` → `already-resolved(state)` → `expired` → `invalid-request` → `storage-failure`.
+**Logic confinement (clock and id).** The clock and the token are **pipeline-injected at the I/O seam**, never produced inside a transition and never action parameters. The execution contract reads the clock once and supplies `now` (`clock_t`) at the seam (Step 3); it likewise supplies the fresh `invitation_token` (the injected `id_t`) to `initiate`. Neither appears in any signature above — they are consumed *inside* the atom by exactly two confined uses. First, the **pure expiry guard**: a guard's expiry test is a **pure function of the stored record and the injected `now`** — `is_expired(record, now) ≜ record.status = Pending ∧ now ≥ record.expires_at` — and it **writes nothing**. Second, the **timestamp stamps**: the only clock *writes* are the immutable timestamps inside a committed transition (`initiated_at`, `accepted_at`, `declined_at`, `revoked_at`), each stamped from the same injected `now`. Expiry itself never writes; it is surfaced only by `read`'s `effective_status` projection (which consumes the same injected clock). Rejection priority for the resolving writes: `not-known` → `already-resolved(state)` → `expired` → `invalid-request` → `storage-failure`.
 
-**At `initiate(inviter_ref, invitee_ref, context, ttl, now)`:**
+**At `initiate(inviter_ref, invitee_ref, context, ttl)`:**
 - `inviter_ref` and `context` must be non-null and non-empty; otherwise `invalid-request`.
 - `invitee_ref` may be null — the atom permits invitations whose intended recipient is not yet a known system entity. Whether the deployment permits null `invitee_ref` is a deployment-configuration decision.
 - `ttl` must be positive if supplied; null uses the deployment default. Zero or negative is `invalid-request`. The deployment default must be configured; absent, `invalid-request`.
 - `initiated_at = now` and `expires_at = now + ttl` are computed once from the injected `now` and stored immutably.
 - If the store write fails, `storage-failure` is returned with no partial record.
 
-**At `accept(invitation_token, accepting_identity_ref, now)`:**
+**At `accept(invitation_token, accepting_identity_ref)`:**
 - The atom looks up the invitation by `invitation_token`. If no record is found, `not-known`.
 - If the stored `status` is a terminal (`Accepted`, `Declined`, or `Revoked`), `already-resolved(state)` naming that stored terminal. This is the single-resolution invariant in action.
 - **Expiry guard (derived, no write):** if `is_expired(record, now)` — stored `status = Pending ∧ now ≥ expires_at` — return `expired`. The record is left `Pending`; nothing is written. (A reader sees `effective_status = Expired`.)
@@ -147,14 +149,14 @@ Each invitation record carries:
 - If the store write fails, `storage-failure` is returned; the record remains `Pending`.
 - The atom does not validate that `accepting_identity_ref` matches `invitee_ref`. Whether the accepting identity was the intended invitee belongs to the composing pattern.
 
-**At `decline(invitation_token, now)`:**
+**At `decline(invitation_token)`:**
 - The atom looks up the invitation by `invitation_token`. If no record, `not-known`.
 - If the stored `status` is a terminal, `already-resolved(state)`.
 - **Expiry guard (derived, no write):** if `is_expired(record, now)`, return `expired`; the record is left `Pending` and nothing is written.
 - The transition to `Declined` and the write of `declined_at = now` are atomic. If the store write fails, `storage-failure`; the record remains `Pending`.
 - `decline` takes no identity argument: the declining actor's identity is not recorded. The deliberate refusal is recorded as the stored terminal `Declined`, not as an attribution record. Whether the declining actor is the intended invitee is not validated. Composing patterns that need to record who declined may do so in their own records.
 
-**At `revoke(invitation_token, revoked_by_ref, reason, now)`:**
+**At `revoke(invitation_token, revoked_by_ref, reason)`:**
 - The atom looks up the invitation by `invitation_token`. If no record, `not-known`.
 - If the stored `status` is a terminal, `already-resolved(state)`.
 - **Expiry guard (derived, no write):** if `is_expired(record, now)`, return `expired`; nothing is written. (A caller wishing to end a `Pending` invitation *before* its window lapses calls `revoke` while `now < expires_at`; once lapsed, the invitation already reads `Expired` and needs no withdrawal.)
@@ -222,49 +224,49 @@ Invariants 2 and 3 together give the *onboarding integrity* property — the ide
 
 An HR system initiates an invitation for a new hire:
 
-`initiate(inviter_ref: hr_admin_h01, invitee_ref: null, context: "org::acme::dept::engineering", ttl: 604800, now: 2026-09-01T09:14:00Z) → invitation_token: tok_inv_g7h2k1`
+`initiate(inviter_ref: hr_admin_h01, invitee_ref: null, context: "org::acme::dept::engineering", ttl: 604800) → invitation_token: tok_inv_g7h2k1`
 
-`invitee_ref` is null because the new hire does not yet have a system identity. `initiated_at = now`; `expires_at = initiated_at + 7 days` (computed from the injected `now`).
+`invitee_ref` is null because the new hire does not yet have a system identity. The pipeline injects the seam clock — here `2026-09-01T09:14:00Z` — so `initiated_at = now` and `expires_at = initiated_at + 7 days`.
 
 The HR system emails the new hire a link embedding the token. On their first day, the new hire clicks the link and creates their account. The onboarding handler calls:
 
-`accept(invitation_token: tok_inv_g7h2k1, accepting_identity_ref: user_u114, now: 2026-09-08T09:14:00Z) → accepted`
+`accept(invitation_token: tok_inv_g7h2k1, accepting_identity_ref: user_u114) → accepted`
 
-The atom checks the stored `status = Pending` and `now < expires_at` (the 7-day window is still open), then transitions the invitation to `Accepted`, recording `accepting_identity_ref: user_u114` and `accepted_at: 2026-09-08T09:14:00Z` (stamped from the injected `now`). These fields are now immutable. The composing External Onboarding pattern (C16) proceeds: it creates a Party Identity record for user_u114, registers their credential, and issues their first session.
+The pipeline injects the seam clock `2026-09-08T09:14:00Z`. The atom checks the stored `status = Pending` and `now < expires_at` (the 7-day window is still open), then transitions the invitation to `Accepted`, recording `accepting_identity_ref: user_u114` and `accepted_at: 2026-09-08T09:14:00Z` (stamped from the injected `now`). These fields are now immutable. The composing External Onboarding pattern (C16) proceeds: it creates a Party Identity record for user_u114, registers their credential, and issues their first session.
 
 ### Workspace collaboration — decline
 
 A user receives an invitation to join a shared project workspace:
 
-`initiate(inviter_ref: user_u91, invitee_ref: user_u55, context: "workspace::project-alpha", ttl: 172800, now: 2026-10-14T10:00:00Z) → invitation_token: tok_inv_p4q9r2`
+`initiate(inviter_ref: user_u91, invitee_ref: user_u55, context: "workspace::project-alpha", ttl: 172800) → invitation_token: tok_inv_p4q9r2`
 
 The invitee sees the invitation in their notification panel and clicks "Decline":
 
-`decline(invitation_token: tok_inv_p4q9r2, now: 2026-10-15T11:22:00Z) → declined`
+`decline(invitation_token: tok_inv_p4q9r2) → declined`
 
-The atom transitions to `Declined`, recording `declined_at: 2026-10-15T11:22:00Z`. The inviting user_u91 is notified that the invitation was declined. The invitation record is permanently `Declined` — it cannot be accepted, re-declined, revoked, or expired. Any subsequent action returns `already-resolved(Declined)`.
+The pipeline injects the seam clock `2026-10-15T11:22:00Z`. The atom transitions to `Declined`, recording `declined_at: 2026-10-15T11:22:00Z`. The inviting user_u91 is notified that the invitation was declined. The invitation record is permanently `Declined` — it cannot be accepted, re-declined, revoked, or expired. Any subsequent action returns `already-resolved(Declined)`.
 
 ### Invitation revoked before use
 
 An administrator initiates an invitation but then discovers the intended recipient should not be admitted:
 
-`initiate(inviter_ref: admin_a01, invitee_ref: user_u77, context: "org::acme::role::contractor", ttl: 86400, now: 2026-06-30T07:00:00Z) → invitation_token: tok_inv_c2d8e3`
+`initiate(inviter_ref: admin_a01, invitee_ref: user_u77, context: "org::acme::role::contractor", ttl: 86400) → invitation_token: tok_inv_c2d8e3` *(seam clock `2026-06-30T07:00:00Z`)*
 
-`revoke(invitation_token: tok_inv_c2d8e3, revoked_by_ref: admin_a01, reason: "contractor-engagement-cancelled", now: 2026-06-30T08:00:00Z) → revoked`
+`revoke(invitation_token: tok_inv_c2d8e3, revoked_by_ref: admin_a01, reason: "contractor-engagement-cancelled") → revoked` *(seam clock `2026-06-30T08:00:00Z`)*
 
 The atom transitions to `Revoked`, recording `revoked_at`, `revoked_by_ref: admin_a01`, and `revocation_reason: "contractor-engagement-cancelled"`. If the intended recipient had received the link and attempts to use it:
 
-`accept(tok_inv_c2d8e3, accepting_identity_ref: user_u77, now: 2026-06-30T09:00:00Z) → rejected(already-resolved(Revoked))`
+`accept(tok_inv_c2d8e3, accepting_identity_ref: user_u77) → rejected(already-resolved(Revoked))` *(seam clock `2026-06-30T09:00:00Z`)*
 
 The window is still open (`now < expires_at`), so this is not an `expired` rejection: the caller learns the invitation was `Revoked` — not merely lapsed or already accepted.
 
 ### Rejection paths
 
-**`accept` — `already-resolved(Accepted)` (concurrent attempt):** Two requests to accept the same invitation arrive simultaneously. The first commits atomically: `accept(tok_inv_g7h2k1, user_u114, now: 2026-09-08T09:14:00Z) → accepted`. The second arrives microseconds later and finds stored `status = Accepted`: `accept(tok_inv_g7h2k1, user_u115, now: 2026-09-08T09:14:00Z) → rejected(already-resolved(Accepted))`. User u115's attempt is rejected. The invitation is resolved to exactly one identity — user_u114. This is Invariant 2 in action.
+**`accept` — `already-resolved(Accepted)` (concurrent attempt):** Two requests to accept the same invitation arrive simultaneously (both at seam clock `2026-09-08T09:14:00Z`). The first commits atomically: `accept(tok_inv_g7h2k1, user_u114) → accepted`. The second arrives microseconds later and finds stored `status = Accepted`: `accept(tok_inv_g7h2k1, user_u115) → rejected(already-resolved(Accepted))`. User u115's attempt is rejected. The invitation is resolved to exactly one identity — user_u114. This is Invariant 2 in action.
 
 **`decline` — `expired` (derived):** An invitee receives an invitation but takes two weeks to decide, by which time the 7-day window has passed. They click "Decline":
 
-`decline(invitation_token: tok_inv_p4q9r2b, now: 2026-10-29T09:00:00Z) → rejected(expired)`
+`decline(invitation_token: tok_inv_p4q9r2b) → rejected(expired)` *(seam clock `2026-10-29T09:00:00Z`)*
 
 The guard evaluates `is_expired(record, now)` — the stored `status` is still `Pending` but `now ≥ expires_at` — and returns `expired`. **Nothing is written**: the record stays stored-`Pending`, `declined_at` stays null, and there is no `expired_at` field. A `read` of the record now reports `effective_status = Expired`, derived from the immutable `expires_at` and the read-time clock. The invitation was not declined; its window simply closed.
 
@@ -343,7 +345,7 @@ A derived implementation of Invitation is *acceptable* — in the regulator-acce
 
 ## Status
 
-`partially resolved` — touched 2026-06-21 by the **execution/render-time refactor** (derive expiry at read time). The stored `Expired` state, the `expired_at` field, the `expire` action, and all lazy-expiry writes were removed; `Expired` is now a derived `effective_status` projection computed at read time from the injected clock and the immutable `expires_at` (new Invariant 12). The injected clock `now` is surfaced explicitly on every action and consumed only by pure derivations (guards) and timestamp stamps (writes). A full three-pass re-pass (touch trigger) and re-derivation/verification of the formal model are **pending**; the next clean re-pass grounds at **Final Critique 5**. Prior grounding: `grounded on Final Critique 4 — 2026-05-19` (formal layer landed 2026-06-03 — TLA+ `invitation.tla` + buggy twin verified). See Lineage §Execution/render-time refactor.
+`grounded on Final Critique 5 — 2026-06-23` — the **execution/render-time refactor** is complete and the closing fresh-reader Final Critique (FC5) returned clean. The stored `Expired` state, the `expired_at` field, the `expire` action, and all lazy-expiry writes were removed; `Expired` is now a derived `effective_status` projection computed at read time from the injected clock and the immutable `expires_at` (Invariant 12). The clock `now` is **pipeline-injected at the I/O seam** (not an action parameter — the 2026-06-21 now-explicit-signatures experiment was reverted per the Final Critique council on 2026-06-23) and consumed only by pure derivations (guards and `read`) and timestamp stamps (writes). The formal layer's foundational findings (bound saturation, the vacuous Invariant 12 check, the single-resolution over-claim) were fixed on 2026-06-23 and the coverage cross-check is clean (see Lineage). Prior grounding: `grounded on Final Critique 4 — 2026-05-19` (formal layer landed 2026-06-03 — TLA+ `invitation.tla` + buggy twin verified). See Lineage §Execution/render-time refactor and §Final Critique 5.
 
 *Classification (post-flatten): stored flat as `atoms/invitation.md` — no category folder. Invitation is an identity-onboarding lifecycle primitive with meaningful non-regulated uses (wherever invitation-based onboarding is used), so its **regulated** and **security** classifications are overlays derived from its composers, not a folder it is filed under. This resolves the atom's former provisional `compliance/` placement and the question of relocating it to an identity folder: under the [usage-derived taxonomy](./TAXONOMY.md), `security` is an overlay it carries (derived from its identity/access standards), not a domain or a directory.*
 
@@ -411,11 +413,18 @@ Final Critique 4 closed clean after FC1 fix.
 
 - *Stored `Expired` removed; expiry derived.* Stored terminals are now `Accepted`, `Declined`, `Revoked`. `Expired` is a derived `effective_status` projection — `Expired ⟺ status = Pending ∧ now ≥ expires_at` — computed at read time from the immutable `expires_at` and the injected clock. New **Invariant 12**. Applies the "derive the idealization, do not lag it with a flag" pitfall ([`pressure-testing.md`](../pressure-testing.md) §Formal-model authoring pitfalls) to the canonical English.
 - *`expired_at` field, `expire` action, and all lazy-expiry writes removed.* Expiry never writes. A write attempted on a lapsed invitation is rejected with the new `expired` reason — distinct from `already-resolved(state)`, which now names only the three stored terminals.
-- *Clock surfaced as an explicit injected input.* Every action takes `now` (the pipeline's `clock_t`), consumed only by (a) pure expiry derivations in guards (no write) and (b) immutable timestamp stamps inside committed transitions. Closes the rescan's **INV-1** (hidden clock in the lazy-expiry guard).
+- *Clock confined to two pipeline-injected uses.* The clock (the pipeline's `clock_t`) is injected at the I/O seam and consumed only by (a) pure expiry derivations in guards and in `read` (no write) and (b) immutable timestamp stamps inside committed transitions. Closes the rescan's **INV-1** (hidden clock in the lazy-expiry guard). *(The 2026-06-21 draft threaded `now` into the action signatures to make this explicit; that experiment was reverted on 2026-06-23 — see the resolved design point below.)*
 - *Token-uniqueness mechanism named (rescan **INV-2**).* Invariant 11 now states uniqueness is store-enforced (a write reusing a token is rejected `storage-failure`), not merely probabilistic.
 - *Sections updated:* summary blockquote, Intent, Summary, Identity model, Inputs/Outputs (+ a `read` surface with `effective_status`), State, Decision points (+ Logic-confinement note and rejection priority), Behavior, Feedback, Invariants 1/2/5/6/7/9/11 reworded and 12 added, Examples, Edge cases, Generation acceptance.
-- *Open design point for the re-pass:* `now` is threaded into the action **signatures** to make injection explicit. This deviates from the corpus convention of leaving `clock_t` pipeline-implicit (e.g. Selective Disclosure does not show it). Flagged for confirmation — keep explicit, or move to a prose-only injection note and clean the signatures.
+- *Design point RESOLVED — 2026-06-23 (now-explicit experiment reverted per FC council).* The 2026-06-21 draft threaded `now` into the action **signatures** to make injection explicit; this deviated from the corpus convention of leaving `clock_t` pipeline-implicit (Selective Disclosure does not show it; the sibling Capability atom reverted the same way on 2026-06-23). The Final Critique council ruled: **revert**. The execution contract injects `clock_t`/`id_t` at the I/O seam (Step 3); they are not action parameters. `now` was removed from every action signature (`initiate`/`accept`/`decline`/`revoke`) and from the read surface (`read(filter, now)` → `read(filter)`); all `now:` arguments were stripped from the Examples; the Flow call sites and Decision-points headers now match the parameter-free signatures (FC F4). The derived-expiry design is unchanged — the clock is still injected and consumed by the pure expiry guard and the timestamp stamps, now described as pipeline-injected in the reworded "Logic confinement (clock and id)" note rather than as signature parameters. `read` is also now named in the State section's render-time surface (FC F5).
 - *Constituent-change cascade:* removing the `expire` action and the stored `Expired` value is a **breaking** change to Invitation's surface. External Onboarding (C16) and any composition naming Invitation require a touch-triggered re-pass.
-- *Formal model:* `invitation.tla` + buggy twin re-derived to the new shape (expiry derived from a clock variable; single-resolution over the three stored terminals; no `Expire` write) and re-run through `tools/harness/check.mjs`: the correct model holds (16 states, all invariants), and the buggy twin (drops the `Pending` guard → re-resolution) is rejected (`Inv_SingleResolution` violated, 7 states). The full coverage cross-check (a matrix over Invariants 1–12) and the bound-saturation review ride the pending re-pass; note `now` is modeled as an unbounded clock, so the raw state count grows with `MaxClock` while the *behavior* space saturates once `now` crosses `ExpiresAt`.
+- *Formal model:* `invitation.tla` + buggy twin re-derived to the new shape (expiry derived from a clock variable; single-resolution over the three stored terminals; no `Expire` write) and re-run through `tools/harness/check.mjs`: the correct model holds (16 states, all invariants), and the buggy twin (drops the `Pending` guard → re-resolution) is rejected (`Inv_SingleResolution` violated, 7 states).
 
-Pending: the full three-pass re-pass that, when clean, grounds the pattern at **Final Critique 5**.
+- *Formal-layer foundational fixes — 2026-06-23 (fresh-reader Final Critique, three findings closed).* The re-derived model carried three formal-layer defects, now fixed in `invitation.tla`/`.cfg` (the English signatures were untouched by these — they are model-layer fixes):
+  - **F1 — bound now saturates.** The clock previously advanced to `MaxClock` (`Tick == now < MaxClock`), so the reachable state count grew without bound (16 → 28 → 44 states at `MaxClock = 3 → 6 → 10`). `Tick` is now clamped at `ExpiresAt + 1` — one tick past the deadline is the only behaviorally-distinct lapsed value — so exploration saturates: the model holds at **16 states** for `MaxClock ∈ {3, 6, 10, 20}`. `invitation.cfg` sets `MaxClock = 6` (> the clamp) and records the real saturation point (16 states, reachable clock `{0,1,2,3}`) as a comment.
+  - **F2 — Invariant 12 now checked non-vacuously.** `Inv_DerivedExpiryCoherent`'s antecedent excludes Pending, so the *positive* derivation (a lapsed Pending record reads `Expired`) was asserted only vacuously. Added `Inv_LapsedReadsExpired == Lapsed(now) => EffStatus(now) = "Expired"` (antecedent reachable, so it bites) to `invitation.tla` and Safety. A second isolated twin `invitation-buggy-derivation.tla` breaks the derivation (`BrokenEffStatus` echoes the stored `state`, never `Expired`) and is rejected on this check at **9 states** — proving the new invariant is not vacuous.
+  - **F3 — single-resolution coverage no longer over-claimed.** The model verifies single-resolution as *post-write immutability* (`resolution` never changes once set), not concurrent check-and-commit atomicity. The Lineage/coverage language is corrected: check-and-commit-under-contention is a runtime-serialization obligation (Execution Contract sequence-safety class), recorded as by-construction / out-of-scope in the coverage matrix — not stated as covered concurrency.
+  - *Twins:* two isolated buggy twins, one per load-bearing invariant — `invitation-buggy.tla` (Inv 2, rejected at 7 states) and `invitation-buggy-derivation.tla` (Inv 12 positive derivation, rejected at 9 states). Both auto-discovered and required-to-reject by `audit.mjs`.
+  - *Coverage matrix:* refreshed at [`tools/harness/coverage/invitation.md`](../tools/harness/coverage/invitation.md) — one row per Invariant 1–12, constructs cited, with the bound-saturation line. The full coverage cross-check and bound-saturation review (which rode the pending re-pass) are now complete.
+
+**Final Critique 5 — 2026-06-23 — clean (fresh-reader re-gate; council-run).** Closing fresh-reader Final Critique (Pass 1 GRID / Pass 2 EOS / Pass 3 Linus at X2) over the execution/render-time refactor batch returned **zero foundational findings**. Formal model re-verified green in the harness, buggy twin(s) rejected, coverage cross-check clean (no GAP rows), bound saturated. Regrounded at Final Critique 5.
