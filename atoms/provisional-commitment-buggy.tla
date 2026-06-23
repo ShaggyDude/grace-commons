@@ -1,92 +1,93 @@
 ---- MODULE provisional-commitment-buggy ----
 \* Grace Commons — Provisional Commitment atom: BUGGY TWIN (vacuity guard).
+\* Mirrors provisional-commitment.tla (execution/render-time refactor, 2026-06-21)
+\* EXCEPT `ConfirmBuggy` drops the `state = Held` guard, allowing an
+\* already-resolved commitment to be re-resolved to Confirmed — the second
+\* resolution that the single-resolution / terminal-absorption rule forbids.
 \*
-\* Identical to provisional-commitment.tla EXCEPT `Release` and `Expire` stamp
-\* timestamp 0 instead of `clock` — modeling an implementation bug where the
-\* transition recorder writes a hard-coded zero instead of reading the current
-\* wall-clock value. This violates Inv8_TransitionsAfterPlacement because
-\* PlacedAt = 1 > 0 = releasedAt / expiredAt.
+\* This is the RESOLUTION hazard (the sibling -buggy-window targets the window
+\* hazard). `resolution` keeps the first stored terminal recorded, so the override
+\* is detectable by Inv_SingleResolution.
 \*
-\* The confirm-within-window guard is CORRECT here so Inv_ConfirmWithinWindow
-\* continues to hold; only Inv8_TransitionsAfterPlacement is violated, giving a
-\* clean single-invariant rejection signal.
-\*
-\* Expected result: Inv8_TransitionsAfterPlacement VIOLATED.
-\*   Init (clock=1, state=Held) -> Release -> releasedAt=0, state=Released.
-\*   Now (state="Released") => (releasedAt >= PlacedAt) becomes 0 >= 1 = FALSE.
-\* If the checker does NOT reject this, the Inv8 check is vacuous.
+\* Expected result: Inv_SingleResolution VIOLATED.
+\*   Release (state = Released, resolution = Released), then ConfirmBuggy ->
+\*   state = Confirmed while resolution = Released. The predicate
+\*   resolution # none => state = resolution becomes Released = Confirmed = FALSE.
+\* If the checker reports all invariants hold here, the harness is vacuous: a
+\* re-resolvable commitment would be safe, which is exactly what single-resolution
+\* by write denies.
 
 EXTENDS Naturals
 
 CONSTANTS PlacedAt, ExpiresAt, MaxClock
 
-States == {"Held", "Confirmed", "Released", "Expired"}
+StoredTerminals == {"Confirmed", "Released"}
+StoredStates    == {"Held"} \cup StoredTerminals
 
-VARIABLES state, clock, confirmedAt, releasedAt, expiredAt, everTerminal
-vars == <<state, clock, confirmedAt, releasedAt, expiredAt, everTerminal>>
+VARIABLES state, clock, resolution, confirmedAt, releasedAt
+vars == <<state, clock, resolution, confirmedAt, releasedAt>>
 
 TypeOK ==
-    /\ state \in States
+    /\ state \in StoredStates
     /\ clock \in 0..MaxClock
+    /\ resolution \in (StoredTerminals \cup {"none"})
     /\ confirmedAt \in 0..MaxClock
     /\ releasedAt \in 0..MaxClock
-    /\ expiredAt \in 0..MaxClock
-    /\ everTerminal \in BOOLEAN
 
 Init ==
     /\ state = "Held"
     /\ clock = PlacedAt
+    /\ resolution = "none"
     /\ confirmedAt = 0
     /\ releasedAt = 0
-    /\ expiredAt = 0
-    /\ everTerminal = FALSE
+
+Lapsed(c)    == (state = "Held") /\ (c >= ExpiresAt)
+EffStatus(c) == IF Lapsed(c) THEN "Expired" ELSE state
 
 Tick ==
     /\ clock < MaxClock
     /\ clock' = clock + 1
-    /\ UNCHANGED <<state, confirmedAt, releasedAt, expiredAt, everTerminal>>
+    /\ UNCHANGED <<state, resolution, confirmedAt, releasedAt>>
 
-\* CORRECT confirm: window guard intact — Inv7 continues to hold.
-Confirm ==
-    /\ state = "Held"
+\* BUG: no `state = Held` guard — ConfirmBuggy can override an already-resolved
+\* commitment. The window guard is intact (clock < ExpiresAt), so the violation is
+\* isolated to single-resolution, not the window. `resolution` keeps the first
+\* terminal recorded, so the override is caught by Inv_SingleResolution.
+ConfirmBuggy ==
     /\ clock < ExpiresAt
     /\ state' = "Confirmed"
     /\ confirmedAt' = clock
-    /\ everTerminal' = TRUE
-    /\ UNCHANGED <<clock, releasedAt, expiredAt>>
+    /\ resolution' = IF resolution = "none" THEN "Confirmed" ELSE resolution
+    /\ UNCHANGED <<clock, releasedAt>>
 
-\* BUG: stamps releasedAt = 0 instead of clock — simulates a recorder that
-\* hard-codes zero rather than reading the current wall clock. With PlacedAt = 1,
-\* releasedAt = 0 < PlacedAt violates Inv8_TransitionsAfterPlacement.
 Release ==
     /\ state = "Held"
+    /\ clock < ExpiresAt
     /\ state' = "Released"
-    /\ releasedAt' = 0
-    /\ everTerminal' = TRUE
-    /\ UNCHANGED <<clock, confirmedAt, expiredAt>>
+    /\ releasedAt' = clock
+    /\ resolution' = IF resolution = "none" THEN "Released" ELSE resolution
+    /\ UNCHANGED <<clock, confirmedAt>>
 
-\* BUG: stamps expiredAt = 0 instead of clock — same defect as Release.
-Expire ==
-    /\ state = "Held"
-    /\ clock >= ExpiresAt
-    /\ state' = "Expired"
-    /\ expiredAt' = 0
-    /\ everTerminal' = TRUE
-    /\ UNCHANGED <<clock, confirmedAt, releasedAt>>
-
-Next == Tick \/ Confirm \/ Release \/ Expire
+Next == Tick \/ ConfirmBuggy \/ Release
 Spec == Init /\ [][Next]_vars
 
+Inv_SingleResolution == (resolution # "none") => (state = resolution)
+Inv_NoStoredExpired == state \in StoredStates
+Inv_DerivedExpiryCoherent ==
+    (state \in StoredTerminals) => (EffStatus(clock) = state)
+\* Window guard intact here, so this continues to hold — only Inv_SingleResolution
+\* is violated, giving a clean single-invariant rejection signal.
 Inv_ConfirmWithinWindow == (state = "Confirmed") => (confirmedAt < ExpiresAt)
-Inv3_TerminalAbsorbing == everTerminal => (state \in {"Confirmed", "Released", "Expired"})
 Inv8_TransitionsAfterPlacement ==
     /\ (state = "Confirmed") => (confirmedAt >= PlacedAt)
     /\ (state = "Released")  => (releasedAt  >= PlacedAt)
-    /\ (state = "Expired")   => (expiredAt   >= PlacedAt)
+
 Safety ==
     /\ TypeOK
+    /\ Inv_SingleResolution
+    /\ Inv_NoStoredExpired
+    /\ Inv_DerivedExpiryCoherent
     /\ Inv_ConfirmWithinWindow
-    /\ Inv3_TerminalAbsorbing
     /\ Inv8_TransitionsAfterPlacement
 
 ====

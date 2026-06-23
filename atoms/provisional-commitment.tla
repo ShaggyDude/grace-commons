@@ -1,32 +1,41 @@
 ---- MODULE provisional-commitment ----
-\* Grace Commons — Provisional Commitment atom.
-\* Spec-level formal sibling of atoms/provisional-commitment.md.
+\* Grace Commons — Provisional Commitment atom (execution/render-time refactor,
+\* 2026-06-21). Spec-level formal sibling of atoms/provisional-commitment.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
-\* (1) Inv 7 — confirm-within-window: a commitment may reach Confirmed ONLY if
-\*     `confirm` fired while now < expires_at. This is the action-vs-time race the
-\*     2026-06-03 bar reconsideration KEPT as warranting a model.
-\* (2) Inv 8 — transition timestamps strictly after placement: every terminal
-\*     transition records a timestamp >= placed_at. Ghost variables `confirmedAt`,
-\*     `releasedAt`, `expiredAt` capture clock values at transition time;
-\*     `Inv8_TransitionsAfterPlacement` asserts each >= PlacedAt when defined.
-\*     PlacedAt is a constant > 0 so "before placement" is reachable by the clock,
-\*     giving the check real teeth: a buggy twin that stamps 0 is caught.
-\* (3) Inv 3 — terminal absorption (explicit predicate, promoted 2026-06-04).
+\* (1) Single-resolution BY WRITE: a commitment is written to at most one stored
+\*     terminal in {Confirmed, Released}; once written, that resolution is
+\*     immutable. Ghost `resolution` records the first stored terminal reached, so
+\*     "the resolution never changes once set" is the falsifiable predicate
+\*     resolution # none => state = resolution. (Old Inv 3 terminal-absorption,
+\*     now ranging over the two STORED terminals only.)
+\* (2) Expiry is DERIVED, never written. There is no action that stores "Expired"
+\*     and no expired field. `Expired` is the read-time projection EffStatus(now).
+\*     A resolving write (confirm/release) fires only while the window is open
+\*     (now < ExpiresAt), so a lapsed hold can only ever READ Expired — it never
+\*     becomes a stored terminal after the deadline, and the store never holds an
+\*     "Expired" value. (Old Inv 7 confirm-within-window, restated: now no Expire
+\*     write competes — confirm/release simply become disabled at the deadline.)
+\* (3) Transition timestamps strictly after placement (Inv 8): every STORED
+\*     terminal records a timestamp >= PlacedAt. Ghost variables `confirmedAt`,
+\*     `releasedAt` capture clock values at transition time. (Expired carries no
+\*     stored timestamp now — it is derived — so the expiredAt half is gone.)
 \*
 \* MODELING CHOICES
-\* - One commitment, `clock` starting at PlacedAt (commitment is placed at that
-\*   instant), advancing to MaxClock. `ExpiresAt` is the window-close tick.
-\* - Three ghost timestamps (confirmedAt, releasedAt, expiredAt): initialized to 0
-\*   (sentinel — only meaningful when the commitment is in the corresponding
-\*   terminal state); set to clock when the transition fires.
-\* - PlacedAt > 0 so the ghost sentinel 0 is strictly below PlacedAt; Inv8 is
-\*   falsifiable (a buggy twin that forgets to stamp the real clock is caught).
+\* - One commitment. `state` in {Held, Confirmed, Released} — NO stored Expired.
+\*   `clock` (the injected `now`) starts at PlacedAt and only advances (Tick);
+\*   `ExpiresAt` is the window-close tick. Each resolving action guards on
+\*   state = Held /\ clock < ExpiresAt: the injected clock is READ in the guard
+\*   (pure), never used to WRITE an Expired state. EffStatus(c) is the derived
+\*   effective status `read` returns at render time. PlacedAt > 0 so the ghost
+\*   sentinel 0 is strictly below PlacedAt and Inv8 is falsifiable.
 \*
-\* NOT MODELED (out of scope): id discipline, storage-failure, multi-commitment
-\* resource serialization (place_hold race — a separate concern).
+\* NOT MODELED (out of scope, named): id discipline / no-reuse (Alloy-class,
+\* single commitment here), storage-failure, multi-commitment place_hold
+\* serialization (the resource race), and the immutability of stored fields
+\* (structural).
 
 EXTENDS Naturals
 
@@ -34,92 +43,104 @@ CONSTANTS PlacedAt,         \* clock tick at which place_hold fires (> 0)
           ExpiresAt,        \* window close time; take ExpiresAt > PlacedAt
           MaxClock          \* clock bound (finiteness); take MaxClock > ExpiresAt
 
-States == {"Held", "Confirmed", "Released", "Expired"}
+StoredTerminals == {"Confirmed", "Released"}
+StoredStates    == {"Held"} \cup StoredTerminals
 
-VARIABLES state, clock, confirmedAt, releasedAt, expiredAt, everTerminal
-vars == <<state, clock, confirmedAt, releasedAt, expiredAt, everTerminal>>
+VARIABLES state, clock, resolution, confirmedAt, releasedAt
+vars == <<state, clock, resolution, confirmedAt, releasedAt>>
 
 TypeOK ==
-    /\ state \in States
+    /\ state \in StoredStates
     /\ clock \in 0..MaxClock
+    /\ resolution \in (StoredTerminals \cup {"none"})
     /\ confirmedAt \in 0..MaxClock
     /\ releasedAt \in 0..MaxClock
-    /\ expiredAt \in 0..MaxClock
-    /\ everTerminal \in BOOLEAN
 
 Init ==
     /\ state = "Held"           \* place_hold: commitment starts Held at PlacedAt
     /\ clock = PlacedAt
+    /\ resolution = "none"
     /\ confirmedAt = 0          \* sentinel — only valid when state = "Confirmed"
     /\ releasedAt = 0           \* sentinel — only valid when state = "Released"
-    /\ expiredAt = 0            \* sentinel — only valid when state = "Expired"
-    /\ everTerminal = FALSE
 
-\* wall-time advances.
+\* Derived, read-time effective status (render time). Never stored. A still-Held
+\* commitment whose window has elapsed READS as Expired; a stored terminal reads
+\* back as itself.
+Lapsed(c)    == (state = "Held") /\ (c >= ExpiresAt)
+EffStatus(c) == IF Lapsed(c) THEN "Expired" ELSE state
+
+\* The injected clock advances at the I/O seam; it writes nothing else.
 Tick ==
     /\ clock < MaxClock
     /\ clock' = clock + 1
-    /\ UNCHANGED <<state, confirmedAt, releasedAt, expiredAt, everTerminal>>
+    /\ UNCHANGED <<state, resolution, confirmedAt, releasedAt>>
 
-\* CORRECT confirm: admitted only while strictly within the window.
+\* CORRECT confirm: a resolving WRITE, admitted only while Held AND strictly
+\* within the window (clock < ExpiresAt). The injected `now` is read in the guard
+\* (pure); no write ever sets an Expired state. Once the window lapses, confirm is
+\* simply disabled — there is no Expire write racing it.
 Confirm ==
     /\ state = "Held"
     /\ clock < ExpiresAt
     /\ state' = "Confirmed"
     /\ confirmedAt' = clock
-    /\ everTerminal' = TRUE
-    /\ UNCHANGED <<clock, releasedAt, expiredAt>>
+    /\ resolution' = IF resolution = "none" THEN "Confirmed" ELSE resolution
+    /\ UNCHANGED <<clock, releasedAt>>
 
-\* CORRECT release: stamps releasedAt at current clock.
+\* CORRECT release: a resolving WRITE, same window guard as confirm; stamps
+\* releasedAt at the current clock.
 Release ==
     /\ state = "Held"
+    /\ clock < ExpiresAt
     /\ state' = "Released"
     /\ releasedAt' = clock
-    /\ everTerminal' = TRUE
-    /\ UNCHANGED <<clock, confirmedAt, expiredAt>>
+    /\ resolution' = IF resolution = "none" THEN "Released" ELSE resolution
+    /\ UNCHANGED <<clock, confirmedAt>>
 
-\* expire: admitted only once the window has elapsed; stamps expiredAt.
-Expire ==
-    /\ state = "Held"
-    /\ clock >= ExpiresAt
-    /\ state' = "Expired"
-    /\ expiredAt' = clock
-    /\ everTerminal' = TRUE
-    /\ UNCHANGED <<clock, confirmedAt, releasedAt>>
+\* NO Expire action. A lapsed hold needs no write to be Expired; it is surfaced by
+\* EffStatus at read time.
 
-Next == Tick \/ Confirm \/ Release \/ Expire
+Next == Tick \/ Confirm \/ Release
 Spec == Init /\ [][Next]_vars
 
-\* Inv 7 (load-bearing) — a Confirmed commitment was confirmed strictly within
-\* the window.
+\* Load-bearing — single-resolution by write (immutable once written). Ranges over
+\* the two STORED terminals only; the derived Expired never appears in `state`.
+Inv_SingleResolution == (resolution # "none") => (state = resolution)
+
+\* Expiry is derived, never written: the store never holds an "Expired" value
+\* (by construction — no action writes it; promoted to an explicit check so a
+\* future edit that re-introduces a stored Expired is caught).
+Inv_NoStoredExpired == state \in StoredStates
+
+\* The derivation never misclassifies a written terminal as Expired: a stored
+\* terminal always reads back as itself.
+Inv_DerivedExpiryCoherent ==
+    (state \in StoredTerminals) => (EffStatus(clock) = state)
+
+\* Load-bearing (KEPT residual) — you cannot resolve a hold after its window. A
+\* Confirmed commitment was confirmed strictly within the window. With the Expire
+\* WRITE gone, this is the surviving execution-time clock dependence: confirm/
+\* release read the injected `now` in their guard and become DISABLED at the
+\* deadline (no write fires), rather than racing an Expire write. The window twin
+\* (-buggy-window) admits confirm at clock = ExpiresAt and is caught here.
 Inv_ConfirmWithinWindow == (state = "Confirmed") => (confirmedAt < ExpiresAt)
 
-\* Invariant 3 — terminal absorption. Promoted from a by-construction assumption
-\* to an explicit check (2026-06-04 coverage cross-check): once a commitment has
-\* entered a terminal state it stays terminal (history-flag form, like Party
-\* Identity's Closed-absorbing check). A transition out of a terminal state would
-\* violate this.
-Inv3_TerminalAbsorbing ==
-    everTerminal => (state \in {"Confirmed", "Released", "Expired"})
-
-\* Inv 8 (load-bearing) — every terminal transition timestamp is >= placed_at.
-\* PlacedAt > 0 so sentinel 0 is strictly below it; a buggy twin that forgets to
-\* capture the real clock is caught immediately.
-\* Note: the spec states "expires_at <= expired_at" for expiry (Invariant 8);
-\* modeled here as expiredAt >= PlacedAt (PlacedAt is the weaker bound that covers
-\* the release half symmetrically; the stronger expires_at bound is discharged by
-\* Inv7 + the Expire guard `clock >= ExpiresAt` together).
+\* Inv 8 (load-bearing) — every STORED terminal transition timestamp is >=
+\* PlacedAt. PlacedAt > 0 so sentinel 0 is strictly below it; a buggy twin that
+\* forgets to capture the real clock is caught. (Expired is derived now, so it
+\* carries no stored timestamp and has no half here.)
 Inv8_TransitionsAfterPlacement ==
     /\ (state = "Confirmed") => (confirmedAt >= PlacedAt)
     /\ (state = "Released")  => (releasedAt  >= PlacedAt)
-    /\ (state = "Expired")   => (expiredAt   >= PlacedAt)
 
 Safety ==
     /\ TypeOK
+    /\ Inv_SingleResolution
+    /\ Inv_NoStoredExpired
+    /\ Inv_DerivedExpiryCoherent
     /\ Inv_ConfirmWithinWindow
-    /\ Inv3_TerminalAbsorbing
     /\ Inv8_TransitionsAfterPlacement
 
-\* NOTE Invariant 1 (membership exclusivity) is TypeOK.
+\* NOTE Invariant 1 (membership exclusivity over stored states) is TypeOK.
 
 ====
