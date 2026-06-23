@@ -9,6 +9,18 @@ Accidental findings during the build. Raw, dated, unpolished. Grant proposals an
 
 ---
 
+### 2026-06-23 — Derive-expiry-at-read applies only to *side-effect-free* lapse
+
+A corpus-wide "derive expiry at read time" pass (remove the stored `Expired` terminal and the `expire()` write; compute `Expired` as a read-time projection from the injected clock vs the deadline — the *derive the idealization, don't lag it with a flag* discipline) ran cleanly across seven temporal atoms: Invitation, Session, Capability, Credential, Retention Window, Selective Disclosure, Consent. It **broke on the eighth — Provisional Commitment — and the break is the rule.**
+
+PC's lapse is not a pure idealization: when a hold's window elapses it **returns a resource to availability** (a Capacity Constraint pool slot), a side effect that the Reservation Lifecycle (C9) and Idempotent Reservation compositions hang on `ProvisionalCommitment.expire(id)`. Removing `expire()` left those two grounded compositions calling a deleted action — a live cascade — so PC was reverted to its Final Critique 4 stored-`Expired` + `expire()` form, and the compositions went consistent again untouched.
+
+**The rule:** derive-expiry-at-read is correct exactly when a lapse has **no side effect** — the entity simply becomes unusable and "is it expired?" is answered by a pure read (an Invitation can't be accepted, a Session/Credential won't verify, a Capability won't redeem). The moment a lapse must *do* something — release a slot, emit a notification, fire a cascade — it is a state transition with an event, not an idealization, and it keeps its explicit `expire()`/sweep. The discriminator is the EOS one: does the lapse carry a side effect of its own? Side effect ⇒ it owns an event; no side effect ⇒ derive it.
+
+This also exercised the freshly-recalibrated cycle the right way and the wrong way: the cross-cutting change *should* have been gated on a single reference before the sweep ([`pressure-testing.md`](./pressure-testing.md) §Reference-first for cross-cutting changes), which would have surfaced the PC exception at one atom instead of after eight — the worked motivation for that very rule.
+
+---
+
 ### 2026-06-14 — The camelCase-for-TLC naming split is gone; the adapter derives the name
 
 Supersedes the 2026-05-23 rename. That one renamed `.tla` files to lower-camelCase because standard TLA+ (SANY) requires the module name to match the filename and rejects hyphens — at the time the only way to make the models runnable under standard TLC. The cost was a naming split: kebab `.md`/`.als`, camelCase `.tla`.
