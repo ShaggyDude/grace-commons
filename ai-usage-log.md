@@ -156,7 +156,7 @@ Human decision: Author confirmed the retention filter default as ON rather than 
 
 **2026-05-27**
 Model: Claude (sonnet)
-Work: `roadmap.md` updated with new "Formal model coverage" section inventorying six shipped formal-model artifacts (Alloy, TLA+, or both) across one atom and five compositions. `CORNERS.md` for the clinical trial portal updated to record deferred formal-model follow-up items.
+Work: `roadmap.md` updated with new "Formal model coverage" section inventorying six shipped formal-model artifacts (Alloy, TLA+, or both) across one atom and five compositions. `demos/clinical-trial-portal/CORNERS.md` updated to record deferred formal-model follow-up items.
 Human decision: Author established the convention for moving a pattern from Deferred to Shipped in the formal-model registry.
 
 ---
@@ -170,7 +170,7 @@ Human decision: Author made all editorial decisions including budget structure (
 
 **2026-05-27 to 2026-05-29**
 Model: Grok (xAI) — external reviewer; Claude (sonnet) — implementation
-Work: Grok conducted six independent review rounds on the grant proposal (form fields and work plan attachment), each producing scored findings the author adjudicated. Grok also conducted a technical security review of the Beacon demo — surfacing the `/subjects/:id` own-scope gap (no detail-view guard matching the list-view filter), the CSV export attestation boundary, and the canonical JSON `undefined` edge case. Claude implemented the own-scope fix, wrote a regression test (107 passing), documented the remaining findings in `CORNERS.md`. Grok contributed the Logic Confinement Principle formalization (six rules, now in `execution-contract.md`), the Year 1 roadmap framing (~100 atoms, tag-based ontology), and the EU alignment narrative ("the upper layer Europe's open digital ecosystems have been missing") now in `readme.md`. FAIR/EOSC/digital sovereignty paragraph added to Technical Challenges field. Backdated `study.registered` audit event seeded to Beacon live DB to make retention filter demonstrable.
+Work: Grok conducted six independent review rounds on the grant proposal (form fields and work plan attachment), each producing scored findings the author adjudicated. Grok also conducted a technical security review of the Beacon demo — surfacing the `/subjects/:id` own-scope gap (no detail-view guard matching the list-view filter), the CSV export attestation boundary, and the canonical JSON `undefined` edge case. Claude implemented the own-scope fix, wrote a regression test (107 passing), documented the remaining findings in `demos/clinical-trial-portal/CORNERS.md`. Grok contributed the Logic Confinement Principle formalization (six rules, now in `execution-contract.md`), the Year 1 roadmap framing (~100 atoms, tag-based ontology), and the EU alignment narrative ("the upper layer Europe's open digital ecosystems have been missing") now in `readme.md`. FAIR/EOSC/digital sovereignty paragraph added to Technical Challenges field. Backdated `study.registered` audit event seeded to Beacon live DB to make retention filter demonstrable.
 Human decision: Author accepted the own-scope fix as a pre-submission blocker and shipped it. Author accepted the Logic Confinement Principle as a first-class architectural commitment. Author set the ~100 atom Year 1 target as directional. Author approved all EU alignment language.
 
 ### Phase 6 — Formal-layer completion, pattern sprint, and the conformance loop (2026-06-02 to 2026-06-07)

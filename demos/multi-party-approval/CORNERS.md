@@ -1,12 +1,12 @@
 # CORNERS.md — deferred items against the spec
 
-This file tracks every place where the demo's implementation falls short of, defers, or collapses something the [Multi-Party Approval spec](../grace-commons/compositions/multi-party-approval.md) names. The discipline:
+This file tracks every place where the demo's implementation falls short of, defers, or collapses something the [Multi-Party Approval spec](../../compositions/multi-party-approval.md) names. The discipline:
 
 - Every entry names the spec section, the cut made, and the estimated relaxation cost.
 - New entries land *during* the build, not after — the moment the implementation makes a choice that deviates from the spec, the entry is written.
 - This file is the honest counterpart to the demo. A reader who has only the demo and `CORNERS.md` knows exactly how the demo deviates from the spec.
 
-The rule for *what* belongs here vs. what belongs as a spec finding is in [`grace-commons/CLAUDE.md` § Implementation-discovered findings](../grace-commons/CLAUDE.md): contradictions go to Lineage notes via a review pass; preferences and rendering-target collapses go here.
+The rule for *what* belongs here vs. what belongs as a spec finding is in [`CLAUDE.md` § Implementation-discovered findings](../../CLAUDE.md): contradictions go to Lineage notes via a review pass; preferences and rendering-target collapses go here.
 
 ---
 

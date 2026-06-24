@@ -28,20 +28,16 @@ This demo demonstrates five Grace Commons compositions in a Phase II oncology tr
 
 **The scenario:** Anya (PI) invites Maya (Study Coordinator) to the portal, grants her permissions, and Maya enrolls a subject and records a visit. Jordan (Clinical Research Associate / Monitor) walks the audit trail and verifies tamper evidence.
 
-### Screenshot 1: PI invites coordinator
-![Invitation](./screenshots/01_invite.png)
+### Step 1: PI invites coordinator
 *Dr. Anya Okonkwo on `/people` invites a new Study Coordinator by email.*
 
-### Screenshot 2: Coordinator sets password
-![Onboarding](./screenshots/02_onboard.png)
+### Step 2: Coordinator sets password
 *Invitee follows the link to `/invitations/accept/:token` and sets a password.*
 
-### Screenshot 3: Coordinator enrolls subject
-![Enrollment](./screenshots/03_enroll.png)
+### Step 3: Coordinator enrolls subject
 *Maya on `/subjects/new` enrolls subject BCN-014 into the protocol.*
 
-### Screenshot 4: CRA verifies audit trail
-![Verification](./screenshots/04_verify.png)
+### Step 4: CRA verifies audit trail
 *Jordan on `/audit/verify` recomputes the hash chain: "Verified 47 events."*
 
 ---
@@ -127,7 +123,7 @@ Five permission codes, seeded in Phase 6:
 - **What is this?** See the thesis above and Decision #11 in the plan.
 - **How does it work?** Appendix A of the plan shows the reference patterns.
 - **Show me the code:** Start at `composition.ts` (mutations), then `domain/` (atoms), then `lib/db.ts` (transaction primitive).
-- **Full spec:** See `grace-commons/compositions/Demo2-plan.md` in the repository root.
+- **Full spec:** See [`Demo2-plan.md`](./Demo2-plan.md) in this demo's folder.
 
 ---
 

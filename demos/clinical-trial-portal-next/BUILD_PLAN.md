@@ -427,7 +427,7 @@ export const verifyPassword = (pw: string, encoded: string) => verify(encoded, p
 
 ### 7.9 Tests
 
-Vitest, three layers mirroring first render A.12 and Decision 14:
+Vitest, three layers mirroring first render A.12 and Decision 13:
 - **atom unit** — one per atom, against an ephemeral Postgres schema per test (`helpers.ts: withTestDb` creates a temp schema / uses a transaction-rollback fixture).
 - **composition rollback** — force a hash failure mid-function (the ported `_testOverrideSha256hex` hook) and assert **zero** atom rows *and* zero `event_log` rows (the all-or-nothing invariant). This is the critical test; it must pass identically to the first render.
 - **e2e lifecycle** — walk invite → accept → grant → enroll → record visit → audit walk → `/audit/verify` returns "Verified N events", driving the running server (Playwright or fetch against `next start`).

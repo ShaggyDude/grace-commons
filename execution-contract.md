@@ -43,7 +43,7 @@ The overwhelming majority of async, consistency, timing, and correctness problem
 
 **6. Async at the edge only.** All asynchronous, network, storage, and external work is confined to adapters. The pipeline itself — Steps 1 through 4 — is synchronous. Async enters core and complexity grows nonlinearly; Grace Commons eliminates the category by construction.
 
-**Current status.** The Beacon reference implementation satisfies rules 1, 2, 3, and 6 fully. Rule 4 (explicit construction / `createEvent` before `appendEvent`) and rule 5 (compiler-emitted invariant assertions) are targeted for the projector build phase — the gap is documented in the implementation's `CORNERS.md`. The principle is stated here as a first-class commitment, not a retrospective description of the demo.
+**Current status.** The Beacon reference implementation satisfies rules 1, 2, 3, and 6 fully. Rule 4 (explicit construction / `createEvent` before `appendEvent`) and rule 5 (compiler-emitted invariant assertions) are targeted for the projector build phase — the gap is tracked as methodology debt #7 in [`roadmap.md`](./roadmap.md) §Methodology debts (the projector / verification-harness deliverable). The principle is stated here as a first-class commitment, not a retrospective description of the demo.
 
 ---
 

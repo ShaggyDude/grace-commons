@@ -403,7 +403,7 @@ Each phase is independently shippable: the demo runs (perhaps with reduced funct
 - `composition.ts` with: `issueInvitation`, `acceptInvitation`, `revokeInvitation`, `login`, `logout`, `grantPermission`, `revokeGrant`, `enrollSubject`, `recordVisit`. Each wraps a transaction.
 - `lib/canonical.ts` (canonical JSON) and `lib/hash.ts` (SHA-256 via Web Crypto).
 - `appendEvent(ctx, action, target, payload)` helper called by every composition function in the same transaction.
-- Per-function doc comments in `composition.ts` quote the library spec for each composition verbatim above the function (per decision #13 — the spec-to-code mapping is inspectable in the source, not just in the README).
+- Per-function doc comments in `composition.ts` quote the library spec for each composition verbatim above the function (per decision #12 — the spec-to-code mapping is inspectable in the source, not just in the README).
 - `lib/password.ts` uses Argon2id via `jsr:@denosaurs/argontwo@^0.2` (WASM, signed on GitHub Actions, JSR score 100%). Algorithm variant is `Argon2id` per RFC 9106's default recommendation. bcrypt is not used.
 - Unit tests: every composition function asserts both the atom write *and* the audit event in one transaction (rollback test: forced error mid-function leaves zero rows in both).
 - `deno task verify` CLI.
@@ -434,7 +434,7 @@ Each phase is independently shippable: the demo runs (perhaps with reduced funct
 
 - `seed.ts`: PI Anya, CRA Jordan, study `BCN-OX-201`, permission catalog rows. Clearly commented "this is the seam" headers.
 - Tailwind polish on every view.
-- README with: thesis paragraph, composition map (linked to library), one-screen walkthrough with four screenshots (PI invites, invitee onboards, SC enrolls subject, CRA verifies chain), `deno task` reference.
+- README with: thesis paragraph, composition map (linked to library), one-screen walkthrough (PI invites, invitee onboards, SC enrolls subject, CRA verifies chain), `deno task` reference.
 - `WALKTHROUGH.md` — the five-minute reading tour for a thoughtful engineer.
 - Fly.io deploy config — bump from the default `shared-cpu-1x` to at least `shared-cpu-2x` / 1 GB. Argon2id hashing is the only meaningful compute cost in this demo and the demo is single-tenant, so a small fixed machine with a bit of headroom keeps login/onboarding snappy without overpaying. Add GitHub Actions for the live demo URL.
 
@@ -456,15 +456,14 @@ All previously-open questions are answered. These are now constraints on the imp
 3. **Password hashing.** Argon2id via `jsr:@denosaurs/argontwo@^0.2`. WASM-based, signed on GitHub Actions, JSR score 100%, denosaurs org. Algorithm variant: `Argon2id` (RFC 9106 default — hybrid of Argon2i side-channel resistance and Argon2d GPU resistance). No fallback. bcrypt is not used. (Package was last published two years before this plan; the underlying primitive is stable, but reconfirm the version pin and the `hash`/`verify` signatures against the current JSR listing at the moment Phase 2 begins.)
 4. **Session token.** Opaque random, DB-backed (`sessions` table is the source of truth). Not JWT. `session.closed` means a row was actually revoked.
 5. **Tamper evidence.** SHA-256 hash chain over canonical JSON, as specified in §6. No signatures, no per-deployment private key. The property demonstrated is *detection of tampering by an actor with DB write access* — sufficient for the demo's claim.
-6. **Retention.** Enforcement is **off** by default in the demo seed so the full chain is visible. A clearly-labeled toggle on `/audit` flips enforcement on, with explanatory copy in the UI ("Hide events older than the retention window. The records are not deleted — Part 11 forbids that — just filtered for presentation."). Both states get a README screenshot.
+6. **Retention.** Enforcement is **off** by default in the demo seed so the full chain is visible. A clearly-labeled toggle on `/audit` flips enforcement on, with explanatory copy in the UI ("Hide events older than the retention window. The records are not deleted — Part 11 forbids that — just filtered for presentation.").
 7. **Subject privacy.** Synthetic subject codes only (e.g. `BCN-014`). No real names, no PII columns on `subjects`. The form does not accept a name field.
 8. **PI bootstrap.** PI account is seeded directly in `seed.ts` with a loud header comment: `// SEAM: in production this happens via out-of-band provisioning. A "Bootstrap Identity" composition is out of scope for this demo.` No setup wizard.
 9. **SC audit access.** SC is granted `view_audit` with `scope='own'`. The `/audit` route applies `WHERE actor_id = ctx.actor.id` when the active grant's scope is `'own'`. CRA's grant has `scope='all'`.
 10. **`login.failed` attribution.** `event_log.actor_id IS NULL`. When the submitted email matches a known party, `payload_json.party_id` is populated for forensic value. Never attribute a failed login to the actor — the actor did not perform the action.
 11. **Show HN headline framing.** Lead claim: structured natural-language specifications composed into a working regulated-grade system. Clinical trial framing appears second, as the demonstration vehicle. README opening paragraph and Show HN post copy both follow this order.
-12. **README screenshots.** Four images, in order: (a) PI on `/people` issuing Maya's invitation, (b) Maya on the set-password page after following the link, (c) Maya on `/subjects/new` enrolling `BCN-014`, (d) Jordan on `/audit/verify` reading "Verified N events."
-13. **Library cross-linking.** README links every composition name to its entry in the Grace Commons library. Each composition function in `composition.ts` carries a doc comment quoting the relevant library spec text above the function body. Doc comments are written in Phase 2 (alongside the functions), not deferred to Phase 6.
-14. **Test bar for "Show HN ready."** Three test layers required before Phase 5 is called done: (a) unit tests on every atom helper and every composition function (with the rollback assertion: forced mid-function error leaves zero atom rows *and* zero audit rows); (b) one end-to-end HTTP test that walks invite → accept → grant → enroll subject → record visit → audit walk; (c) a tamper-detection test that directly mutates a `payload_json` value in `event_log` and asserts `/audit/verify` flags the exact row id.
+12. **Library cross-linking.** README links every composition name to its entry in the Grace Commons library. Each composition function in `composition.ts` carries a doc comment quoting the relevant library spec text above the function body. Doc comments are written in Phase 2 (alongside the functions), not deferred to Phase 6.
+13. **Test bar for "Show HN ready."** Three test layers required before Phase 5 is called done: (a) unit tests on every atom helper and every composition function (with the rollback assertion: forced mid-function error leaves zero atom rows *and* zero audit rows); (b) one end-to-end HTTP test that walks invite → accept → grant → enroll subject → record visit → audit walk; (c) a tamper-detection test that directly mutates a `payload_json` value in `event_log` and asserts `/audit/verify` flags the exact row id.
 
 ---
 
