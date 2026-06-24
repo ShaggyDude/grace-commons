@@ -6,7 +6,7 @@ has_toc: true
 toc: true
 ---
 
-# Forensic Recovery (C3)
+# Forensic Recovery
 
 <details markdown="block">
   <summary>Table of contents</summary>

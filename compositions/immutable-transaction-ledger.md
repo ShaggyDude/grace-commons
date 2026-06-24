@@ -6,7 +6,7 @@ has_toc: true
 toc: true
 ---
 
-# Immutable Transaction Ledger with Selective Disclosure (C6)
+# Immutable Transaction Ledger with Selective Disclosure
 
 <details markdown="block">
   <summary>Table of contents</summary>

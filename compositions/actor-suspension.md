@@ -6,7 +6,7 @@ has_toc: true
 toc: true
 ---
 
-# Actor Suspension (C18)
+# Actor Suspension
 
 <details markdown="block">
  <summary>Table of contents</summary>

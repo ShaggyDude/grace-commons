@@ -6,7 +6,7 @@ has_toc: true
 toc: true
 ---
 
-# Chain of Custody (C12)
+# Chain of Custody
 
 <details markdown="block">
   <summary>Table of contents</summary>

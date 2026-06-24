@@ -6,7 +6,7 @@ has_toc: true
 toc: true
 ---
 
-# Reservation Lifecycle (C9)
+# Reservation Lifecycle
 
 <details markdown="block">
  <summary>Table of contents</summary>

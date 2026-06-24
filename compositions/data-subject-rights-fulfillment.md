@@ -6,7 +6,7 @@ has_toc: true
 toc: true
 ---
 
-# Data Subject Rights Fulfillment (C7)
+# Data Subject Rights Fulfillment
 
 <details markdown="block">
  <summary>Table of contents</summary>

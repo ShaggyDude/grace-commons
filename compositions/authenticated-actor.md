@@ -6,7 +6,7 @@ has_toc: true
 toc: true
 ---
 
-# Authenticated Actor (C17)
+# Authenticated Actor
 
 <details markdown="block">
  <summary>Table of contents</summary>

@@ -6,7 +6,7 @@ has_toc: true
 toc: true
 ---
 
-# Capability-Backed Sharing (C15)
+# Capability-Backed Sharing
 
 <details markdown="block">
  <summary>Table of contents</summary>

@@ -6,7 +6,7 @@ has_toc: true
 toc: true
 ---
 
-# Consent & Preference Management with Revocation Propagation (C2)
+# Consent & Preference Management with Revocation Propagation
 
 <details markdown="block">
  <summary>Table of contents</summary>
