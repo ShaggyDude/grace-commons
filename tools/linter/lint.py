@@ -477,6 +477,9 @@ def check_duplicate_rows(root: Path) -> list[Finding]:
 
 BANNED_TOKEN = re.compile(r"(?i)\bconcern\w*")
 ANCESTOR_PROPER_NOUN = "Separation of Concerns"
+# Ordinary-English "concern" — a deployment-level matter/responsibility, not the
+# banned unit-of-separation working noun. Permitted; stripped before the scan.
+ORDINARY_CONCERN = re.compile(r"(?i)\bdeployment\s+concern\w*")
 BANNED_TOKEN_EXCLUDED_DIRS = {".git", ".github", "node_modules", "Alloy.app",
                               "demos", "grants", "internal", "working-ideas"}
 
@@ -489,9 +492,10 @@ LINEAGE_HEADING = re.compile(r"^##\s+Lineage\b", re.IGNORECASE)
 def check_banned_token(root: Path) -> list[Finding]:
     """J: the working noun "concern" is banned corpus-wide (vocabulary directive
     2026-06-11). The unit of separation is the concept; pre-triage items are
-    candidate concepts. Single exception: the exact title-case proper noun
-    "Separation of Concerns" — the ancestor principle's name — is permitted
-    (mention of the ancestor, never working use)."""
+    candidate concepts. Exceptions: the exact title-case proper noun
+    "Separation of Concerns" — the ancestor principle's name (mention of the
+    ancestor, never working use); and ordinary-English "deployment concern(s)"
+    (a deployment-level matter/responsibility, not the unit of separation)."""
     out: list[Finding] = []
     md_files: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(root):
@@ -508,6 +512,7 @@ def check_banned_token(root: Path) -> list[Finding]:
             if LINEAGE_HEADING.match(line):
                 break  # live body only — Lineage is dated history
             scrubbed = CODE_SPAN.sub("", line).replace(ANCESTOR_PROPER_NOUN, "")
+            scrubbed = ORDINARY_CONCERN.sub("", scrubbed)
             for m in BANNED_TOKEN.finditer(scrubbed):
                 out.append(Finding(
                     md, i, "J-banned-token",

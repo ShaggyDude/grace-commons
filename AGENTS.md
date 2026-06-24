@@ -87,7 +87,7 @@ Moved — the verbosity-preserves-meaning and bridges-over-walls principles are 
 
 ## Session hygiene
 
-**Never commit without explicit approval.** When work is ready to commit, write the proposed commit message inline in the chat and stop. Do not run `git commit`. Wait for the user to read the message and say to proceed. This rule has no exceptions — not for trivial fixes, not for "obvious" changes, not when the user says "commit" without first seeing the message.
+**Never commit!** When work is ready to commit, write the proposed commit message inline in the chat and stop. Do not run `git commit`. This rule has no exceptions — not for trivial fixes, not for "obvious" changes, not ever.
 
 **Prompts go in chat, not files.** When asked for a prompt — for an AI adversarial review pass, a kickoff, a handoff, a sub-agent brief, anything — write it inline in the chat reply, as short as the task permits. Do **not** create prompt files in the repo. Prompts are ephemeral scaffolding; they carry no review pass, no Lineage notes, no authoring discipline, and they clutter the repo as content structurally indistinguishable from canonical patterns to any future reader (human or AI). Past sessions have written Round 3 / Final Critique review prompts as standalone files at the repo root; that was a mistake. The review's findings land in the pattern's Lineage notes under the appropriate round's Pass 1 / Pass 2 / Pass 3 entries; the prompt that drove the review stays in the chat where it was issued and is not committed.
 
