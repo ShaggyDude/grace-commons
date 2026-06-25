@@ -1,6 +1,6 @@
----- MODULE consent-preference-management ----
-\* Grace Commons — Consent & Preference Management with Revocation Propagation (C2).
-\* Spec-level formal sibling of compositions/consent-preference-management.md.
+---- MODULE propagate-consent-revocation-downstream ----
+\* Grace Commons — Propagate Consent Revocation Downstream.
+\* Spec-level formal sibling of compositions/propagate-consent-revocation-downstream.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*

@@ -1,5 +1,5 @@
----- MODULE consent-preference-management-buggy ----
-\* BUGGY TWIN (vacuity guard) for consent-preference-management.tla.
+---- MODULE propagate-consent-revocation-downstream-buggy ----
+\* BUGGY TWIN (vacuity guard) for propagate-consent-revocation-downstream.tla.
 \*
 \* The withdraw_consent commit is split into three separate, interleavable
 \* sub-steps with NO compensation — the naive non-atomic implementation the
