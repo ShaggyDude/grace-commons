@@ -69,7 +69,7 @@
     padding:14px;position:relative;overflow:auto}
 
   /* linear timeline */
-  .timeline{display:flex;align-items:center;gap:0;flex-wrap:wrap;padding-top:8px}
+  .timeline{display:flex;align-items:center;gap:.5rem 0;flex-wrap:wrap;padding-top:8px}
   .node{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;
     font-family:var(--mono);font-weight:700;font-size:15px;border:1.5px solid var(--line);
     background:#202024;color:var(--ink);flex:0 0 auto;transition:all .2s ease}
@@ -203,6 +203,8 @@
       </div>
     </div>
     <div class="boundary">This is the same boundary as the Saga map. <b>Re-derivation stops at the log's edge</b> — linear and branching only work while the effect is replayable. <b>Compensation is what you reach for once the effect escapes</b>, which is exactly why Saga reverses with a compensating action and not an undo. The amber engine here <i>is</i> the Saga mechanism, shown small.</div>
+
+    <div class="boundary" style="border-left-color:var(--ink);margin-top:14px">The verb is the cheap part. <b>"Undo" names nothing until you say the noun</b> — and the noun's shape (a line, a tree, a ledger) <i>is</i> the concept. There is no undo without the undo-noun. That is also why three isn't a fixed count: the two axes generate more cells than these three fill (a compensating log that <i>branches</i>; a re-derived log that never truncates), so what you have is a space, not a list. <b>Three undos — for now.</b></div>
   </div>
 </div>
 
