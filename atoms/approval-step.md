@@ -272,7 +272,7 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 - **Atomicity and crash semantics.** Each terminal transition (`approve`, `reject`, `withdraw`) writes multiple fields simultaneously: `state`, an attribution field (`decided_by` or `withdrawn_by`), a timestamp (`decided_at` or `withdrawn_at`), and for `reject` and `withdraw` a reason field. A crash mid-transition that sets some fields without others would violate Invariant 6 (decision attribution is complete for terminal steps). The implementor is responsible for the transactional boundary that makes all fields in a single terminal transition change together. The spec does not define recovery semantics for partial writes; implementations must provide atomic transaction support or a crash-recovery scan that detects and repairs partial transitions on restart. `storage-failure` is the observable signal of an aborted transition; per the step store durability guarantee, a `storage-failure` response leaves the step in its prior state (Pending) with no partial attribution written.
 
-- **Multi-party approval and quorum.** When an action requires N approvals from a designated set of approvers — all-of-N, threshold-of-N, one-of-N — each required approval is modeled as a separate Approval Step instance. The quorum (the minimum number of approvals required for a decision to be valid) rule (how many Approved steps constitute sufficient authorization) belongs to the [Multi-Party Approval](../roadmap.md) composition (C4). This atom specifies the single gate; the composition specifies the chain.
+- **Multi-party approval and quorum.** When an action requires N approvals from a designated set of approvers — all-of-N, threshold-of-N, one-of-N — each required approval is modeled as a separate Approval Step instance. The quorum (the minimum number of approvals required for a decision to be valid) rule (how many Approved steps constitute sufficient authorization) belongs to the [Multi-Party Approval](../roadmap.md) composition. This atom specifies the single gate; the composition specifies the chain.
 
 ---
 
@@ -335,7 +335,7 @@ All nine GRID nodes resolved.
 
 - *Notification as an absorbed trigger.* Could the atom absorb a notification trigger on `submit` to alert the named approver? Evaluated: notification delivery belongs to the Notification atom. Absorbing it would make this atom depend on a messaging concern, breaking freestanding status. The atom records that a step is Pending; any notification of the pending step is the composing layer's responsibility. Clean.
 
-- *Quorum logic as a hidden multi-party mechanism.* Could tracking multiple steps against the same subject imply the atom should enforce quorum? Evaluated: no. The atom records individual steps; whether a set of approved steps constitutes sufficient authorization for a multi-party requirement is the composing layer's concern (Multi-Party Approval, C4). The atom does not count approvals or evaluate quorum. Clean.
+- *Quorum logic as a hidden multi-party mechanism.* Could tracking multiple steps against the same subject imply the atom should enforce quorum? Evaluated: no. The atom records individual steps; whether a set of approved steps constitutes sufficient authorization for a multi-party requirement is the composing layer's concern (Multi-Party Approval). The atom does not count approvals or evaluate quorum. Clean.
 
 **Pass 3 — Adversarial scrutiny (Linus mode).** Twelve findings, all closed in-pattern.
 
