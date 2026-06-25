@@ -1,5 +1,5 @@
----- MODULE data-subject-rights-fulfillment-buggy ----
-\* BUGGY TWIN (binding hazard; vacuity guard) for data-subject-rights-fulfillment.tla.
+---- MODULE resolve-a-persons-data-rights-buggy ----
+\* BUGGY TWIN (binding hazard; vacuity guard) for resolve-a-persons-data-rights.tla.
 \*
 \* The fulfillment commit is split into three separate, interleavable sub-steps
 \* with NO compensation — the naive non-atomic implementation the *Cross-store

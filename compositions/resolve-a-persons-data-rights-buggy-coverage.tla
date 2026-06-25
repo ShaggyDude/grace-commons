@@ -1,6 +1,6 @@
----- MODULE data-subject-rights-fulfillment-buggy-coverage ----
+---- MODULE resolve-a-persons-data-rights-buggy-coverage ----
 \* BUGGY TWIN (no-silent-omission / coverage hazard; vacuity guard) for
-\* data-subject-rights-fulfillment.tla.
+\* resolve-a-persons-data-rights.tla.
 \*
 \* This twin keeps the BINDING atomic — the response-disclosure, the dsar.*_fulfilled
 \* event, and the request_to_fulfillment binding still land together — so

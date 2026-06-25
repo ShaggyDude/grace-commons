@@ -1,11 +1,11 @@
----- MODULE data-subject-rights-fulfillment ----
-\* Grace Commons — Data Subject Rights Fulfillment (C7).
-\* Spec-level formal sibling of compositions/data-subject-rights-fulfillment.md.
+---- MODULE resolve-a-persons-data-rights ----
+\* Grace Commons — Resolve a Person's Data Rights.
+\* Spec-level formal sibling of compositions/resolve-a-persons-data-rights.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS
-\* C7's two load-bearing emergent guarantees, for the fulfillment of one request
+\* Resolve a Person's Data Rights' two load-bearing emergent guarantees, for the fulfillment of one request
 \* over an in-scope record universe Records:
 \*   Invariant 1 — request <-> accountable-complete-fulfillment binding bijection:
 \*     the disposition set, the Selective Disclosure response-disclosure, and the

@@ -34,7 +34,7 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 | [Capability](./capability.md) | — | yes (2) | yes | capability-backed-sharing, privileged-access-provisioning |
 | [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md) | — | yes (1) | — | reservation-lifecycle |
 | [Clinical Observation](./clinical-observation.md) | — | — | — | *(none yet)* |
-| [Consent](./consent.md) | — | yes (2) | — | data-subject-rights-fulfillment, propagate-consent-revocation-downstream |
+| [Consent](./consent.md) | — | yes (2) | — | propagate-consent-revocation-downstream, resolve-a-persons-data-rights |
 | [Credential](./credential.md) | — | yes (4) | yes | authenticated-actor, external-onboarding, login, privileged-access-provisioning |
 | [Duplicate Prevention](./duplicate-prevention.md) | — | yes (2) | — | idempotent-reservation, reservation-lifecycle |
 | [Event Log](./event-log.md) | — | yes (3) | — | audit-trail, preference-aware-notification-fanout, reservation-lifecycle, saga, undo-history |
@@ -49,7 +49,7 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 | [Provenance](./provenance.md) | — | yes (1) | — | chain-of-custody |
 | [Provisional Commitment](./provisional-commitment.md) | — | yes (2) | — | idempotent-reservation, reservation-lifecycle |
 | [Retention Window](./retention-window.md) | — | yes (4) | — | audit-trail, defensible-retention, kyc-customer-onboarding, propagate-consent-revocation-downstream |
-| [Selective Disclosure](./selective-disclosure.md) | — | yes (3) | — | capability-backed-sharing, data-subject-rights-fulfillment, immutable-transaction-ledger |
+| [Selective Disclosure](./selective-disclosure.md) | — | yes (3) | — | capability-backed-sharing, immutable-transaction-ledger, resolve-a-persons-data-rights |
 | [Session](./session.md) | — | yes (4) | yes | actor-suspension, login, privileged-access-provisioning, session-gated-authorization |
 | [Soft Delete](./soft-delete.md) | — | yes (1) | — | forensic-recovery |
 | [Subscription](./subscription.md) | — | yes (2) | — | notification-fanout, preference-aware-notification-fanout |
@@ -65,7 +65,7 @@ Atoms that a regulated composition (one carrying a `## Generation acceptance` se
 - [Assignment](./assignment.md) — via multi-party-approval, stateful-workflow-execution
 - [Capability](./capability.md) — via capability-backed-sharing, privileged-access-provisioning
 - [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md) — via reservation-lifecycle
-- [Consent](./consent.md) — via data-subject-rights-fulfillment, propagate-consent-revocation-downstream
+- [Consent](./consent.md) — via propagate-consent-revocation-downstream, resolve-a-persons-data-rights
 - [Credential](./credential.md) — via authenticated-actor, external-onboarding, login, privileged-access-provisioning
 - [Duplicate Prevention](./duplicate-prevention.md) — via idempotent-reservation, reservation-lifecycle
 - [Event Log](./event-log.md) — via audit-trail, preference-aware-notification-fanout, reservation-lifecycle
@@ -78,7 +78,7 @@ Atoms that a regulated composition (one carrying a `## Generation acceptance` se
 - [Provenance](./provenance.md) — via chain-of-custody
 - [Provisional Commitment](./provisional-commitment.md) — via idempotent-reservation, reservation-lifecycle
 - [Retention Window](./retention-window.md) — via audit-trail, defensible-retention, kyc-customer-onboarding, propagate-consent-revocation-downstream
-- [Selective Disclosure](./selective-disclosure.md) — via capability-backed-sharing, data-subject-rights-fulfillment, immutable-transaction-ledger
+- [Selective Disclosure](./selective-disclosure.md) — via capability-backed-sharing, immutable-transaction-ledger, resolve-a-persons-data-rights
 - [Session](./session.md) — via actor-suspension, login, privileged-access-provisioning, session-gated-authorization
 - [Soft Delete](./soft-delete.md) — via forensic-recovery
 - [Subscription](./subscription.md) — via notification-fanout, preference-aware-notification-fanout
