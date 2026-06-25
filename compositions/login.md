@@ -243,7 +243,7 @@ This is the generator's contract: any implementation derived from this compositi
 - *`revoke_sessions_for_credential` returns `{revoked: 0, skipped: 0}` when `credential_id` has no map entry.* A credential that was registered but never used to log in (no sessions issued) produces an empty map entry. Returning `rejected(not-known)` for this case would conflate "no sessions exist" with "the credential itself doesn't exist," which are structurally different situations the composition cannot distinguish without querying the Credential store. The composition does not perform that check; the caller handles it. A no-op return is correct: the cascade is vacuously satisfied when there are no sessions to revoke.
 - *Failed login attempts are recorded in both `login_event_log` and Audit Trail (when configured).* The `login_event_log` is the composition-layer query surface for rate-limiting and lockout logic. The Audit Trail is the tamper-evident external-auditor surface. Both record the same event in different stores because the two audiences have different query patterns and trust models.
 
-**Forthcoming-link resolution.** This composition is the `Login (C13 — not started)` reference in Credential's Composition notes and Session's Composition notes. Both atoms now have a live target. The update to those atoms' Composition notes (removing `*(not started)*` markers and linking to this file) is a separate task.
+**Forthcoming-link resolution.** This composition is the `Login (not started)` reference in Credential's Composition notes and Session's Composition notes. Both atoms now have a live target. The update to those atoms' Composition notes (removing `*(not started)*` markers and linking to this file) is a separate task.
 
 ---
 

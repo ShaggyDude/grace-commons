@@ -5,6 +5,13 @@
 <meta property="og:image:alt" content="Grace Commons — Atomic patterns (concepts) and applications, expressed as structured natural language. Code is derived; intent is canonical.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://gracecommons.dev/OG.png">
+<style>
+    @media (min-width: 66.5rem) {
+    .site-nav, .site-header, .site-footer {
+            width: 23rem;
+        }
+    }
+</style>
 <!-- Home page: override og:title so the OG card headline matches the description's subject (avoids "Home" as headline when description is about Grace Commons). Sub-pages keep their per-page title. -->
 {% if page.url == "/" %}
 <meta property="og:title" content="Grace Commons">
