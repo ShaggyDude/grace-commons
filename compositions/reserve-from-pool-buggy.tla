@@ -1,5 +1,5 @@
----- MODULE reservation-lifecycle-buggy ----
-\* BUGGY TWIN (vacuity guard) for reservation-lifecycle.tla.
+---- MODULE reserve-from-pool-buggy ----
+\* BUGGY TWIN (vacuity guard) for reserve-from-pool.tla.
 \*
 \* Replaces the correct atomic Cancel with CancelBuggy, which moves the
 \* reservation Held -> Released but does NOT decrement `allocated` — the

@@ -1,6 +1,6 @@
----- MODULE reservation-lifecycle ----
-\* Grace Commons — Reservation Lifecycle (C9) composition.
-\* Spec-level formal sibling of compositions/reservation-lifecycle.md.
+---- MODULE reserve-from-pool ----
+\* Grace Commons — Reserve from Pool (C9) composition.
+\* Spec-level formal sibling of compositions/reserve-from-pool.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*

@@ -28,16 +28,16 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 
 | Atom | Domain | Regulated | Security | Composed by |
 |---|---|---|---|---|
-| [Actor Identity](./actor-identity.md) | — | yes (5) | yes | actor-suspension, attributed-permissions-admin, audit-trail, authenticated-actor, reservation-lifecycle |
+| [Actor Identity](./actor-identity.md) | — | yes (5) | yes | actor-suspension, attributed-permissions-admin, audit-trail, authenticated-actor, reserve-from-pool |
 | [Approval Step](./approval-step.md) | — | yes (2) | — | multi-party-approval, stateful-workflow-execution |
 | [Assignment](./assignment.md) | — | yes (2) | — | multi-party-approval, shared-todo, stateful-workflow-execution |
 | [Capability](./capability.md) | — | yes (2) | yes | capability-backed-sharing, privileged-access-provisioning |
-| [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md) | — | yes (1) | — | reservation-lifecycle |
+| [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md) | — | yes (1) | — | reserve-from-pool |
 | [Clinical Observation](./clinical-observation.md) | — | — | — | *(none yet)* |
 | [Consent](./consent.md) | — | yes (2) | — | propagate-consent-revocation-downstream, resolve-a-persons-data-rights |
 | [Credential](./credential.md) | — | yes (4) | yes | authenticated-actor, external-onboarding, login, privileged-access-provisioning |
-| [Duplicate Prevention](./duplicate-prevention.md) | — | yes (2) | — | idempotent-reservation, reservation-lifecycle |
-| [Event Log](./event-log.md) | — | yes (3) | — | audit-trail, preference-aware-notification-fanout, reservation-lifecycle, saga, undo-history |
+| [Duplicate Prevention](./duplicate-prevention.md) | — | yes (2) | — | idempotent-reservation, reserve-from-pool |
+| [Event Log](./event-log.md) | — | yes (3) | — | audit-trail, preference-aware-notification-fanout, reserve-from-pool, saga, undo-history |
 | [Invitation](./invitation.md) | — | yes (1) | yes | external-onboarding |
 | [Legal Hold](./legal-hold.md) | — | yes (1) | — | defensible-retention |
 | [Medication Order](./medication-order.md) | healthcare | — | — | *(none yet)* |
@@ -47,7 +47,7 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 | [Personal Todo](./personal-todo.md) | — | — | — | shared-todo, undo-history |
 | [Preference](./preference.md) | — | yes (1) | — | preference-aware-notification-fanout |
 | [Provenance](./provenance.md) | — | yes (1) | — | chain-of-custody |
-| [Provisional Commitment](./provisional-commitment.md) | — | yes (2) | — | idempotent-reservation, reservation-lifecycle |
+| [Provisional Commitment](./provisional-commitment.md) | — | yes (2) | — | idempotent-reservation, reserve-from-pool |
 | [Retention Window](./retention-window.md) | — | yes (4) | — | audit-trail, customer-onboarding, defensible-retention, propagate-consent-revocation-downstream |
 | [Selective Disclosure](./selective-disclosure.md) | — | yes (3) | — | capability-backed-sharing, immutable-transaction-ledger, resolve-a-persons-data-rights |
 | [Session](./session.md) | — | yes (4) | yes | actor-suspension, login, privileged-access-provisioning, session-gated-authorization |
@@ -60,15 +60,15 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 
 Atoms that a regulated composition (one carrying a `## Generation acceptance` section) composes. Derived, attributed per composer.
 
-- [Actor Identity](./actor-identity.md) — via actor-suspension, attributed-permissions-admin, audit-trail, authenticated-actor, reservation-lifecycle
+- [Actor Identity](./actor-identity.md) — via actor-suspension, attributed-permissions-admin, audit-trail, authenticated-actor, reserve-from-pool
 - [Approval Step](./approval-step.md) — via multi-party-approval, stateful-workflow-execution
 - [Assignment](./assignment.md) — via multi-party-approval, stateful-workflow-execution
 - [Capability](./capability.md) — via capability-backed-sharing, privileged-access-provisioning
-- [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md) — via reservation-lifecycle
+- [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md) — via reserve-from-pool
 - [Consent](./consent.md) — via propagate-consent-revocation-downstream, resolve-a-persons-data-rights
 - [Credential](./credential.md) — via authenticated-actor, external-onboarding, login, privileged-access-provisioning
-- [Duplicate Prevention](./duplicate-prevention.md) — via idempotent-reservation, reservation-lifecycle
-- [Event Log](./event-log.md) — via audit-trail, preference-aware-notification-fanout, reservation-lifecycle
+- [Duplicate Prevention](./duplicate-prevention.md) — via idempotent-reservation, reserve-from-pool
+- [Event Log](./event-log.md) — via audit-trail, preference-aware-notification-fanout, reserve-from-pool
 - [Invitation](./invitation.md) — via external-onboarding
 - [Legal Hold](./legal-hold.md) — via defensible-retention
 - [Notification](./notification.md) — via notification-fanout, preference-aware-notification-fanout
@@ -76,7 +76,7 @@ Atoms that a regulated composition (one carrying a `## Generation acceptance` se
 - [Permissions](./permissions.md) — via actor-suspension, attributed-permissions-admin, multi-party-approval, privileged-access-provisioning, propagate-consent-revocation-downstream, session-gated-authorization, stateful-workflow-execution
 - [Preference](./preference.md) — via preference-aware-notification-fanout
 - [Provenance](./provenance.md) — via chain-of-custody
-- [Provisional Commitment](./provisional-commitment.md) — via idempotent-reservation, reservation-lifecycle
+- [Provisional Commitment](./provisional-commitment.md) — via idempotent-reservation, reserve-from-pool
 - [Retention Window](./retention-window.md) — via audit-trail, customer-onboarding, defensible-retention, propagate-consent-revocation-downstream
 - [Selective Disclosure](./selective-disclosure.md) — via capability-backed-sharing, immutable-transaction-ledger, resolve-a-persons-data-rights
 - [Session](./session.md) — via actor-suspension, login, privileged-access-provisioning, session-gated-authorization

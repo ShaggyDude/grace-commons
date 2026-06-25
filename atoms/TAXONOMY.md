@@ -39,7 +39,7 @@ argument is sharper and the data is unambiguous:
 - **The misfiling runs the *other* way (Analysis B).** `compliance/` actually holds
   together — 12 of its 13 atoms are regulated-by-usage. The genuine defect is **10
   regulated-by-usage atoms filed *outside* it**: `event-log` (`temporal/`, regulated by
-  Audit Trail + Reservation Lifecycle, **14 derived standards**), `soft-delete`
+  Audit Trail + Reserve from Pool, **14 derived standards**), `soft-delete`
   (`resource-lifecycle/`, 9), `approval-step` and `workflow-state-machine` (`workflow/`),
   `assignment` (`productivity/`), `provisional-commitment` / `duplicate-prevention` /
   `capacity-constraint-enforcement`, and `notification` / `subscription` (`messaging/`).
