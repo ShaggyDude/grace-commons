@@ -1,6 +1,6 @@
----- MODULE stateful-workflow-execution ----
-\* Grace Commons — Stateful Workflow Execution (C10) composition.
-\* Spec-level formal sibling of compositions/stateful-workflow-execution.md.
+---- MODULE execute-gated-workflow ----
+\* Grace Commons — Execute Gated Workflow (C10) composition.
+\* Spec-level formal sibling of compositions/execute-gated-workflow.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*

@@ -29,8 +29,8 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 | Atom | Domain | Regulated | Security | Composed by |
 |---|---|---|---|---|
 | [Actor Identity](./actor-identity.md) | — | yes (5) | yes | actor-suspension, attributed-permissions-admin, audit-trail, authenticated-actor, reserve-from-pool |
-| [Approval Step](./approval-step.md) | — | yes (2) | — | multi-party-approval, stateful-workflow-execution |
-| [Assignment](./assignment.md) | — | yes (2) | — | multi-party-approval, shared-todo, stateful-workflow-execution |
+| [Approval Step](./approval-step.md) | — | yes (2) | — | execute-gated-workflow, multi-party-approval |
+| [Assignment](./assignment.md) | — | yes (2) | — | execute-gated-workflow, multi-party-approval, shared-todo |
 | [Capability](./capability.md) | — | yes (2) | yes | capability-backed-sharing, privileged-access-provisioning |
 | [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md) | — | yes (1) | — | reserve-from-pool |
 | [Clinical Observation](./clinical-observation.md) | — | — | — | *(none yet)* |
@@ -43,7 +43,7 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 | [Medication Order](./medication-order.md) | healthcare | — | — | *(none yet)* |
 | [Notification](./notification.md) | — | yes (2) | — | notification-fanout, preference-aware-notification-fanout |
 | [Party Identity](./party-identity.md) | — | yes (2) | yes | customer-onboarding, external-onboarding |
-| [Permissions](./permissions.md) | — | yes (7) | yes | actor-suspension, attributed-permissions-admin, multi-party-approval, privileged-access-provisioning, propagate-consent-revocation-downstream, session-gated-authorization, shared-todo, stateful-workflow-execution |
+| [Permissions](./permissions.md) | — | yes (7) | yes | actor-suspension, attributed-permissions-admin, execute-gated-workflow, multi-party-approval, privileged-access-provisioning, propagate-consent-revocation-downstream, session-gated-authorization, shared-todo |
 | [Personal Todo](./personal-todo.md) | — | — | — | shared-todo, undo-history |
 | [Preference](./preference.md) | — | yes (1) | — | preference-aware-notification-fanout |
 | [Provenance](./provenance.md) | — | yes (1) | — | chain-of-custody |
@@ -54,15 +54,15 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 | [Soft Delete](./soft-delete.md) | — | yes (1) | — | forensic-recovery |
 | [Subscription](./subscription.md) | — | yes (2) | — | notification-fanout, preference-aware-notification-fanout |
 | [Tamper Evidence](./tamper-evidence.md) | — | yes (1) | — | audit-trail |
-| [Workflow / State Machine](./workflow-state-machine.md) | — | yes (1) | — | saga, stateful-workflow-execution |
+| [Workflow / State Machine](./workflow-state-machine.md) | — | yes (1) | — | execute-gated-workflow, saga |
 
 ## Lens — regulated
 
 Atoms that a regulated composition (one carrying a `## Generation acceptance` section) composes. Derived, attributed per composer.
 
 - [Actor Identity](./actor-identity.md) — via actor-suspension, attributed-permissions-admin, audit-trail, authenticated-actor, reserve-from-pool
-- [Approval Step](./approval-step.md) — via multi-party-approval, stateful-workflow-execution
-- [Assignment](./assignment.md) — via multi-party-approval, stateful-workflow-execution
+- [Approval Step](./approval-step.md) — via execute-gated-workflow, multi-party-approval
+- [Assignment](./assignment.md) — via execute-gated-workflow, multi-party-approval
 - [Capability](./capability.md) — via capability-backed-sharing, privileged-access-provisioning
 - [Capacity Constraint Enforcement](./capacity-constraint-enforcement.md) — via reserve-from-pool
 - [Consent](./consent.md) — via propagate-consent-revocation-downstream, resolve-a-persons-data-rights
@@ -73,7 +73,7 @@ Atoms that a regulated composition (one carrying a `## Generation acceptance` se
 - [Legal Hold](./legal-hold.md) — via defensible-retention
 - [Notification](./notification.md) — via notification-fanout, preference-aware-notification-fanout
 - [Party Identity](./party-identity.md) — via customer-onboarding, external-onboarding
-- [Permissions](./permissions.md) — via actor-suspension, attributed-permissions-admin, multi-party-approval, privileged-access-provisioning, propagate-consent-revocation-downstream, session-gated-authorization, stateful-workflow-execution
+- [Permissions](./permissions.md) — via actor-suspension, attributed-permissions-admin, execute-gated-workflow, multi-party-approval, privileged-access-provisioning, propagate-consent-revocation-downstream, session-gated-authorization
 - [Preference](./preference.md) — via preference-aware-notification-fanout
 - [Provenance](./provenance.md) — via chain-of-custody
 - [Provisional Commitment](./provisional-commitment.md) — via idempotent-reservation, reserve-from-pool
@@ -83,7 +83,7 @@ Atoms that a regulated composition (one carrying a `## Generation acceptance` se
 - [Soft Delete](./soft-delete.md) — via forensic-recovery
 - [Subscription](./subscription.md) — via notification-fanout, preference-aware-notification-fanout
 - [Tamper Evidence](./tamper-evidence.md) — via audit-trail
-- [Workflow / State Machine](./workflow-state-machine.md) — via stateful-workflow-execution
+- [Workflow / State Machine](./workflow-state-machine.md) — via execute-gated-workflow
 
 ## Lens — security
 

@@ -1,5 +1,5 @@
----- MODULE stateful-workflow-execution-buggy ----
-\* BUGGY TWIN (vacuity guard) for stateful-workflow-execution.tla.
+---- MODULE execute-gated-workflow-buggy ----
+\* BUGGY TWIN (vacuity guard) for execute-gated-workflow.tla.
 \*
 \* Replaces the correct guarded fire with FireGuardedBuggy, which introduces TWO
 \* hazards the spec defends against:

@@ -1,5 +1,5 @@
----- MODULE stateful-workflow-execution-buggy-unaudited ----
-\* BUGGY TWIN (vacuity guard) for stateful-workflow-execution.tla — ISOLATED to
+---- MODULE execute-gated-workflow-buggy-unaudited ----
+\* BUGGY TWIN (vacuity guard) for execute-gated-workflow.tla — ISOLATED to
 \* Invariant Inv_BindingAtomic (the fire/audit binding atomicity).
 \*
 \* This is the second of two isolated twins. Its sibling
