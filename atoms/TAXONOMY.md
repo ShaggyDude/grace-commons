@@ -85,7 +85,7 @@ off the graph, never asserted:
 - **regulated** — an atom is regulated iff a regulated composition (one carrying a
   `## Generation acceptance` section; 16/18 compositions) composes it.
 - **standards** — the union of the standards its composers carry, **attributed per
-  composer in the generated view** (`HIPAA via audit-trail`, `FATF via kyc`), never
+  composer in the generated view** (`HIPAA via audit-trail`, `FATF via customer-onboarding`), never
   flattened to a bare set. (This answers the one real legibility wrinkle: infra atoms
   accumulate large unions — retention-window derives 19 — which read as over-claim unless
   each standard names the composer that contributes it. The view reports *usage*, not

@@ -42,13 +42,13 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 | [Legal Hold](./legal-hold.md) | — | yes (1) | — | defensible-retention |
 | [Medication Order](./medication-order.md) | healthcare | — | — | *(none yet)* |
 | [Notification](./notification.md) | — | yes (2) | — | notification-fanout, preference-aware-notification-fanout |
-| [Party Identity](./party-identity.md) | — | yes (2) | yes | external-onboarding, kyc-customer-onboarding |
+| [Party Identity](./party-identity.md) | — | yes (2) | yes | customer-onboarding, external-onboarding |
 | [Permissions](./permissions.md) | — | yes (7) | yes | actor-suspension, attributed-permissions-admin, multi-party-approval, privileged-access-provisioning, propagate-consent-revocation-downstream, session-gated-authorization, shared-todo, stateful-workflow-execution |
 | [Personal Todo](./personal-todo.md) | — | — | — | shared-todo, undo-history |
 | [Preference](./preference.md) | — | yes (1) | — | preference-aware-notification-fanout |
 | [Provenance](./provenance.md) | — | yes (1) | — | chain-of-custody |
 | [Provisional Commitment](./provisional-commitment.md) | — | yes (2) | — | idempotent-reservation, reservation-lifecycle |
-| [Retention Window](./retention-window.md) | — | yes (4) | — | audit-trail, defensible-retention, kyc-customer-onboarding, propagate-consent-revocation-downstream |
+| [Retention Window](./retention-window.md) | — | yes (4) | — | audit-trail, customer-onboarding, defensible-retention, propagate-consent-revocation-downstream |
 | [Selective Disclosure](./selective-disclosure.md) | — | yes (3) | — | capability-backed-sharing, immutable-transaction-ledger, resolve-a-persons-data-rights |
 | [Session](./session.md) | — | yes (4) | yes | actor-suspension, login, privileged-access-provisioning, session-gated-authorization |
 | [Soft Delete](./soft-delete.md) | — | yes (1) | — | forensic-recovery |
@@ -72,12 +72,12 @@ Atoms that a regulated composition (one carrying a `## Generation acceptance` se
 - [Invitation](./invitation.md) — via external-onboarding
 - [Legal Hold](./legal-hold.md) — via defensible-retention
 - [Notification](./notification.md) — via notification-fanout, preference-aware-notification-fanout
-- [Party Identity](./party-identity.md) — via external-onboarding, kyc-customer-onboarding
+- [Party Identity](./party-identity.md) — via customer-onboarding, external-onboarding
 - [Permissions](./permissions.md) — via actor-suspension, attributed-permissions-admin, multi-party-approval, privileged-access-provisioning, propagate-consent-revocation-downstream, session-gated-authorization, stateful-workflow-execution
 - [Preference](./preference.md) — via preference-aware-notification-fanout
 - [Provenance](./provenance.md) — via chain-of-custody
 - [Provisional Commitment](./provisional-commitment.md) — via idempotent-reservation, reservation-lifecycle
-- [Retention Window](./retention-window.md) — via audit-trail, defensible-retention, kyc-customer-onboarding, propagate-consent-revocation-downstream
+- [Retention Window](./retention-window.md) — via audit-trail, customer-onboarding, defensible-retention, propagate-consent-revocation-downstream
 - [Selective Disclosure](./selective-disclosure.md) — via capability-backed-sharing, immutable-transaction-ledger, resolve-a-persons-data-rights
 - [Session](./session.md) — via actor-suspension, login, privileged-access-provisioning, session-gated-authorization
 - [Soft Delete](./soft-delete.md) — via forensic-recovery

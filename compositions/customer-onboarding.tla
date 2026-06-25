@@ -1,6 +1,6 @@
----- MODULE kyc-customer-onboarding ----
-\* Grace Commons — KYC / Customer Onboarding with Ongoing Monitoring (C8).
-\* Spec-level formal sibling of compositions/kyc-customer-onboarding.md.
+---- MODULE customer-onboarding ----
+\* Grace Commons — Customer Onboarding.
+\* Spec-level formal sibling of compositions/customer-onboarding.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*

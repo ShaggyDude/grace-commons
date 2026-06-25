@@ -1,7 +1,7 @@
----- MODULE kyc-customer-onboarding-buggy ----
-\* Grace Commons — KYC / Customer Onboarding (C8): BUGGY TWIN (vacuity guard).
+---- MODULE customer-onboarding-buggy ----
+\* Grace Commons — Customer Onboarding: BUGGY TWIN (vacuity guard).
 \*
-\* Identical to kyc-customer-onboarding.tla EXCEPT it adds SuspendWithoutTrigger:
+\* Identical to customer-onboarding.tla EXCEPT it adds SuspendWithoutTrigger:
 \* a suspend that fires with no preceding adverse trigger. This breaks both
 \* adverse-trigger-precedes-suspend (there is no trigger before the suspend) and
 \* the biconditional open-trigger <=> Suspended (Suspended while openTriggers = 0).

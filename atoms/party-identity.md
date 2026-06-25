@@ -15,7 +15,7 @@ toc: true
 </details>
 
 
-> A compliance primitive: a persistent, verifiable identity record for an external party — customer, patient, counterparty, beneficial owner — with a verification lifecycle distinct from Actor Identity. Where Actor Identity models an internal actor's ability to sign actions with credentials, Party Identity models an external party's verified existence and identity attributes, which may be re-verified, suspended, or closed as circumstances change. States: Unverified, Verified, Suspended, Closed. The load-bearing contribution: a verified Party Identity record is the precondition any composing system (KYC — Know Your Customer — onboarding, clinical enrollment, counterparty risk management) may declare before proceeding to regulated activity with a named party.
+> A compliance primitive: a persistent, verifiable identity record for an external party — customer, patient, counterparty, beneficial owner — with a verification lifecycle distinct from Actor Identity. Where Actor Identity models an internal actor's ability to sign actions with credentials, Party Identity models an external party's verified existence and identity attributes, which may be re-verified, suspended, or closed as circumstances change. States: Unverified, Verified, Suspended, Closed. The load-bearing contribution: a verified Party Identity record is the precondition any composing system (Know Your Customer onboarding, clinical enrollment, counterparty risk management) may declare before proceeding to regulated activity with a named party.
 
 ---
 
@@ -43,7 +43,7 @@ Party Identity is a lasting, verifiable identity record for an external party �
 
 Every party known to the system has a **`party_id`** — an opaque, immutable, system-generated identifier produced by `enroll`. The id is the party's identity; all other fields (name, date of birth, document type, document reference) are immutable *properties* set at enrollment, not the identity itself.
 
-This matters because an external party's legal name, document number, or address may change — through legal name change, document renewal, address update — without the party ceasing to be *the same party*. Using a content field like name or document number as identity would collapse legitimate attribute evolution with distinct-party disambiguation. Opaque ids preserve the one-party-one-id discipline that makes lifelong identity chain-of-custody tractable and lets the composing KYC composition link all activity — past and future — to a single durable reference.
+This matters because an external party's legal name, document number, or address may change — through legal name change, document renewal, address update — without the party ceasing to be *the same party*. Using a content field like name or document number as identity would collapse legitimate attribute evolution with distinct-party disambiguation. Opaque ids preserve the one-party-one-id discipline that makes lifelong identity chain-of-custody tractable and lets the composing Customer Onboarding composition link all activity — past and future — to a single durable reference.
 
 Each call to `verify` produces a **`verification_id`** — opaque, immutable, system-generated — associated with the party. Verification events are separate records, append-only; the current state reflects the outcome of the most recent successful verification, but all past events are preserved as the chain-of-custody for the party's verification history.
 
@@ -122,7 +122,7 @@ Transitions:
 1. An onboarding officer calls `enroll(...)` → party enters Unverified, `party_id` returned.
 2. The verification workflow collects documents and conducts identity checks (out of scope for this atom).
 3. Officer (or automated system) calls `verify(party_id, ..., verification_result=passed)` → party enters Verified, `verification_id` returned.
-4. Composing KYC composition proceeds: the party is now eligible for regulated activity; `party_id` is recorded on every downstream record as the verified party reference.
+4. Composing Customer Onboarding composition proceeds: the party is now eligible for regulated activity; `party_id` is recorded on every downstream record as the verified party reference.
 5. Periodic re-verification (required under ongoing monitoring obligations) produces additional `verify(verification_result=passed)` calls; each appends a new verification event; the party remains Verified.
 6. When the relationship ends, the officer calls `close(party_id, ..., reason="relationship-ended")` → party enters Closed.
 
@@ -139,7 +139,7 @@ Transitions:
 1. `enroll(...)` → party enters Unverified, `party_id` returned.
 2. `verify(party_id, ..., verification_result=failed)` → verification event appended with `failed`; party remains Unverified.
 3. Composing system retries or escalates; after N failed attempts, decides not to proceed.
-4. `close(party_id, ..., reason="kyc-verification-failed-after-3-attempts")` → party enters Closed; record persists as evidence of the attempted onboarding.
+4. `close(party_id, ..., reason="verification-failed-after-3-attempts")` → party enters Closed; record persists as evidence of the attempted onboarding.
 
 ### Decision points
 
@@ -219,13 +219,13 @@ Invariants 1, 5, 6, and 8 together give the *identity chain-of-custody* property
 
 The same atom, four regulated domains, identical mechanic.
 
-### Banking — KYC customer onboarding under BSA/AML
+### Banking — Customer Onboarding under BSA/AML
 
 A bank onboards a new retail customer. The officer collects identity attributes and runs the CIP (Customer Identification Program — the BSA/AML requirement to collect and verify minimum customer-identity data) verification workflow.
 
 1. `enroll(name="Amara Osei", date_of_birth="1981-03-14", document_type="passport", document_ref="doc_p901", enrolling_actor_ref="officer_r3") → party_id = party_9017`
-2. Automated OCR (Optical Character Recognition — software that extracts text from images of documents) system checks the passport. `verify(party_id="party_9017", verifying_actor_ref="system_kyc_auto", verification_method="automated-ocr", verification_result="passed", evidence_ref="evidence_ocr_442") → (verification_id = verif_1101, state_change_id = sc_4401)` — party transitions Unverified → Verified; both ids returned so Actor Identity attestation of the verification can bind to `verif_1101` and Actor Identity attestation of the state transition can bind to `sc_4401`.
-3. KYC composition gates account opening on the party being Verified; account_a883 is opened and linked to party_9017.
+2. Automated OCR (Optical Character Recognition — software that extracts text from images of documents) system checks the passport. `verify(party_id="party_9017", verifying_actor_ref="system_verification_auto", verification_method="automated-ocr", verification_result="passed", evidence_ref="evidence_ocr_442") → (verification_id = verif_1101, state_change_id = sc_4401)` — party transitions Unverified → Verified; both ids returned so Actor Identity attestation of the verification can bind to `verif_1101` and Actor Identity attestation of the state transition can bind to `sc_4401`.
+3. The Customer Onboarding composition gates account opening on the party being Verified; account_a883 is opened and linked to party_9017.
 4. Six months later, annual re-verification. `verify(party_id="party_9017", verifying_actor_ref="officer_r3", verification_method="manual-document-review", verification_result="passed", evidence_ref="evidence_doc_556") → (verification_id = verif_1184, state_change_id = absent)` — party remains Verified; second verification event appended; no state-change event produced because the party was already Verified.
 5. Ten years later, account closure. `close(party_id="party_9017", closing_actor_ref="officer_r3", reason="account-closed-customer-request-26-05-14") → state_change_id = sc_4988` — party enters Closed. BSA requires retention of CDD records for 5 years after closure; the Retention Window composition governs the record's lifetime from this point.
 
@@ -293,11 +293,11 @@ What this atom does not cover:
 
 **Identity attribute updates.** No action modifies `name`, `date_of_birth`, `document_type`, or `document_ref` after enrollment. A legal name change, document renewal, or address update does not overwrite the enrollment fields. The principle: the enrollment record is the auditable original, capturing what was known at onboarding. The objection: real parties' attributes change and the system must reflect current information. The mechanism: a composing Attribute Update pattern appends versioned attribute events to the party record without mutating the enrollment fields; queries that need the current view read the latest attribute event; queries that need the at-time-of-onboarding view read the enrollment fields. The result: the audit trail for any party's attributes is complete and no prior state is silently overwritten. Attribute Update is distinct from retention-driven anonymization (Invariant 7): Attribute Update layers new attribute values without removing the original; Retention Window scrubbing removes personal data entirely when retention or erasure obligations require it. The two compositions operate on different lifecycle events with different audit semantics — attribute update preserves history; anonymization removes personal data while preserving the audit identifier.
 
-**The verification workflow.** What happens *during* verification — document OCR, biometric check, sanctions database query, adverse media search — is not modeled by this atom. The atom records that a verification was performed, by whom, using what method, with what result, against what evidence. The workflow that produces those inputs is a composing KYC / AML Verification pattern.
+**The verification workflow.** What happens *during* verification — document OCR, biometric check, sanctions database query, adverse media search — is not modeled by this atom. The atom records that a verification was performed, by whom, using what method, with what result, against what evidence. The workflow that produces those inputs is a composing Customer Onboarding / AML verification pattern.
 
 **Ongoing monitoring scheduling.** Periodic re-verification, sanctions re-screening, PEP (Politically Exposed Person — a category of high-risk client in financial regulation, such as a foreign government official or their close associate) re-check — these are composing patterns that call `verify` on a schedule or trigger basis. The atom records each result; the scheduling policy is external.
 
-**Risk scoring and enhanced due diligence.** Whether a party requires enhanced due diligence based on risk factors (country of origin, transaction volume, PEP status) is a composing concept. The atom records identity and verification lifecycle; risk classification and EDD orchestration belong to the KYC composition.
+**Risk scoring and enhanced due diligence.** Whether a party requires enhanced due diligence based on risk factors (country of origin, transaction volume, PEP status) is a composing concept. The atom records identity and verification lifecycle; risk classification and EDD orchestration belong to the Customer Onboarding composition.
 
 **Beneficial ownership.** A beneficial owner of a legal entity is a Party Identity record in their own right; the relationship between the beneficial owner and the entity (ownership percentage, control type) is a composing Ownership Structure pattern. The atom records each party independently; the ownership graph does not belong to this atom.
 
@@ -326,11 +326,11 @@ Where the atom breaks down: when the same natural person must hold multiple conc
 Party Identity is freestanding and is the external-party identity contract that regulated composing systems declare:
 
 - **[Consent](./consent.md)** — Party Identity establishes *who* the party is; Consent establishes *what* the system may do with or to their data. Every system that both identifies and processes personal data for an external party composes both. Consent basis is checked per processing action against the party's Consent record; the party's `party_id` is the data subject reference in the Consent atom.
-- **[Actor Identity](./actor-identity.md)** — each `verify`, `suspend`, `reinstate`, and `close` action should be attested by the internal actor performing it; the `*_actor_ref` fields are the attribution surface. Actor Identity supplies the non-repudiable proof that a specific actor authorized each state transition. KYC / Customer Onboarding (C8) wires Actor Identity into every state-changing call.
+- **[Actor Identity](./actor-identity.md)** — each `verify`, `suspend`, `reinstate`, and `close` action should be attested by the internal actor performing it; the `*_actor_ref` fields are the attribution surface. Actor Identity supplies the non-repudiable proof that a specific actor authorized each state transition. Customer Onboarding wires Actor Identity into every state-changing call.
 - **[Retention Window](./retention-window.md)** — Invariant 1 makes party records permanent from the atom's perspective, but the composing system places the party record under a retention policy that governs how long the record is actively accessible and when archival or anonymization becomes permitted. BSA/AML requires five years post-closure; GDPR Article 17 erasure obligations compose through legal counsel adjudication.
 - **[Audit Trail](../compositions/audit-trail.md)** — every state transition event and verification event should be surfaced through the Audit Trail composition for tamper-evident, attribution-stamped recording that survives the Audit Trail's own regulated adversarial scenarios.
 - **[External Onboarding](../compositions/external-onboarding.md)** — accepts an authorized invitation and calls `Party Identity.enroll` to create the party record in `Unverified` state, establishing the identity-binding at accept time. The `accepting_identity_ref` supplied at `Invitation.accept` and the resulting `party_id` are both named in the Audit Trail completion record, making the chain from invitation to enrolled party reconstructable from records alone.
-- **[KYC / Customer Onboarding with Ongoing Monitoring](../compositions/kyc-customer-onboarding.md)** (C8) — the primary composition that names this atom. Gates regulated activity on the party being in Verified state; orchestrates the verification workflow; handles ongoing monitoring via periodic `verify` calls; composes Actor Identity for attestation and Retention Window for record lifetime.
+- **[Customer Onboarding](../compositions/customer-onboarding.md)** — the primary composition that names this atom. Gates regulated activity on the party being in Verified state; orchestrates the verification workflow; handles ongoing monitoring via periodic `verify` calls; composes Actor Identity for attestation and Retention Window for record lifetime.
 - **Identity Document Store** *(forthcoming)* — holds the document records that `document_ref` and `evidence_ref` reference. The atom treats both as opaque; the document store's content is the external evidence supporting each verification.
 - **Attribute Update** *(forthcoming)* — handles changes to `name`, `date_of_birth`, or document references for an existing party. Appends versioned attribute events without mutating enrollment fields.
 - **Ownership Structure / Beneficial Owner** *(forthcoming)* — models the ownership relationships between Party Identity records (individuals, legal entities, beneficial owners). Each beneficial owner is a Party Identity record; the graph of relationships is the composition.
@@ -367,7 +367,7 @@ Party Identity began as the #6 atom in the ROADMAP's draft order. The foundation
 
 The regulated-overlay conventions (Regulated adversarial scenarios and Generation acceptance) are included from the first draft in accordance with the methodology's inheritance discipline documented in pressure-testing.md and established by Actor Identity and Retention Window. This atom cites the methodology directly rather than treating either predecessor as its canonical reference.
 
-Three composing patterns named throughout this draft — Consent (grounded 2026-05-13), Actor Identity (grounded 2026-05-13), and KYC / Customer Onboarding (C8, grounded on Final Critique 4, 2026-06-03) — are all available; forthcoming-link markers for those three are resolved. The remaining forthcoming-link debts (Identity Document Store, Attribute Update, Ownership Structure, Identity Federation, Delegation / Representation) are named explicitly and will resolve as those patterns land.
+Three composing patterns named throughout this draft — Consent (grounded 2026-05-13), Actor Identity (grounded 2026-05-13), and Customer Onboarding (grounded on Final Critique 4, 2026-06-03) — are all available; forthcoming-link markers for those three are resolved. The remaining forthcoming-link debts (Identity Document Store, Attribute Update, Ownership Structure, Identity Federation, Delegation / Representation) are named explicitly and will resolve as those patterns land.
 
 **Pass 1 — Structural completeness (GRID). One finding, closed in-pattern.**
 
