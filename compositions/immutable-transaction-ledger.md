@@ -428,7 +428,7 @@ This composition inherits the broader standards compliance of its constituents:
 
 ## Lineage notes
 
-Regulated composition. The two regulated-overlay conventions — *Regulated adversarial scenarios* and *Generation acceptance* (with the Audit-Trail-traversal-clearable / externally-clearable split) — are **inherited from the methodology directly** ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft, not re-derived from predecessor patterns. [Chain of Custody (C12)](./chain-of-custody.md) and [Forensic Recovery](./forensic-recovery.md) are the primary structural references for the substrate-composition shape (one constituent atom + the Audit Trail substrate, joined by a single binding map), the binding-bijection emergent invariant, the cross-store-consistency-under-partial-failure treatment, and the TLA+ binding-bijection model + buggy twin.
+Regulated composition. The two regulated-overlay conventions — *Regulated adversarial scenarios* and *Generation acceptance* (with the Audit-Trail-traversal-clearable / externally-clearable split) — are **inherited from the methodology directly** ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft, not re-derived from predecessor patterns. [Chain of Custody](./chain-of-custody.md) and [Forensic Recovery](./forensic-recovery.md) are the primary structural references for the substrate-composition shape (one constituent atom + the Audit Trail substrate, joined by a single binding map), the binding-bijection emergent invariant, the cross-store-consistency-under-partial-failure treatment, and the TLA+ binding-bijection model + buggy twin.
 
 **Structural milestone.** This composition retires two `*(forthcoming)*` references to this composition:
 
