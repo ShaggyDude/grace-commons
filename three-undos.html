@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three Undos — one input, three shapes, three guarantees</title>
+<style>
+  :root{
+    --bg:#0e0e10; --panel:#161618; --panel-2:#1b1b1e; --line:#2a2a2e;
+    --ink:#e9e7e3; --muted:#9a9aa0; --faint:#6d6d73;
+    --blue:#6da8e8; --blue-dim:#21344a;
+    --green:#7fcf9b; --green-dim:#21392c;
+    --amber:#e0a84a; --amber-dim:#3d2f16;
+    --ghost:#3a3a3f;
+    --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,-apple-system,"Inter","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:1280px;margin:0 auto;padding:40px 28px 64px}
+  header{text-align:center;margin-bottom:30px}
+  h1{font-size:clamp(26px,3.4vw,40px);font-weight:760;letter-spacing:-.02em;margin:0 0 10px}
+  .sub{color:var(--muted);font-size:clamp(14px,1.5vw,18px);max-width:760px;margin:0 auto}
+  .sub b{color:var(--ink);font-weight:600}
+
+  /* control bar */
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;
+    margin:26px auto 8px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;max-width:920px}
+  .bar .grp{display:flex;gap:8px;align-items:center}
+  .bar .sep{width:1px;height:26px;background:var(--line);margin:0 4px}
+  button{font-family:var(--sans);font-size:14px;font-weight:600;color:var(--ink);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+    padding:9px 14px;cursor:pointer;transition:transform .08s ease,background .15s ease,border-color .15s ease}
+  button:hover{background:#232327;border-color:#36363b}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#0a0a0a}
+  button.primary:hover{filter:brightness(1.08)}
+  button.ghost{background:transparent;color:var(--muted)}
+  .addlabel{font-family:var(--mono);font-size:13px;color:var(--faint)}
+  .addlabel b{color:var(--blue);font-weight:700}
+  .hint{text-align:center;color:var(--faint);font-size:12.5px;margin:0 auto 26px;max-width:760px}
+  kbd{font-family:var(--mono);font-size:11px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;color:var(--muted)}
+
+  /* three panels */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 18px;
+    display:flex;flex-direction:column;min-height:430px;position:relative;overflow:hidden}
+  .panel.linear{border-top:3px solid var(--blue)}
+  .panel.branch{border-top:3px solid var(--green)}
+  .panel.comp{border-top:3px solid var(--amber)}
+  .pname{font-size:20px;font-weight:720;letter-spacing:-.01em;margin:0 0 2px}
+  .linear .pname{color:var(--blue)} .branch .pname{color:var(--green)} .comp .pname{color:var(--amber)}
+  .pref{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-bottom:2px}
+  .mech{font-size:12.5px;color:var(--muted);margin:6px 0 14px;min-height:34px}
+  .shapelabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 10px}
+
+  /* live state readout */
+  .state{font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:14px}
+  .state .seq{color:var(--ink);font-weight:600;letter-spacing:.04em}
+  .state .empty{color:var(--faint);font-style:italic}
+
+  /* shape canvas */
+  .canvas{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;
+    padding:14px;position:relative;overflow:auto}
+
+  /* linear timeline */
+  .timeline{display:flex;align-items:center;gap:0;flex-wrap:wrap;padding-top:8px}
+  .node{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;
+    font-family:var(--mono);font-weight:700;font-size:15px;border:1.5px solid var(--line);
+    background:#202024;color:var(--ink);flex:0 0 auto;transition:all .2s ease}
+  .node.live{border-color:var(--blue);background:var(--blue-dim);color:#cfe3fb}
+  .node.cursor{box-shadow:0 0 0 2px var(--blue);}
+  .node.ghost{opacity:.32;border-style:dashed;color:var(--faint);background:transparent}
+  .edge{width:16px;height:1.5px;background:var(--line);flex:0 0 auto}
+  .edge.live{background:var(--blue)}
+  .cursorpin{font-family:var(--mono);font-size:10px;color:var(--blue);margin-top:7px}
+
+  /* branch tree (SVG injected) */
+  .treewrap{width:100%;height:100%}
+  .treewrap svg{width:100%;height:auto;display:block;overflow:visible}
+  .tnode{cursor:pointer}
+  .tnode circle{transition:all .18s ease}
+  .tnode text{font-family:var(--mono);font-weight:700;font-size:13px;fill:var(--ink);pointer-events:none}
+
+  /* compensating ledger */
+  .ledger{display:flex;flex-direction:column;gap:6px}
+  .lrow{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;
+    padding:6px 10px;border-radius:8px;background:#202024;border:1px solid var(--line);
+    animation:slidein .22s ease}
+  .lrow .op{width:18px;text-align:center;font-weight:800}
+  .lrow.add .op{color:var(--green)} .lrow.comp .op{color:var(--amber)} .lrow.reapply .op{color:var(--blue)}
+  .lrow .what{flex:1;color:var(--ink)}
+  .lrow .tag{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+  .lrow.dead .what{color:var(--faint);text-decoration:line-through}
+  .lempty{font-family:var(--mono);font-size:12px;color:var(--faint);font-style:italic;padding:8px}
+
+  .inv{margin-top:14px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+  .inv b{color:var(--ink);font-weight:600}
+  .linear .inv b{color:#b9d4f4} .branch .inv b{color:#b6e6c8} .comp .inv b{color:#f1d79b}
+
+  .pulse{animation:pulse 1.1s ease}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(109,168,232,.0)}30%{box-shadow:0 0 0 4px rgba(109,168,232,.35)}100%{box-shadow:0 0 0 0 rgba(109,168,232,0)}}
+  @keyframes slidein{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+  /* footer insight */
+  .insight{margin-top:34px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px}
+  .insight h2{font-size:20px;font-weight:720;margin:0 0 6px;letter-spacing:-.01em}
+  .insight p{color:var(--muted);font-size:14.5px;margin:0 0 18px;max-width:900px}
+  .insight p b{color:var(--ink)}
+  .axes{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .axis{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .axis .alab{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+  .axis .arow{font-size:13.5px;color:var(--muted);margin:5px 0}
+  .axis .arow b{color:var(--ink);font-weight:600}
+  .chip{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:6px;margin-right:6px;vertical-align:middle}
+  .chip.b{color:#cfe3fb;background:var(--blue-dim)} .chip.g{color:#bdf0d0;background:var(--green-dim)} .chip.a{color:#f3dfa6;background:var(--amber-dim)}
+  .boundary{margin-top:18px;font-size:14px;color:var(--muted);border-left:3px solid var(--amber);padding:4px 0 4px 16px}
+  .boundary b{color:var(--amber)}
+
+  @media(max-width:920px){.grid{grid-template-columns:1fr}.panel{min-height:0}.axes{grid-template-columns:1fr}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Three Undos</h1>
+    <p class="sub">One input stream, three engines. Each <b>reverses</b> a different way and keeps a different <b>shape</b> of the past — so each makes a different promise. Run the story and watch the shapes diverge.</p>
+  </header>
+
+  <div class="bar" role="group" aria-label="Shared controls">
+    <div class="grp">
+      <span class="addlabel">next: <b id="nextLabel">A</b></span>
+      <button id="addBtn">Add item</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grp">
+      <button id="undoBtn">Undo</button>
+      <button id="redoBtn">Redo</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grp">
+      <button id="storyBtn" class="primary">▶ Run the divergence story</button>
+      <button id="resetBtn" class="ghost">Reset</button>
+    </div>
+  </div>
+  <p class="hint">The story is the lesson: <kbd>Add A</kbd> → <kbd>Add B</kbd> → <kbd>Undo</kbd> → <kbd>Add C</kbd>. All three land on the same state <b>A C</b> — but ask each one for <b>B</b> back, and only two can answer.</p>
+
+  <div class="grid">
+    <!-- LINEAR -->
+    <section class="panel linear" id="p-linear">
+      <h3 class="pname">Linear undo</h3>
+      <div class="pref">text-editor undo · Undo History composition</div>
+      <div class="mech">Reverses by <b>replay-skip</b>: move the cursor back, recompute as if it never happened.</div>
+      <div class="shapelabel">shape · a line with a cursor</div>
+      <div class="state">state: <span id="s-linear" class="seq"></span></div>
+      <div class="canvas"><div class="timeline" id="tl-linear"></div></div>
+      <div class="inv">A new action discards the undone tail. <b>One timeline, total by construction</b> — diverge and the alternate future is gone.</div>
+    </section>
+
+    <!-- BRANCHING -->
+    <section class="panel branch" id="p-branch">
+      <h3 class="pname">Branching undo</h3>
+      <div class="pref">emacs undo-tree · Mercurial DAG · Vim :undolist</div>
+      <div class="mech">Reverses by <b>moving up the tree</b>: diverging adds a branch beside the old one — click any node to travel back.</div>
+      <div class="shapelabel">shape · a tree, never collapsed</div>
+      <div class="state">state: <span id="s-branch" class="seq"></span></div>
+      <div class="canvas"><div class="treewrap" id="tr-branch"></div></div>
+      <div class="inv">Diverging destroys nothing. <b>Every state ever visited stays reachable</b> — this is the "keeps all undos forever" one.</div>
+    </section>
+
+    <!-- COMPENSATING -->
+    <section class="panel comp" id="p-comp">
+      <h3 class="pname">Compensating undo</h3>
+      <div class="pref">Saga compensation · command-pattern · double-entry ledger</div>
+      <div class="mech">Reverses by a <b>recorded inverse action</b>: undo is itself a new log entry, not a deletion.</div>
+      <div class="shapelabel">shape · an append-only ledger</div>
+      <div class="state">state: <span id="s-comp" class="seq"></span></div>
+      <div class="canvas"><div class="ledger" id="lg-comp"></div></div>
+      <div class="inv">The log only grows; reversal is posted, never erased. <b>The only model that survives the effect escaping the log.</b></div>
+    </section>
+  </div>
+
+  <div class="insight">
+    <h2>Why these are three concepts, not one with options</h2>
+    <p>They differ on <b>two independent axes</b>, and the proof of independence is that each lands on a <b>different state shape</b> — a line, a tree, a monotonic ledger. A different shape with a different emergent invariant is a different concept, not a parameter on the same one.</p>
+    <div class="axes">
+      <div class="axis">
+        <div class="alab">Axis 1 — how reversal happens</div>
+        <div class="arow"><b>Re-derivation</b> — replay the log without the undone step. Requires the effect to live <i>inside</i> the log. <span class="chip b">linear</span><span class="chip g">branching</span></div>
+        <div class="arow"><b>Compensation</b> — apply a recorded inverse. The only option once the effect already happened in the world. <span class="chip a">compensating</span></div>
+      </div>
+      <div class="axis">
+        <div class="alab">Axis 2 — what the past looks like</div>
+        <div class="arow"><b>Single timeline</b> — divergence discards the alternate future. <span class="chip b">linear</span></div>
+        <div class="arow"><b>Branching</b> — divergence preserves it as a sibling. <span class="chip g">branching</span></div>
+        <div class="arow"><b>Monotonic</b> — nothing is ever removed; reversals are appended. <span class="chip a">compensating</span></div>
+      </div>
+    </div>
+    <div class="boundary">This is the same boundary as the Saga map. <b>Re-derivation stops at the log's edge</b> — linear and branching only work while the effect is replayable. <b>Compensation is what you reach for once the effect escapes</b>, which is exactly why Saga reverses with a compensating action and not an undo. The amber engine here <i>is</i> the Saga mechanism, shown small.</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- shared item naming ---------- */
+let counter = 0;
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function nextItem(){ const c = LETTERS[counter % 26]; counter++; return c; }
+function peekNext(){ return LETTERS[counter % 26]; }
+
+/* ================= LINEAR ENGINE ================= *
+ * seq: full array; cursor: how many are live. state = seq[0..cursor).
+ * add: truncate to cursor (discard tail), push, cursor=len.
+ * undo: cursor--  redo: cursor++ (only reaches a tail that add hasn't truncated). */
+const linear = {
+  seq:[], cursor:0,
+  add(x){ this.seq = this.seq.slice(0,this.cursor); this.seq.push(x); this.cursor=this.seq.length; },
+  undo(){ if(this.cursor>0) this.cursor--; },
+  redo(){ if(this.cursor<this.seq.length) this.cursor++; },
+  state(){ return this.seq.slice(0,this.cursor); },
+  reset(){ this.seq=[]; this.cursor=0; }
+};
+
+/* ================= BRANCHING ENGINE ================= *
+ * tree of nodes; current node. path root->current = state.
+ * add: new child of current; current = child; remember as parent's lastChild (redo target).
+ * undo: current = parent (branch NOT deleted).
+ * redo: current = parent.lastChild path... actually current's lastChild.
+ * goto: free navigation (proves recoverability). */
+const branch = {
+  nodes:{}, root:null, current:null, seqId:0,
+  _new(label,parent){ const id="n"+(this.seqId++); this.nodes[id]={id,label,parent,children:[],last:null}; return id; },
+  init(){ this.nodes={}; this.seqId=0; this.root=this._new("·",null); this.current=this.root; },
+  add(x){ const id=this._new(x,this.current); const p=this.nodes[this.current]; p.children.push(id); p.last=id; this.current=id; },
+  undo(){ const n=this.nodes[this.current]; if(n.parent) this.current=n.parent; },
+  redo(){ const n=this.nodes[this.current]; if(n.last) this.current=n.last; },
+  goto(id){ if(this.nodes[id]) this.current=id; },
+  state(){ const out=[]; let n=this.nodes[this.current]; while(n && n.parent){ out.unshift(n.label); n=this.nodes[n.parent]; } return out; },
+  reset(){ this.init(); }
+};
+
+/* ================= COMPENSATING ENGINE ================= *
+ * ops: ordered forward ops {id,item,active}. ledger: append-only display rows.
+ * add: push op active; append 'add' row.
+ * undo: last active op -> active=false; append 'comp' row (inverse). a stack of compensated for redo.
+ * redo: last compensated -> active=true; append 'reapply' row.
+ * state = items of active ops in order. */
+const comp = {
+  ops:[], ledger:[], undone:[],
+  add(x){ const op={id:"o"+this.ops.length,item:x,active:true}; this.ops.push(op);
+          this.ledger.push({kind:"add",item:x}); this.undone=[]; },
+  undo(){ for(let i=this.ops.length-1;i>=0;i--){ if(this.ops[i].active){ this.ops[i].active=false;
+            this.undone.push(this.ops[i]); this.ledger.push({kind:"comp",item:this.ops[i].item}); return; } } },
+  redo(){ const op=this.undone.pop(); if(op){ op.active=true; this.ledger.push({kind:"reapply",item:op.item}); } },
+  state(){ return this.ops.filter(o=>o.active).map(o=>o.item); },
+  reset(){ this.ops=[]; this.ledger=[]; this.undone=[]; }
+};
+
+/* ---------- rendering ---------- */
+function seqHTML(arr){ return arr.length ? `<span class="seq">${arr.join(" ")}</span>` : `<span class="empty">empty</span>`; }
+
+function renderLinear(){
+  document.getElementById("s-linear").outerHTML =
+    `<span id="s-linear">${seqHTML(linear.state())}</span>`;
+  const tl=document.getElementById("tl-linear"); tl.innerHTML="";
+  if(linear.seq.length===0){ tl.innerHTML=`<span class="lempty">empty — add an item</span>`; return; }
+  linear.seq.forEach((x,i)=>{
+    if(i>0){ const e=document.createElement("div"); e.className="edge"+(i<=linear.cursor-1?" live":""); tl.appendChild(e); }
+    const n=document.createElement("div");
+    const live = i < linear.cursor;
+    n.className="node"+(live?" live":" ghost")+(i===linear.cursor-1?" cursor":"");
+    n.textContent=x; tl.appendChild(n);
+  });
+  const pin=document.createElement("div"); pin.className="cursorpin";
+  pin.style.flexBasis="100%"; pin.textContent = linear.cursor<linear.seq.length
+    ? `↑ cursor at ${linear.cursor} · ${linear.seq.length-linear.cursor} step(s) recoverable until you add` : `↑ cursor at end`;
+  tl.appendChild(pin);
+}
+
+function renderBranch(){
+  document.getElementById("s-branch").outerHTML =
+    `<span id="s-branch">${seqHTML(branch.state())}</span>`;
+  // layout tree by depth(x) and an assigned row(y) via DFS leaf ordering
+  const wrap=document.getElementById("tr-branch");
+  const order=[]; (function dfs(id){ const n=branch.nodes[id]; if(n.children.length===0){ order.push(id); }
+    else n.children.forEach(dfs); if(n.children.length){} })(branch.root);
+  // assign y: each node's y = average of its leaf descendants' index
+  const yOf={}; const leafIndex={}; order.forEach((id,i)=>leafIndex[id]=i);
+  (function assign(id){ const n=branch.nodes[id];
+    if(n.children.length===0){ yOf[id]=leafIndex[id]; return yOf[id]; }
+    const ys=n.children.map(assign); yOf[id]=(Math.min(...ys)+Math.max(...ys))/2; return yOf[id]; })(branch.root);
+  const depthOf={}; (function dep(id,d){ depthOf[id]=d; branch.nodes[id].children.forEach(c=>dep(c,d+1)); })(branch.root,0);
+  const maxDepth=Math.max(...Object.values(depthOf));
+  const rows=order.length;
+  const colW=64, rowH=52, padX=26, padY=26, r=17;
+  const W=padX*2+colW*maxDepth+r*2, H=padY*2+rowH*Math.max(rows-1,0)+r*2;
+  let edges="", circs="";
+  Object.keys(branch.nodes).forEach(id=>{
+    const n=branch.nodes[id];
+    const x=padX+r+depthOf[id]*colW, y=padY+r+yOf[id]*rowH;
+    n.children.forEach(cid=>{
+      const cx=padX+r+depthOf[cid]*colW, cy=padY+r+yOf[cid]*rowH;
+      const onPath = isOnPath(cid);
+      edges+=`<path d="M${x} ${y} C ${x+colW*0.5} ${y}, ${cx-colW*0.5} ${cy}, ${cx} ${cy}"
+        fill="none" stroke="${onPath?'#7fcf9b':'#33333a'}" stroke-width="${onPath?2:1.4}"/>`;
+    });
+  });
+  Object.keys(branch.nodes).forEach(id=>{
+    const n=branch.nodes[id];
+    const x=padX+r+depthOf[id]*colW, y=padY+r+yOf[id]*rowH;
+    const isRoot=(id===branch.root), isCur=(id===branch.current), onPath=isOnPath(id);
+    let fill="#202024", stroke="#33333a", tcol="#e9e7e3";
+    if(onPath){ fill="#21392c"; stroke="#7fcf9b"; tcol="#bdf0d0"; }
+    if(isCur){ stroke="#7fcf9b"; fill="#2c5440"; }
+    if(isRoot){ fill="#1b1b1e"; tcol="#6d6d73"; }
+    const ring = isCur ? `<circle cx="${x}" cy="${y}" r="${r+4}" fill="none" stroke="#7fcf9b" stroke-width="1.5" opacity="0.6"/>`:"";
+    circs+=`<g class="tnode" data-id="${id}" role="button" tabindex="0" aria-label="state ${n.label}">
+      ${ring}<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+      <text x="${x}" y="${y+5}" text-anchor="middle" fill="${tcol}">${n.label}</text></g>`;
+  });
+  wrap.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="undo tree, click a node to travel">${edges}${circs}</svg>`;
+  wrap.querySelectorAll(".tnode").forEach(g=>{
+    const go=()=>{ branch.goto(g.dataset.id); renderAll(); };
+    g.addEventListener("click",go);
+    g.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); }});
+  });
+  function isOnPath(id){ let c=branch.current; while(c){ if(c===id) return true; c=branch.nodes[c].parent; } return false; }
+}
+
+function renderComp(){
+  document.getElementById("s-comp").outerHTML =
+    `<span id="s-comp">${seqHTML(comp.state())}</span>`;
+  const lg=document.getElementById("lg-comp"); lg.innerHTML="";
+  if(comp.ledger.length===0){ lg.innerHTML=`<span class="lempty">empty — the ledger grows down, never up</span>`; return; }
+  comp.ledger.forEach(row=>{
+    const div=document.createElement("div");
+    let op,tag,cls;
+    if(row.kind==="add"){ op="+"; tag="post"; cls="add"; }
+    else if(row.kind==="comp"){ op="−"; tag="compensate"; cls="comp"; }
+    else { op="+"; tag="re-apply"; cls="reapply"; }
+    div.className="lrow "+cls;
+    div.innerHTML=`<span class="op">${op}</span><span class="what">${row.item}</span><span class="tag">${tag}</span>`;
+    lg.appendChild(div);
+  });
+  lg.scrollTop=lg.scrollHeight;
+}
+
+function renderAll(){ renderLinear(); renderBranch(); renderComp();
+  document.getElementById("nextLabel").textContent=peekNext(); }
+
+/* ---------- controls ---------- */
+function doAdd(){ const x=nextItem(); linear.add(x); branch.add(x); comp.add(x); renderAll(); }
+function doUndo(){ linear.undo(); branch.undo(); comp.undo(); renderAll(); }
+function doRedo(){ linear.redo(); branch.redo(); comp.redo(); renderAll(); }
+function doReset(){ counter=0; linear.reset(); branch.reset(); comp.reset(); renderAll(); }
+
+document.getElementById("addBtn").onclick=doAdd;
+document.getElementById("undoBtn").onclick=doUndo;
+document.getElementById("redoBtn").onclick=doRedo;
+document.getElementById("resetBtn").onclick=doReset;
+
+/* divergence story: add A, add B, undo, add C  */
+let storyRunning=false;
+async function runStory(){
+  if(storyRunning) return; storyRunning=true;
+  const btn=document.getElementById("storyBtn"); btn.disabled=true; btn.textContent="… running";
+  doReset();
+  const reduce=window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  const wait=ms=>new Promise(r=>setTimeout(r,reduce?0:ms));
+  const pulse=()=>{ ["p-linear","p-branch","p-comp"].forEach(id=>{
+    const el=document.getElementById(id); el.classList.remove("pulse"); void el.offsetWidth; el.classList.add("pulse"); }); };
+  await wait(350); doAdd(); pulse(); await wait(900);
+  doAdd(); pulse(); await wait(900);
+  doUndo(); pulse(); await wait(900);
+  doAdd(); pulse(); await wait(500);
+  btn.disabled=false; btn.textContent="▶ Run the divergence story"; storyRunning=false;
+}
+document.getElementById("storyBtn").onclick=runStory;
+
+/* keyboard: Ctrl/Cmd+Z undo, +Shift redo, A add */
+document.addEventListener("keydown",e=>{
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod && e.key.toLowerCase()==="z"){ e.preventDefault(); e.shiftKey?doRedo():doUndo(); }
+});
+
+branch.init();
+renderAll();
+</script>
+</body>
+</html>
