@@ -6,7 +6,9 @@ The spec layer has no compiler. This is a partial one: a dependency-free static
 pass over the atoms/ and compositions/ markdown that catches the classes of drift
 the three-pass review otherwise has to catch by eye —
 
-  A. Dangling links        — every relative .md link resolves to a real file.
+  A. Dangling links        — every relative .md/.tla/.als/.cfg link resolves to
+                              a real file (a renamed model leaving a spec→.tla
+                              link dangling is the class this caught).
   B. Invariant-count refs   — "all N invariants from <Pattern>" matches the
                               actual count of `**Invariant N —**` headers in
                               <Pattern>. (The nine-vs-ten drift hazard.)
@@ -55,6 +57,15 @@ the three-pass review otherwise has to catch by eye —
                               (naming an external project's literal
                               `applications/` directory, or glossing API, is
                               mention, not use).
+  L. Bare C-number          — no bare composition C-number (C1–C19) survives in an
+                              atom/composition live body; the name carries the
+                              meaning, the C-number is a registry key (debt #14).
+                              Example `credential Cn` IDs are scrubbed; root policy
+                              docs that cite `Cn` as an example are out of scope.
+  M. Internal sigils        — no coined finding-ID sigil (FCn, FC-Fn, MC-Cn-N,
+                              Rn-Fn, Cn-N, OG-n) survives in an atom/composition
+                              live body (debt #15, naming.md Rule zero). High
+                              precision: these shapes have no legitimate collision.
 
 Design notes (this tool is meant to be maintained by a small/cheap model):
   - Standard library only. No deps. Runs anywhere `python3` does.
@@ -80,8 +91,10 @@ from pathlib import Path
 
 PATTERN_DIRS = ("atoms", "compositions")
 INVARIANT_HEADER = re.compile(r"^\s*-?\s*\*\*Invariant\s+(\d+)\s+[—-]", re.M)
-# markdown links to a relative path ending in .md (optionally with #anchor)
-MD_LINK = re.compile(r"\[[^\]]+\]\((\.{1,2}/[^)]+?\.md)(#[^)]*)?\)")
+# markdown links to a relative path ending in .md/.tla/.als/.cfg (opt. #anchor).
+# Model extensions are included so a renamed .tla/.als leaving a spec→model link
+# dangling is caught — the original .md-only form missed it (debt #14 lint gap).
+MD_LINK = re.compile(r"\[[^\]]+\]\((\.{1,2}/[^)]+?\.(?:md|tla|als|cfg))(#[^)]*)?\)")
 # Status line: the first paragraph starting with `grounded` (back-tick optional)
 STATUS_GROUNDED = re.compile(r"^`?grounded", re.M)
 # model files named in a Status / Lineage line, e.g. `provenance.als`, `kyc.tla`
@@ -578,6 +591,64 @@ def check_banned_application(root: Path) -> list[Finding]:
 
 
 # --------------------------------------------------------------------------- #
+# Internal-identifier guards (L, M) — lock in the C-number / coinage cleanup
+# --------------------------------------------------------------------------- #
+
+# Bare composition C-number, C1–C19 (the registry sigil retired from spec bodies,
+# debt #14). The token must stand alone: "C12345" and the "C9" inside "IC9" do not
+# match. Example *credential* IDs ("credential C2") are scrubbed before matching.
+BARE_CNUMBER = re.compile(r"\bC(?:1[0-9]|[1-9])\b")
+CREDENTIAL_ID = re.compile(r"(?i)\bcredential\s+C\d+\b")
+
+# The methodology's own coined finding-ID sigils (debt #15) — no legitimate
+# collision in a spec body, so a high-precision regression guard. Bare `S-n` is
+# deliberately omitted (collides with the SEC "S-1" form); the others are unique.
+INTERNAL_SIGILS = [
+    (re.compile(r"\bMC-C\d+-\d+\b"), "MC-Cn-N coverage-finding ID"),
+    (re.compile(r"\bFC-F\d+\b"),     "FC-Fn (Final Critique finding) ID"),
+    (re.compile(r"\bFC-?\d+\b"),     "FCn (Final Critique n) sigil"),
+    (re.compile(r"\bR\d+-F\d+\b"),   "Rn-Fn (round / finding) ID"),
+    (re.compile(r"\bC\d+-\d+\b"),    "Cn-N finding ID"),
+    (re.compile(r"\bOG-\d+\b"),      "OG-n finding ID"),
+]
+
+
+def check_internal_ids(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """L + M. No bare composition C-number and no coined finding-ID sigil survives
+    in an atom/composition live body — locking in debts #14 and #15 so the cleared
+    cruft cannot quietly regrow during a prose pass. Code spans are scrubbed (a
+    backticked token is mention, not use); Lineage is skipped (dated history, same
+    convention as checks J/K); example `credential Cn` IDs are scrubbed before the
+    bare-C-number match. Scoped to atoms/ + compositions/: root policy docs cite
+    `Cn` and acronyms as deliberate teaching examples."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        for i, raw in enumerate(p.text.splitlines(), start=1):
+            if LINEAGE_HEADING.match(raw):
+                break  # live body only — Lineage is dated history
+            scrubbed = CODE_SPAN.sub("", raw)
+            # M — coined sigils
+            cn_line = scrubbed
+            for rx, label in INTERNAL_SIGILS:
+                for m in rx.finditer(scrubbed):
+                    findings.append(Finding(
+                        p.path, i, "M-internal-sigil",
+                        f'coined finding-ID "{m.group(0)}" ({label}) — spell the '
+                        f"concept out or describe it (naming.md Rule zero)",
+                    ))
+                cn_line = rx.sub("", cn_line)  # don't double-report its C-prefix
+            # L — bare composition C-number (example credential IDs scrubbed)
+            cn_line = CREDENTIAL_ID.sub("", cn_line)
+            for m in BARE_CNUMBER.finditer(cn_line):
+                findings.append(Finding(
+                    p.path, i, "L-bare-cnumber",
+                    f'bare composition C-number "{m.group(0)}" — use the '
+                    f"composition's name (the C-number is a registry key, not prose)",
+                ))
+    return findings
+
+
+# --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
 
@@ -606,6 +677,7 @@ def main(argv: list[str]) -> int:
     findings += check_duplicate_rows(root)
     findings += check_banned_token(root)
     findings += check_banned_application(root)
+    findings += check_internal_ids(patterns)
 
     findings.sort(key=lambda f: (f.code, str(f.path), f.line))
     for f in findings:
