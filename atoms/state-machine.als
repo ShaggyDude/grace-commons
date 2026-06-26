@@ -1,6 +1,6 @@
--- workflow-state-machine.als
--- Alloy structural model for the Grace Commons Workflow / State Machine atom
--- (atoms/workflow-state-machine.md)
+-- state-machine.als
+-- Alloy structural model for the Grace Commons State Machine atom
+-- (atoms/state-machine.md)
 --
 -- PURPOSE
 -- Verify the load-bearing structural invariants by bounded exhaustive search:
@@ -32,7 +32,7 @@
 -- Every "check A_*" should return UNSAT (the guarantee holds). Every "run Show*"
 -- should return SAT (the configuration space is non-empty).
 
-module workflow_state_machine
+module state_machine
 
 abstract sig St {}          -- a declared state
 abstract sig Action {}      -- a declared transition trigger

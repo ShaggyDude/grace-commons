@@ -40,7 +40,7 @@ argument is sharper and the data is unambiguous:
   together — 12 of its 13 atoms are regulated-by-usage. The genuine defect is **10
   regulated-by-usage atoms filed *outside* it**: `event-log` (`temporal/`, regulated by
   Audit Trail + Reserve from Pool, **14 derived standards**), `soft-delete`
-  (`resource-lifecycle/`, 9), `approval-step` and `workflow-state-machine` (`workflow/`),
+  (`resource-lifecycle/`, 9), `approval-step` and `state-machine` (`workflow/`),
   `assignment` (`productivity/`), `provisional-commitment` / `duplicate-prevention` /
   `capacity-constraint-enforcement`, and `notification` / `subscription` (`messaging/`).
   **Event Log is the proof**: it is the single most heavily-regulated atom in the library

@@ -1,5 +1,5 @@
--- workflow-state-machine-buggy.als
--- BUGGY TWIN (vacuity guard) for workflow-state-machine.als.
+-- state-machine-buggy.als
+-- BUGGY TWIN (vacuity guard) for state-machine.als.
 --
 -- Introduces real hazards the spec defends against by DROPPING three facts:
 --   BUG 1 (Invariant 3): `EveryEntryDeclared` dropped — a history entry may carry a
@@ -16,7 +16,7 @@
 -- are retained so the violations are isolated. If the checker reports all checks
 -- UNSAT here, the harness is vacuous.
 
-module workflow_state_machine_buggy
+module state_machine_buggy
 
 abstract sig St {}
 abstract sig Action {}
@@ -60,7 +60,7 @@ fact HeadFromInitial {
 -- BUG 2: TerminalNoOutgoingDecl DROPPED.
 -- BUG 3: ChainConsistency DROPPED.
 
--- ── Assertions (identical to workflow-state-machine.als). Several now SAT. ──
+-- ── Assertions (identical to state-machine.als). Several now SAT. ──
 
 assert A_Linear_AtMostOneSuccessor   { all x : Entry | lone x.successor }
 check A_Linear_AtMostOneSuccessor for 7
