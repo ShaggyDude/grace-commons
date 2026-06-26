@@ -4,7 +4,7 @@
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
-\* WHAT THIS MODEL CHECKS (revised 2026-06-11 — closes coverage finding MC-C12-1)
+\* WHAT THIS MODEL CHECKS (revised 2026-06-11 — closes the Invariant-4 coverage-gap finding)
 \* The composition's load-bearing wiring decision is Invariant 4 (binding
 \* bijection / no dangling partial), restated as safety + liveness. The design
 \* the spec actually mandates is SEQUENTIAL-WITH-COMPENSATION: the Provenance
@@ -17,7 +17,7 @@
 \*
 \* This model covers BOTH arms of Invariant 4 — the atomic-commit arm and the
 \* compensated arm the earlier model idealized away (the coverage-matrix GAP
-\* closed by finding MC-C12-1; immutable-transaction-ledger.tla, revised for
+\* closed by the Invariant-4 coverage-gap finding; immutable-transaction-ledger.tla, revised for
 \* C6-2, is the worked template):
 \*   CommitClean(e)  — both truth-bearing writes land together (the
 \*                     transactional-boundary form).

@@ -1,6 +1,6 @@
 ---- MODULE provisional-commitment-buggy ----
 \* Grace Commons — Provisional Commitment atom: BUGGY TWIN (vacuity guard).
-\* Mirrors provisional-commitment.tla (FC4 stored-Expired shape, restored
+\* Mirrors provisional-commitment.tla (Final Critique 4 stored-Expired shape, restored
 \* 2026-06-23) EXCEPT `ConfirmBuggy` drops the `state = Held` guard, allowing an
 \* already-resolved commitment to be re-resolved to Confirmed — the second
 \* resolution that the single-resolution / terminal-absorption rule forbids.

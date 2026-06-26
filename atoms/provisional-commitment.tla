@@ -4,7 +4,7 @@
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
-\* This model is the Final Critique 4 (FC4) STORED-EXPIRED shape, restored after
+\* This model is the Final Critique 4 STORED-EXPIRED shape, restored after
 \* the 2026-06-21 "derive expiry at read time" refactor was WITHDRAWN for this
 \* atom (a Provisional Commitment lapse has a side effect — it returns a slot to a
 \* Capacity Constraint pool, relied on by the reservation-lifecycle and

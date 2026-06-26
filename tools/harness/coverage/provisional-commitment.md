@@ -2,7 +2,7 @@
 
 - **Pattern:** `atoms/provisional-commitment.md`
 - **Model:** `provisional-commitment.tla` (+ two isolated buggy twins: `provisional-commitment-buggy.tla` (resolution hazard), `provisional-commitment-buggy-window.tla` (window hazard))
-- **Reviewer / date:** agent coverage cross-check — 2026-06-03; Inv8 closed — 2026-06-04; **derive-expiry refactor reverted, model restored to FC4 stored-Expired shape and re-aligned — 2026-06-23**
+- **Reviewer / date:** agent coverage cross-check — 2026-06-03; Inv8 closed — 2026-06-04; **derive-expiry refactor reverted, model restored to Final Critique 4 stored-Expired shape and re-aligned — 2026-06-23**
 - **Formal-layer vote load-bearing claims:** Invariant 7 (confirmation within the window — `confirm`/`release` rejected if `now ≥ expires_at`, `expire` rejected if `now < expires_at`), Invariant 2 (single-resolution), Invariant 8 (transition timestamps strictly after placement), Invariant 3 (terminal absorption)
 
 ## Step 1 — harness re-run (must pass)
@@ -35,5 +35,5 @@ The spec has 10 invariants. The model covers single-resolution over the three st
 ## Outcome
 
 - GAP rows: **none** — all four load-bearing invariants (Inv 2, Inv 3, Inv 7, Inv 8) are covered by explicit predicates, each with a non-vacuous buggy twin (the two hazards split across two isolated twins so each load-bearing guarantee has its own reachable, checker-rejected counterexample).
-- Restore note (2026-06-23): the "derive expiry at read time" refactor was withdrawn for this atom because its lapse has a side effect (returns a resource / pool slot to availability); the model returns to the FC4 stored-`Expired` shape with an explicit `Expire` transition. Single-resolution (`Inv_SingleResolution`) is retained as the resolution-twin target; the window hazard is the window-twin target.
+- Restore note (2026-06-23): the "derive expiry at read time" refactor was withdrawn for this atom because its lapse has a side effect (returns a resource / pool slot to availability); the model returns to the Final Critique 4 stored-`Expired` shape with an explicit `Expire` transition. Single-resolution (`Inv_SingleResolution`) is retained as the resolution-twin target; the window hazard is the window-twin target.
 - Result: **all load-bearing invariants covered** with explicit named predicates and non-vacuous, hazard-isolated buggy twins.

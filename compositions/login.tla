@@ -9,7 +9,7 @@
 \* No static Alloy model exists for this composition yet. The TLA+ model
 \* carries the operational invariants: state assertions over every
 \* interleaving the bounded model can produce, including the map-write-
-\* failure edge case and the FC1 TOCTOU race.
+\* failure edge case and the Final Critique 1 TOCTOU race.
 \*
 \* SCOPE — INTENTIONAL EXCLUSIONS (matching login.md's Final Critique scope):
 \*   * Audit Trail substrate (login.md §Invariant 5 — Audit Trail
@@ -38,7 +38,7 @@
 \*   In a real distributed deployment the snapshot race is real; here the
 \*   TLA+ atomic-action model discharges the single-node case.
 \*
-\* FC1 TOCTOU RACE (login.md §Final Critique 1):
+\* Final Critique 1 TOCTOU RACE (login.md §Final Critique 1):
 \*   A Logout may run concurrently with the cascade. If Logout fires on a
 \*   session the cascade also targets, the cascade finds it already
 \*   terminal (already-terminal → skipped). The model includes Logout as
@@ -155,10 +155,10 @@ LoginMapWriteFailure(cred, sess) ==
 \* its status to "logged_out". The session_to_cred entry is preserved
 \* (immutable once written, per login.md §Invariant 3).
 \*
-\* FC1 note: this action may fire concurrently with
+\* Final Critique 1 note: this action may fire concurrently with
 \* RevokeSessionsForCredential. If Logout fires on a session that is also in
 \* the cascade's snapshot, the cascade finds that session already in a
-\* terminal state and counts it as `skipped` (already-terminal path from FC1).
+\* terminal state and counts it as `skipped` (already-terminal path from Final Critique 1).
 \* TLC exercises the interleaving: Logout(s) fires, then
 \* RevokeSessionsForCredential(c) fires for the same session's credential.
 \* Cascade_Completeness verifies the cascade still completes correctly.
@@ -181,13 +181,13 @@ Logout(sess) ==
 \*   (3) Audit Trail: cascade_initiated event written (logged in
 \*       cascade_initiated set — the precondition for Cascade_Audit_Ordering).
 \*   (5) For each s in snapshot:
-\*         if session_status[s] ≠ "active": already-terminal → skip (FC1)
+\*         if session_status[s] ≠ "active": already-terminal → skip (Final Critique 1)
 \*         else: Session.revoke → "revoked_by_cascade"
 \*
 \* Atomicity: all writes commit in a single TLA+ step. This models the
 \* same-transactional-boundary discipline login.md §Edge cases requires.
 \*
-\* The FC1 TOCTOU race is captured by the interleaving model: TLC will
+\* The Final Critique 1 TOCTOU race is captured by the interleaving model: TLC will
 \* generate traces in which Logout fires on a session BEFORE this action
 \* fires, leaving a "logged_out" session in the snapshot. The snapshot
 \* filter (IsActiveSession) excludes already-terminal sessions, so they
@@ -245,7 +245,7 @@ Credential_Gates_Issuance ==
 \* Invariant 2 — Cascade completeness, snapshot-scoped (login.md §Invariant 2).
 \* Every session the cascade acted on (cascade_revoked) is now terminal.
 \* Sessions that were already terminal when the cascade took its snapshot
-\* (FC1 TOCTOU race, already-terminal path) were never added to
+\* (Final Critique 1 TOCTOU race, already-terminal path) were never added to
 \* cascade_revoked, so they satisfy the invariant vacuously. Sessions
 \* created after the cascade fired cannot exist (Login's guard blocks on
 \* a revoked credential), so the snapshot is exhaustive.

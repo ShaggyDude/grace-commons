@@ -1,6 +1,6 @@
 ---- MODULE provisional-commitment-buggy-window ----
 \* Grace Commons — Provisional Commitment atom: BUGGY TWIN (isolated, window guard)
-\* — FC4 stored-Expired shape, restored 2026-06-23.
+\* — Final Critique 4 stored-Expired shape, restored 2026-06-23.
 \*
 \* This is the second of two isolated buggy twins. It targets the WINDOW hazard
 \* (Inv 7, confirm-within-window: you cannot resolve a hold after its window). Its
@@ -14,7 +14,7 @@
 \* fired at clock = ExpiresAt treats a hold whose window has elapsed (which the
 \* `Expire` event would otherwise move to the stored Expired terminal) as still
 \* confirmable and stamps confirmedAt = ExpiresAt — exactly the post-window write
-\* the FC4 `window-elapsed` guard forbids. `Inv_ConfirmWithinWindow` (confirmedAt
+\* the Final Critique 4 `window-elapsed` guard forbids. `Inv_ConfirmWithinWindow` (confirmedAt
 \* < ExpiresAt) catches it. The `state = Held` guard is intact, so
 \* single-resolution still HOLDS — the violation is isolated to
 \* confirm-within-window.

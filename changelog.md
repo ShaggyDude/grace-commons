@@ -172,7 +172,7 @@ cut a versioned release, so everything below sits under **Unreleased**.
     recorded.
   - **Handoff retired (Meta).** `internal/refactor-1-findings.md` dispersed and
     deleted: resolved findings live in their owning docs and the patterns'
-    Lineage notes, the mirror-check findings (MC-C12-1 / MC-C3-1) in the Chain of
+    Lineage notes, the mirror-check coverage-gap findings in the Chain of
     Custody / Forensic Recovery coverage matrices, and this history here. The
     handoff is done when the staging file has nothing left to say.
 
