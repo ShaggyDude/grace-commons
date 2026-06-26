@@ -7,7 +7,7 @@
 \* Inv1_BindingBijection holds here. The bug is in COVERAGE: in-scope records are
 \* disposed one at a time, and CommitBinding fires WITHOUT a full-coverage guard.
 \* So a committed fulfillment with an undispositioned in-scope record is reachable —
-\* the silent omission Invariant 2 forbids and that C6's binding-only model did not
+\* the silent omission Invariant 2 forbids and that Immutable Transaction Ledger's binding-only model did not
 \* need to check. From Init, CommitBinding alone yields bound = TRUE with every
 \* disp[r] = "none": Inv2_NoSilentOmission fails. The checker rejects the twin.
 \*

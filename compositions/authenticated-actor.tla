@@ -1,5 +1,5 @@
 ---- MODULE authenticated-actor ----
-\* Grace Commons — Authenticated Actor (C17). Credential + Actor Identity.
+\* Grace Commons — Authenticated Actor. Credential + Actor Identity.
 \* Spec-level formal sibling of compositions/authenticated-actor.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.

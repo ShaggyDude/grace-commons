@@ -1,5 +1,5 @@
 ---- MODULE immutable-transaction-ledger ----
-\* Grace Commons — Immutable Transaction Ledger with Selective Disclosure (C6).
+\* Grace Commons — Immutable Transaction Ledger with Selective Disclosure.
 \* Spec-level formal sibling of compositions/immutable-transaction-ledger.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.

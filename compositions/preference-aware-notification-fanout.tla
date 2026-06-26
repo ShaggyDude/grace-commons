@@ -1,5 +1,5 @@
 ---- MODULE preference-aware-notification-fanout ----
-\* Grace Commons — Preference-Aware Notification Fanout (C11) composition.
+\* Grace Commons — Preference-Aware Notification Fanout composition.
 \* Spec-level formal sibling of compositions/preference-aware-notification-fanout.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
@@ -13,14 +13,14 @@
 \* the cap under any interleaving of concurrent fanout invocations evaluating
 \* the same principal. This is the same time-of-check-to-time-of-use (TOCTOU)
 \* race class as capacity-constraint-enforcement.tla, whose overshoot twin
-\* this model's twin mirrors (per the C11 kickoff adjudication).
+\* this model's twin mirrors (per the kickoff adjudication).
 \*
 \* MODELING CHOICES
 \* - One principal, one interpreted (window, cap) pair with cap = Cap; the
 \*   window is held fixed (no aging) — aging only ever *lowers* the in-window
 \*   count, so the fixed-window model is the conservative case for overshoot.
 \* - `Workers` concurrent fanout invocations, each rendering at most one
-\*   disposition for the principal (C11 Invariant 9: at most one live
+\*   disposition for the principal (Invariant 9: at most one live
 \*   notification per subscriber per invocation).
 \* - `delivered` is the principal's committed in-window delivery count — the
 \*   truth the journal (Event Log) carries; the delivery_count_index is a
@@ -31,7 +31,7 @@
 \*   serialized-per-principal capability the deployment declares; no
 \*   interleaving can wedge between the cap check and the commit.
 \* - `GateSuppress(w)`: the gate's frequency-cap suppression branch — fires
-\*   exactly when the observed count meets/exceeds the cap (C11 step 5.iv).
+\*   exactly when the observed count meets/exceeds the cap (step 5.iv).
 \*   Its presence makes the cap guard non-vacuous: runs reach states where
 \*   suppression is the only enabled disposition for remaining workers.
 \*
@@ -67,7 +67,7 @@ Init ==
 
 \* CORRECT gate, deliver verdict: serialized observe-and-commit in one atomic
 \* step — the `serialized-per-principal` capability, modeled. The cap
-\* precondition (observed count strictly below cap, C11 Invariant 4 per-commit
+\* precondition (observed count strictly below cap, Invariant 4 per-commit
 \* anchor) and the journal commit cannot be split by any interleaving.
 GateDeliver(w) ==
     /\ status[w] = "idle"
@@ -91,7 +91,7 @@ Next ==
         \/ GateSuppress(w)
 Spec == Init /\ [][Next]_vars
 
-\* C11 Invariant 4 (safety arm, serialized-per-principal): the principal's
+\* Invariant 4 (safety arm, serialized-per-principal): the principal's
 \* committed in-window delivery count never exceeds the interpreted cap.
 Inv4_CapSafety == delivered <= Cap
 

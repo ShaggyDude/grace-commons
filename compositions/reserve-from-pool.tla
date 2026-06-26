@@ -1,5 +1,5 @@
 ---- MODULE reserve-from-pool ----
-\* Grace Commons — Reserve from Pool (C9) composition.
+\* Grace Commons — Reserve from Pool composition.
 \* Spec-level formal sibling of compositions/reserve-from-pool.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.

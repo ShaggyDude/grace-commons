@@ -1,5 +1,5 @@
 ---- MODULE capability-backed-sharing ----
-\* Grace Commons — Capability-Backed Sharing (C15).
+\* Grace Commons — Capability-Backed Sharing.
 \* Capability + Selective Disclosure + Audit Trail (substrate).
 \* Spec-level formal sibling of compositions/capability-backed-sharing.md.
 \* Derived validator; the English spec is the single source of truth. On any
@@ -14,9 +14,9 @@
 \* without its attributed `sharing.disclosed` event and binding, and no
 \* `sharing.disclosed` event exists without its Selective Disclosure record. The
 \* redemption-decrement that precedes the binding is part of the same host
-\* transaction and rolls back with it (a recoverable store write, unlike C7's
+\* transaction and rolls back with it (a recoverable store write, unlike Resolve a Person's Data Rights'
 \* irreversible purge), so the binding is atomic in the conforming case — this
-\* model mirrors C6's binding-bijection model directly.
+\* model mirrors Immutable Transaction Ledger's binding-bijection model directly.
 \*
 \* Per disclosure d, three sub-writes:
 \*   sdState    : absent | present   (Selective Disclosure disclosure record)

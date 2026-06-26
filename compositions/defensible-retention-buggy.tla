@@ -1,5 +1,5 @@
 ---- MODULE defensible-retention-buggy ----
-\* Grace Commons — Defensible Retention (C1): BUGGY TWIN (vacuity guard).
+\* Grace Commons — Defensible Retention: BUGGY TWIN (vacuity guard).
 \*
 \* Identical to defensible-retention.tla EXCEPT `Purge` drops the `holds = 0`
 \* guard — modeling a purge that consults retention eligibility but NOT the Legal

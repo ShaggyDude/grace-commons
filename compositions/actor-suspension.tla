@@ -1,5 +1,5 @@
 ---- MODULE actor-suspension ----
-\* Grace Commons — Actor Suspension (C18). Login's outbound-side counterpart.
+\* Grace Commons — Actor Suspension. Login's outbound-side counterpart.
 \* Spec-level formal sibling of compositions/actor-suspension.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.

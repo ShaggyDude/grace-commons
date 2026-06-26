@@ -1,5 +1,5 @@
 ---- MODULE defensible-retention ----
-\* Grace Commons — Regulated Record Retention & Defensible Deletion (C1).
+\* Grace Commons — Regulated Record Retention & Defensible Deletion.
 \* Spec-level formal sibling of compositions/defensible-retention.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.

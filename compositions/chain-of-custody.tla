@@ -1,5 +1,5 @@
 ---- MODULE chain-of-custody ----
-\* Grace Commons — Chain of Custody (C12) composition.
+\* Grace Commons — Chain of Custody composition.
 \* Spec-level formal sibling of compositions/chain-of-custody.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.

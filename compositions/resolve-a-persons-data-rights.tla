@@ -11,7 +11,7 @@
 \*     the disposition set, the Selective Disclosure response-disclosure, and the
 \*     dsar.*_fulfilled Audit Trail event commit together or not at all.
 \*   Invariant 2 — no-silent-omission: a committed fulfillment carries exactly one
-\*     disposition for EVERY in-scope record — a totality/coverage property C6's
+\*     disposition for EVERY in-scope record — a totality/coverage property Immutable Transaction Ledger's
 \*     binding-only model did not need.
 \*
 \* Per fulfillment, the sub-writes:
@@ -23,12 +23,12 @@
 \* This CORRECT model performs every sub-write as a single atomic action — the
 \* single-transaction form the spec's step-4 "commit atomically" requires. The two
 \* buggy twins split it: -buggy reaches a dangling partial (the binding hazard, as
-\* in C6); -buggy-coverage commits the binding before every in-scope record is
+\* in Immutable Transaction Ledger); -buggy-coverage commits the binding before every in-scope record is
 \* disposed (the novel no-silent-omission hazard). TLC rejects both.
 \*
 \* NOT MODELED (out of scope for the load-bearing properties)
 \* - per-action orchestration, rejection guards, the enumeration surface itself.
-\* - the irreversible per-record purge_record calls (C1's contract, modeled in
+\* - the irreversible per-record purge_record calls (Defensible Retention's contract, modeled in
 \*   defensible-retention.tla) and the inherited partial-failure orphan.
 \* - disposition *vocabulary* (included/withheld vs erased/retained) — the coverage
 \*   property is vocabulary-agnostic, so "set" abstracts any one recorded verdict.

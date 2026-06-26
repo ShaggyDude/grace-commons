@@ -1,5 +1,5 @@
 ---- MODULE preference-aware-notification-fanout-buggy ----
-\* Grace Commons — Preference-Aware Notification Fanout (C11): BUGGY TWIN.
+\* Grace Commons — Preference-Aware Notification Fanout: BUGGY TWIN.
 \*
 \* BUG — non-serialized cap evaluation (TOCTOU): the gate's frequency-cap
 \* observation and the delivery commit are split into two steps, modeling a
@@ -9,7 +9,7 @@
 \* `GateCommit` commits the delivery WITHOUT re-checking. Two concurrent
 \* fanout invocations can each observe count = Cap - 1 on the last slot,
 \* then both commit — the in-window delivery count overshoots the cap.
-\* This is exactly the race C11 Invariant 4 names and exactly the twin shape
+\* This is exactly the race Invariant 4 names and exactly the twin shape
 \* of capacity-constraint-enforcement-buggy-toctou.tla (the adjudicated
 \* precedent): observe/commit split, no re-check at commit.
 \*

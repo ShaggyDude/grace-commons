@@ -1,5 +1,5 @@
 ---- MODULE forensic-recovery ----
-\* Grace Commons — Forensic Recovery (C3) composition.
+\* Grace Commons — Forensic Recovery composition.
 \* Spec-level formal sibling of compositions/forensic-recovery.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.

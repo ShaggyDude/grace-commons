@@ -28,7 +28,7 @@
 \* SCOPE — INTENTIONAL EXCLUSIONS
 \*
 \* * Party Identity verification (Unverified → Verified). That transition
-\*   belongs to C8 (KYC / Customer Onboarding) and is outside this
+\*   belongs to Customer Onboarding and is outside this
 \*   composition's surface.
 \* * Credential rotation after onboarding. Outside the composition.
 \* * Background invitation expiry scheduling. Expire is modeled as an

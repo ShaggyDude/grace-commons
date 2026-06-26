@@ -1,5 +1,5 @@
 ---- MODULE execute-gated-workflow ----
-\* Grace Commons — Execute Gated Workflow (C10) composition.
+\* Grace Commons — Execute Gated Workflow composition.
 \* Spec-level formal sibling of compositions/execute-gated-workflow.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
