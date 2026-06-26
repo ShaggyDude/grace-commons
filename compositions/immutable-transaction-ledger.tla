@@ -4,7 +4,7 @@
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
-\* WHAT THIS MODEL CHECKS (revised 2026-06-10, Refactor 1 — C6-2/C6-1)
+\* WHAT THIS MODEL CHECKS (revised 2026-06-10, Refactor 1 — compensated arm + derived-index reclassification)
 \* The composition's load-bearing wiring decision is Invariant 1 (disclosure-
 \* accountability binding bijection), restated as safety + liveness. The design
 \* the spec actually mandates is SEQUENTIAL-WITH-COMPENSATION: Selective
@@ -16,7 +16,7 @@
 \*
 \* This model covers BOTH arms of Invariant 1 — the atomic-commit arm and the
 \* compensated arm the earlier model idealized away (the coverage-matrix GAP
-\* closed by finding C6-2):
+\* closed by the compensated-arm finding):
 \*   CommitClean(d)  — both truth-bearing writes land together (the
 \*                     transactional-boundary form).
 \*   FailPartial(d)  — the SD write lands, the audit write fails; the orphan is

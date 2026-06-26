@@ -21,7 +21,7 @@
 \* This model covers BOTH arms of Invariant 4 — the atomic-commit arm and the
 \* compensated arm the earlier model idealized away (the coverage-matrix GAP
 \* closed by the Invariant-4 coverage-gap finding; immutable-transaction-ledger.tla, revised for
-\* C6-2, is the worked template):
+\* the compensated-arm finding, is the worked template):
 \*   CommitClean(t)  — both truth-bearing writes land together (the
 \*                     transactional-boundary form).
 \*   FailPartial(t)  — the Soft Delete write lands, the audit write fails; the

@@ -153,7 +153,7 @@ render's composition coverage) enforces three things:
   reason (a documented divergence is reported as info).
 
 Render 1 reconciles at **0 drift findings** with **1 documented override**
-(C14-4: principal-binding is externally-clearable in the bare spec but
+(principal-binding is externally-clearable in the bare spec but
 records-clearable here because render 1 composes Audit Trail). Running it after a
 spec edit tells you immediately whether the manifest drifted. Full
 auto-generation of the manifest from prose builds on this; today it keeps the

@@ -2,7 +2,7 @@
 
 > Formal-layer **coverage cross-check** (pressure-testing.md §"The coverage cross-check").
 > Emitted 2026-06-10 (Refactor 1, C6 batch round's mirror check): C6's Lineage names C3 as
-> sharing the binding-bijection model shape, so the C6-2 finding class (atomic idealization
+> sharing the binding-bijection model shape, so the compensated-arm finding class (atomic idealization
 > verified over a compensating design) was checked here. **It is present.** This matrix is
 > the Invariant-4 coverage-gap finding's record of record (the Refactor 1 staging handoff that first logged it
 > has since been dispersed and deleted); the fix rides C3's own touch-triggered round —
@@ -10,7 +10,7 @@
 >
 > **RESOLVED 2026-06-11.** The touch-triggered round landed: the model was revised to
 > sequential-with-compensation covering both arms of Invariant 4 (template:
-> `immutable-transaction-ledger.tla`, the C6-2 closure), Invariant 4 was restated in the
+> `immutable-transaction-ledger.tla`, the compensated-arm closure), Invariant 4 was restated in the
 > English as safety + liveness, and `record_to_events` was reclassified as a derived index
 > outside the atomicity surface. Invariant 2's compensated-path coverage, which rode the GAP,
 > closed with it. The pattern returned to `grounded`. Rows below updated in place with the
@@ -31,7 +31,7 @@
 | Spec invariant (no. + name) | Load-bearing (vote)? | Verdict | Model construct / reason |
 |---|---|---|---|
 | Invariant 4 — binding bijection, **atomic-commit arm** | **yes** | covered | Single atomic commit action; `Inv4_BindingBijection` / `Inv_NoDanglingSoft` / `Inv_NoOrphanAudit` |
-| Invariant 4 — binding bijection, **compensated arm** ("or the failure is compensated": the *Cross-store consistency under partial failure* edge case mandates retry + surfacing + `cascade_recovery`, and the uniform rejection-mapping rule makes the orphan *reachable by design* — credential invalidity always manifests as `recording-failure` plus an orphan) | **yes** | **GAP → resolved (2026-06-11): covered** | *Was:* the correct model committed all three sub-writes as one atomic action — the spec-mandated sequential-with-compensation path unmodeled (the Invariant-4 coverage-gap finding, same class as C6's closed C6-2), with the stakes on C3's headline invariant (a purge without its audit record), and the third sub-write placed `record_to_events` inside the atomicity surface against its derived-index classification. *Now:* the revised model is sequential-with-compensation per the C6 template — `FailPartial` makes the orphan reachable and surfaced (for a purge: Invariant 2's worst case, visible the whole time), `RetryAudit` compensates (marked `recovered`/`cascade_recovery`, enabled in exactly the orphan configuration), and the derived index is omitted per execution-contract §Composition state obligation 2. Covered by `Inv4_SafetyBijection` / `Inv4_NoUnsurfacedOrphan` / `Inv4_RecoveryDistinguishable`; liveness's enabledness half is structural (no orphan dead end). |
+| Invariant 4 — binding bijection, **compensated arm** ("or the failure is compensated": the *Cross-store consistency under partial failure* edge case mandates retry + surfacing + `cascade_recovery`, and the uniform rejection-mapping rule makes the orphan *reachable by design* — credential invalidity always manifests as `recording-failure` plus an orphan) | **yes** | **GAP → resolved (2026-06-11): covered** | *Was:* the correct model committed all three sub-writes as one atomic action — the spec-mandated sequential-with-compensation path unmodeled (the Invariant-4 coverage-gap finding, same class as C6's closed compensated-arm finding), with the stakes on C3's headline invariant (a purge without its audit record), and the third sub-write placed `record_to_events` inside the atomicity surface against its derived-index classification. *Now:* the revised model is sequential-with-compensation per the C6 template — `FailPartial` makes the orphan reachable and surfaced (for a purge: Invariant 2's worst case, visible the whole time), `RetryAudit` compensates (marked `recovered`/`cascade_recovery`, enabled in exactly the orphan configuration), and the derived index is omitted per execution-contract §Composition state obligation 2. Covered by `Inv4_SafetyBijection` / `Inv4_NoUnsurfacedOrphan` / `Inv4_RecoveryDistinguishable`; liveness's enabledness half is structural (no orphan dead end). |
 | Invariant 1 — lifecycle attribution coverage | no | out-of-scope (named reason) | Attribution is Audit Trail Invariant 1's property; not an interleaving. |
 | Invariant 2 — purge accountability | yes (structural form) | covered (2026-06-11 — both arms) | Rode the Invariant-4 coverage-gap finding and closed with it: the purge-orphan window (a destroyed record awaiting its compensating audit event) is now a modeled, *surfaced* configuration — `Inv4_NoUnsurfacedOrphan` is Invariant 2's compensated-path form (a Purged record's missing audit event can exist only as a visible finding under compensation), and the coherent-or-recovered end state restores the accountability record. |
 | Invariant 3 — forensic completeness / full-history recoverability | no | out-of-scope (named reason) | Replay/query-shape property over Event Log total order (Event Log Invariants 2, 3); discharged in prose + Generation acceptance. |
