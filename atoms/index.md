@@ -37,7 +37,7 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 | [Consent](./consent.md) | — | yes (2) | — | propagate-consent-revocation-downstream, resolve-a-persons-data-rights |
 | [Credential](./credential.md) | — | yes (4) | yes | authenticated-actor, external-onboarding, login, privileged-access-provisioning |
 | [Duplicate Prevention](./duplicate-prevention.md) | — | yes (2) | — | idempotent-reservation, reserve-from-pool |
-| [Event Log](./event-log.md) | — | yes (3) | — | audit-trail, preference-aware-notification-fanout, reserve-from-pool, saga, undo-history |
+| [Event Log](./event-log.md) | — | yes (3) | — | audit-trail, compensable-workflow, preference-aware-notification-fanout, reserve-from-pool, undo-history |
 | [Invitation](./invitation.md) | — | yes (1) | yes | external-onboarding |
 | [Legal Hold](./legal-hold.md) | — | yes (1) | — | defensible-retention |
 | [Medication Order](./medication-order.md) | healthcare | — | — | *(none yet)* |
@@ -54,7 +54,7 @@ _25 compositions (22 regulated) · 27 atoms · 63 composition→atom edges. Gene
 | [Soft Delete](./soft-delete.md) | — | yes (1) | — | forensic-recovery |
 | [Subscription](./subscription.md) | — | yes (2) | — | notification-fanout, preference-aware-notification-fanout |
 | [Tamper Evidence](./tamper-evidence.md) | — | yes (1) | — | audit-trail |
-| [Workflow / State Machine](./workflow-state-machine.md) | — | yes (1) | — | execute-gated-workflow, saga |
+| [Workflow / State Machine](./workflow-state-machine.md) | — | yes (1) | — | compensable-workflow, execute-gated-workflow |
 
 ## Lens — regulated
 

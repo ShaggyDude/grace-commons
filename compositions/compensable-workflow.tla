@@ -1,23 +1,23 @@
----- MODULE saga ----
-\* Grace Commons — Saga / Compensable Workflow composition.
-\* Spec-level formal sibling of compositions/saga.md.
+---- MODULE compensable-workflow ----
+\* Grace Commons — Compensable Workflow composition.
+\* Spec-level formal sibling of compositions/compensable-workflow.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*
 \* WHAT THIS MODEL CHECKS (base model — the two load-bearing invariants the
 \* formal-layer vote names)
-\*   Inv4 (all-or-compensated): a saga rests only as `committed` (every step's
+\*   Inv4 (all-or-compensated): a compensable workflow rests only as `committed` (every step's
 \*       effect landed) or `compensated` (every landed effect has had its
 \*       compensation executed); no completed external effect survives an abort
 \*       uncompensated. Falsified by the skip-compensation twin
-\*       (saga-skip-comp-buggy.tla), which declares the saga compensated after
+\*       (compensable-workflow-skip-comp-buggy.tla), which declares the compensable workflow compensated after
 \*       unwinding only the most-recent step.
 \*   Inv7 (idempotency under retry): the durable-execution engine may RE-DELIVER a
-\*       step effect, so each effect executes AT MOST ONCE per saga — a re-delivery
+\*       step effect, so each effect executes AT MOST ONCE per compensable workflow — a re-delivery
 \*       is a no-op. Modeled with an explicit retry window (StepEffect stays
 \*       enabled, re-firing, until StepRecord advances) plus an idempotency guard;
 \*       a witness counter appCnt[i] records real executions and must stay <= 1.
-\*       Falsified by the double-apply twin (saga-double-apply-buggy.tla), whose
+\*       Falsified by the double-apply twin (compensable-workflow-double-apply-buggy.tla), whose
 \*       handler re-applies on every delivery.
 \*   Inv6 (single terminal): `committed`/`compensated` are the only resting
 \*       outcomes (a consistency form is checked; terminal absorption is by
@@ -36,10 +36,10 @@
 \*   keys off `applied` (the effect ledger), so an effect that landed but was not
 \*   yet recorded is still compensated.
 \*
-\* SCOPE (named, base model) — see the coverage matrix in saga.md Lineage
+\* SCOPE (named, base model) — see the coverage matrix in compensable-workflow.md Lineage
 \* - Compensations are assumed to eventually succeed under retry, so the
 \*   NON-TERMINAL `halted` holding state (a compensation that cannot complete — a
-\*   liveness/operational concern, saga.md §Edge cases) is out of model scope.
+\*   liveness/operational concern, compensable-workflow.md §Edge cases) is out of model scope.
 \* - The forward-effect retry window is the modeled idempotency surface;
 \*   compensation idempotency is symmetric and by-construction here (CompEffect
 \*   fires once per step via its ~comp guard).
@@ -54,7 +54,7 @@ Steps == 1..N
 Phase == {"forward", "aborting", "committed", "compensated"}
 
 VARIABLES
-    phase,      \* saga phase / terminal outcome
+    phase,      \* compensable workflow phase / terminal outcome
     pos,        \* highest forward step recorded; current forward step = pos + 1
     applied,    \* Steps -> BOOLEAN ; step i's external effect has landed
     appCnt,     \* Steps -> 0..2    ; real executions of step i's effect (<= 1 ok)
@@ -120,7 +120,7 @@ Commit ==
     /\ phase' = "committed"
     /\ UNCHANGED <<pos, applied, appCnt, comp, compCnt>>
 
-\* Abort: a step failed or the saga was cancelled; enter the compensating phase.
+\* Abort: a step failed or the compensable workflow was cancelled; enter the compensating phase.
 Abort ==
     /\ phase = "forward"
     /\ phase' = "aborting"
@@ -157,7 +157,7 @@ Spec == Init /\ [][Next]_vars
 
 \* --- the verification surface ---
 
-\* Invariant 4 — All-or-compensated (the load-bearing claim). A saga rests only as
+\* Invariant 4 — All-or-compensated (the load-bearing claim). A compensable workflow rests only as
 \* `committed` (all effects landed) or `compensated` (every landed effect
 \* compensated); no completed external effect survives an abort uncompensated.
 Inv4_AllOrCompensated ==

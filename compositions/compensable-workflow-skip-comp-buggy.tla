@@ -1,10 +1,11 @@
----- MODULE saga-skip-comp-buggy ----
-\* Grace Commons — Saga / Compensable Workflow: BUGGY TWIN (vacuity guard for Inv4).
+---- MODULE compensable-workflow-skip-comp-buggy ----
+\* Grace Commons — Compensable Workflow: BUGGY TWIN (vacuity guard for Inv4).
 \*
-\* Identical to saga.tla EXCEPT `CompDone` declares the saga `compensated` as soon
-\* as the MOST RECENT (highest-index) applied step has been compensated — a
-\* reverse-compensation loop that exits after its first iteration, leaving earlier
-\* completed steps uncompensated. The classic "only undo the last step" saga bug.
+\* Identical to compensable-workflow.tla EXCEPT `CompDone` declares the compensable
+\* workflow `compensated` as soon as the MOST RECENT (highest-index) applied step has
+\* been compensated — a reverse-compensation loop that exits after its first iteration,
+\* leaving earlier completed steps uncompensated. The classic "only undo the last
+\* step" compensation bug.
 \*
 \* Expected result: VIOLATION of Inv4_AllOrCompensated (a completed external effect
 \* survives an abort uncompensated). If the checker reports all invariants hold

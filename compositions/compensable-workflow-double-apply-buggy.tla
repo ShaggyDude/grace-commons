@@ -1,7 +1,7 @@
----- MODULE saga-double-apply-buggy ----
-\* Grace Commons — Saga / Compensable Workflow: BUGGY TWIN (vacuity guard for Inv7).
+---- MODULE compensable-workflow-double-apply-buggy ----
+\* Grace Commons — Compensable Workflow: BUGGY TWIN (vacuity guard for Inv7).
 \*
-\* Identical to saga.tla EXCEPT `StepEffect` is NOT idempotent: every delivery
+\* Identical to compensable-workflow.tla EXCEPT `StepEffect` is NOT idempotent: every delivery
 \* re-runs the effect, so when the engine re-delivers a step (a retry) the effect
 \* is applied again and the witness counter appCnt climbs past 1. This is the
 \* double-charge hazard idempotency-under-retry exists to forbid.
