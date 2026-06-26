@@ -30,7 +30,7 @@ Software is the only engineering discipline operating without a canonical-intent
 
 1. **Structured English as the canonical form.** Your PM, your lawyer, your auditor, your regulator can read it *and edit it*. Formal methods (mathematical, notation-heavy approaches to writing software specifications) exclude these stakeholders (people who have a direct interest in the outcome) by notation; Grace Commons includes them by design.
 2. **One spec, many derivations.** Tests, code, multiple frontends (user interfaces — web, mobile, voice), formal models (precise mathematical representations of the system), audit artifacts (official records used in compliance reviews) — all projected from the same canonical source.
-3. **Stack-agnostic by construction.** The spec doesn't know about your runtime (the environment where software actually runs — a web server, a phone, a browser). The projector (the tool that converts the spec into working code) compiles to whatever stack (combination of technologies) a deployment needs — web, CLI, mobile, voice, future channels.
+3. **Stack-agnostic by construction.** The spec doesn't know about your runtime (the environment where software actually runs — a web server, a phone, a browser). The projector (the tool that converts the spec into working code) is designed to compile to whatever stack (combination of technologies) a deployment needs — web, CLI, mobile, voice, future channels.
 4. **Bidirectional refinement.** Findings from running tests, real-world incidents, regulator audits (official inspections by government or industry overseers) feed back into the canonical spec via the methodology. The system improves with use; it doesn't go stale.
 
 ---
@@ -42,6 +42,8 @@ Most software systems are 80% patterns that have been implemented thousands of t
 Grace Commons is the attempt to specify these patterns once — clearly, completely, in structured natural language — so they can be referenced, validated against, and eventually generated from rather than reimplemented.
 
 The library is organized around business patterns, not technologies. The same provisional resource commitment pattern (temporarily holding a resource — a seat, a hotel room, an inventory item — while waiting for final confirmation) appears in banking, healthcare, logistics, and e-commerce. It belongs in one place.
+
+Specifying patterns together surfaces a third layer the implementations never see: **emergent invariants** — guarantees that hold only once atoms are composed and that no single atom carries (worked examples in *How it's organized*).
 
 ---
 
@@ -80,9 +82,11 @@ The `atoms/` + `compositions/` split mirrors the structural logic of [concept-ca
 
 ## Status
 
-Early but stable (as of mid-June 2026). The architectural philosophy is in [`the-spec-layer.md`](./the-spec-layer.md). The pattern library is being built.
+Early but stable (as of mid-June 2026). The architectural philosophy is in [`the-spec-layer.md`](./the-spec-layer.md).
 
-Contributors who understand the problem are welcome before the library is complete. That is the right time to establish the structure.
+The corpus is the gift — the patterns that belong to everyone, grounded once so no one has to reinvent them. The methodology is the engine that produces the corpus and keeps it sound as it grows. The engine works today; the commons it produces is early and compounding — being built, not unfinished.
+
+Contributors who understand the problem are welcome now. While the structure is still being set is the right time to help shape it.
 
 ---
 
@@ -97,6 +101,8 @@ If you work in a domain with well-specified standards — healthcare, finance, l
 ---
 
 ## Where this is going
+
+Grace Commons is a commons: the shared patterns that sit under most systems, grounded once where anyone can inspect them. The methodology is the engine that produces that commons and proves it sound — and because the engine, not any single artifact, is the durable thing, the commons keeps growing while the implementations stay disposable.
 
 The bet is not incremental: the structured specification is the single source of truth, mechanically projected into working software — so the system is legible to everyone accountable for it, not only the people who can read the code. Compliance logic stops living buried in opaque implementations and starts living in clear, inspectable patterns.
 
