@@ -252,7 +252,7 @@ This composition introduces no per-call event log. The acceptance bar therefore 
 
 **Relationship to Privileged Access Provisioning.** [Privileged Access Provisioning](./privileged-access-provisioning.md) gates elevated-access provisioning behind a multi-party approval chain before issuing a time-limited Capability token. PAP's `exercise_access` action independently validates session state before permitting exercise — it is not a use of Session-Gated Authorization, but it enforces the same gate invariant at the exercise boundary. System designers building a full privileged-access surface should consider whether to share the session-gate logic via this composition or enforce it independently inside PAP; the current library treats them as independent implementations of the same principle applied at different lifecycle points.
 
-**Forthcoming-link resolution.** The Session atom's *Composition notes* listed "Session-Gated Authorization (C14 — not started)" as a forthcoming composition. That link is now live.
+**Forthcoming-link resolution.** The Session atom's *Composition notes* listed "Session-Gated Authorization (not started)" as a forthcoming composition. That link is now live.
 
 ---
 
