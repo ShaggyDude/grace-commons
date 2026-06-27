@@ -498,8 +498,12 @@ BANNED_TOKEN_EXCLUDED_DIRS = {".git", ".github", "node_modules", "Alloy.app",
 
 # Lineage notes are dated historical narration (like roadmap.md, already exempt);
 # the vocabulary rules J/K govern the live spec body, not the record of past rounds.
-# A pattern's Lineage is its last section, so scanning stops at its heading.
-LINEAGE_HEADING = re.compile(r"^##\s+Lineage\b", re.IGNORECASE)
+# A pattern's Lineage is its last section, so scanning stops at its heading —
+# whether that heading is markdown (`## Lineage…`) or, when the section is folded
+# into a <details> for readability, an HTML `<h2>…Lineage…</h2>`. Both forms are
+# anchored to the line start, so an in-body prose mention ("see Lineage notes §…")
+# never matches and the live body above Lineage is still fully scanned.
+LINEAGE_HEADING = re.compile(r"^(?:##\s+|\s*<h2\b[^>]*>\s*)Lineage\b", re.IGNORECASE)
 
 
 def check_banned_token(root: Path) -> list[Finding]:
