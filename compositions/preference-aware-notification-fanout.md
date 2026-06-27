@@ -310,7 +310,7 @@ It inherits from: **[Subscription](../atoms/subscription.md)** (Observer, pub-su
 
 <details markdown="block">
 <summary>
-## Lineage notes
+    <h2>Lineage notes</h2>
 </summary>
 
 Drafted as the composition that retires the final unstarted C-numbered roadmap row, unblocked 2026-05-29 when Preference grounded. The constituent-set decision — compose Subscription + Notification + Preference + Event Log directly; do **not** compose Notification Fanout — was adjudicated in the 2026-06-11 planning session on the Reserve from Pool precedent (Reserve from Pool re-wires Idempotent Reservation's atoms rather than wrapping the grounded composition, because the smaller composition's action surface exposes no insertion point). Notification Fanout's `fanout` has no per-subscriber hook between query and create; the gate must sit exactly there. Audit Trail and Consent were adjudicated peers, not constituents: attribution is optional to the mechanism, and legal permission is sequenced upstream by Preference's own boundary declaration.
