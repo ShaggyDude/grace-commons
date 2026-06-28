@@ -653,6 +653,55 @@ def check_internal_ids(patterns: dict[Path, Pattern]) -> list[Finding]:
 
 
 # --------------------------------------------------------------------------- #
+# Common-acronym whitelist (N) — the redundant-gloss guard
+# --------------------------------------------------------------------------- #
+
+# spec-format's acronym rule (§Cross-cutting authoring conventions) exempts a
+# short, dictionary-headword whitelist (SMS, GPS, URL, HTML, US/USA, ID, PDF,
+# FAQ) from the spell-out requirement. *Glossing* a whitelisted acronym anyway —
+# "SMS (Short Message Service …)" — is the redundant noise the whitelist exists
+# to remove, so it is a finding. High precision: each pattern is a whitelisted
+# acronym immediately followed by a parenthetical carrying its canonical
+# expansion, so an ordinary aside ("US (and the EU)") never matches. US/USA and
+# ID are whitelisted but deliberately NOT auto-detected — their expansions are
+# common-enough words to risk a false positive, and the linter's bar is
+# precision over recall. Code spans scrubbed; Lineage skipped (dated history),
+# same convention as J/K/L/M.
+WHITELIST_GLOSS = [
+    (re.compile(r"\bSMS\b\s*\([^)]*Short Message Service", re.I), "SMS"),
+    (re.compile(r"\bGPS\b\s*\([^)]*Global Positioning System", re.I), "GPS"),
+    (re.compile(r"\bURL\b\s*\([^)]*Uniform Resource Locator", re.I), "URL"),
+    (re.compile(r"\bHTML\b\s*\([^)]*HyperText Markup Language", re.I), "HTML"),
+    (re.compile(r"\bPDF\b\s*\([^)]*Portable Document Format", re.I), "PDF"),
+    (re.compile(r"\bFAQ\b\s*\([^)]*Frequently Asked Questions?", re.I), "FAQ"),
+]
+
+
+def check_whitelist_gloss(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """N. A whitelisted common acronym carries a redundant spelled-out gloss.
+
+    spec-format whitelists a few dictionary-headword acronyms from the spell-out
+    rule; glossing one anyway is noise the whitelist exists to remove. Scoped to
+    atoms/ + compositions/; code spans scrubbed; Lineage skipped (dated history).
+    """
+    findings: list[Finding] = []
+    for p in patterns.values():
+        for i, raw in enumerate(p.text.splitlines(), start=1):
+            if LINEAGE_HEADING.match(raw):
+                break  # live body only — Lineage is dated history
+            scrubbed = CODE_SPAN.sub("", raw)
+            for rx, acr in WHITELIST_GLOSS:
+                if rx.search(scrubbed):
+                    findings.append(Finding(
+                        p.path, i, "N-whitelist-gloss",
+                        f"{acr} is a whitelisted common acronym (spec-format "
+                        f"§Cross-cutting authoring conventions) — drop the "
+                        f"spelled-out gloss; the acronym stands alone",
+                    ))
+    return findings
+
+
+# --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
 
@@ -682,6 +731,7 @@ def main(argv: list[str]) -> int:
     findings += check_banned_token(root)
     findings += check_banned_application(root)
     findings += check_internal_ids(patterns)
+    findings += check_whitelist_gloss(patterns)
 
     findings.sort(key=lambda f: (f.code, str(f.path), f.line))
     for f in findings:
