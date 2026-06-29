@@ -1,7 +1,7 @@
----- MODULE preference-buggy ----
-\* Grace Commons — Preference / Personalization atom: BUGGY TWIN (vacuity guard).
+---- MODULE message-preference-buggy ----
+\* Grace Commons — Message Preference / Personalization atom: BUGGY TWIN (vacuity guard).
 \*
-\* Identical to preference.tla EXCEPT supersession is split into two steps with
+\* Identical to message-preference.tla EXCEPT supersession is split into two steps with
 \* the new Active record created BEFORE the prior in-effect record is retired —
 \* the non-atomic `set` that opens the two-in-effect window Invariant 3 and the
 \* supersession-atomicity decision point forbid.

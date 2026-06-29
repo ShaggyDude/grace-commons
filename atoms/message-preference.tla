@@ -1,6 +1,6 @@
----- MODULE preference ----
-\* Grace Commons — Preference / Personalization atom.
-\* Spec-level formal sibling of atoms/preference.md.
+---- MODULE message-preference ----
+\* Grace Commons — Message Preference / Personalization atom.
+\* Spec-level formal sibling of atoms/message-preference.md.
 \* Derived validator; the English spec is the single source of truth. On any
 \* disagreement, diagnose per pressure-testing.md §The conflict protocol.
 \*

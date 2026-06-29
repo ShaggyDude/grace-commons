@@ -19,7 +19,7 @@ vote-named invariant*.
 ## Result
 
 - **14 fully clean** — every vote-named load-bearing invariant covered by a named
-  check: Party Identity (after the Inv 6 promotion), Assignment, Preference,
+  check: Party Identity (after the Inv 6 promotion), Assignment, Message Preference,
   Invitation, Audit Trail, Idempotent Reservation, Defensible Retention, KYC,
   Shared Todo (Inv 2 covered by delegation to `assignment.tla`), Undo History,
   Permissions, Notification, Subscription, Clinical Observation.
