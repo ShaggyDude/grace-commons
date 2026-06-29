@@ -15,9 +15,11 @@ toc: true
 </details>
 
 
-> A composable temporal concept: a temporally-bounded record of recently-seen identities, used by containing patterns to reject re-additions within a configurable window.
+## Summary
 
-> Also known as: temporal idempotency, recency guard, cooldown window.
+Duplicate Prevention gives a system a short-term memory of things it has recently seen, so it can spot repeats. The way it works is simple. When something happens (an item is removed, a request is processed), the system records that identity; before accepting a new one, it checks whether that identity was recorded within a set time window. If it was, the check reports "seen" and the system can decide what to do — reject the repeat, ignore it, or return the earlier result. Once the window has passed, the same identity is fresh again. The pattern itself stays out of that decision and out of how identities are compared — those belong to the system using it — which is why the same mechanism works for a to-do list (a one-day window blocks accidental re-adds), a payment system (a few-minute window stops a retried charge from billing twice), a comment box (a one-minute window stops double-click double-posts), and a signup form. One firm guarantee: recording the same identity again does not push the window forward, so a flurry of repeats cannot extend the block indefinitely — the clock starts at the first sighting and runs out at a fixed time.
+
+*Also known as: temporal idempotency, recency guard, cooldown window.*
 
 ---
 
@@ -25,15 +27,9 @@ toc: true
 
 The pattern prevents an [Identity] from being acted on (added, submitted, posted, charged) if the same [Identity] has been recently observed. "Recently" is bounded by a configurable [Window] that opens on observation and closes after a duration.
 
-The concept addresses a class of integrity and UX (user-experience — how the system feels to the person using it) problems that recur across virtually every system accepting user or external input: accidental double-submits, rapid double-add of the same task, replayed messages, repeated payments, double-posted comments, redundant newsletter sign-ups. The common shape is constant — an action accepts an [Identity], the outcome should be rejected (or de-duplicated, or replayed) if the same [Identity] was recently observed, and "recently" is a wall-time [Window].
+The concept addresses a class of integrity and user-experience problems that recur across virtually every system accepting user or external input: accidental double-submits, rapid double-add of the same task, replayed messages, repeated payments, double-posted comments, redundant newsletter sign-ups. The common shape is constant — an action accepts an [Identity], the outcome should be rejected (or de-duplicated, or replayed) if the same [Identity] was recently observed, and "recently" is a wall-time [Window].
 
-This is a freestanding (can be specified without naming any other pattern) concept in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state, its own actions, and its own operational principles, and is designed to compose with patterns that contain identifiable items rather than to be absorbed into them. The same mechanic appears under different names across literatures — *idempotency window* in distributed systems, *cooldown* in UX, *replay protection* in security — but the underlying concept is identical.
-
----
-
-## Summary
-
-Duplicate Prevention gives a system a short-term memory of things it has recently seen, so it can spot repeats. The way it works is simple: when something happens (an item is removed, a request is processed), the system records that identity; before accepting a new one, it checks whether that identity was recorded within a set time window. If it was, the check reports "seen" and the system can decide what to do — reject the repeat, ignore it, or return the earlier result; once the window has passed, the same identity is fresh again. The pattern itself stays out of that decision and out of how identities are compared — those belong to the system using it — which is why the same mechanism works for a to-do list (a one-day window blocks accidental re-adds), a payment system (a few-minute window stops a retried charge from billing twice), a comment box (a one-minute window stops double-click double-posts), and a signup form. One firm guarantee: recording the same identity again does not push the window forward, so a flurry of repeats cannot extend the block indefinitely — the clock starts at the first sighting and runs out at a fixed time.
+This is a freestanding (can be specified without naming any other pattern) concept in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state, its own actions, and its own operational principles, and is designed to compose with patterns that contain identifiable items rather than to be absorbed into them. The same mechanic appears under different names across literatures — *idempotency window* in distributed systems, *cooldown* in user-experience, *replay protection* in security — but the underlying concept is identical.
 
 ---
 
@@ -46,7 +42,7 @@ Duplicate Prevention gives a system a short-term memory of things it has recentl
 - An identity-matching rule, supplied by the containing pattern (string equality, case-insensitive, normalized, hashed).
 - Action: `record(identity) → ok` — invoked when an item with this [Identity] has been observed and removed. The action is total: it never rejects.
 - Action: `check(identity) → seen | not-seen` — invoked before the containing system accepts a new [Identity].
-- A clock providing wall-time (clock time as a human would read it, not an internal counter), injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock at the seam before the transition runs; the pure transition receives `now` as an explicit input and never reads a wall clock internally. `now` is not supplied by the business caller — which keeps the transition deterministic.
+- A clock providing wall-time (clock time as a human would read it, not an internal counter), injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock at the seam before the transition runs. The pure transition receives `now` as an explicit input and never reads a wall clock internally. `now` is not supplied by the business caller, which keeps the transition deterministic.
 
 ### Outputs
 
@@ -72,8 +68,16 @@ The concept has no user-driven flow of its own; it is invoked by a containing pa
 
 ### Decision points
 
-- **At `record(identity)`** — no precondition. If the [Identity] is currently under guard (recorded and within the [Window]), the original `recorded_at` is preserved; otherwise [Record] starts a fresh guard. This prevents accidental [Window] extension by repeated [Record] calls.
-- **At `check(identity)`** — no precondition. The result depends only on whether the [Identity] is currently in the [Recorded Set] and within the [Window].
+Both calls are total — no precondition, never rejected. The outcome turns on one question: is the [Identity] currently under guard (in the [Recorded Set] and within its [Window])?
+
+| Call | [Identity] under guard? | Result | Effect on state |
+|------|-------------------------|--------|-----------------|
+| `record` | no — never recorded, or [Window] elapsed | `ok` | enters the [Recorded Set]; `recorded_at` ← injected `now` |
+| `record` | yes | `ok` | unchanged — original `recorded_at` preserved (Invariant 2) |
+| `check` | yes | [Seen] | none — read-only (Invariant 3) |
+| `check` | no | [Not-Seen] | none — read-only (Invariant 3) |
+
+Preserving the original `recorded_at` on an already-guarded [Identity] is what stops repeated [Record] calls from extending the [Window] (Invariant 2). Infrastructure failures sit outside this matrix and are handled in Edge cases: a `record` write-failure is a silent [Window] miss, and `check` store-unavailability is a deployment fail-open / fail-closed choice.
 
 ### Behavior
 
@@ -249,7 +253,10 @@ Current and forthcoming compositions:
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 This pattern survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first revision. Findings were modest.
 
@@ -282,3 +289,7 @@ The pattern is `grounded — 2026-05-13` after one round.
 *Conflict-protocol case 2 (model mis-encoding), worked in-loop.* The first encoding modeled `recorded` as a separate flag flipped by an explicit `Expire` action; TLC rejected the *correct* model, exhibiting a transient state where the clock had advanced past the window while the flag was still set — a state the spec's Invariant 1 (anything in `recorded` is within window) and Invariant 4 (auto-removal at window elapse) forbid. Diagnosis: the spec treats membership as auto-expiring (derived), not lagging; the defect was in the model, not the English. Per the conflict protocol the *derivation* was fixed (membership made derived), the canonical English was **not** touched, and the model then verified. This is the protocol's case-2 path — "fix the derivation; never edit the English to match a buggy validator" — exercised on a real finding. *Conflict-protocol outcome:* model corroborates the English after the encoding fix; canonical English unchanged.
 
 **AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This atom grounded 2026-05-20 under the early process — foundation plus refinement, with no fresh-reader AI adversarial round — and carried the legacy grandfathered token. This round is that missing AI-conducted adversarial round (fresh-reader Opus, Happy-Torvalds-X2); it is the atom's Final Critique 4 (Rounds 1–3 the foundation/refinement baseline, per pressure-testing.md §Round structure). One foundational finding closed: F1 Logic Confinement — the clock is now host-injected at the I/O seam (was an 'implicit clock' read inside `record`/`check`). Refining: a Behavior note that an infrastructure write-failure on `record` is deliberately not surfaced as a rejection (a bounded liveness miss, not a safety violation); and single-recording re-keyed on derived membership (currently-under-guard) rather than raw physical presence, matching the formal model's `~Seen` guard. Caller signatures unchanged and the invariant set held at 4, so the fixes are additive with no constituent-change cascade. Formal-layer vote stands YES (Alloy/TLA model verified green); the clock seam is out of model scope, so F1 does not reopen it. Confirming fresh-reader Opus clearance gate (2026-06-18): CLEAR, 0 foundational, no new surface. Compositions affected — confirming check only, NOT a re-pass: Idempotent Reservation, Reserve from Pool. Grounds at Final Critique 4.
+
+**Readability + annotation showcase — 2026-06-29.** This atom now carries every readability direction at once, as the corpus's combined-improvements exemplar: the standardized flush-left TOC block; the [`annotation.md`](../working-ideas/annotation.md) `[Term]` markers + per-page Term registry (the one-atom pilot, confirmed rendering on the live host); the Summary/blockquote merge (one plain Tier-1 Summary at the top, the descriptive blockquote folded out as redundant, the *also-known-as* aliases kept); this collapsed Lineage; and the [`prose.md`](../working-ideas/prose.md) cuts — cut #1 (one idea per sentence: the Summary and the clock Inputs bullet split), cut #2 (the UX gloss dropped for the spelled-out term), cut #4 (Summary kept plain), and cut #5 (the `record`/`check` decision matrix rendered as a table in Decision points, with the infrastructure-failure edge conditions kept in prose beside it per the cut-#5 caveat). Expression only — every invariant, action signature, the `now − recorded_at < window` formula, and all four guarantees are unchanged in force; every `[Term]` still resolves to its card. **Re-verified, not re-grounded:** Status stays at Final Critique 4. Gates: linter 0; the TLA+ model and its buggy twin untouched and still PASS / rejected; diff read line-by-line against the same-claim-or-weaker test.
+
+</details>
