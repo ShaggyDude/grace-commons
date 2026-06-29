@@ -9,8 +9,8 @@ toc: true
 # Defensible Retention
 
 <details markdown="block">
- <summary>Table of contents</summary>
- {: .text-delta }
+<summary>Table of contents</summary>
+{: .text-delta }
 1. TOC
 {:toc}
 </details>

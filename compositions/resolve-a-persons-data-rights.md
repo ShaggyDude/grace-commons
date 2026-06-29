@@ -9,8 +9,8 @@ toc: true
 # Resolve a Person's Data Rights
 
 <details markdown="block">
- <summary>Table of contents</summary>
- {: .text-delta }
+<summary>Table of contents</summary>
+{: .text-delta }
 1. TOC
 {:toc}
 </details>
