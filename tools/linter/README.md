@@ -38,6 +38,7 @@ every push to `main` and every pull request.
 | **G-status-grammar** | A pattern with no `## Status` section, or whose status line does not start with one backticked token conforming to the pinned grammar (`pressure-testing.md` §Status line format, pinned 2026-06-11). |
 | **H-status-mirror** | A `roadmap.md` list entry that links a pattern and carries a status token differing from the pattern file's own token (the pattern file is the source of truth). Found 25 stale mirrors on its first run. |
 | **I-duplicate-row** | A `roadmap.md` status table naming the same pattern twice (the duplicated-Login-row class). |
+| **O-term-dangling / O-term-orphan** | On any page carrying an [`annotation.md`](../../working-ideas/annotation.md) `## Terms` registry, a `[Term]` shortcut-reference marker with no `[Term]: …` definition (dangling), or a definition no marker uses (orphan). **Opt-in by design:** pages with no Terms section are skipped, so the not-yet-converted patterns stay clean and recall grows as pages convert. Code spans and HTML comments are scrubbed; inline links `[x](…)`, reference labels `[x][y]`, footnotes `[^x]`, and definition lines are not markers. |
 
 ## Design principles (this tool is meant to be maintained by a small/cheap model)
 

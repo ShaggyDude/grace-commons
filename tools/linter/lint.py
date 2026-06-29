@@ -66,6 +66,14 @@ the three-pass review otherwise has to catch by eye —
                               Rn-Fn, Cn-N, OG-n) survives in an atom/composition
                               live body (debt #15, naming.md Rule zero). High
                               precision: these shapes have no legitimate collision.
+  O. Term registry resolver — on any page carrying an annotation.md `## Terms`
+                              registry, every `[Term]` shortcut-reference marker
+                              resolves to a `[Term]: …` definition (no dangling)
+                              and every definition is used (no orphan). OPT-IN:
+                              pages with no Terms section are skipped, so the
+                              not-yet-converted patterns stay at 0 and recall
+                              grows as pages convert. The safety net for the
+                              annotation.md bulk rollout. (Whitelist gloss is N.)
 
 Design notes (this tool is meant to be maintained by a small/cheap model):
   - Standard library only. No deps. Runs anywhere `python3` does.
@@ -702,6 +710,82 @@ def check_whitelist_gloss(patterns: dict[Path, Pattern]) -> list[Finding]:
 
 
 # --------------------------------------------------------------------------- #
+# Term registry resolver (O) — the annotation.md [Term] safety net
+# --------------------------------------------------------------------------- #
+#
+# OPT-IN BY DESIGN. The check fires only on a page that carries a `## Terms`
+# section (the annotation.md registry). The ~49 not-yet-converted patterns have no
+# such section, so they are skipped entirely and stay at 0 findings — recall grows
+# as pages convert, never by loosening. For a converted page it resolves every
+# `[Term]` shortcut-reference marker in the live body against the page's own
+# shortcut-reference definition set, flagging two drift classes:
+#   O-term-dangling  — a `[Term]` marker with no matching `[Term]: …` definition
+#                      (the reader's click 404s; the adapter can't project it).
+#   O-term-orphan    — a `[Term]: …` definition no marker uses (dead registry entry).
+#
+# A `[Term]` MARKER is a kramdown SHORTCUT reference: `[Text]` NOT immediately
+# followed by `(` (inline link) or `[` (full/collapsed reference). Code spans and
+# HTML comments are scrubbed first, so the meta-prose `` `[Term]` `` and the
+# commented definition block never count as markers. Definitions are the
+# `[Text]: target` lines (the registry itself). Comparison is on the bracket text
+# verbatim — anchors/casing are the adapter's job, not this check's.
+TERMS_SECTION = re.compile(r"^##\s+Terms\b", re.M)
+HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+# a shortcut-reference definition line: `[Text]: destination`
+TERM_DEF = re.compile(r"^\[([^\]]+)\]:\s*\S", re.M)
+# a shortcut-reference USE: `[Text]` that is NOT
+#   - preceded by `]`   (the label half of a full/collapsed reference `[text][label]`)
+#   - a footnote        (`[^id]`)
+#   - followed by `(`   (inline link `[text](url)`)
+#   - followed by `[`   (full/collapsed reference `[text][label]` / `[text][]`)
+#   - followed by `:`   (it is itself a `[text]: …` definition line, handled above)
+TERM_USE = re.compile(r"(?<!\])\[(?!\^)([^\]\[]+)\](?![\(\[:])")
+
+
+def check_term_registry(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """O. On any page carrying a `## Terms` registry, every `[Term]` marker resolves
+    to a registry definition, and every definition is used. Opt-in: pages without a
+    Terms section are skipped, so unconverted patterns stay clean."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        if not TERMS_SECTION.search(p.text):
+            continue  # opt-in: only converted pages carry a Terms registry
+        # definitions: the registry's `[Term]: …` lines (anywhere on the page)
+        defs = {m.group(1) for m in TERM_DEF.finditer(p.text)}
+        # markers: scrub HTML comments (possibly multi-line) and code spans, then
+        # collect shortcut refs. Comments are blanked line-count-preserving so the
+        # registry's own commented "[Term] marker" prose never counts and line
+        # numbers stay accurate.
+        no_comments = HTML_COMMENT.sub(
+            lambda m: "\n" * m.group(0).count("\n"), p.text)
+        used: dict[str, int] = {}
+        for i, raw in enumerate(no_comments.splitlines(), start=1):
+            line = CODE_SPAN.sub("", raw)
+            if TERM_DEF.match(line.strip()):
+                continue  # the definition line is not itself a marker use
+            for m in TERM_USE.finditer(line):
+                used.setdefault(m.group(1), i)
+        # O-term-dangling — a marker with no definition
+        for name, line in sorted(used.items(), key=lambda kv: kv[1]):
+            if name not in defs:
+                findings.append(Finding(
+                    p.path, line, "O-term-dangling",
+                    f"[{name}] marker has no registry definition "
+                    f"([{name}]: …) in this page's Terms section",
+                ))
+        # O-term-orphan — a definition no marker uses
+        def_lines = {m.group(1): line_of(p.text, m.start()) for m in TERM_DEF.finditer(p.text)}
+        for name in sorted(defs):
+            if name not in used:
+                findings.append(Finding(
+                    p.path, def_lines.get(name, 1), "O-term-orphan",
+                    f"registry defines [{name}] but no [{name}] marker uses it "
+                    f"(orphan definition)",
+                ))
+    return findings
+
+
+# --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
 
@@ -732,6 +816,7 @@ def main(argv: list[str]) -> int:
     findings += check_banned_application(root)
     findings += check_internal_ids(patterns)
     findings += check_whitelist_gloss(patterns)
+    findings += check_term_registry(patterns)
 
     findings.sort(key=lambda f: (f.code, str(f.path), f.line))
     for f in findings:
