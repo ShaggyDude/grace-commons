@@ -23,9 +23,9 @@ toc: true
 
 ## Intent
 
-The pattern prevents an identity from being acted on (added, submitted, posted, charged) if the same identity has been recently observed. "Recently" is bounded by a configurable window that opens on observation and closes after a duration.
+The pattern prevents an [Identity] from being acted on (added, submitted, posted, charged) if the same [Identity] has been recently observed. "Recently" is bounded by a configurable [Window] that opens on observation and closes after a duration.
 
-The concept addresses a class of integrity and UX (user-experience — how the system feels to the person using it) problems that recur across virtually every system accepting user or external input: accidental double-submits, rapid double-add of the same task, replayed messages, repeated payments, double-posted comments, redundant newsletter sign-ups. The common shape is constant — an action accepts an identity, the outcome should be rejected (or de-duplicated, or replayed) if the same identity was recently observed, and "recently" is a wall-time window.
+The concept addresses a class of integrity and UX (user-experience — how the system feels to the person using it) problems that recur across virtually every system accepting user or external input: accidental double-submits, rapid double-add of the same task, replayed messages, repeated payments, double-posted comments, redundant newsletter sign-ups. The common shape is constant — an action accepts an [Identity], the outcome should be rejected (or de-duplicated, or replayed) if the same [Identity] was recently observed, and "recently" is a wall-time [Window].
 
 This is a freestanding (can be specified without naming any other pattern) concept in the EOS (Essence of Software — Daniel Jackson's framework for specifying software concepts as freestanding, composable units) sense. It has its own state, its own actions, and its own operational principles, and is designed to compose with patterns that contain identifiable items rather than to be absorbed into them. The same mechanic appears under different names across literatures — *idempotency window* in distributed systems, *cooldown* in UX, *replay protection* in security — but the underlying concept is identical.
 
@@ -41,63 +41,63 @@ Duplicate Prevention gives a system a short-term memory of things it has recentl
 
 ### Inputs
 
-- An identity value to track.
-- A window duration, supplied by the containing pattern.
+- An [Identity] value to track.
+- A `window` duration, supplied by the containing pattern (the datum that sizes a [Window]).
 - An identity-matching rule, supplied by the containing pattern (string equality, case-insensitive, normalized, hashed).
-- Action: `record(identity) → ok` — invoked when an item with this identity has been observed and removed. The action is total: it never rejects.
-- Action: `check(identity) → seen | not-seen` — invoked before the containing system accepts a new identity.
+- Action: `record(identity) → ok` — invoked when an item with this [Identity] has been observed and removed. The action is total: it never rejects.
+- Action: `check(identity) → seen | not-seen` — invoked before the containing system accepts a new [Identity].
 - A clock providing wall-time (clock time as a human would read it, not an internal counter), injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock at the seam before the transition runs; the pure transition receives `now` as an explicit input and never reads a wall clock internally. `now` is not supplied by the business caller — which keeps the transition deterministic.
 
 ### Outputs
 
-- For any `check(identity)` query: `seen` (in `recorded` and within the window) or `not-seen` (otherwise).
-- Implicit: the `recorded` set, queryable for diagnostic purposes only.
+- For any `check(identity)` query: [Seen] (in the [Recorded Set] and within the [Window]) or [Not-Seen] (otherwise).
+- Implicit: the [Recorded Set], queryable for diagnostic purposes only.
 
 ### State
 
-A guarded set of identities, each with the timestamp at which it was recorded:
+The [Recorded Set] — a guarded set of identities, each with the timestamp at which it was recorded:
 
-- **`recorded`** — the set of identities currently under guard, each with its `recorded_at` timestamp.
+- **`recorded`** — the [Recorded Set]: the identities currently under guard, each with its `recorded_at` timestamp. (`recorded` is the projected field name for the set; `recorded_at` is the per-entry timestamp datum.)
 
-Identities enter `recorded` via `record(identity)`. They expire and leave automatically once the window has elapsed since `recorded_at`.
+Identities enter the [Recorded Set] via `record(identity)`. They expire and leave automatically once the [Window] has elapsed since `recorded_at`.
 
 ### Flow
 
 The concept has no user-driven flow of its own; it is invoked by a containing pattern.
 
-1. **Containing pattern removes an item.** It calls `record(identity)`. If the identity is not currently under guard (not in `recorded`, or in `recorded` but expired), it enters with `recorded_at` stamped from the injected `now`. If the identity is currently under guard (in `recorded` and within the window), the original `recorded_at` is preserved (single-recording invariant).
-2. **Time passes.** While the injected `now` evaluated at `check` time satisfies `now − recorded_at < window`, the identity remains under guard.
-3. **Containing pattern receives a new add request.** Before accepting, it calls `check(identity)`. The concept returns `seen` if the identity is in `recorded` and within the window; otherwise `not-seen`.
-4. **Window elapses.** The identity is removed from `recorded`. Subsequent `check(identity)` calls return `not-seen`.
+1. **Containing pattern removes an item.** It calls `record(identity)`. If the [Identity] is not currently under guard (not in the [Recorded Set], or in it but expired), it enters with `recorded_at` stamped from the injected `now`. If the [Identity] is currently under guard (in the [Recorded Set] and within the [Window]), the original `recorded_at` is preserved (single-recording invariant).
+2. **Time passes.** While the injected `now` evaluated at [Check] time satisfies `now − recorded_at < window`, the [Identity] remains under guard.
+3. **Containing pattern receives a new add request.** Before accepting, it calls `check(identity)`. The concept returns [Seen] if the [Identity] is in the [Recorded Set] and within the [Window]; otherwise [Not-Seen].
+4. **[Window] elapses.** The [Identity] is removed from the [Recorded Set]. Subsequent `check(identity)` calls return [Not-Seen].
 
 ### Decision points
 
-- **At `record(identity)`** — no precondition. If the identity is currently under guard (recorded and within window), the original `recorded_at` is preserved; otherwise `record` starts a fresh guard. This prevents accidental window extension by repeated record calls.
-- **At `check(identity)`** — no precondition. The result depends only on whether the identity is currently in `recorded` and within the window.
+- **At `record(identity)`** — no precondition. If the [Identity] is currently under guard (recorded and within the [Window]), the original `recorded_at` is preserved; otherwise [Record] starts a fresh guard. This prevents accidental [Window] extension by repeated [Record] calls.
+- **At `check(identity)`** — no precondition. The result depends only on whether the [Identity] is currently in the [Recorded Set] and within the [Window].
 
 ### Behavior
 
 How the concept appears to compose with containing patterns:
 
-- The containing pattern decides what to do with `seen` vs `not-seen`. Typical responses: reject the action, prompt the user for confirmation, attach a warning, return a previously-cached result. The concept itself does not act on the result.
-- Window duration is a policy choice of the containing pattern. Personal Todo uses 24 hours. Comment double-post protection uses ~60 seconds. Payment idempotency uses minutes. Newsletter double-subscribe uses hours.
-- Identity-matching rule is also a policy choice. String equality is the default. Case-insensitive, trimmed, normalized, or hashed variants are common.
-- Infrastructure write-failure on `record` is deliberately NOT surfaced as a rejection. The containing pattern has already acted when it calls `record` (it has already removed the item; there is nothing to roll back). The consequence is a bounded liveness miss — the guard will not fire for that identity during the window it should have covered — rather than a safety violation. See *`record` storage failures are silent window misses* in Edge cases.
+- The containing pattern decides what to do with [Seen] vs [Not-Seen]. Typical responses: reject the action, prompt the user for confirmation, attach a warning, return a previously-cached result. The concept itself does not act on the result.
+- The `window` duration is a policy choice of the containing pattern. Personal Todo uses 24 hours. Comment double-post protection uses ~60 seconds. Payment idempotency uses minutes. Newsletter double-subscribe uses hours.
+- The identity-matching rule is also a policy choice. String equality is the default. Case-insensitive, trimmed, normalized, or hashed variants are common.
+- Infrastructure write-failure on `record` is deliberately NOT surfaced as a rejection. The containing pattern has already acted when it calls [Record] (it has already removed the item; there is nothing to roll back). The consequence is a bounded liveness miss — the guard will not fire for that [Identity] during the [Window] it should have covered — rather than a safety violation. See *`record` storage failures are silent window misses* in Edge cases.
 
 ### Feedback
 
-- After `record(identity)` — `identity` is in `recorded` with `recorded_at` (or unchanged if already present).
-- After `check(identity)` — the result reflects the current state of `recorded` at the time of the call. The call does not modify state.
-- After window elapses — `identity` is no longer in `recorded`; subsequent checks return `not-seen`.
+- After `record(identity)` — the [Identity] is in the [Recorded Set] with `recorded_at` (or unchanged if already present).
+- After `check(identity)` — the result reflects the current state of the [Recorded Set] at the time of the call. The call does not modify state.
+- After the [Window] elapses — the [Identity] is no longer in the [Recorded Set]; subsequent checks return [Not-Seen].
 
-The `recorded` set is queryable for diagnostic purposes (debugging, observability) but is not typically exposed to users — it is an internal mechanism, not a user-facing concept.
+The [Recorded Set] is queryable for diagnostic purposes (debugging, observability) but is not typically exposed to users — it is an internal mechanism, not a user-facing concept.
 
 ### Invariants
 
-- **Invariant 1 — Window monotonicity.** For any identity in `recorded`, `now − recorded_at < window`.
-- **Invariant 2 — Single-recording.** `record(identity)` does not extend the window for an identity currently under guard (recorded and within window). The original `recorded_at` is preserved. An expired-but-not-yet-purged identity is not under guard; a `record` call on such an identity starts a fresh guard rather than extending the old one.
+- **Invariant 1 — Window monotonicity.** For any [Identity] in the [Recorded Set], `now − recorded_at < window`.
+- **Invariant 2 — Single-recording.** `record(identity)` does not extend the [Window] for an [Identity] currently under guard (recorded and within window). The original `recorded_at` is preserved. An expired-but-not-yet-purged [Identity] is not under guard; a [Record] call on such an [Identity] starts a fresh guard rather than extending the old one.
 - **Invariant 3 — Idempotency of check.** `check(identity)` does not modify state; repeated calls return the same result for the same `now`.
-- **Invariant 4 — Eventual expiry.** For any identity, after `window` time has elapsed since `recorded_at`, the identity is no longer in `recorded`.
+- **Invariant 4 — Eventual expiry.** For any [Identity], after `window` time has elapsed since `recorded_at`, the [Identity] is no longer in the [Recorded Set].
 
 ---
 
@@ -105,21 +105,21 @@ The `recorded` set is queryable for diagnostic purposes (debugging, observabilit
 
 ### Personal Todo (24-hour window)
 
-A user deletes *"buy milk."* Personal Todo calls `record("buy milk")`. Two hours later, the user attempts to add *"buy milk"* again. Personal Todo calls `check("buy milk")`, receives `seen`, rejects the add as `duplicate-recent`. Twenty-five hours after the original delete, the user tries again. Personal Todo calls `check("buy milk")`, receives `not-seen`, accepts the add.
+A user deletes *"buy milk."* Personal Todo calls `record("buy milk")`. Two hours later, the user attempts to add *"buy milk"* again. Personal Todo calls `check("buy milk")`, receives [Seen], rejects the add as `duplicate-recent`. Twenty-five hours after the original delete, the user tries again. Personal Todo calls `check("buy milk")`, receives [Not-Seen], accepts the add.
 
 ### Comment double-post protection (60-second window)
 
-A user submits a comment, the page hangs, they click submit again. The comment system calls `record(normalized-comment-text)` after the first submission completes. The second click triggers `check(...)`, receives `seen`, rejects the second post. The first comment goes through; the second does not.
+A user submits a comment, the page hangs, they click submit again. The comment system calls `record(normalized-comment-text)` after the first submission completes. The second click triggers `check(...)`, receives [Seen], rejects the second post. The first comment goes through; the second does not.
 
 ### Payment idempotency (5-minute window)
 
-A payment processor receives a charge request with an idempotency key. It calls `check(key)`, receives `not-seen`, processes the charge, calls `record(key)` with the response cached against it. A retry within five minutes triggers `check(key)`, receives `seen`, returns the previously-cached result without re-processing.
+A payment processor receives a charge request with an idempotency key. It calls `check(key)`, receives [Not-Seen], processes the charge, calls `record(key)` with the response cached against it. A retry within five minutes triggers `check(key)`, receives [Seen], returns the previously-cached result without re-processing.
 
 ### Newsletter double-subscribe (1-hour window)
 
-A user submits the same email address to a newsletter form twice in quick succession (browser back button, double-click on submit). The first submission processes. Subsequent submissions within the hour trigger `seen` and are silently absorbed-as-already-subscribed rather than producing duplicate confirmation emails.
+A user submits the same email address to a newsletter form twice in quick succession (browser back button, double-click on submit). The first submission processes. Subsequent submissions within the hour trigger [Seen] and are silently absorbed-as-already-subscribed rather than producing duplicate confirmation emails.
 
-The mechanic is identical across all four. What differs: the window duration, the identity-matching rule, and the containing pattern's response on `seen` (reject, return-cached, silently-absorb).
+The mechanic is identical across all four. What differs: the `window` duration, the identity-matching rule, and the containing pattern's response on [Seen] (reject, return-cached, silently-absorb).
 
 ---
 
@@ -127,19 +127,84 @@ The mechanic is identical across all four. What differs: the window duration, th
 
 What this pattern does not cover:
 
-- **The decision of what to do with `seen` / `not-seen`.** The concept reports; the containing pattern decides. This is by design — the same mechanic supports rejection (Personal Todo), de-duplication (newsletter), and replay (payment idempotency).
-- **Persistence across restarts.** Whether `recorded` is durable across process restarts is a deployment decision, not a property of the concept. Volatile in-memory implementations are valid; durable persisted implementations are valid.
+- **The decision of what to do with [Seen] / [Not-Seen].** The concept reports; the containing pattern decides. This is by design — the same mechanic supports rejection (Personal Todo), de-duplication (newsletter), and replay (payment idempotency).
+- **Persistence across restarts.** Whether the [Recorded Set] is durable across process restarts is a deployment decision, not a property of the concept. Volatile in-memory implementations are valid; durable persisted implementations are valid.
 - **Distributed coordination.** If multiple instances of the concept exist (one per server in a cluster), keeping them consistent is the job of a separate Coordination or Replication pattern.
-- **Long-term retention for analytics or audit.** The concept retains identities only for the window. Long-term audit belongs to a History or Audit pattern.
+- **Long-term retention for analytics or audit.** The concept retains identities only for the [Window]. Long-term audit belongs to a History or Audit pattern.
 - **Identity normalization.** The matching rule is supplied by the containing pattern. The concept does not opine on how identities are compared.
-- **Window extension on repeated record (sliding-window semantics).** The single-recording invariant explicitly forbids this. Patterns that need a window that resets on every observation are a separate concept (Sliding Window).
+- **[Window] extension on repeated record (sliding-window semantics).** The single-recording invariant explicitly forbids this. Patterns that need a [Window] that resets on every observation are a separate concept (Sliding Window).
 - **Calendar-day boundaries.** "Same day" semantics are not the same as "within 24 hours" — they are timezone-and-DST-sensitive. A separate Calendar Day pattern handles day-boundary semantics; this concept is wall-time based.
-- **`record` storage failures are silent window misses.** `record` is total — it never rejects — because the containing pattern has already acted when it calls `record` (it has already removed the item; there is nothing to roll back). If the underlying store write fails, the identity is not added to `recorded`, and subsequent `check` calls will return `not-seen` during the period when they should return `seen`. This is a window miss on the liveness side (duplicates may be accepted within the window), not a safety violation. Deployments where duplicate prevention is safety-critical should ensure the `recorded` store is durable and highly available.
-- **`check` store unavailability.** If the underlying store for `recorded` is unavailable at `check` time, the implementation must choose between two policies: fail-open (proceed as `not-seen`, allowing the action at the risk of accepting a duplicate) or fail-closed (proceed as `seen`, blocking the action at the risk of false rejection). The atom does not mandate a policy — the choice is deployment configuration. Fail-open is appropriate when the cost of a missed duplicate is low; fail-closed is appropriate when duplicate prevention is safety-critical.
-- **Clock semantics.** The `recorded_at` timestamp is stamped from the injected `now` (the host reads the clock at the seam and supplies it as an explicit input before the transition runs; see Inputs). The window expiry comparison is evaluated against the injected `now` at `check` time. Clock skew, monotonicity, and timezone handling are handled at the deployment layer; the atom does not address them beyond this access-at-seam commitment. The window is anchored to the wall-time of the first `record` call; a backward clock jump can make an identity appear expired before the configured window has truly elapsed, or delay expiry if the clock jumps forward. Containing patterns that require strict monotonic window enforcement should compose with a Logical Clock pattern rather than relying solely on this atom's wall-time mechanic.
-- **Lazy expiry and Invariant 1.** Invariant 1 states that for any identity in `recorded`, the window has not elapsed. This holds for eager-expiry implementations (which remove expired entries from `recorded` on a background schedule or on write). Lazy-expiry implementations — which check and remove expired entries only at `check` time — may retain expired entries in the `recorded` set. Invariant 1 technically does not hold over the internal state of lazy-expiry implementations, but Invariant 4 (eventual expiry) does hold, and the behavioral contract is preserved: `check` evaluates the window condition at call time and returns `not-seen` for expired entries regardless of whether they have been physically removed from `recorded`.
+- **`record` storage failures are silent window misses.** [Record] is total — it never rejects — because the containing pattern has already acted when it calls [Record] (it has already removed the item; there is nothing to roll back). If the underlying store write fails, the [Identity] is not added to the [Recorded Set], and subsequent [Check] calls will return [Not-Seen] during the period when they should return [Seen]. This is a [Window] miss on the liveness side (duplicates may be accepted within the [Window]), not a safety violation. Deployments where duplicate prevention is safety-critical should ensure the [Recorded Set] store is durable and highly available.
+- **`check` store unavailability.** If the underlying store for the [Recorded Set] is unavailable at [Check] time, the implementation must choose between two policies: fail-open (proceed as [Not-Seen], allowing the action at the risk of accepting a duplicate) or fail-closed (proceed as [Seen], blocking the action at the risk of false rejection). The atom does not mandate a policy — the choice is deployment configuration. Fail-open is appropriate when the cost of a missed duplicate is low; fail-closed is appropriate when duplicate prevention is safety-critical.
+- **Clock semantics.** The `recorded_at` timestamp is stamped from the injected `now` (the host reads the clock at the seam and supplies it as an explicit input before the transition runs; see Inputs). The [Window] expiry comparison is evaluated against the injected `now` at [Check] time. Clock skew, monotonicity, and timezone handling are handled at the deployment layer; the atom does not address them beyond this access-at-seam commitment. The [Window] is anchored to the wall-time of the first [Record] call; a backward clock jump can make an [Identity] appear expired before the configured `window` has truly elapsed, or delay expiry if the clock jumps forward. Containing patterns that require strict monotonic [Window] enforcement should compose with a Logical Clock pattern rather than relying solely on this atom's wall-time mechanic.
+- **Lazy expiry and Invariant 1.** Invariant 1 states that for any [Identity] in the [Recorded Set], the [Window] has not elapsed. This holds for eager-expiry implementations (which remove expired entries from the [Recorded Set] on a background schedule or on write). Lazy-expiry implementations — which check and remove expired entries only at [Check] time — may retain expired entries in the [Recorded Set]. Invariant 1 technically does not hold over the internal state of lazy-expiry implementations, but Invariant 4 (eventual expiry) does hold, and the behavioral contract is preserved: [Check] evaluates the [Window] condition at call time and returns [Not-Seen] for expired entries regardless of whether they have been physically removed from the [Recorded Set].
 
 Where the pattern breaks down: when "recent" is defined by something other than wall-time elapsed. Number-of-intervening-events, calendar-day-boundary, and business-day-boundary semantics each take a separate concept.
+
+---
+
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** (Type — a thing or category; Operation — a behavior; Member — a value of an enumerated Type), the Type it is a **Member of** where applicable, and its **Role** where the domain assigns one. Casing, parameter shapes, and wire forms are deliberately absent: those are projection, owned by adapters, not the canonical meaning. *(This Terms registry is the [`annotation.md`](../working-ideas/annotation.md) direction's one-atom pilot; it is representational only — it changes no guarantee, invariant, or behavior of the atom above.)*
+
+#### Identity
+
+The value a containing pattern asks Duplicate Prevention to remember and recognize — what counts as "the same thing seen again." The concept treats it as opaque: it stores and compares the value but never interprets it, and how two identities are judged equal is the containing pattern's matching rule, not this atom's.
+
+Kind: Type
+
+#### Window
+
+The bounded interval of time during which a recently-recorded [Identity] is still guarded. It opens when the [Identity] is first recorded and closes after a duration the containing pattern sets; once it has elapsed, the same [Identity] is fresh again. (The duration value that sizes the [Window] is supplied per containing pattern; the value itself is configuration, not part of this concept.)
+
+Kind: Type
+
+#### Recorded Set
+
+The atom's short-term memory: the collection of identities currently under guard, each held together with the time it was recorded. An [Identity] enters on [Record] and leaves automatically once its [Window] has elapsed. It is an internal mechanism, queryable for diagnostics, not a user-facing surface.
+
+Kind: Type
+
+#### Record
+
+The behavior a containing pattern invokes when it has just observed an [Identity] (for example, after removing an item) so that future repeats can be recognized. It places the [Identity] under guard, opening a [Window]. It always succeeds — it never refuses — and recording an [Identity] that is already under guard does not push its [Window] forward.
+
+Kind: Operation
+
+#### Check
+
+The behavior a containing pattern invokes before accepting a new [Identity], to ask whether that [Identity] is currently under guard. It only reads — it changes nothing — and reports its answer as [Seen] or [Not-Seen]. What to do with the answer is the containing pattern's decision.
+
+Kind: Operation
+
+#### Seen
+
+The answer [Check] gives when the [Identity] is currently under guard — recorded, and still within its [Window]. It signals "this was observed recently"; the containing pattern decides whether that means reject, de-duplicate, or return an earlier result.
+
+Kind:      Member
+Member of: the Check outcome
+Role:      Outcome
+
+#### Not-Seen
+
+The answer [Check] gives when the [Identity] is not currently under guard — either never recorded, or its [Window] has elapsed. It signals "this is fresh"; the containing pattern is clear to proceed.
+
+Kind:      Member
+Member of: the Check outcome
+Role:      Outcome
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Identity]: #identity
+[Window]: #window
+[Recorded Set]: #recorded-set
+[Record]: #record
+[Check]: #check
+[Seen]: #seen
+[Not-Seen]: #not-seen
 
 ---
 
@@ -170,7 +235,7 @@ It inherits from:
 Patterns compose with Duplicate Prevention through a uniform contract:
 
 1. On every successful *remove* action (delete, abandon, expire), call `record(identity)`.
-2. On every *add* action, call `check(identity)` before accepting; if `seen`, respond per the containing pattern's policy (reject, de-duplicate, return cached).
+2. On every *add* action, call `check(identity)` before accepting; if [Seen], respond per the containing pattern's policy (reject, de-duplicate, return cached).
 
 Window and identity-matching rule are configured per containing pattern, not globally. A single deployment may run multiple instances of Duplicate Prevention with different configurations — one per containing pattern.
 
