@@ -15,19 +15,15 @@ toc: true
 </details>
 
 
-> A productivity primitive: single-user task tracking with pending / done / removed states, edit-while-pending, and timestamps. Each unit has an opaque immutable id host-allocated at the I/O seam; description is a mutable property under explicit normalization rules.
+## Summary
+
+Personal Todo is a single-person to-do list: one user records tasks, edits them while they are still open, marks them done, and deletes them. Every task gets a permanent internal identifier that never changes, so editing the wording of a task does not change which task it is. Each task is always in exactly one state — open (Pending) or finished (Done) — until it is deleted. No two active tasks can share the same wording, and the same text typed two different ways still counts as a match. It is built for one person managing their own list — personal tasks, reading lists, grocery lists, goals — not for shared or delegated lists, which are handled by separate patterns that build on this one.
 
 ---
 
 ## Intent
 
 A single user records discrete units of work they intend to complete. Each unit can be edited while pending, marked done, and removed entirely. At any moment, every known unit is in exactly one logical condition.
-
----
-
-## Summary
-
-Personal Todo is a single-person to-do list: one user records tasks, edits them while they are still open, marks them done, and deletes them. Every task gets a permanent internal identifier that never changes, so editing the wording of a task does not change which task it is. The pattern guarantees that each task is always in exactly one state — open (Pending) or finished (Done) — until it is deleted, and that no two active tasks can share the same wording (the same text typed two different ways still counts as a match). It is built for one person managing their own list — personal tasks, reading lists, grocery lists, goals — not for shared or delegated lists, which are handled by separate patterns that build on this one.
 
 ---
 
@@ -91,12 +87,21 @@ Each unit carries:
 - **[Last Edited At]** — set on [Edit], absent if never edited.
 - **[Completed At]** — set on [Complete], present only while in [Done].
 
-Transitions:
+Transitions — every transition below stamps its timestamp from the injected [Now], and no transition reads the clock internally:
 
-- [Add] → unit enters [Pending] with a fresh [Id], normalized [Description], and [Added At] stamped from the injected [Now]. Returns [Id].
-- [Edit] → unit's [Description] is replaced with the normalized [New Description]; [Last Edited At] stamped from the injected [Now]. State unchanged. Returns `ok`.
-- [Complete] → unit moves [Pending] → [Done]; [Completed At] stamped from the injected [Now]. Returns `ok`.
-- [Delete] → unit leaves the system; id is retired. Returns `ok`.
+| action | from | to | guard | stamps | result | rejections |
+|--------|------|----|-------|--------|--------|-----------|
+| [Add] | *(no record)* | **[Pending]** | normalized [Description] valid and not active-duplicate | fresh [Id]; [Added At] = [Now] | the new [Id] | [Invalid Description]; [Duplicate Active]; [Storage Failure] |
+| [Edit] | [Pending] | **[Pending]** | normalized [New Description] valid and not active-duplicate (excluding the unit itself) | [Last Edited At] = [Now] | `ok` | [Not Known]; [Not Editable]; [Invalid Description]; [Duplicate Active]; [Storage Failure] |
+| [Complete] | [Pending] | **[Done]** | — | [Completed At] = [Now] | `ok` | [Not Known]; [Not Pending]; [Storage Failure] |
+| [Delete] | [Pending] or [Done] | *(leaves the system)* | — | — | `ok` | [Not Known]; [Storage Failure] |
+
+Four semantics the cells cannot hold:
+
+- *The [Edit] no-op is a real accepted case that never writes.* A normalized [New Description] equal to the unit's current normalized [Description] is accepted as a no-op: state is unchanged, [Last Edited At] is unchanged, no write occurs, and [Storage Failure] cannot result. Only a non-no-op [Edit] writes and can therefore storage-fail.
+- *Active-set uniqueness spans both live states and applies to two actions.* The normalized-[Description] uniqueness check runs across [Pending] ∪ [Done] together — [Done] counts toward it — and guards both [Add] and [Edit] (the [Edit] check excludes the unit being edited). A clash is rejected [Duplicate Active]; no unit is created or changed.
+- *A failed guard or store write leaves the prior state intact.* When a precondition fails or the store write fails after all preconditions pass, the atom returns the named rejection and the unit is left exactly as it was — [Add] creates no unit on [Storage Failure], and [Edit]/[Complete]/[Delete] leave their target unchanged.
+- *[Delete] is terminal and retires the id.* A unit leaves the system entirely on [Delete]; the [Id] is retired and never reused, and there is no transition back into [Pending] or [Done]. The full per-action preconditions are in Decision points.
 
 ### Flow
 
@@ -442,7 +447,10 @@ A formal-methods version of a similar concept exists in [concept-catalog](https:
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 This pattern is the result of two iterations of pressure-testing.
 
@@ -481,3 +489,7 @@ The two passes together exercise the architecture as designed: GRID's (the nine-
 **AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This atom grounded 2026-05-20 under the early process — foundation plus refinement, with no fresh-reader AI adversarial round — and carried the legacy grandfathered token. This round is that missing AI-conducted adversarial round (fresh-reader Opus, Happy-Torvalds-X2); it is the atom's Final Critique 4 (Rounds 1–3 the foundation/refinement baseline, per pressure-testing.md §Round structure). Two foundational findings closed: F1 Logic Confinement (`id` and the clock now host-injected at the I/O seam, was 'implicit clock'/'system-generated'); F2 the unreachable `not-pending` rejection removed from `edit` (the two-live-state model makes a non-Pending live unit necessarily Done → `not-editable`); `complete`'s reachable `not-pending` is preserved. Caller signatures unchanged and the invariant set held at 8, so the fixes are additive with no constituent-change cascade. Formal-layer vote stands NO (English-only, minimum-formalism). Confirming fresh-reader Opus clearance gate (2026-06-18): CLEAR, 0 foundational, no new surface. Compositions affected — confirming check only, NOT a re-pass: Shared Todo, Undo History. Note: Shared Todo and Undo History propagated the same `not-pending` into their own `edit` taxonomy; that is flagged for their own re-pass and is non-breaking (an unreachable arm, not a lost outcome). Grounds at Final Critique 4.
 
 **Annotation conversion (all four kinds + manifest) — 2026-06-29 (annotation.md first-batch rollout, with Duplicate Prevention and Event Log).** Converted every concept reference to a `[Term]` marker and added the per-page Terms registry, applying the resolved fourth-kind decision — **Field** and **Parameter**. This atom is the all-four-kinds stress test (it carries no formal model, so the harness gate does not apply): **Operations** [Add]/[Edit]/[Complete]/[Delete]; **Fields** (stored-as-themselves) [Id], [Description], [Added At], [Last Edited At], [Completed At]; **Parameters** (consumed, not stored under that name) [New Description] and [Now] — [New Description] exercises a *camelCase* canonical token (`newDescription`), which the adapter splits on the hump to project every casing; **state Members** [Pending] / [Done] (of "the unit state"); and the full **rejection Members** [Invalid Description], [Duplicate Active], [Not Known], [Not Pending], [Not Editable], [Storage Failure]. It also owns the **pinned cross-page Member** [Duplicate Recent] — Personal Todo's rejection in the Duplicate Prevention composition, `Wire: pinned` because callers switch on the exact `duplicate-recent` string; this is the card Duplicate Prevention's verbatim `duplicate-recent` literal will resolve to as a cross-page link once both registries are ratified. The four Operation contracts (`add(description) → …`, etc.) are kept once in Inputs as the labeled *projected contracts*; concrete example invocations (`add("buy milk")`, ids `t1`…) are left verbatim as illustrations; Duplicate Prevention's `record`/`check`/`seen` in Composition notes stay backticked (that page's surface — a cross-page reference, not a page-local marker). Expression only — all eight invariants hold their exact claims and the timestamp inequalities are unchanged ([Added At] ≤ [Last Edited At] is the same relation as before); caller signatures and the rejection taxonomy are unchanged in force. **Re-verified, not re-grounded:** Status stays at Final Critique 4. Gates: linter 0 (incl. the new O-term-resolver, resolving all 20 of this page's markers); no formal model exists, so the harness gate is N/A (English-only, per the 2026-06-03 NO vote); the derived manifest projects an identifier kind (Field, incl. the camelCase parameter) and an enumerated kind (Member, incl. the pinned wire); diff read line-by-line against the same-claim-or-weaker test.
+
+**Showcase pass — 2026-06-29.** Brought to the full showcase standard, matching the [`duplicate-prevention.md`](./duplicate-prevention.md) exemplar and mirroring the [`provisional-commitment.md`](./provisional-commitment.md) and [`session.md`](./session.md) lifecycle passes, on top of the already-applied annotation conversion. Changes are representational only: (1) **Summary/blockquote merge** — the plain Tier-1 [`prose.md`](../working-ideas/prose.md) cut-#4 Summary moved to the very top (before Intent), and the descriptive top blockquote folded out as redundant (its claims — single-user task tracking, pending/done/removed states, edit-while-pending, timestamps, the opaque immutable host-allocated [Id], and [Description] as a mutable property under normalization rules — are all already carried by Summary, Intent, Identity model, Description policy, and State). This atom has no *also-known-as* line and none was invented. (2) **Lineage collapse** — the Lineage notes wrapped in the collapsed `<details markdown="block">` block, mirroring the exemplars; the dated history is unchanged. (3) **prose.md cut #1 (one idea per sentence)** — the densest Summary run-on (the "each task is always in exactly one state… and that no two active tasks…" sentence) split into three short declaratives, lossless; the active-set-uniqueness and the typed-two-ways-still-matches caveats are both preserved. (4) **prose.md cut #5 (prose→structure)** — the State section's `Transitions:` prose list rendered as a **transition table** (action · from · to · guard · stamps · result · rejections), mirroring provisional-commitment and session. Per the cut-#5 caveat the cell-resistant semantics are kept in prose *beside* the table: the [Edit] no-op case (normalized [New Description] equal to current → accepted, no write, [Last Edited At] unchanged, cannot [Storage Failure]); active-set uniqueness spanning [Pending] ∪ [Done] and guarding both [Add] and [Edit]; the failed-guard / storage-failure-leaves-prior-state precision; and [Delete] being terminal with the [Id] retired (cross-referenced to Decision points, where the full per-action preconditions stay). Cuts #2 (glossary) and #3 (cross-ref footer) were assessed and **skipped**: acronyms are already spelled-out-once inline per the corpus convention here, and provenance already lives in Inputs/Behavior prose and Composition notes rather than being re-cited mid-sentence. Expression only — every invariant and its number (1–8), Invariant 7's three conditional timestamp inequalities ([Added At] ≤ [Last Edited At]; [Added At] ≤ [Completed At]; [Last Edited At] ≤ [Completed At]) verbatim in force, all four projected-contract signatures (`add(description) → …`, `edit(id, newDescription) → …`, `complete(id) → …`, `delete(id) → …`), every guarantee, every `[Term]` marker and card — including the pinned cross-page [Duplicate Recent] card (anchor `#duplicate-recent`, `Wire: pinned`) that duplicate-prevention.md links to — are unchanged in force; the Terms registry is intact and the Status token is untouched. **Re-verified, not re-grounded:** Status stays at `grounded on Final Critique 4 — 2026-06-18`. Gates: linter 0 (incl. the O-term resolver — all 20 markers resolve against the registry); **no formal model exists for Personal Todo, so the harness gate is N/A** (English-only, per the 2026-06-03 NO formal-layer vote — no model run was performed or implied); the derived manifest projects an identifier kind (Field) and an enumerated kind (Member, incl. the pinned [Duplicate Recent] wire) cleanly; `git status` shows only `atoms/personal-todo.md` modified (no model files); diff read line-by-line against the same-claim-or-weaker test.
+
+</details>
