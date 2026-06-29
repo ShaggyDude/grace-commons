@@ -11,6 +11,11 @@
             width: 23rem;
         }
     }
+    @media (min-width: 50rem) {
+    .main {
+        max-width: 60rem;
+    }
+}
 </style>
 <!-- Home page: override og:title so the OG card headline matches the description's subject (avoids "Home" as headline when description is about Grace Commons). Sub-pages keep their per-page title. -->
 {% if page.url == "/" %}
