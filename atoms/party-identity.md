@@ -14,8 +14,15 @@ toc: true
 {:toc}
 </details>
 
+## Summary
 
-> A compliance primitive: a persistent, verifiable identity record for an external party — customer, patient, counterparty, beneficial owner — with a verification lifecycle distinct from Actor Identity. Where Actor Identity models an internal actor's ability to sign actions with credentials, Party Identity models an external party's verified existence and identity attributes, which may be re-verified, suspended, or closed as circumstances change. States: Unverified, Verified, Suspended, Closed. The load-bearing contribution: a verified Party Identity record is the precondition any composing system (Know Your Customer onboarding, clinical enrollment, counterparty risk management) may declare before proceeding to regulated activity with a named party.
+Party Identity is a lasting, verifiable identity record for an external party — a customer, patient, counterparty, or beneficial owner (the individual who ultimately owns or controls a company). It answers the question every regulated system must settle before doing business: who is this party, and has their identity been checked?
+
+The record keeps the party's initial enrollment, the full history of identity checks (each one's method, result, and supporting evidence), and every later change — suspension, reinstatement, closure — with who did it and why. A party is in one of four states: Unverified, Verified, Suspended, or Closed; Closed is permanent, and a party who returns after closure needs a fresh enrollment.
+
+The central guarantee is that a party cannot be marked Verified without at least one recorded passing check since its most recent suspension — the system enforces this itself, so a downstream process can require "a verified party" and trust that the verified status rests on real, on-record evidence rather than a flipped flag.
+
+The pattern records the results of identity checks; it does not perform them (no document scanning, biometric matching, or sanctions screening), and it does not deduplicate parties — those belong to surrounding patterns. It is the foundation for regulatory customer-identity onboarding, patient enrollment, and counterparty identity management. (It is distinct from Actor Identity, which is about internal operators signing actions; a party is verified, an actor signs.)
 
 ---
 
@@ -31,89 +38,85 @@ This is a freestanding (can be specified without naming any other pattern) atom 
 
 ---
 
-## Summary
-
-Party Identity is a lasting, verifiable identity record for an external party — a customer, patient, counterparty, or beneficial owner (the individual who ultimately owns or controls a company). It answers the question every regulated system must settle before doing business: who is this party, and has their identity been checked? The record keeps the party's initial enrollment, the full history of identity checks (each one's method, result, and supporting evidence), and every later change — suspension, reinstatement, closure — with who did it and why. A party is in one of four states: Unverified, Verified, Suspended, or Closed; Closed is permanent, and a party who returns after closure needs a fresh enrollment. The central guarantee is that a party cannot be marked Verified without at least one recorded passing check since its most recent suspension — the system enforces this itself, so a downstream process can require "a verified party" and trust that the verified status rests on real, on-record evidence rather than a flipped flag. The pattern records the results of identity checks; it does not perform them (no document scanning, biometric matching, or sanctions screening), and it does not deduplicate parties — those belong to surrounding patterns. It is the foundation for regulatory customer-identity onboarding, patient enrollment, and counterparty identity management. (It is distinct from Actor Identity, which is about internal operators signing actions; a party is verified, an actor signs.)
-
----
-
 ## Structure
 
 ### Identity model
 
-Every party known to the system has a **`party_id`** — an opaque, immutable, system-generated identifier produced by `enroll`. The id is the party's identity; all other fields (name, date of birth, document type, document reference) are immutable *properties* set at enrollment, not the identity itself.
+Every party known to the system has a **[Party Id]** — an opaque, immutable, system-generated identifier produced by [Enroll]. The id is the party's identity; all other fields ([Name], [Date Of Birth], [Document Type], [Document Ref]) are immutable *properties* set at enrollment, not the identity itself.
 
 This matters because an external party's legal name, document number, or address may change — through legal name change, document renewal, address update — without the party ceasing to be *the same party*. Using a content field like name or document number as identity would collapse legitimate attribute evolution with distinct-party disambiguation. Opaque ids preserve the one-party-one-id discipline that makes lifelong identity chain-of-custody tractable and lets the composing Customer Onboarding composition link all activity — past and future — to a single durable reference.
 
-Each call to `verify` produces a **`verification_id`** — opaque, immutable, system-generated — associated with the party. Verification events are separate records, append-only; the current state reflects the outcome of the most recent successful verification, but all past events are preserved as the chain-of-custody for the party's verification history.
+Each call to [Verify] produces a **[Verification Id]** — opaque, immutable, system-generated — associated with the party. [Verification Event]s are separate records, append-only; the current state reflects the outcome of the most recent successful verification, but all past events are preserved as the chain-of-custody for the party's verification history.
 
-Each state-change event produced by `suspend`, `reinstate`, `close`, or a `verify`-driven Unverified → Verified transition has a **`state_change_id`** — opaque, immutable, system-generated — so that composing patterns (Actor Identity attestations, Audit Trail entries) can reference a specific suspension, reinstatement, or closure event by id rather than by timestamp or position in the log. State-change events accumulate on the party record as a time-ordered, append-only log; they are sub-records of the party, not independently stored record types, but each is individually addressable by its `state_change_id`.
+Each [State-Change Event] produced by [Suspend], [Reinstate], [Close], or a [Verify]-driven [Unverified] → [Verified] transition has a **[State Change Id]** — opaque, immutable, system-generated — so that composing patterns (Actor Identity attestations, Audit Trail entries) can reference a specific suspension, reinstatement, or closure event by id rather than by timestamp or position in the log. [State-Change Event]s accumulate on the party record as a time-ordered, append-only log; they are sub-records of the party, not independently stored record types, but each is individually addressable by its [State Change Id].
 
-Two enrollments for the same natural person produce two records with two distinct `party_id` values. The atom does not deduplicate; deduplication is the composing system's responsibility. See Edge cases.
+Two enrollments for the same natural person produce two records with two distinct [Party Id] values. The atom does not deduplicate; deduplication is the composing system's responsibility. See Edge cases.
 
 ### Inputs and Outputs
 
-- A legal name identifying the party at enrollment. Non-empty, non-whitespace-only. Maximum 500 characters. The atom stores the name as supplied; Unicode normalization, case folding, and transliteration are deployment policy.
-- A date of birth expressed as an ISO 8601 date (the International Organization for Standardization's date format, `YYYY-MM-DD`). Must parse as a valid calendar date; must not be in the future.
-- A document type identifying the class of identity document presented (`passport`, `national-id`, `drivers-license`, or similar). Non-empty, non-whitespace-only. The atom treats this as an opaque string; which values are valid for which regulatory regime belongs to the composing system.
-- A document reference — an opaque pointer to the identity document record in the composing identity-document store. Non-empty, non-whitespace-only. The atom does not validate the reference against the document store.
-- An enrolling actor reference — an opaque pointer to the internal actor performing enrollment. Non-empty, non-whitespace-only. Attribution only; verification and non-repudiation of the enrollment action compose with Actor Identity.
+- A legal [Name] identifying the party at enrollment. Non-empty, non-whitespace-only. Maximum 500 characters. The atom stores the name as supplied; Unicode normalization, case folding, and transliteration are deployment policy.
+- A [Date Of Birth] expressed as an ISO 8601 date (the International Organization for Standardization's date format, `YYYY-MM-DD`). Must parse as a valid calendar date; must not be in the future.
+- A [Document Type] identifying the class of identity document presented (`passport`, `national-id`, `drivers-license`, or similar). Non-empty, non-whitespace-only. The atom treats this as an opaque string; which values are valid for which regulatory regime belongs to the composing system.
+- A [Document Ref] — an opaque pointer to the identity document record in the composing identity-document store. Non-empty, non-whitespace-only. The atom does not validate the reference against the document store.
+- An [Enrolling Actor Ref] — an opaque pointer to the internal actor performing enrollment. Non-empty, non-whitespace-only. Attribution only; verification and non-repudiation of the enrollment action compose with Actor Identity.
 - Actions:
-  - `enroll(name, date_of_birth, document_type, document_ref, enrolling_actor_ref) → party_id | rejected(invalid-request | storage-failure)`
-  - `verify(party_id, verifying_actor_ref, verification_method, verification_result, evidence_ref) → (verification_id, state_change_id?) | rejected(not-known | already-closed | invalid-request | storage-failure)`
-  - `suspend(party_id, suspending_actor_ref, reason) → state_change_id | rejected(not-known | not-verifiable | already-suspended | already-closed | invalid-request | storage-failure)`
-  - `reinstate(party_id, reinstating_actor_ref, reason) → state_change_id | rejected(not-known | not-suspended | already-closed | no-passed-verification-since-suspend | invalid-request | storage-failure)`
-  - `close(party_id, closing_actor_ref, reason) → state_change_id | rejected(not-known | already-closed | invalid-request | storage-failure)`
+  - [Enroll] — (Projected contract: `enroll(name, date_of_birth, document_type, document_ref, enrolling_actor_ref) → party_id | rejected(invalid-request | storage-failure)`)
+  - [Verify] — (Projected contract: `verify(party_id, verifying_actor_ref, verification_method, verification_result, evidence_ref) → (verification_id, state_change_id?) | rejected(not-known | already-closed | invalid-request | storage-failure)`)
+  - [Suspend] — (Projected contract: `suspend(party_id, suspending_actor_ref, reason) → state_change_id | rejected(not-known | not-verifiable | already-suspended | already-closed | invalid-request | storage-failure)`)
+  - [Reinstate] — (Projected contract: `reinstate(party_id, reinstating_actor_ref, reason) → state_change_id | rejected(not-known | not-suspended | already-closed | no-passed-verification-since-suspend | invalid-request | storage-failure)`)
+  - [Close] — (Projected contract: `close(party_id, closing_actor_ref, reason) → state_change_id | rejected(not-known | already-closed | invalid-request | storage-failure)`)
 - An implicit clock providing wall-time timestamps.
 
-**On `verify`:** `verification_result` must be exactly `passed` or `failed`; any other value is `invalid-request`. `verification_method` is an opaque non-empty, non-whitespace-only string naming the method used (`manual-document-review`, `automated-ocr`, `biometric-match`, `database-check`, etc.). `evidence_ref` is an opaque non-empty, non-whitespace-only pointer to the verification evidence record. `verifying_actor_ref` is non-empty, non-whitespace-only. All four required string fields must be present; any missing field, or any field that is empty or whitespace-only, is `invalid-request`.
+**On [Verify]:** [Verification Result] must be exactly `passed` or `failed`; any other value is [Invalid Request]. [Verification Method] is an opaque non-empty, non-whitespace-only string naming the method used (`manual-document-review`, `automated-ocr`, `biometric-match`, `database-check`, etc.). [Evidence Ref] is an opaque non-empty, non-whitespace-only pointer to the verification evidence record. [Verifying Actor Ref] is non-empty, non-whitespace-only. All four required string fields must be present; any missing field, or any field that is empty or whitespace-only, is [Invalid Request].
 
-**On `suspend`, `reinstate`, `close`:** `reason` is required; non-empty, non-whitespace-only; maximum 2000 characters; stored as supplied, no normalization. `*_actor_ref` fields are opaque non-empty, non-whitespace-only references.
+**On [Suspend], [Reinstate], [Close]:** [Reason] is required; non-empty, non-whitespace-only; maximum 2000 characters; stored as supplied, no normalization. [Suspending Actor Ref], [Reinstating Actor Ref], and [Closing Actor Ref] are opaque non-empty, non-whitespace-only references.
 
-**Outputs** — the current set of party records; for each party: `party_id`, `name`, `date_of_birth`, `document_type`, `document_ref`, `enrolled_at`, `enrolling_actor_ref`, current state, state-change log, and the full ordered list of verification events. For each verification event: `verification_id`, `party_id`, `verifying_actor_ref`, `verification_method`, `verification_result`, `evidence_ref`, `verified_at`. Action returns: `party_id` from `enroll`; `(verification_id, state_change_id?)` from `verify` — `state_change_id` is present iff the call drove an Unverified → Verified transition, absent otherwise; `state_change_id` from `suspend`, `reinstate`, `close`. Every action that produces a state-change event returns the `state_change_id` directly so the caller can bind to Actor Identity for attestation and to Audit Trail for tamper-evident recording without a follow-up query — symmetric with `enroll` returning `party_id` and `verify` returning `verification_id`.
+**Outputs** — the current set of party records; for each party: [Party Id], [Name], [Date Of Birth], [Document Type], [Document Ref], [Enrolled At], [Enrolling Actor Ref], [Current State], [State-Change Log], and the full ordered list of [Verification Event]s. For each verification event: [Verification Id], [Party Id], [Verifying Actor Ref], [Verification Method], [Verification Result], [Evidence Ref], [Verified At]. Action returns: [Party Id] from [Enroll]; `(verification_id, state_change_id?)` from [Verify] — [State Change Id] is present iff the call drove an [Unverified] → [Verified] transition, absent otherwise; [State Change Id] from [Suspend], [Reinstate], [Close]. Every action that produces a state-change event returns the [State Change Id] directly so the caller can bind to Actor Identity for attestation and to Audit Trail for tamper-evident recording without a follow-up query — symmetric with [Enroll] returning [Party Id] and [Verify] returning [Verification Id].
 
 ### State
 
 A party, once enrolled, occupies exactly one of four states:
 
-- **Unverified** — enrolled but no successful verification has been recorded (or all verifications so far returned `failed`). Entry state for every newly enrolled party.
-- **Verified** — at least one `verify(verification_result=passed)` call has been recorded and no subsequent `suspend` or `close` has occurred.
-- **Suspended** — previously Verified; activity suspended pending investigation, re-verification, or a regulatory preservation order. Verification events may continue to be recorded during Suspended; the state does not change to Verified until `reinstate` is called.
-- **Closed** — terminal. The party record persists; the party may not be the subject of new regulated activity. `verify`, `suspend`, and `reinstate` are rejected for Closed parties.
+- **[Unverified]** — enrolled but no successful verification has been recorded (or all verifications so far returned `failed`). Entry state for every newly enrolled party.
+- **[Verified]** — at least one `verify(verification_result=passed)` call has been recorded and no subsequent [Suspend] or [Close] has occurred.
+- **[Suspended]** — previously [Verified]; activity suspended pending investigation, re-verification, or a regulatory preservation order. [Verification Event]s may continue to be recorded during [Suspended]; the state does not change to [Verified] until [Reinstate] is called.
+- **[Closed]** — terminal. The party record persists; the party may not be the subject of new regulated activity. [Verify], [Suspend], and [Reinstate] are rejected for Closed parties.
 
 Each party record carries:
 
-- **`party_id`** — opaque, immutable, system-generated. Set on `enroll`. Never changes.
-- **`name`** — set on `enroll`. Never changes.
-- **`date_of_birth`** — set on `enroll`. Never changes.
-- **`document_type`** — set on `enroll`. Never changes.
-- **`document_ref`** — set on `enroll`. Never changes.
-- **`enrolled_at`** — wall-time of enrollment. Set on `enroll`. Never changes.
-- **`enrolling_actor_ref`** — set on `enroll`. Never changes.
-- **current state** — one of {Unverified, Verified, Suspended, Closed}. Changes on `verify(passed)`, `suspend`, `reinstate`, `close`.
-- **state-change log** — ordered, append-only list of state-change events. Each carries: `state_change_id` (opaque, immutable, system-generated), prior state, new state, acting actor ref, timestamp, and reason. Reason is present for `suspend`-, `reinstate`-, and `close`-driven transitions; absent for `verify`-driven Unverified → Verified transitions (the `verify` action carries no `reason` field).
+- **[Party Id]** — opaque, immutable, system-generated. Set on [Enroll]. Never changes.
+- **[Name]** — set on [Enroll]. Never changes.
+- **[Date Of Birth]** — set on [Enroll]. Never changes.
+- **[Document Type]** — set on [Enroll]. Never changes.
+- **[Document Ref]** — set on [Enroll]. Never changes.
+- **[Enrolled At]** — wall-time of enrollment. Set on [Enroll]. Never changes.
+- **[Enrolling Actor Ref]** — set on [Enroll]. Never changes.
+- **[Current State]** — one of {[Unverified], [Verified], [Suspended], [Closed]}. Changes on `verify(passed)`, [Suspend], [Reinstate], [Close].
+- **[State-Change Log]** — ordered, append-only list of [State-Change Event]s. Each carries: [State Change Id] (opaque, immutable, system-generated), [Prior State], [New State], [Acting Actor Ref], timestamp, and [Reason]. [Reason] is present for [Suspend]-, [Reinstate]-, and [Close]-driven transitions; absent for [Verify]-driven [Unverified] → [Verified] transitions (the [Verify] action carries no [Reason] field).
 
-**Ordering.** The state-change log and the verification event list are ordered by insertion sequence. References elsewhere in this spec to "after the most recent X," "between X and Y," or "most recent X" mean by insertion order, not by timestamp order. Timestamps (`enrolled_at`, `verified_at`, and state-change-event timestamps) are best-effort wall-time metadata sourced from the implicit clock; under skew or clock adjustment, timestamps may not be monotonic. The Trusted Timestamping composition supplies a verifiable time-anchor that binds insertion order to externally-verifiable wall-time; without that composition, timestamps are advisory and insertion order is authoritative.
+**Ordering.** The [State-Change Log] and the [Verification Event] list are ordered by insertion sequence. References elsewhere in this spec to "after the most recent X," "between X and Y," or "most recent X" mean by insertion order, not by timestamp order. Timestamps ([Enrolled At], [Verified At], and state-change-event timestamps) are best-effort wall-time metadata sourced from the implicit clock; under skew or clock adjustment, timestamps may not be monotonic. The Trusted Timestamping composition supplies a verifiable time-anchor that binds insertion order to externally-verifiable wall-time; without that composition, timestamps are advisory and insertion order is authoritative.
 
-Transitions:
+**Transitions.** Each row is fail-closed: a rejected action writes no record and leaves the party's state unchanged. The [Invalid Request] (field-format) and [Storage Failure] (write-failure) guards apply to every action and are omitted from the table for brevity; their precedence among rejection reasons is specified under Decision points. "now" is the implicit clock reading at the call.
 
-- `enroll(...)` → party created in **Unverified** with fresh `party_id` and `enrolled_at = now`.
-- `verify(party_id, ..., verification_result=passed)` when Unverified → **Verified**; new verification event appended; new state-change event appended; both `verification_id` and `state_change_id` returned to the caller.
-- `verify(party_id, ..., verification_result=failed)` when Unverified → remains **Unverified**; new verification event appended with `failed` result; only `verification_id` returned.
-- `verify(party_id, ..., verification_result=passed)` when Verified → remains **Verified** (re-verification); new verification event appended; only `verification_id` returned.
-- `verify(party_id, ..., verification_result=failed)` when Verified → remains **Verified**; new verification event appended with `failed` result; only `verification_id` returned.
-- `verify(party_id, ..., *)` when Suspended → remains **Suspended**; new verification event appended; only `verification_id` returned.
-- `verify(party_id, ..., *)` when Closed → `rejected(already-closed)`.
-- `suspend(party_id, ...)` when Verified → **Suspended**; state-change event appended.
-- `suspend(party_id, ...)` when Unverified → `rejected(not-verifiable)`.
-- `suspend(party_id, ...)` when Suspended → `rejected(already-suspended)`.
-- `suspend(party_id, ...)` when Closed → `rejected(already-closed)`.
-- `reinstate(party_id, ...)` when Suspended, with at least one verification event recorded with `verification_result = passed` after the most recent `suspend` action in insertion order → **Verified**; state-change event appended.
-- `reinstate(party_id, ...)` when Suspended, with no `passed` verification event after the most recent `suspend` action in insertion order → `rejected(no-passed-verification-since-suspend)`.
-- `reinstate(party_id, ...)` when Unverified or Verified → `rejected(not-suspended)`.
-- `reinstate(party_id, ...)` when Closed → `rejected(already-closed)`.
-- `close(party_id, ...)` when not Closed → **Closed**; state-change event appended.
-- `close(party_id, ...)` when Closed → `rejected(already-closed)`.
+| Action | From state | Condition | To state | Effect |
+|---|---|---|---|---|
+| [Enroll] | — (new) | valid request | [Unverified] | party created with fresh [Party Id], `enrolled_at = now` |
+| [Verify] | [Unverified] | `verification_result=passed` | [Verified] | [Verification Event] + [State-Change Event] appended; both [Verification Id] and [State Change Id] returned |
+| [Verify] | [Unverified] | `verification_result=failed` | [Unverified] | [Verification Event] appended (`failed`); only [Verification Id] returned |
+| [Verify] | [Verified] | `passed` (re-verification) | [Verified] | [Verification Event] appended; only [Verification Id] returned |
+| [Verify] | [Verified] | `failed` | [Verified] | [Verification Event] appended (`failed`); only [Verification Id] returned |
+| [Verify] | [Suspended] | any result | [Suspended] | [Verification Event] appended; only [Verification Id] returned |
+| [Verify] | [Closed] | — | (rejected) | [Already Closed] |
+| [Suspend] | [Verified] | — | [Suspended] | [State-Change Event] appended |
+| [Suspend] | [Unverified] | — | (rejected) | [Not Verifiable] |
+| [Suspend] | [Suspended] | — | (rejected) | [Already Suspended] |
+| [Suspend] | [Closed] | — | (rejected) | [Already Closed] |
+| [Reinstate] | [Suspended] | ≥ 1 `passed` [Verification Event] after the most recent [Suspend] (insertion order) | [Verified] | [State-Change Event] appended |
+| [Reinstate] | [Suspended] | no `passed` verification after the most recent [Suspend] | (rejected) | [No Passed Verification Since Suspend] |
+| [Reinstate] | [Unverified] or [Verified] | — | (rejected) | [Not Suspended] |
+| [Reinstate] | [Closed] | — | (rejected) | [Already Closed] |
+| [Close] | any non-[Closed] | — | [Closed] | [State-Change Event] appended |
+| [Close] | [Closed] | — | (rejected) | [Already Closed] |
 
 ### Flow
 
@@ -143,75 +146,75 @@ Transitions:
 
 ### Decision points
 
-**Uniform validation rule.** Across all actions, every required string field — names, document attributes, actor references, verification metadata, reasons — must be non-null, non-empty, and non-whitespace-only; otherwise `rejected(invalid-request)`. The rule applies uniformly so that the audit-trail surface (especially the `reason` field on suspend, reinstate, and close) cannot be vacuously satisfied by a whitespace placeholder. Action-specific format constraints (e.g., `verification_result` must be `passed` or `failed`; `date_of_birth` must parse as a valid past-or-present ISO 8601 date) are stated per action below.
+**Uniform validation rule.** Across all actions, every required string field — names, document attributes, actor references, verification metadata, reasons — must be non-null, non-empty, and non-whitespace-only; otherwise [Invalid Request]. The rule applies uniformly so that the audit-trail surface (especially the [Reason] field on [Suspend], [Reinstate], and [Close]) cannot be vacuously satisfied by a whitespace placeholder. Action-specific format constraints (e.g., [Verification Result] must be `passed` or `failed`; [Date Of Birth] must parse as a valid past-or-present ISO 8601 date) are stated per action below.
 
-**At `enroll(name, date_of_birth, document_type, document_ref, enrolling_actor_ref)`:** All five fields must satisfy the uniform validation rule; otherwise `rejected(invalid-request)`. `date_of_birth` must parse as a valid ISO 8601 date (`YYYY-MM-DD`) and must not be a future date; otherwise `rejected(invalid-request)`. If the party store write fails after all preconditions pass, the atom returns `rejected(storage-failure)` — no party record is created. The atom does not check for duplicate party records; whether two records represent the same natural person is the composing system's responsibility.
+**At [Enroll]:** All five fields must satisfy the uniform validation rule; otherwise [Invalid Request]. [Date Of Birth] must parse as a valid ISO 8601 date (`YYYY-MM-DD`) and must not be a future date; otherwise [Invalid Request]. If the party store write fails after all preconditions pass, the atom returns [Storage Failure] — no party record is created. The atom does not check for duplicate party records; whether two records represent the same natural person is the composing system's responsibility.
 
-**At `verify(party_id, verifying_actor_ref, verification_method, verification_result, evidence_ref)`:** `party_id` must reference a known party; otherwise `rejected(not-known)`. The party must not be Closed; otherwise `rejected(already-closed)`. `verifying_actor_ref`, `verification_method`, and `evidence_ref` must satisfy the uniform validation rule; `verification_result` must be exactly `passed` or `failed`; otherwise `rejected(invalid-request)`. If the verification event store write fails, `rejected(storage-failure)` — no event is recorded and the party's state does not change. `verify` may be called against a Suspended party; the event is recorded but the party remains Suspended. When `verify(verification_result=passed)` against an Unverified party succeeds, the call produces both a verification event and a state-change event in a single atomic unit (Invariant 11); both ids are returned to the caller.
+**At [Verify]:** [Party Id] must reference a known party; otherwise [Not Known]. The party must not be [Closed]; otherwise [Already Closed]. [Verifying Actor Ref], [Verification Method], and [Evidence Ref] must satisfy the uniform validation rule; [Verification Result] must be exactly `passed` or `failed`; otherwise [Invalid Request]. If the verification event store write fails, [Storage Failure] — no event is recorded and the party's state does not change. [Verify] may be called against a [Suspended] party; the event is recorded but the party remains [Suspended]. When `verify(verification_result=passed)` against an [Unverified] party succeeds, the call produces both a [Verification Event] and a [State-Change Event] in a single atomic unit (Invariant 11); both ids are returned to the caller.
 
-**At `suspend(party_id, suspending_actor_ref, reason)`:** `party_id` must reference a known party; otherwise `rejected(not-known)`. The party must be in Verified state. If Unverified (party has not yet successfully verified — there is no active Verified status to suspend), `rejected(not-verifiable)`. If Suspended (party is already suspended — double-suspend), `rejected(already-suspended)`. `not-verifiable` and `already-suspended` are distinct because a composing system receiving `not-verifiable` knows to look at the verification workflow, while one receiving `already-suspended` knows a concurrent or duplicate suspend call has raced in. If Closed, `rejected(already-closed)`. `suspending_actor_ref` and `reason` must satisfy the uniform validation rule; otherwise `rejected(invalid-request)`. If the state-change write fails, `rejected(storage-failure)`.
+**At [Suspend]:** [Party Id] must reference a known party; otherwise [Not Known]. The party must be in [Verified] state. If [Unverified] (party has not yet successfully verified — there is no active Verified status to suspend), [Not Verifiable]. If [Suspended] (party is already suspended — double-suspend), [Already Suspended]. [Not Verifiable] and [Already Suspended] are distinct because a composing system receiving [Not Verifiable] knows to look at the verification workflow, while one receiving [Already Suspended] knows a concurrent or duplicate suspend call has raced in. If [Closed], [Already Closed]. [Suspending Actor Ref] and [Reason] must satisfy the uniform validation rule; otherwise [Invalid Request]. If the state-change write fails, [Storage Failure].
 
-**At `reinstate(party_id, reinstating_actor_ref, reason)`:** `party_id` must reference a known party; otherwise `rejected(not-known)`. The party must be in Suspended state. `not-suspended` is returned for both Unverified and Verified parties — both mean there is no active suspension to lift, and a composing system need not distinguish them to decide its next action. A composing system that does need to distinguish (e.g., to surface a different error message) must query the party state separately; the atom does not split this into two codes because the rejection semantics are the same: reinstate is inapplicable. If Closed, `rejected(already-closed)`. The party must have at least one verification event with `verification_result = passed` recorded after the most recent `suspend` action in insertion order; otherwise `rejected(no-passed-verification-since-suspend)`. This enforces that reinstatement reflects fresh evidence rather than a flag toggle: a suspension represents revoked trust in the prior verification, and a `reinstate` call without an intervening `passed` verification has no recorded basis for restoring trust. The atom owns this rule directly rather than delegating it to composing workflows; every composition that uses Party Identity inherits the invariant automatically. `reinstating_actor_ref` and `reason` must satisfy the uniform validation rule; otherwise `rejected(invalid-request)`. If the state-change write fails, `rejected(storage-failure)`.
+**At [Reinstate]:** [Party Id] must reference a known party; otherwise [Not Known]. The party must be in [Suspended] state. [Not Suspended] is returned for both [Unverified] and [Verified] parties — both mean there is no active suspension to lift, and a composing system need not distinguish them to decide its next action. A composing system that does need to distinguish (e.g., to surface a different error message) must query the party state separately; the atom does not split this into two codes because the rejection semantics are the same: reinstate is inapplicable. If [Closed], [Already Closed]. The party must have at least one [Verification Event] with `verification_result = passed` recorded after the most recent [Suspend] action in insertion order; otherwise [No Passed Verification Since Suspend]. This enforces that reinstatement reflects fresh evidence rather than a flag toggle: a suspension represents revoked trust in the prior verification, and a [Reinstate] call without an intervening `passed` verification has no recorded basis for restoring trust. The atom owns this rule directly rather than delegating it to composing workflows; every composition that uses Party Identity inherits the invariant automatically. [Reinstating Actor Ref] and [Reason] must satisfy the uniform validation rule; otherwise [Invalid Request]. If the state-change write fails, [Storage Failure].
 
-**At `close(party_id, closing_actor_ref, reason)`:** `party_id` must reference a known party; otherwise `rejected(not-known)`. The party must not already be Closed; otherwise `rejected(already-closed)`. `closing_actor_ref` and `reason` must satisfy the uniform validation rule; otherwise `rejected(invalid-request)`. If the state-change write fails, `rejected(storage-failure)`.
+**At [Close]:** [Party Id] must reference a known party; otherwise [Not Known]. The party must not already be [Closed]; otherwise [Already Closed]. [Closing Actor Ref] and [Reason] must satisfy the uniform validation rule; otherwise [Invalid Request]. If the state-change write fails, [Storage Failure].
 
-**Priority ordering among rejection reasons:** For any action, `not-known` is checked before state-validity checks; state-validity checks are checked before semantic-precondition checks (e.g., `reinstate`'s fresh-verification check); semantic-precondition checks are checked before field-format checks; all checks precede the store write. For `reinstate` specifically, the order is: `not-known` → `already-closed` or `not-suspended` (state validity, mutually exclusive) → `no-passed-verification-since-suspend` (semantic precondition, only reached when the party is Suspended) → `invalid-request` (field format) → `storage-failure`.
+**Priority ordering among rejection reasons:** For any action, [Not Known] is checked before state-validity checks; state-validity checks are checked before semantic-precondition checks (e.g., [Reinstate]'s fresh-verification check); semantic-precondition checks are checked before field-format checks; all checks precede the store write. For [Reinstate] specifically, the order is: [Not Known] → [Already Closed] or [Not Suspended] (state validity, mutually exclusive) → [No Passed Verification Since Suspend] (semantic precondition, only reached when the party is [Suspended]) → [Invalid Request] (field format) → [Storage Failure].
 
 ### Behavior
 
 Observed behavior, derived from how regulated systems use external party identity:
 
-`enroll` always creates a new party record in Unverified, regardless of whether another record with the same name and document already exists. Two concurrent onboarding flows for the same natural person produce two distinct `party_id` values. The atom does not deduplicate; the composing system detects and resolves duplicates. This design keeps the atom's obligations narrow and makes the enrollment record the immutable original — merging or closing a duplicate party is always an explicit, auditable act, not a silent collision.
+[Enroll] always creates a new party record in [Unverified], regardless of whether another record with the same name and document already exists. Two concurrent onboarding flows for the same natural person produce two distinct [Party Id] values. The atom does not deduplicate; the composing system detects and resolves duplicates. This design keeps the atom's obligations narrow and makes the enrollment record the immutable original — merging or closing a duplicate party is always an explicit, auditable act, not a silent collision.
 
 `verify(verification_result=failed)` records the failure event and leaves state unchanged. The atom's job is to record that a verification was attempted, who attempted it, what method was used, and what the result was. Whether to retry, escalate, or close after N failures is the composing system's policy. The atom does not count attempts.
 
-`verify(verification_result=passed)` against a Suspended party records the passed event but does not reinstate the party. This allows verification evidence to be gathered during an investigation — e.g., a fresh document check may be required before the compliance team makes the reinstate/close decision — without the `passed` result implicitly clearing the suspension. Reinstatement requires an explicit `reinstate` call with an actor and reason, and the atom further requires that at least one such `passed` verification be recorded after the most recent suspend before `reinstate` will succeed (Invariant 4). Reinstatement therefore always reflects fresh, recorded evidence — never a flag toggle.
+`verify(verification_result=passed)` against a [Suspended] party records the passed event but does not reinstate the party. This allows verification evidence to be gathered during an investigation — e.g., a fresh document check may be required before the compliance team makes the reinstate/close decision — without the `passed` result implicitly clearing the suspension. Reinstatement requires an explicit [Reinstate] call with an actor and reason, and the atom further requires that at least one such `passed` verification be recorded after the most recent suspend before [Reinstate] will succeed (Invariant 4). Reinstatement therefore always reflects fresh, recorded evidence — never a flag toggle.
 
-When `verify(verification_result=passed)` against an Unverified party drives the Unverified → Verified transition, the action returns both the new `verification_id` and the new `state_change_id`. The two ids refer to different facets of the same event-time: the verification event records the inputs and result of the verification (method, evidence, actor); the state-change event records the transition itself (prior state, new state, actor, timestamp). Composing patterns bind to the appropriate id — Actor Identity attestation of the verification action binds to `verification_id`; Actor Identity attestation of the state transition and Audit Trail tamper-evident recording bind to `state_change_id`. Returning both ids directly keeps the verify-driven state change symmetric with suspend/reinstate/close and removes the need for a follow-up query.
+When `verify(verification_result=passed)` against an [Unverified] party drives the [Unverified] → [Verified] transition, the action returns both the new [Verification Id] and the new [State Change Id]. The two ids refer to different facets of the same event-time: the [Verification Event] records the inputs and result of the verification (method, evidence, actor); the [State-Change Event] records the transition itself (prior state, new state, actor, timestamp). Composing patterns bind to the appropriate id — Actor Identity attestation of the verification action binds to [Verification Id]; Actor Identity attestation of the state transition and Audit Trail tamper-evident recording bind to [State Change Id]. Returning both ids directly keeps the verify-driven state change symmetric with suspend/reinstate/close and removes the need for a follow-up query.
 
-`close` is callable from any non-Closed state. Enrolling a party and immediately closing it (enrollment-in-error) is a valid sequence; the record persists in Closed with the stated reason, giving the audit trail evidence of the error. There is no way to retroactively hide an enrollment; the atom's delete-surface absence is structural.
+[Close] is callable from any non-[Closed] state. Enrolling a party and immediately closing it (enrollment-in-error) is a valid sequence; the record persists in [Closed] with the stated reason, giving the audit trail evidence of the error. There is no way to retroactively hide an enrollment; the atom's delete-surface absence is structural.
 
-No action modifies enrollment fields (`name`, `date_of_birth`, `document_type`, `document_ref`, `enrolled_at`, `enrolling_actor_ref`) after `enroll`. A legal name change, document renewal, or address update does not modify the enrollment record — those are events in the party's real-world attributes that compose via an Attribute Update pattern. The enrollment record captures what was known and verified at the time of onboarding; subsequent changes layer on top without overwriting the original.
+No action modifies enrollment fields ([Name], [Date Of Birth], [Document Type], [Document Ref], [Enrolled At], [Enrolling Actor Ref]) after [Enroll]. A legal name change, document renewal, or address update does not modify the enrollment record — those are events in the party's real-world attributes that compose via an Attribute Update pattern. The enrollment record captures what was known and verified at the time of onboarding; subsequent changes layer on top without overwriting the original.
 
 ### Feedback
 
 Each successful action produces an observable, measurable change:
 
-- After `enroll` — a new party appears in Unverified with fresh `party_id` and `enrolled_at`. Total party count increases by one.
-- After `verify` — a new verification event appears in the party's event list, with fresh `verification_id` and `verified_at`. If the result was `passed` and the party was Unverified, the party's state is now Verified (observable on the party record), a state-change entry appears with a fresh `state_change_id` returned to the caller alongside the `verification_id`, and the Unverified-count decreases by one while the Verified-count increases by one. If the party was Suspended or Verified at call time, the state is unchanged, the event count grows by one, and only `verification_id` is returned.
-- After `suspend` — the party's state is Suspended. A state-change entry appears on the party record with a fresh `state_change_id` (returned to the caller), prior state (Verified), new state (Suspended), `suspending_actor_ref`, timestamp, and reason. Verified-count decreases by one; Suspended-count increases by one.
-- After `reinstate` — the party's state is Verified. State-change entry appended; fresh `state_change_id` returned to caller. Suspended-count decreases by one; Verified-count increases by one.
-- After `close` — the party's state is Closed. State-change entry appended; fresh `state_change_id` returned to caller. The relevant state-count (Unverified, Verified, or Suspended) decreases by one; Closed-count increases by one. Total party count is unchanged.
+- After [Enroll] — a new party appears in [Unverified] with fresh [Party Id] and [Enrolled At]. Total party count increases by one.
+- After [Verify] — a new [Verification Event] appears in the party's event list, with fresh [Verification Id] and [Verified At]. If the result was `passed` and the party was [Unverified], the party's state is now [Verified] (observable on the party record), a state-change entry appears with a fresh [State Change Id] returned to the caller alongside the [Verification Id], and the Unverified-count decreases by one while the Verified-count increases by one. If the party was [Suspended] or [Verified] at call time, the state is unchanged, the event count grows by one, and only [Verification Id] is returned.
+- After [Suspend] — the party's state is [Suspended]. A state-change entry appears on the party record with a fresh [State Change Id] (returned to the caller), [Prior State] ([Verified]), [New State] ([Suspended]), [Suspending Actor Ref], timestamp, and [Reason]. Verified-count decreases by one; Suspended-count increases by one.
+- After [Reinstate] — the party's state is [Verified]. State-change entry appended; fresh [State Change Id] returned to caller. Suspended-count decreases by one; Verified-count increases by one.
+- After [Close] — the party's state is [Closed]. State-change entry appended; fresh [State Change Id] returned to caller. The relevant state-count ([Unverified], [Verified], or [Suspended]) decreases by one; Closed-count increases by one. Total party count is unchanged.
 
-Each rejected action produces an observable refusal with a named reason. The state-count segmentation (Unverified, Verified, Suspended, Closed) is computable from the party record set at any time; the atom does not maintain pre-aggregated counters but does not hide the underlying records.
+Each rejected action produces an observable refusal with a named reason. The state-count segmentation ([Unverified], [Verified], [Suspended], [Closed]) is computable from the party record set at any time; the atom does not maintain pre-aggregated counters but does not hide the underlying records.
 
 ### Invariants
 
 The following hold across all valid sequences of actions and constitute the verification surface of the pattern:
 
-**Invariant 1 — Party record permanence.** Once enrolled, a party record is never deleted from the system. The `party_id` returned by a successful `enroll` call is durably persisted and remains in the system indefinitely, regardless of subsequent state transitions including `close`. A `storage-failure` rejection on `enroll` guarantees no partial record was written.
+**Invariant 1 — Party record permanence.** Once enrolled, a party record is never deleted from the system. The [Party Id] returned by a successful [Enroll] call is durably persisted and remains in the system indefinitely, regardless of subsequent state transitions including [Close]. A [Storage Failure] rejection on [Enroll] guarantees no partial record was written.
 
-**Invariant 2 — State membership exclusivity.** Every party known to the system is in exactly one of {Unverified, Verified, Suspended, Closed} at all times.
+**Invariant 2 — State membership exclusivity.** Every party known to the system is in exactly one of {[Unverified], [Verified], [Suspended], [Closed]} at all times.
 
-**Invariant 3 — Closed is absorbing.** Once a party enters Closed, no action transitions it elsewhere. `verify`, `suspend`, and `reinstate` against a Closed party are rejected.
+**Invariant 3 — Closed is absorbing.** Once a party enters [Closed], no action transitions it elsewhere. [Verify], [Suspend], and [Reinstate] against a [Closed] party are rejected.
 
-**Invariant 4 — Verified requires a passed verification after the most recent suspend.** A party in Verified state has at least one verification event with `verification_result = passed` recorded after the most recent `suspend` action in insertion order (or, if never suspended, after `enroll`). The atom enforces this invariant directly: the only paths to Verified state are (a) `verify(verification_result=passed)` against an Unverified party, which records the required `passed` event as part of the transition, and (b) `reinstate` against a Suspended party, where `reinstate` itself requires at least one passed verification recorded after the most recent suspend before it will succeed. There is no action sequence the atom accepts that produces a Verified party without the required passed verification on record.
+**Invariant 4 — Verified requires a passed verification after the most recent suspend.** A party in [Verified] state has at least one [Verification Event] with `verification_result = passed` recorded after the most recent [Suspend] action in insertion order (or, if never suspended, after [Enroll]). The atom enforces this invariant directly: the only paths to [Verified] state are (a) `verify(verification_result=passed)` against an [Unverified] party, which records the required `passed` event as part of the transition, and (b) [Reinstate] against a [Suspended] party, where [Reinstate] itself requires at least one passed verification recorded after the most recent suspend before it will succeed. There is no action sequence the atom accepts that produces a [Verified] party without the required passed verification on record.
 
-**Invariant 5 — Verification events are immutable.** Once recorded, a verification event's `verification_id`, `party_id`, `verifying_actor_ref`, `verification_method`, `verification_result`, `evidence_ref`, and `verified_at` never change.
+**Invariant 5 — Verification events are immutable.** Once recorded, a [Verification Event]'s [Verification Id], [Party Id], [Verifying Actor Ref], [Verification Method], [Verification Result], [Evidence Ref], and [Verified At] never change.
 
-**Invariant 6 — Verification events are append-only in insertion order.** Verification events are only added to the set in insertion order; no event is removed and no event is inserted before any prior event. The verification event list of any party grows monotonically in length.
+**Invariant 6 — Verification events are append-only in insertion order.** [Verification Event]s are only added to the set in insertion order; no event is removed and no event is inserted before any prior event. The [Verification Event] list of any party grows monotonically in length.
 
-**Invariant 7 — Enrollment fields immutable under the atom's action contract.** No action exposed by this atom modifies `name`, `date_of_birth`, `document_type`, `document_ref`, `enrolled_at`, or `enrolling_actor_ref` after `enroll`. The Retention Window composition may scrub identifiable fields (`name`, `date_of_birth`, `document_ref`) under GDPR Article 17 erasure obligations or post-retention obligations; that scrubbing operates outside the atom's action contract and is recorded as a Retention Window event with attribution. `party_id`, `enrolled_at`, and `enrolling_actor_ref` survive scrubbing as the record's durable audit-identifier surface, so the chain of custody — who enrolled this party, when, and the full event history — remains traceable even after personal data is removed.
+**Invariant 7 — Enrollment fields immutable under the atom's action contract.** No action exposed by this atom modifies [Name], [Date Of Birth], [Document Type], [Document Ref], [Enrolled At], or [Enrolling Actor Ref] after [Enroll]. The Retention Window composition may scrub identifiable fields ([Name], [Date Of Birth], [Document Ref]) under GDPR Article 17 erasure obligations or post-retention obligations; that scrubbing operates outside the atom's action contract and is recorded as a Retention Window event with attribution. [Party Id], [Enrolled At], and [Enrolling Actor Ref] survive scrubbing as the record's durable audit-identifier surface, so the chain of custody — who enrolled this party, when, and the full event history — remains traceable even after personal data is removed.
 
-**Invariant 8 — State-change events are auditable.** Every transition (Unverified → Verified, Verified → Suspended, Suspended → Verified, any → Closed) produces a durable state-change entry on the party record with a fresh `state_change_id`, naming the prior state, new state, acting actor reference, and timestamp. `reason` is present for `suspend`-, `reinstate`-, and `close`-driven transitions; it is absent for `verify`-driven transitions (the `verify` action carries no `reason` field). No state transition is silent.
+**Invariant 8 — State-change events are auditable.** Every transition ([Unverified] → [Verified], [Verified] → [Suspended], [Suspended] → [Verified], any → [Closed]) produces a durable state-change entry on the party record with a fresh [State Change Id], naming the [Prior State], [New State], acting actor reference, and timestamp. [Reason] is present for [Suspend]-, [Reinstate]-, and [Close]-driven transitions; it is absent for [Verify]-driven transitions (the [Verify] action carries no [Reason] field). No state transition is silent.
 
-**Invariant 9 — Id stability.** A party's `party_id` is set on `enroll` and never changes. A verification event's `verification_id` is set on `verify` and never changes. A state-change event's `state_change_id` is set when the event is written and never changes.
+**Invariant 9 — Id stability.** A party's [Party Id] is set on [Enroll] and never changes. A [Verification Event]'s [Verification Id] is set on [Verify] and never changes. A [State-Change Event]'s [State Change Id] is set when the event is written and never changes.
 
-**Invariant 10 — No id reuse.** No two parties share a `party_id`; no two verification events share a `verification_id`; no two state-change events share a `state_change_id`, across the lifetime of the system.
+**Invariant 10 — No id reuse.** No two parties share a [Party Id]; no two verification events share a [Verification Id]; no two state-change events share a [State Change Id], across the lifetime of the system.
 
-**Invariant 11 — Action atomicity.** Each action either commits all of its intended records — party record, verification event, state-change event, as applicable to the action — or none. A `storage-failure` rejection on any action guarantees no partial record, across any record type written by that action, has been persisted. The verify-on-Unverified case writes both a verification event and a state-change event in a single atomic unit; if either write fails, neither is persisted and the action returns `storage-failure`. Suspend, reinstate, and close each write a single state-change event; enroll writes a party record. The total count of party records is monotonically non-decreasing.
+**Invariant 11 — Action atomicity.** Each action either commits all of its intended records — party record, verification event, state-change event, as applicable to the action — or none. A [Storage Failure] rejection on any action guarantees no partial record, across any record type written by that action, has been persisted. The verify-on-Unverified case writes both a [Verification Event] and a [State-Change Event] in a single atomic unit; if either write fails, neither is persisted and the action returns [Storage Failure]. [Suspend], [Reinstate], and [Close] each write a single [State-Change Event]; [Enroll] writes a party record. The total count of party records is monotonically non-decreasing.
 
-Invariants 1, 5, 6, and 8 together give the *identity chain-of-custody* property: the full history of a party's identity — who enrolled them, every verification attempt, every state change — is recoverable from the records alone and cannot be silently altered. Each state-change event is individually addressable by `state_change_id`, so Actor Identity attestations and Audit Trail entries can reference a specific suspension or closure event by id. Invariant 4 gives the *verification integrity* property: Verified state is not self-asserted. Invariant 3 gives the *terminal closure* property: a closed party cannot be silently reopened.
+Invariants 1, 5, 6, and 8 together give the *identity chain-of-custody* property: the full history of a party's identity — who enrolled them, every verification attempt, every state change — is recoverable from the records alone and cannot be silently altered. Each [State-Change Event] is individually addressable by [State Change Id], so Actor Identity attestations and Audit Trail entries can reference a specific suspension or closure event by id. Invariant 4 gives the *verification integrity* property: [Verified] state is not self-asserted. Invariant 3 gives the *terminal closure* property: a [Closed] party cannot be silently reopened.
 
 ---
 
@@ -259,11 +262,11 @@ Alternative closing path (match confirmed): `close(party_id="party_7732", closin
 
 Three scenarios the atom must survive in regulated contexts:
 
-**Regulator audit — "show me every party that proceeded to regulated activity without a verified identity, and every party reinstated without fresh evidence."** The auditor's first query is for any regulated activity record linked to a `party_id` in Unverified or Closed state; Invariant 4 is the structural answer for the verification chain — the only paths to Verified state are `verify(verification_result=passed)` from Unverified and `reinstate` from Suspended, and `reinstate` itself requires a `passed` verification event recorded after the most recent `suspend` in insertion order. The auditor's second query — "any party currently in Verified state whose verification chain breaks at the most recent suspend" — is structurally empty by Invariant 4: the atom rejects `reinstate` calls that would produce such a state, so no party in Verified state can lack the required passed-verification record. Any composing system that gates regulated activity on the party being in Verified state can demonstrate compliance from the records alone; the party's state-change log and verification event list answer both queries without developer narration. The auditor does not need to trust the system's claim; they can reconstruct any party's state at any point in insertion order from the state-change log (Invariant 8), and the Trusted Timestamping composition supplies the wall-time anchor when the audit query is bounded by clock time rather than event index.
+**Regulator audit — "show me every party that proceeded to regulated activity without a verified identity, and every party reinstated without fresh evidence."** The auditor's first query is for any regulated activity record linked to a [Party Id] in [Unverified] or [Closed] state; Invariant 4 is the structural answer for the verification chain — the only paths to [Verified] state are `verify(verification_result=passed)` from [Unverified] and [Reinstate] from [Suspended], and [Reinstate] itself requires a `passed` [Verification Event] recorded after the most recent [Suspend] in insertion order. The auditor's second query — "any party currently in Verified state whose verification chain breaks at the most recent suspend" — is structurally empty by Invariant 4: the atom rejects [Reinstate] calls that would produce such a state, so no party in [Verified] state can lack the required passed-verification record. Any composing system that gates regulated activity on the party being in [Verified] state can demonstrate compliance from the records alone; the party's [State-Change Log] and [Verification Event] list answer both queries without developer narration. The auditor does not need to trust the system's claim; they can reconstruct any party's state at any point in insertion order from the [State-Change Log] (Invariant 8), and the Trusted Timestamping composition supplies the wall-time anchor when the audit query is bounded by clock time rather than event index.
 
-**Disputed identity — "the party claims they were never verified; show me the verification chain."** The party (or their counsel) challenges the claim that their identity was verified before account opening. The investigator retrieves the verification event list for the `party_id`: each event names `verifying_actor_ref`, `verification_method`, `evidence_ref`, and `verified_at`. Invariant 5 (immutability) and Invariant 6 (append-only) establish that no verification event can have been altered or inserted after the fact. The `evidence_ref` on each `passed` event points to the document or database record that supported the verification — the dispute is resolved by producing the evidence record alongside the immutable verification event. If the `evidence_ref` record cannot be produced, the verification event is an unsubstantiated claim; that is an evidence-management failure at the document store, not a Party Identity failure.
+**Disputed identity — "the party claims they were never verified; show me the verification chain."** The party (or their counsel) challenges the claim that their identity was verified before account opening. The investigator retrieves the [Verification Event] list for the [Party Id]: each event names [Verifying Actor Ref], [Verification Method], [Evidence Ref], and [Verified At]. Invariant 5 (immutability) and Invariant 6 (append-only) establish that no [Verification Event] can have been altered or inserted after the fact. The [Evidence Ref] on each `passed` event points to the document or database record that supported the verification — the dispute is resolved by producing the evidence record alongside the immutable [Verification Event]. If the [Evidence Ref] record cannot be produced, the [Verification Event] is an unsubstantiated claim; that is an evidence-management failure at the document store, not a Party Identity failure.
 
-**Breach or incident investigation — "during the breach window, which verified parties' records may have been accessed or altered?"** An incident investigator is given a time window (e.g., 2026-04-01 through 2026-04-15) and needs to reconstruct which Party Identity records were in Verified state during that window and which state changes occurred. The state-change log (Invariant 8) records every transition in insertion order with a wall-time timestamp; the investigator replays each party's log in insertion order to determine its state at the window's start and end. The verification event list (Invariant 6, append-only in insertion order) shows what verification evidence was on file during the window. Together, these bound the scope of affected records from the records alone, without requiring log files from an external system. The atom's append-only, immutable-event discipline forecloses the possibility that an attacker altered the verification history to conceal unauthorized state changes; any gap in the state-change log is itself a finding. Where the breach scope requires wall-time bounds (rather than event-index bounds), the Trusted Timestamping composition supplies the time-anchor that binds insertion order to externally-verifiable wall-time; without that composition, the investigator's reconstruction is event-index-authoritative and timestamps are advisory only.
+**Breach or incident investigation — "during the breach window, which verified parties' records may have been accessed or altered?"** An incident investigator is given a time window (e.g., 2026-04-01 through 2026-04-15) and needs to reconstruct which Party Identity records were in [Verified] state during that window and which state changes occurred. The [State-Change Log] (Invariant 8) records every transition in insertion order with a wall-time timestamp; the investigator replays each party's log in insertion order to determine its state at the window's start and end. The [Verification Event] list (Invariant 6, append-only in insertion order) shows what verification evidence was on file during the window. Together, these bound the scope of affected records from the records alone, without requiring log files from an external system. The atom's append-only, immutable-event discipline forecloses the possibility that an attacker altered the verification history to conceal unauthorized state changes; any gap in the [State-Change Log] is itself a finding. Where the breach scope requires wall-time bounds (rather than event-index bounds), the Trusted Timestamping composition supplies the time-anchor that binds insertion order to externally-verifiable wall-time; without that composition, the investigator's reconstruction is event-index-authoritative and timestamps are advisory only.
 
 ---
 
@@ -271,17 +274,17 @@ Three scenarios the atom must survive in regulated contexts:
 
 A derived implementation of Party Identity is *acceptable* — in the regulator-acceptance sense — when an external auditor, given the party record set and the verification event set, can do all of the following without recourse to source code, runbooks, or developer narration:
 
-**Reconstruct any party's state at any point in the event log.** The state-change log (Invariant 8) provides a complete, insertion-ordered transition history from `enroll` through the current state. The auditor can replay the log forward in insertion order from `enroll` and arrive at the party's state as of any given event index. When the Trusted Timestamping composition binds insertion order to verifiable wall-time, the auditor can also arrive at the party's state as of any given wall-time instant; without that composition, the reconstruction is event-index-authoritative and timestamps are advisory.
+**Reconstruct any party's state at any point in the event log.** The [State-Change Log] (Invariant 8) provides a complete, insertion-ordered transition history from [Enroll] through the current state. The auditor can replay the log forward in insertion order from [Enroll] and arrive at the party's state as of any given event index. When the Trusted Timestamping composition binds insertion order to verifiable wall-time, the auditor can also arrive at the party's state as of any given wall-time instant; without that composition, the reconstruction is event-index-authoritative and timestamps are advisory.
 
-**Verify that every party in Verified state has at least one passed verification event after the most recent suspend.** Query the verification event set for each party in Verified state; confirm the existence of a `verification_result = passed` event recorded after the most recent `suspend` action in insertion order (or after `enroll` if never suspended). Invariant 4 makes this set structurally non-empty for every Verified party — the atom enforces the condition directly at `reinstate` time via the `no-passed-verification-since-suspend` rejection, so the records cannot exhibit a Verified party that fails this check. The auditor sees the structural guarantee, not a procedural claim.
+**Verify that every party in Verified state has at least one passed verification event after the most recent suspend.** Query the [Verification Event] set for each party in [Verified] state; confirm the existence of a `verification_result = passed` event recorded after the most recent [Suspend] action in insertion order (or after [Enroll] if never suspended). Invariant 4 makes this set structurally non-empty for every [Verified] party — the atom enforces the condition directly at [Reinstate] time via the [No Passed Verification Since Suspend] rejection, so the records cannot exhibit a [Verified] party that fails this check. The auditor sees the structural guarantee, not a procedural claim.
 
-**Confirm that every verification event is attributed to an actor and method.** Each event records `verifying_actor_ref`, `verification_method`, `evidence_ref`, and `verified_at`. An auditor can trace every verification decision to the actor and method that produced it, and to the evidence record that supported it, from the event store alone.
+**Confirm that every verification event is attributed to an actor and method.** Each event records [Verifying Actor Ref], [Verification Method], [Evidence Ref], and [Verified At]. An auditor can trace every verification decision to the actor and method that produced it, and to the evidence record that supported it, from the event store alone.
 
-**Trace the complete lifecycle of any party from enrollment to current state.** The enrollment fields (Invariant 7) capture the initial attributes; the state-change log (Invariant 8) captures every subsequent transition; the verification event list (Invariants 5–6) captures the complete verification history. Together they form a complete, time-ordered, append-only biography of the party record.
+**Trace the complete lifecycle of any party from enrollment to current state.** The enrollment fields (Invariant 7) capture the initial attributes; the [State-Change Log] (Invariant 8) captures every subsequent transition; the [Verification Event] list (Invariants 5–6) captures the complete verification history. Together they form a complete, time-ordered, append-only biography of the party record.
 
-**Identify every party currently in each state.** The current state field on each party record, queryable as a set, partitions the party population into Unverified, Verified, Suspended, and Closed. Counts per state are derivable from the set.
+**Identify every party currently in each state.** The [Current State] field on each party record, queryable as a set, partitions the party population into [Unverified], [Verified], [Suspended], and [Closed]. Counts per state are derivable from the set.
 
-**Identify the composing patterns active in this deployment.** Whether Actor Identity attestation is wired into state transitions (attributing each `suspend`, `reinstate`, `close` action to a verifiable proof), whether Audit Trail is active for tamper-evident recording, whether Retention Window governs party record lifetime, and whether ongoing monitoring is wired to produce periodic `verify` calls.
+**Identify the composing patterns active in this deployment.** Whether Actor Identity attestation is wired into state transitions (attributing each [Suspend], [Reinstate], [Close] action to a verifiable proof), whether Audit Trail is active for tamper-evident recording, whether Retention Window governs party record lifetime, and whether ongoing monitoring is wired to produce periodic [Verify] calls.
 
 ---
 
@@ -289,13 +292,13 @@ A derived implementation of Party Identity is *acceptable* — in the regulator-
 
 What this atom does not cover:
 
-**Duplicate detection and deduplication.** The atom does not detect or prevent two `party_id` records for the same natural person or entity. Detecting that two enrollments represent the same individual — whether by biometric match, document comparison, or external identity resolution — is a composing concept. The atom models the lifecycle of a single party record; the graph of records and their deduplication relationships is external.
+**Duplicate detection and deduplication.** The atom does not detect or prevent two [Party Id] records for the same natural person or entity. Detecting that two enrollments represent the same individual — whether by biometric match, document comparison, or external identity resolution — is a composing concept. The atom models the lifecycle of a single party record; the graph of records and their deduplication relationships is external.
 
-**Identity attribute updates.** No action modifies `name`, `date_of_birth`, `document_type`, or `document_ref` after enrollment. A legal name change, document renewal, or address update does not overwrite the enrollment fields. The principle: the enrollment record is the auditable original, capturing what was known at onboarding. The objection: real parties' attributes change and the system must reflect current information. The mechanism: a composing Attribute Update pattern appends versioned attribute events to the party record without mutating the enrollment fields; queries that need the current view read the latest attribute event; queries that need the at-time-of-onboarding view read the enrollment fields. The result: the audit trail for any party's attributes is complete and no prior state is silently overwritten. Attribute Update is distinct from retention-driven anonymization (Invariant 7): Attribute Update layers new attribute values without removing the original; Retention Window scrubbing removes personal data entirely when retention or erasure obligations require it. The two compositions operate on different lifecycle events with different audit semantics — attribute update preserves history; anonymization removes personal data while preserving the audit identifier.
+**Identity attribute updates.** No action modifies [Name], [Date Of Birth], [Document Type], or [Document Ref] after enrollment. A legal name change, document renewal, or address update does not overwrite the enrollment fields. The principle: the enrollment record is the auditable original, capturing what was known at onboarding. The objection: real parties' attributes change and the system must reflect current information. The mechanism: a composing Attribute Update pattern appends versioned attribute events to the party record without mutating the enrollment fields; queries that need the current view read the latest attribute event; queries that need the at-time-of-onboarding view read the enrollment fields. The result: the audit trail for any party's attributes is complete and no prior state is silently overwritten. Attribute Update is distinct from retention-driven anonymization (Invariant 7): Attribute Update layers new attribute values without removing the original; Retention Window scrubbing removes personal data entirely when retention or erasure obligations require it. The two compositions operate on different lifecycle events with different audit semantics — attribute update preserves history; anonymization removes personal data while preserving the audit identifier.
 
 **The verification workflow.** What happens *during* verification — document OCR, biometric check, sanctions database query, adverse media search — is not modeled by this atom. The atom records that a verification was performed, by whom, using what method, with what result, against what evidence. The workflow that produces those inputs is a composing Customer Onboarding / AML verification pattern.
 
-**Ongoing monitoring scheduling.** Periodic re-verification, sanctions re-screening, PEP (Politically Exposed Person — a category of high-risk client in financial regulation, such as a foreign government official or their close associate) re-check — these are composing patterns that call `verify` on a schedule or trigger basis. The atom records each result; the scheduling policy is external.
+**Ongoing monitoring scheduling.** Periodic re-verification, sanctions re-screening, PEP (Politically Exposed Person — a category of high-risk client in financial regulation, such as a foreign government official or their close associate) re-check — these are composing patterns that call [Verify] on a schedule or trigger basis. The atom records each result; the scheduling policy is external.
 
 **Risk scoring and enhanced due diligence.** Whether a party requires enhanced due diligence based on risk factors (country of origin, transaction volume, PEP status) is a composing concept. The atom records identity and verification lifecycle; risk classification and EDD orchestration belong to the Customer Onboarding composition.
 
@@ -303,21 +306,405 @@ What this atom does not cover:
 
 **Authorized representatives and power of attorney.** An individual acting on behalf of a party — guardian, attorney-in-fact, corporate officer — is a composing Delegation / Representation pattern. The atom records the party being represented; the representative's authority is separate.
 
-**Cross-system identity portability.** `party_id` is opaque and scoped to the issuing system. Linking a `party_id` in one system to a record in another trust domain belongs to an Identity Federation composing pattern.
+**Cross-system identity portability.** [Party Id] is opaque and scoped to the issuing system. Linking a [Party Id] in one system to a record in another trust domain belongs to an Identity Federation composing pattern.
 
 **Notification of state changes.** When a party is Suspended or Closed, downstream systems may need to freeze activity (block transactions, freeze accounts, suppress notifications). Propagating state changes to downstream systems composes with Subscription and Notification; it is not the atom's responsibility.
 
-**Retention of party records.** Invariant 1 guarantees party records are never deleted by the atom, but does not set the retention policy governing how long records must be actively accessible before archival or anonymization. FATF and BSA/AML require retention of CDD records for at least five years after the business relationship ends; GDPR Article 17 creates competing erasure obligations that legal counsel adjudicates. The Retention Window composition governs this lifecycle and is the only mechanism authorized to scrub identifiable enrollment fields (`name`, `date_of_birth`, `document_ref`) under Invariant 7. The audit-identifier fields (`party_id`, `enrolled_at`, `enrolling_actor_ref`) and the full event history (verification events, state-change events) survive scrubbing — the chain of custody remains intact for any party whose personal data has been anonymized, so a regulator can still confirm that the party's lifecycle existed and reconstruct its sequence of state transitions even when the personal attributes have been removed.
+**Retention of party records.** Invariant 1 guarantees party records are never deleted by the atom, but does not set the retention policy governing how long records must be actively accessible before archival or anonymization. FATF and BSA/AML require retention of CDD records for at least five years after the business relationship ends; GDPR Article 17 creates competing erasure obligations that legal counsel adjudicates. The Retention Window composition governs this lifecycle and is the only mechanism authorized to scrub identifiable enrollment fields ([Name], [Date Of Birth], [Document Ref]) under Invariant 7. The audit-identifier fields ([Party Id], [Enrolled At], [Enrolling Actor Ref]) and the full event history ([Verification Event]s, [State-Change Event]s) survive scrubbing — the chain of custody remains intact for any party whose personal data has been anonymized, so a regulator can still confirm that the party's lifecycle existed and reconstruct its sequence of state transitions even when the personal attributes have been removed.
 
-**What "Closed" means for existing open commitments.** Closing a party prevents new regulated activity but does not automatically terminate existing open accounts, positions, or contracts. The composing system owns the policy for unwinding open commitments against a Closed party; the atom's contract is that `verify`, `suspend`, and `reinstate` are rejected for Closed parties, signaling to composing systems that the party is no longer eligible for new activity.
+**What "Closed" means for existing open commitments.** Closing a party prevents new regulated activity but does not automatically terminate existing open accounts, positions, or contracts. The composing system owns the policy for unwinding open commitments against a Closed party; the atom's contract is that [Verify], [Suspend], and [Reinstate] are rejected for [Closed] parties, signaling to composing systems that the party is no longer eligible for new activity.
 
-**Concurrency.** Concurrent state transitions for the same `party_id` (e.g., simultaneous `suspend` and `close` calls) resolve under the host environment's serialization guarantees. The first wins; the second observes the updated state and is rejected accordingly (`already-closed`, `already-suspended`, `not-suspended`, etc.). Multi-action transactions belong to a Transaction composition.
+**Concurrency.** Concurrent state transitions for the same [Party Id] (e.g., simultaneous [Suspend] and [Close] calls) resolve under the host environment's serialization guarantees. The first wins; the second observes the updated state and is rejected accordingly ([Already Closed], [Already Suspended], [Not Suspended], etc.). Multi-action transactions belong to a Transaction composition.
 
-**Asynchronous verification workflows.** The `verify` action takes `verification_result` as a field that must be `passed` or `failed` at call time. The atom does not model in-progress or pending verification states. Real-world verification workflows are frequently asynchronous — a document is submitted, an external service runs a check, and the result arrives seconds to days later. The composing workflow owns this coordination: the party remains in Unverified while the external check runs; when the result is known, the composing workflow calls `verify` with the outcome. The atom's `verification_result` field is the recording surface for a result that has already been determined; the orchestration of asynchronous determination is a composing concept.
+**Asynchronous verification workflows.** The [Verify] action takes [Verification Result] as a field that must be `passed` or `failed` at call time. The atom does not model in-progress or pending verification states. Real-world verification workflows are frequently asynchronous — a document is submitted, an external service runs a check, and the result arrives seconds to days later. The composing workflow owns this coordination: the party remains in [Unverified] while the external check runs; when the result is known, the composing workflow calls [Verify] with the outcome. The atom's [Verification Result] field is the recording surface for a result that has already been determined; the orchestration of asynchronous determination is a composing concept.
 
 **Clock semantics.** State-change timestamps and verification timestamps come from an implicit clock. Where onboarding and verification timestamps have legal force (FATF, BSA/AML require recording when CDD was performed), implementations must source time from a trustworthy clock. Trusted Timestamping composes to supply a verifiable time-anchor.
 
-Where the atom breaks down: when the same natural person must hold multiple concurrent identity records under different regulatory regimes (some regulated domains require jurisdiction-specific records that cannot share a single `party_id`); when the verification obligation requires real-time sanctions database access that the atom cannot gate on (the atom records the result but cannot enforce that the lookup was performed — the composing workflow owns that guarantee); when personal data must be purged under GDPR Article 17 while a BSA/AML retention obligation is still active (the legal tension is real and the resolution belongs to legal counsel and the Retention Window + Consent compositions, not to this atom).
+Where the atom breaks down: when the same natural person must hold multiple concurrent identity records under different regulatory regimes (some regulated domains require jurisdiction-specific records that cannot share a single [Party Id]); when the verification obligation requires real-time sanctions database access that the atom cannot gate on (the atom records the result but cannot enforce that the lookup was performed — the composing workflow owns that guarantee); when personal data must be purged under GDPR Article 17 while a BSA/AML retention obligation is still active (the legal tension is real and the resolution belongs to legal counsel and the Retention Window + Consent compositions, not to this atom).
+
+---
+
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the atom above.)*
+
+#### Enroll
+
+The behavior that creates a new party record in [Unverified] with a fresh [Party Id], capturing the enrollment attributes ([Name], [Date Of Birth], [Document Type], [Document Ref]) and the [Enrolling Actor Ref], and stamping [Enrolled At]. Returns the [Party Id], or a rejection ([Invalid Request], [Storage Failure]).
+
+Kind: Operation
+
+#### Verify
+
+The behavior that records a [Verification Event] against a known, non-[Closed] party, driving an [Unverified] party to [Verified] on a `passed` result and otherwise leaving state unchanged. Returns the [Verification Id] — plus a [State Change Id] when it drove the transition — or a rejection ([Not Known], [Already Closed], [Invalid Request], [Storage Failure]).
+
+Kind: Operation
+
+#### Suspend
+
+The behavior that transitions a [Verified] party to [Suspended], appending a [State-Change Event]. Rejected for a party that is [Unverified] ([Not Verifiable]), already [Suspended] ([Already Suspended]), or [Closed] ([Already Closed]).
+
+Kind: Operation
+
+#### Reinstate
+
+The behavior that returns a [Suspended] party to [Verified], appending a [State-Change Event] — but only when a `passed` [Verification Event] has been recorded after the most recent [Suspend], else [No Passed Verification Since Suspend].
+
+Kind: Operation
+
+#### Close
+
+The behavior that transitions any non-[Closed] party to terminal [Closed], appending a [State-Change Event]. Rejected for an already-[Closed] party ([Already Closed]).
+
+Kind: Operation
+
+#### Verification Event
+
+The append-only, immutable record of one identity check against a party — produced by [Verify]. It carries its [Verification Id], [Party Id], [Verifying Actor Ref], [Verification Method], [Verification Result], [Evidence Ref], and [Verified At]; nothing about it changes once recorded (Invariants 5–6).
+
+Kind: Type
+
+#### State-Change Event
+
+The append-only record of one lifecycle transition on a party — produced by [Suspend], [Reinstate], [Close], or a [Verify]-driven [Unverified] → [Verified] transition. It carries its [State Change Id], [Prior State], [New State], [Acting Actor Ref], a timestamp, and (where the action supplies one) a [Reason]. Individually addressable by [State Change Id] (Invariant 8).
+
+Kind: Type
+
+#### Party Id
+
+The opaque, immutable, system-generated identity of a party — produced by [Enroll], never reused (Invariant 10), never changed (Invariant 9). The party's other attributes are properties of the record, not its identity.
+
+Kind:     Field
+Field of: the party record
+Projects: party_id
+
+#### Name
+
+The party's legal name at enrollment, non-empty and at most 500 characters, stored as supplied. Set on [Enroll], immutable under the atom's action contract (Invariant 7); scrubbable only by Retention Window.
+
+Kind:     Field
+Field of: the party record
+Projects: name
+
+#### Date Of Birth
+
+The party's date of birth as an ISO 8601 calendar date that must parse and not be in the future. Set on [Enroll], immutable under the atom's action contract (Invariant 7).
+
+Kind:     Field
+Field of: the party record
+Projects: date_of_birth
+
+#### Document Type
+
+The class of identity document presented at enrollment (an opaque string such as `passport` or `national-id`). Set on [Enroll], immutable (Invariant 7).
+
+Kind:     Field
+Field of: the party record
+Projects: document_type
+
+#### Document Ref
+
+The opaque pointer to the identity document record in the composing document store. Set on [Enroll], immutable under the atom's action contract (Invariant 7); the atom neither validates nor interprets it.
+
+Kind:     Field
+Field of: the party record
+Projects: document_ref
+
+#### Enrolled At
+
+The wall-time of enrollment, stamped from the implicit clock at [Enroll]. Immutable; survives Retention Window scrubbing as an audit identifier (Invariant 7).
+
+Kind:     Field
+Field of: the party record
+Projects: enrolled_at
+
+#### Enrolling Actor Ref
+
+The opaque reference to the internal actor that performed [Enroll] — attribution only. Immutable; survives scrubbing as an audit identifier (Invariant 7).
+
+Kind:     Field
+Field of: the party record
+Projects: enrolling_actor_ref
+
+#### Current State
+
+The party's lifecycle state — [Unverified], [Verified], [Suspended], or [Closed]. Set to [Unverified] on [Enroll]; changes only via the lifecycle actions, and is always exactly one value (Invariant 2).
+
+Kind:     Field
+Field of: the party record
+Projects: state
+
+#### State-Change Log
+
+The ordered, append-only list of [State-Change Event]s on a party record. Insertion order is authoritative for every "most recent" and "after" reference (Invariant 8).
+
+Kind:     Field
+Field of: the party record
+Projects: state_change_log
+
+#### Verification Id
+
+The opaque, immutable, system-generated identity of a [Verification Event] — produced by [Verify], never reused (Invariant 10), never changed (Invariant 9).
+
+Kind:     Field
+Field of: the verification event
+Projects: verification_id
+
+#### Verifying Actor Ref
+
+The opaque reference to the actor that performed the verification. Recorded on the [Verification Event]; immutable (Invariant 5).
+
+Kind:     Field
+Field of: the verification event
+Projects: verifying_actor_ref
+
+#### Verification Method
+
+The opaque string naming the method used for the check (`manual-document-review`, `automated-ocr`, and similar). Recorded on the [Verification Event]; immutable (Invariant 5).
+
+Kind:     Field
+Field of: the verification event
+Projects: verification_method
+
+#### Verification Result
+
+The outcome of the check — exactly `passed` or `failed`. Recorded on the [Verification Event]; a `passed` result against an [Unverified] party drives the transition to [Verified].
+
+Kind:     Field
+Field of: the verification event
+Projects: verification_result
+
+#### Evidence Ref
+
+The opaque pointer to the evidence record supporting the check. Recorded on the [Verification Event]; immutable (Invariant 5); the atom does not validate it.
+
+Kind:     Field
+Field of: the verification event
+Projects: evidence_ref
+
+#### Verified At
+
+The wall-time the verification was recorded, stamped from the implicit clock at [Verify]. Recorded on the [Verification Event]; immutable (Invariant 5).
+
+Kind:     Field
+Field of: the verification event
+Projects: verified_at
+
+#### State Change Id
+
+The opaque, immutable, system-generated identity of a [State-Change Event] — set when the event is written, never reused (Invariant 10), never changed (Invariant 9). Lets composing patterns reference a specific transition by id.
+
+Kind:     Field
+Field of: the state-change event
+Projects: state_change_id
+
+#### Prior State
+
+The party's state immediately before the transition a [State-Change Event] records.
+
+Kind:     Field
+Field of: the state-change event
+Projects: prior_state
+
+#### New State
+
+The party's state immediately after the transition a [State-Change Event] records.
+
+Kind:     Field
+Field of: the state-change event
+Projects: new_state
+
+#### Acting Actor Ref
+
+The opaque reference to the actor that drove the transition, recorded on the [State-Change Event] — sourced from the action's actor-ref parameter ([Suspending Actor Ref], [Reinstating Actor Ref], or [Closing Actor Ref]).
+
+Kind:     Field
+Field of: the state-change event
+Projects: acting_actor_ref
+
+#### Reason
+
+The required, non-empty justification recorded on a [Suspend]-, [Reinstate]-, or [Close]-driven [State-Change Event]; absent for [Verify]-driven transitions. Stored as supplied (no normalization); an empty or whitespace-only value is [Invalid Request].
+
+Kind:     Field
+Field of: the state-change event
+Projects: reason
+
+#### Suspending Actor Ref
+
+The opaque reference to the actor invoking [Suspend], consumed for attribution and recorded on the resulting [State-Change Event] as its [Acting Actor Ref] — not stored under this name. Empty or whitespace-only is [Invalid Request].
+
+Kind:         Parameter
+Parameter of: Suspend
+Projects:     suspending_actor_ref
+
+#### Reinstating Actor Ref
+
+The opaque reference to the actor invoking [Reinstate], consumed for attribution and recorded on the resulting [State-Change Event] as its [Acting Actor Ref] — not stored under this name. Empty or whitespace-only is [Invalid Request].
+
+Kind:         Parameter
+Parameter of: Reinstate
+Projects:     reinstating_actor_ref
+
+#### Closing Actor Ref
+
+The opaque reference to the actor invoking [Close], consumed for attribution and recorded on the resulting [State-Change Event] as its [Acting Actor Ref] — not stored under this name. Empty or whitespace-only is [Invalid Request].
+
+Kind:         Parameter
+Parameter of: Close
+Projects:     closing_actor_ref
+
+#### Unverified
+
+The entry state of every newly enrolled party: enrolled, with no `passed` verification on record. May transition to [Verified] via [Verify] or to [Closed] via [Close].
+
+Kind:      Member
+Member of: the party state
+Role:      Outcome
+
+#### Verified
+
+The state of a party with at least one `passed` [Verification Event] after its most recent [Suspend] (Invariant 4). Reached from [Unverified] via [Verify] or from [Suspended] via [Reinstate]; may move to [Suspended] or [Closed].
+
+Kind:      Member
+Member of: the party state
+Role:      Outcome
+
+#### Suspended
+
+The state of a previously [Verified] party whose activity is paused pending investigation or re-verification. [Verify] may record events but does not change state; only [Reinstate] returns it to [Verified], and only [Close] otherwise leaves it.
+
+Kind:      Member
+Member of: the party state
+Role:      Outcome
+
+#### Closed
+
+The terminal, absorbing state of a party (Invariant 3). The record persists, but [Verify], [Suspend], and [Reinstate] are rejected and the party is no longer eligible for new regulated activity.
+
+Kind:      Member
+Member of: the party state
+Role:      Outcome
+
+#### Invalid Request
+
+The rejection [Enroll], [Verify], [Suspend], [Reinstate], or [Close] returns when a required field is null, empty, or whitespace-only, or fails its format rule (e.g., a [Verification Result] other than `passed`/`failed`, or a future [Date Of Birth]).
+
+Kind:      Member
+Member of: the action rejection
+Role:      Outcome
+Projects:  invalid-request
+
+#### Storage Failure
+
+The rejection any action returns when the backing-store write fails after all preconditions pass; guarantees no partial record was persisted (Invariant 11).
+
+Kind:      Member
+Member of: the action rejection
+Role:      Outcome
+Projects:  storage-failure
+
+#### Not Known
+
+The rejection [Verify], [Suspend], [Reinstate], or [Close] returns when the [Party Id] references no known party.
+
+Kind:      Member
+Member of: the action rejection
+Role:      Outcome
+Projects:  not-known
+
+#### Already Closed
+
+The rejection [Verify], [Suspend], [Reinstate], or [Close] returns when the target party is already [Closed] (Invariant 3).
+
+Kind:      Member
+Member of: the action rejection
+Role:      Outcome
+Projects:  already-closed
+
+#### Not Verifiable
+
+The rejection [Suspend] returns when the party is [Unverified] — there is no active [Verified] status to suspend.
+
+Kind:      Member
+Member of: the Suspend rejection
+Role:      Outcome
+Projects:  not-verifiable
+
+#### Already Suspended
+
+The rejection [Suspend] returns when the party is already [Suspended] — a double-suspend, distinct from [Not Verifiable].
+
+Kind:      Member
+Member of: the Suspend rejection
+Role:      Outcome
+Projects:  already-suspended
+
+#### Not Suspended
+
+The rejection [Reinstate] returns when the party is [Unverified] or [Verified] — there is no active suspension to lift.
+
+Kind:      Member
+Member of: the Reinstate rejection
+Role:      Outcome
+Projects:  not-suspended
+
+#### No Passed Verification Since Suspend
+
+The rejection [Reinstate] returns when no `passed` [Verification Event] has been recorded after the party's most recent [Suspend] — reinstatement requires fresh evidence, not a flag toggle (Invariant 4).
+
+Kind:      Member
+Member of: the Reinstate rejection
+Role:      Outcome
+Projects:  no-passed-verification-since-suspend
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Enroll]: #enroll
+[Verify]: #verify
+[Suspend]: #suspend
+[Reinstate]: #reinstate
+[Close]: #close
+[Verification Event]: #verification-event
+[State-Change Event]: #state-change-event
+[Party Id]: #party-id
+[Name]: #name
+[Date Of Birth]: #date-of-birth
+[Document Type]: #document-type
+[Document Ref]: #document-ref
+[Enrolled At]: #enrolled-at
+[Enrolling Actor Ref]: #enrolling-actor-ref
+[Current State]: #current-state
+[State-Change Log]: #state-change-log
+[Verification Id]: #verification-id
+[Verifying Actor Ref]: #verifying-actor-ref
+[Verification Method]: #verification-method
+[Verification Result]: #verification-result
+[Evidence Ref]: #evidence-ref
+[Verified At]: #verified-at
+[State Change Id]: #state-change-id
+[Prior State]: #prior-state
+[New State]: #new-state
+[Acting Actor Ref]: #acting-actor-ref
+[Reason]: #reason
+[Suspending Actor Ref]: #suspending-actor-ref
+[Reinstating Actor Ref]: #reinstating-actor-ref
+[Closing Actor Ref]: #closing-actor-ref
+[Unverified]: #unverified
+[Verified]: #verified
+[Suspended]: #suspended
+[Closed]: #closed
+[Invalid Request]: #invalid-request
+[Storage Failure]: #storage-failure
+[Not Known]: #not-known
+[Already Closed]: #already-closed
+[Not Verifiable]: #not-verifiable
+[Already Suspended]: #already-suspended
+[Not Suspended]: #not-suspended
+[No Passed Verification Since Suspend]: #no-passed-verification-since-suspend
 
 ---
 
@@ -325,33 +712,33 @@ Where the atom breaks down: when the same natural person must hold multiple conc
 
 Party Identity is freestanding and is the external-party identity contract that regulated composing systems declare:
 
-- **[Consent](./consent.md)** — Party Identity establishes *who* the party is; Consent establishes *what* the system may do with or to their data. Every system that both identifies and processes personal data for an external party composes both. Consent basis is checked per processing action against the party's Consent record; the party's `party_id` is the data subject reference in the Consent atom.
-- **[Actor Identity](./actor-identity.md)** — each `verify`, `suspend`, `reinstate`, and `close` action should be attested by the internal actor performing it; the `*_actor_ref` fields are the attribution surface. Actor Identity supplies the non-repudiable proof that a specific actor authorized each state transition. Customer Onboarding wires Actor Identity into every state-changing call.
+- **[Consent](./consent.md)** — Party Identity establishes *who* the party is; Consent establishes *what* the system may do with or to their data. Every system that both identifies and processes personal data for an external party composes both. Consent basis is checked per processing action against the party's Consent record; the party's [Party Id] is the data subject reference in the Consent atom.
+- **[Actor Identity](./actor-identity.md)** — each [Verify], [Suspend], [Reinstate], and [Close] action should be attested by the internal actor performing it; the `*_actor_ref` fields are the attribution surface. Actor Identity supplies the non-repudiable proof that a specific actor authorized each state transition. Customer Onboarding wires Actor Identity into every state-changing call.
 - **[Retention Window](./retention-window.md)** — Invariant 1 makes party records permanent from the atom's perspective, but the composing system places the party record under a retention policy that governs how long the record is actively accessible and when archival or anonymization becomes permitted. BSA/AML requires five years post-closure; GDPR Article 17 erasure obligations compose through legal counsel adjudication.
 - **[Audit Trail](../compositions/audit-trail.md)** — every state transition event and verification event should be surfaced through the Audit Trail composition for tamper-evident, attribution-stamped recording that survives the Audit Trail's own regulated adversarial scenarios.
-- **[External Onboarding](../compositions/external-onboarding.md)** — accepts an authorized invitation and calls `Party Identity.enroll` to create the party record in `Unverified` state, establishing the identity-binding at accept time. The `accepting_identity_ref` supplied at `Invitation.accept` and the resulting `party_id` are both named in the Audit Trail completion record, making the chain from invitation to enrolled party reconstructable from records alone.
-- **[Customer Onboarding](../compositions/customer-onboarding.md)** — the primary composition that names this atom. Gates regulated activity on the party being in Verified state; orchestrates the verification workflow; handles ongoing monitoring via periodic `verify` calls; composes Actor Identity for attestation and Retention Window for record lifetime.
-- **Identity Document Store** *(forthcoming)* — holds the document records that `document_ref` and `evidence_ref` reference. The atom treats both as opaque; the document store's content is the external evidence supporting each verification.
-- **Attribute Update** *(forthcoming)* — handles changes to `name`, `date_of_birth`, or document references for an existing party. Appends versioned attribute events without mutating enrollment fields.
+- **[External Onboarding](../compositions/external-onboarding.md)** — accepts an authorized invitation and calls `Party Identity.enroll` to create the party record in [Unverified] state, establishing the identity-binding at accept time. The `accepting_identity_ref` supplied at `Invitation.accept` and the resulting [Party Id] are both named in the Audit Trail completion record, making the chain from invitation to enrolled party reconstructable from records alone.
+- **[Customer Onboarding](../compositions/customer-onboarding.md)** — the primary composition that names this atom. Gates regulated activity on the party being in [Verified] state; orchestrates the verification workflow; handles ongoing monitoring via periodic [Verify] calls; composes Actor Identity for attestation and Retention Window for record lifetime.
+- **Identity Document Store** *(forthcoming)* — holds the document records that [Document Ref] and [Evidence Ref] reference. The atom treats both as opaque; the document store's content is the external evidence supporting each verification.
+- **Attribute Update** *(forthcoming)* — handles changes to [Name], [Date Of Birth], or document references for an existing party. Appends versioned attribute events without mutating enrollment fields.
 - **Ownership Structure / Beneficial Owner** *(forthcoming)* — models the ownership relationships between Party Identity records (individuals, legal entities, beneficial owners). Each beneficial owner is a Party Identity record; the graph of relationships is the composition.
-- **Identity Federation** *(forthcoming)* — links `party_id` records across trust domains; handles cross-system identity resolution.
+- **Identity Federation** *(forthcoming)* — links [Party Id] records across trust domains; handles cross-system identity resolution.
 - **Delegation / Representation** *(forthcoming)* — models authorized representatives (guardians, attorneys-in-fact, corporate officers) acting on behalf of an enrolled party.
 
 ---
 
 ## Standards references
 
-- **FATF Recommendations 10–12** — Customer Due Diligence: identify the customer and verify identity using reliable, independent source documents, data, or information; identify and verify beneficial owners; understand the ownership and control structure; conduct ongoing due diligence on the business relationship. The atom's `enroll` / `verify` lifecycle is the structural form of FATF's CDD obligation.
-- **Bank Secrecy Act / Anti-Money Laundering — 31 CFR Part 1020 (FinCEN — the US Financial Crimes Enforcement Network)** — Customer Identification Program: minimum identity attributes (name, date of birth, address, identification number), verification using documentary or non-documentary methods, and record retention for five years after account closure or the date the record was made. The atom's `verification_method` and `evidence_ref` fields satisfy the CIP's recording requirements.
+- **FATF Recommendations 10–12** — Customer Due Diligence: identify the customer and verify identity using reliable, independent source documents, data, or information; identify and verify beneficial owners; understand the ownership and control structure; conduct ongoing due diligence on the business relationship. The atom's [Enroll] / [Verify] lifecycle is the structural form of FATF's CDD obligation.
+- **Bank Secrecy Act / Anti-Money Laundering — 31 CFR Part 1020 (FinCEN — the US Financial Crimes Enforcement Network)** — Customer Identification Program: minimum identity attributes (name, date of birth, address, identification number), verification using documentary or non-documentary methods, and record retention for five years after account closure or the date the record was made. The atom's [Verification Method] and [Evidence Ref] fields satisfy the CIP's recording requirements.
 - **FinCEN Beneficial Ownership Rule — 31 CFR §1010.230** — legal entity customers must identify and verify beneficial owners owning ≥25% and a single control person. Each beneficial owner is a Party Identity record; the Ownership Structure composition holds the ≥25% relationship graph.
 - **EU 5th Anti-Money Laundering Directive (AMLD5)** — enhanced CDD requirements including beneficial ownership registries; alignment with FATF.
 - **GDPR Article 4(1)** — the identity attributes collected by this atom (name, date of birth, document type and reference) are personal data under GDPR; all processing is subject to Articles 5–6.
 - **GDPR Articles 5–6** — lawful basis for processing identity data; typically Article 6(1)(c) (legal obligation) or Article 6(1)(b) (performance of a contract). The Consent composition governs data processing *beyond* the regulatory obligation.
 - **GDPR Article 17** — right to erasure; creates tension with BSA/AML and FATF retention obligations. The atom does not resolve this tension (see Edge cases); Retention Window + legal counsel adjudication composes for this.
 - **HIPAA 45 CFR §164.514** — patient identity is required for the creation of protected health information records; the patient is a Party Identity in the healthcare context.
-- **NIST (National Institute of Standards and Technology — US federal standards body) SP 800-63A (Identity Assurance Levels)** — IAL1, IAL2, IAL3 (Identity Assurance Levels — graded strength of identity proofing: self-asserted, remote with document evidence, in-person with biometric). The atom's `verification_method` field implicitly captures the IAL level; explicit IAL tagging and method-to-IAL mapping is a composing concept.
-- **ISO/IEC 29115 (Entity Authentication Assurance)** — the International Organization for Standardization / International Electrotechnical Commission analog to NIST SP 800-63A; defines four levels of entity authentication assurance. The atom's `verification_method` field is the recording surface for the assurance level achieved.
-- **OFAC SDN Compliance** — the US Office of Foreign Assets Control's sanctions screening requires parties to be checked against the SDN (Specially Designated Nationals) list; the `suspend` → investigate → `reinstate` or `close` lifecycle is the operational form of a sanctions match process. The atom records the lifecycle; the screening system is a composing concept.
+- **NIST (National Institute of Standards and Technology — US federal standards body) SP 800-63A (Identity Assurance Levels)** — IAL1, IAL2, IAL3 (Identity Assurance Levels — graded strength of identity proofing: self-asserted, remote with document evidence, in-person with biometric). The atom's [Verification Method] field implicitly captures the IAL level; explicit IAL tagging and method-to-IAL mapping is a composing concept.
+- **ISO/IEC 29115 (Entity Authentication Assurance)** — the International Organization for Standardization / International Electrotechnical Commission analog to NIST SP 800-63A; defines four levels of entity authentication assurance. The atom's [Verification Method] field is the recording surface for the assurance level achieved.
+- **OFAC SDN Compliance** — the US Office of Foreign Assets Control's sanctions screening requires parties to be checked against the SDN (Specially Designated Nationals) list; the [Suspend] → investigate → [Reinstate] or [Close] lifecycle is the operational form of a sanctions match process. The atom records the lifecycle; the screening system is a composing concept.
 
 ---
 
@@ -361,7 +748,10 @@ Party Identity is freestanding and is the external-party identity contract that 
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 Party Identity began as the #6 atom in the ROADMAP's draft order. The foundation round (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus) ran against the initial draft and produced the entries below; the Phase 4 Opus clearance gate ran against the post-foundation spec, surfaced six findings, and returned clean after all six were closed in-pattern. As of 2026-05-14 the atom is `grounded`.
 
@@ -420,3 +810,7 @@ Gate re-run after the six fixes returned clean across all three passes. Status p
 *Buggy twin (vacuity guard).* [`party-identity-buggy.tla`](./party-identity-buggy.tla) is identical except `reinstate` drops the `HasPassedAfterSuspend` guard — i.e. it re-introduces the exact **F3** defect this atom's Phase-4 gate closed. The checker rejects it at 22 states with the counterexample `Unverified →(vp) Verified →(sus) Suspended →(rei) Verified`, log `<<vp, sus, rei>>`: a Verified party whose most recent suspend has no passing verification after it. The twin's rejection confirms the correct model's clean result is non-vacuous.
 
 *Conflict-protocol outcome.* None triggered. The model **corroborates** the English — Invariant 4's atom-enforced `reinstate` precondition admits no violating interleaving — so no counterexample flowed back and the canonical English is unchanged (this is the model-confirms-source case, not a case-1/2/3 repair). The model's contribution is independent corroboration that the F3 fix holds under exhaustive interleaving, and a regression guard (the buggy twin) against the defect's reappearance. Reproduce with `cd tools/harness && bash bootstrap.sh && node check.mjs ../../atoms/party-identity.tla` (and `… party-identity-buggy.tla --buggy`).
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed. (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added before Composition notes (42 terms): 5 Operations ([Enroll], [Verify], [Suspend], [Reinstate], [Close]); 2 Types ([Verification Event], [State-Change Event] — the party record itself stays a plain-noun referent with no Type card); 20 Fields — 9 on the party record ([Party Id], [Name], [Date Of Birth], [Document Type], [Document Ref], [Enrolled At], [Enrolling Actor Ref], [Current State], [State-Change Log]), 6 on the verification event ([Verification Id], [Verifying Actor Ref], [Verification Method], [Verification Result], [Evidence Ref], [Verified At]), 5 on the state-change event ([State Change Id], [Prior State], [New State], [Acting Actor Ref], [Reason]); 3 Parameters ([Suspending Actor Ref], [Reinstating Actor Ref], [Closing Actor Ref] — each consumed for attribution and stored as the event's [Acting Actor Ref], not under its own name); and 12 Members — the 4 lifecycle states ([Unverified], [Verified], [Suspended], [Closed]) plus 8 rejections ([Invalid Request], [Storage Failure], [Not Known], [Already Closed], [Not Verifiable], [Already Suspended], [Not Suspended], [No Passed Verification Since Suspend]). Survivors left backticked: the one labeled projected-contract signature per Operation; the `passed`/`failed` [Verification Result] value literals; the `(verification_id, state_change_id?)` return-shape literal; the `verify(verification_result=passed)`/`verify(passed)` call-shape literals; qualified cross-atom calls (`Party Identity.enroll`, `Invitation.accept`) and the external field `accepting_identity_ref`; concrete example calls, ids, document/evidence values, and timestamps; and external standard tokens (`YYYY-MM-DD`, document-type and method strings). The implicit clock stamps [Enrolled At]/[Verified At] and the state-change timestamps but derives no status, so there is no `[Now]` term (mirrors legal-hold). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), the descriptive top blockquote folded out after confirming each claim is carried by Summary/Intent/State/Invariant 4; no *also-known-as* line existed, so none was invented. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #1** — the single-paragraph Summary split into one-idea-per-sentence paragraphs, lossless. (e) **prose cut #5** — the State "Transitions" list rendered as a transition table (action / from state / condition / to state / effect), with the fail-closed, write-nothing, and rejection-precedence semantics kept in the prose beside it. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-05-20`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (42 terms); 11 invariants preserved; `.tla` untouched — harness re-run green: `party-identity.tla` PASS + `party-identity-buggy.tla --buggy` rejected.
+
+</details>
