@@ -15,7 +15,9 @@ toc: true
 </details>
 
 
-> A resource-lifecycle primitive: a named, bounded pool of a finite resource with arithmetic that enforces *total allocated never exceeds declared capacity*. The pool's identity is an opaque immutable id; capacity is mutable via attributed, audited adjustments. Allocations consume units, releases return units; units are fungible — the atom does not retain per-allocation identity. States: Open, Suspended, Closed. The load-bearing contribution: a single durable arithmetic invariant (`allocated ≤ capacity`) that composing patterns may rely on without re-implementing the constraint at every call site — subject to four host obligations named explicitly in this spec (serializable concurrent execution against the same `pool_id`, overflow-safe integer arithmetic, crash-atomic multi-record writes, and system-wide id generation producing non-colliding `pool_id` and event-id values across the lifetime of the system). The invariant is the atom's guarantee; the four obligations are the deployment conditions under which the guarantee — together with Invariants 12 and 13 — holds.
+## Summary
+
+Capacity Constraint Enforcement keeps a count of a limited resource from ever going over its limit. Each "pool" is declared with a [Capacity] — the most units that can be in use at once — and starts empty. Asking for units (an [Allocate]) adds to the running count; giving them back (a [Release]) subtracts. Any request that would push the count over the limit is refused at the door, before it is recorded — the pattern never quietly fudges the number to make it fit. That single guarantee — used units never exceed the declared limit — is the whole point. Other patterns can lean on it without re-checking the limit themselves. A pool can be [Open] (taking requests), [Suspended] (paused — refusing new requests but still accepting returns), or [Closed] (shut for good, though returns still go through so in-flight work can wind down). The units are interchangeable: the pool only tracks how many are in use, not which seat or bed or connection — that detail belongs to a separate pattern. Every successful change is written to a permanent, attributed log with a before-and-after count, so an auditor can confirm any single step stayed within the limit without replaying the whole history. The same mechanism fits airline seats, bank credit limits, hospital beds, database connections, and warehouse stock.
 
 ---
 
@@ -31,31 +33,25 @@ This is a freestanding (can be specified without naming any other pattern) atom 
 
 ---
 
-## Summary
-
-Capacity Constraint Enforcement keeps a count of a limited resource from ever going over its limit. Each "pool" is declared with a capacity — the most units that can be in use at once — and starts empty. Asking for units (allocating) adds to the running count; giving them back (releasing) subtracts. Any request that would push the count over the limit is refused at the door, before it is recorded — the pattern never quietly fudges the number to make it fit. That single guarantee — used units never exceed the declared limit — is the whole point: other patterns can lean on it without re-checking the limit themselves. A pool can be Open (taking requests), Suspended (paused — refusing new requests but still accepting returns), or Closed (shut for good, though returns still go through so in-flight work can wind down). The units are interchangeable: the pool only tracks how many are in use, not which seat or bed or connection — that detail belongs to a separate pattern. Every successful change is written to a permanent, attributed log with a before-and-after count, so an auditor can confirm any single step stayed within the limit without replaying the whole history. The same mechanism fits airline seats, bank credit limits, hospital beds, database connections, and warehouse stock.
-
----
-
 ## Structure
 
 ### Identity model
 
-Every pool known to the system has a **`pool_id`** — an opaque, immutable, system-generated identifier produced by `declare_pool`. The id is the pool's identity; the declaring actor reference, declaration timestamp, and declaration reason are immutable *properties* of the pool record, set at creation.
+Every pool known to the system has a **[Pool Id]** — an opaque, immutable, system-generated identifier produced by [Declare Pool]. The id is the pool's identity; the [Declaring Actor Ref], [Declared At] timestamp, and [Declaration Reason] are immutable *properties* of the pool record, set at creation.
 
 The opaque-id model is load-bearing for two reasons. First, the *name* a deployment might use for a pool (e.g., `"flight-NK1234-2026-05-14-seats"` or `"connection-pool-primary"`) is a host-system concept: pools may be re-named, re-categorized, or re-tagged without the pool's identity changing. Second, two pools with the same human-readable label — declared in different deployment regions or against different resource registries — must have distinct ids so their arithmetic does not merge. Using a content field as identity would silently conflate logical-rename and distinct-pool cases.
 
-Each `allocate` call produces an **`allocation_event_id`** — opaque, immutable, system-generated. Each `release` call produces a **`release_event_id`**. Each `adjust_capacity` call produces an **`adjustment_event_id`**. Each `suspend_pool`, `resume_pool`, or `close_pool` call produces a **`state_change_id`**. All four event-id classes are sub-records of the pool, accumulating on the pool's audit log in insertion order, each individually addressable so that composing patterns (Actor Identity attestation, Audit Trail recording, Reserve from Pool's per-commitment cross-reference) can reference a specific event by id without depending on timestamp or position.
+Each [Allocate] call produces an **[Allocation Event Id]** — opaque, immutable, system-generated. Each [Release] call produces a **[Release Event Id]**. Each [Adjust Capacity] call produces an **[Adjustment Event Id]**. Each [Suspend Pool], [Resume Pool], or [Close Pool] call produces a **[State Change Id]**. All four event-id classes are sub-records of the pool, accumulating on the pool's audit log in insertion order, each individually addressable so that composing patterns (Actor Identity attestation, Audit Trail recording, Reserve from Pool's per-commitment cross-reference) can reference a specific event by id without depending on timestamp or position.
 
 Units are fungible at this atom's grain — the atom does not assign or track per-allocation identities. An `allocate(pool_id, count=5, ...)` call increments the running total by five and emits one allocation event with one id; it does not produce five sub-records or five allocation ids. A subsequent `release(pool_id, count=5, ...)` decrements the running total by five and emits one release event with one id. The composing pattern (Provisional Commitment, or whatever owns the per-allocation lifecycle in the host system) supplies the per-allocation identity; this atom owns only the pool's arithmetic.
 
 ### Inputs and Outputs
 
-- A capacity value — a non-negative integer naming the maximum total allocation the pool admits. Zero is allowed (a pool that admits no allocations until its capacity is adjusted upward).
-- A unit count — a positive integer naming how many units an `allocate` or `release` call operates on.
-- A new-capacity value — a non-negative integer supplied to `adjust_capacity`.
+- A [Capacity] value — a non-negative integer naming the maximum total allocation the pool admits. Zero is allowed (a pool that admits no allocations until its capacity is adjusted upward).
+- A [Count] — a positive integer naming how many units an [Allocate] or [Release] call operates on.
+- A [New Capacity] value — a non-negative integer supplied to [Adjust Capacity].
 - A declaring / allocating / releasing / adjusting / suspending / resuming / closing actor reference — an opaque pointer to the internal actor performing the action. Non-empty, non-whitespace-only. Attribution only; non-repudiable proof composes with Actor Identity.
-- A reason — a non-empty, non-whitespace-only string of at most 2000 characters, required on `declare_pool`, `adjust_capacity`, `suspend_pool`, `resume_pool`, `close_pool`. Not required on `allocate` or `release` (those are routine arithmetic operations; the audit value of a per-allocation reason is low and would clutter the event log).
+- A [Reason] — a non-empty, non-whitespace-only string of at most 2000 characters, required on [Declare Pool], [Adjust Capacity], [Suspend Pool], [Resume Pool], [Close Pool]. Not required on [Allocate] or [Release] (those are routine arithmetic operations; the audit value of a per-allocation reason is low and would clutter the event log).
 - Actions:
   - `declare_pool(capacity, declaring_actor_ref, reason) → pool_id | rejected(invalid-request | storage-failure)`
   - `allocate(pool_id, count, allocating_actor_ref) → allocation_event_id | rejected(not-known | over-capacity | suspended | closed | invalid-request | storage-failure)`
@@ -65,32 +61,32 @@ Units are fungible at this atom's grain — the atom does not assign or track pe
   - `resume_pool(pool_id, resuming_actor_ref, reason) → state_change_id | rejected(not-known | not-suspended | already-closed | invalid-request | storage-failure)`
   - `close_pool(pool_id, closing_actor_ref, reason) → state_change_id | rejected(not-known | already-closed | invalid-request | storage-failure)`
   - `query(pool_id) → {capacity, allocated, available, state} | rejected(not-known)`
-- An implicit clock providing wall-time (clock time as a human would read it) timestamps for event-log entries.
+- An implicit clock providing the wall-time [Now] (clock time as a human would read it) stamped into each event's [Recorded At] and into [Declared At].
 
-**On `declare_pool`:** `capacity` must be a non-negative integer; otherwise `invalid-request`. `declaring_actor_ref` and `reason` must satisfy the uniform validation rule below.
+**On [Declare Pool]:** [Capacity] must be a non-negative integer; otherwise [Invalid Request]. [Declaring Actor Ref] and [Reason] must satisfy the uniform validation rule below.
 
-**On `allocate`:** `count` must be a positive integer (at least 1); otherwise `invalid-request`. `allocating_actor_ref` must satisfy the uniform validation rule. The atom does not permit zero-unit allocations — a no-op allocate is not a legitimate use of the action.
+**On [Allocate]:** [Count] must be a positive integer (at least 1); otherwise [Invalid Request]. [Allocating Actor Ref] must satisfy the uniform validation rule. The atom does not permit zero-unit allocations — a no-op allocate is not a legitimate use of the action.
 
-**On `release`:** `count` must be a positive integer; otherwise `invalid-request`. `releasing_actor_ref` must satisfy the uniform validation rule.
+**On [Release]:** [Count] must be a positive integer; otherwise [Invalid Request]. [Releasing Actor Ref] must satisfy the uniform validation rule.
 
-**On `adjust_capacity`:** `new_capacity` must be a non-negative integer; otherwise `invalid-request`. `new_capacity` must additionally differ from the pool's current `capacity`; an adjust call with `new_capacity == current_capacity` is rejected with `invalid-request` — a no-op adjustment is not a legitimate use of the action and admitting it would emit a capacity-adjustment event with `prior_capacity == new_capacity`, cluttering the audit log with events that record no change. This mirrors the discipline `allocate` and `release` apply to `count` (must be positive; zero-unit operations are not legitimate uses of those actions). `adjusting_actor_ref` and `reason` must satisfy the uniform validation rule.
+**On [Adjust Capacity]:** [New Capacity] must be a non-negative integer; otherwise [Invalid Request]. [New Capacity] must additionally differ from the pool's current [Capacity]; an adjust call with [New Capacity] equal to the current [Capacity] is rejected with [Invalid Request] — a no-op adjustment is not a legitimate use of the action and admitting it would emit a capacity-adjustment event with [Prior Capacity] equal to [New Capacity], cluttering the audit log with events that record no change. This mirrors the discipline [Allocate] and [Release] apply to [Count] (must be positive; zero-unit operations are not legitimate uses of those actions). [Adjusting Actor Ref] and [Reason] must satisfy the uniform validation rule.
 
-**On `suspend_pool`, `resume_pool`, `close_pool`:** `*_actor_ref` and `reason` must satisfy the uniform validation rule.
+**On [Suspend Pool], [Resume Pool], [Close Pool]:** `*_actor_ref` and [Reason] must satisfy the uniform validation rule.
 
 **Outputs** — the atom's persisted state takes two forms with different read surfaces.
 
-*The persisted pool record* — what the atom durably keeps for each declared pool — carries: `pool_id`, `capacity` (current declared maximum), `allocated` (current running total), `available` (= `capacity - allocated`), current state, `declared_at`, `declaring_actor_ref`, `declaration_reason`, and the full audit log (allocation events, release events, capacity-adjustment events, state-change events, in insertion order). This is the shape audit pipelines, regulator queries, and composing patterns read against; it is the surface the Generation acceptance checks operate on.
+*The persisted pool record* — what the atom durably keeps for each declared pool — carries: [Pool Id], [Capacity] (current declared maximum), [Allocated] (current running total), [Available] (= [Capacity] − [Allocated]), current [State], [Declared At], [Declaring Actor Ref], [Declaration Reason], and the full audit log (allocation events, release events, capacity-adjustment events, state-change events, in insertion order). This is the shape audit pipelines, regulator queries, and composing patterns read against; it is the surface the Generation acceptance checks operate on.
 
-*The runtime read surface* exposed to allocation-hot-path callers is `query(pool_id) → {capacity, allocated, available, state}` — a deliberately narrow projection of four fields. The projection is deliberate: callers in the allocation hot path need the current bound and headroom for routing or admission decisions, not the declaration metadata or the audit log on every call. Declaration fields and the audit log are read through composing surfaces — Audit Trail's tamper-evident composite, Event Log's deployment-grain journal, or direct inspection of the persisted record by audit pipelines — not through `query`. A reader who needs the full record reads the persisted record directly via the audit surface; a reader who needs the live arithmetic state reads `query`.
+*The runtime read surface* exposed to allocation-hot-path callers is [Query] — (Projected contract: `query(pool_id) → {capacity, allocated, available, state}`) — a deliberately narrow projection of four fields. The projection is deliberate: callers in the allocation hot path need the current bound and headroom for routing or admission decisions, not the declaration metadata or the audit log on every call. Declaration fields and the audit log are read through composing surfaces — Audit Trail's tamper-evident composite, Event Log's deployment-grain journal, or direct inspection of the persisted record by audit pipelines — not through [Query]. A reader who needs the full record reads the persisted record directly via the audit surface; a reader who needs the live arithmetic state reads [Query].
 
 All four event classes in the persisted pool record carry before/after snapshots for the quantity they mutate, symmetric across the audit-log surface:
 
-- Allocation events: `allocation_event_id`, `pool_id`, `count`, `allocated_before`, `allocated_after` (= `allocated_before + count`), `allocating_actor_ref`, `recorded_at`.
-- Release events: `release_event_id`, `pool_id`, `count`, `allocated_before`, `allocated_after` (= `allocated_before - count`), `releasing_actor_ref`, `recorded_at`.
-- Capacity-adjustment events: `adjustment_event_id`, `pool_id`, `prior_capacity`, `new_capacity`, `adjusting_actor_ref`, `reason`, `recorded_at`.
-- State-change events: `state_change_id`, `pool_id`, `prior_state`, `new_state`, `acting_actor_ref`, `reason`, `recorded_at`.
+- Allocation events: [Allocation Event Id], [Pool Id], [Count], [Allocated Before], [Allocated After] (= [Allocated Before] + [Count]), [Allocating Actor Ref], [Recorded At].
+- Release events: [Release Event Id], [Pool Id], [Count], [Allocated Before], [Allocated After] (= [Allocated Before] − [Count]), [Releasing Actor Ref], [Recorded At].
+- Capacity-adjustment events: [Adjustment Event Id], [Pool Id], [Prior Capacity], [New Capacity], [Adjusting Actor Ref], [Reason], [Recorded At].
+- State-change events: [State Change Id], [Pool Id], [Prior State], [New State], [Acting Actor Ref], [Reason], [Recorded At].
 
-The before/after symmetry is load-bearing for Generation acceptance: an auditor inspecting a single event can verify Invariant 4 (allocate: `allocated_after ≤ capacity_in_effect`) or Invariant 5 (release: `allocated_after ≥ 0`) without replaying the entire log to that point. Replay remains authoritative under Invariant 9 — the snapshots are a witness to the arithmetic, not a substitute for it.
+The before/after symmetry is load-bearing for Generation acceptance: an auditor inspecting a single event can verify Invariant 4 (allocate: [Allocated After] ≤ capacity in effect) or Invariant 5 (release: [Allocated After] ≥ 0) without replaying the entire log to that point. Replay remains authoritative under Invariant 9 — the snapshots are a witness to the arithmetic, not a substitute for it.
 
 Action returns: the event id created (per the action signatures above) so the caller has the id in hand without a follow-up query — required for passing to Actor Identity for attestation and to Audit Trail for tamper-evident recording.
 
@@ -98,47 +94,55 @@ Action returns: the event id created (per the action signatures above) so the ca
 
 A pool, once declared, occupies exactly one of three states:
 
-- **Open** — the pool accepts `allocate` calls subject to the capacity constraint (allocations that would push `allocated + count > capacity` are rejected with `over-capacity`; the pool remains Open). Entry state for every newly declared pool.
-- **Suspended** — the pool rejects all new `allocate` calls regardless of capacity headroom. `release` calls are still accepted (in-flight allocations can be cleanly unwound). `adjust_capacity` is still accepted (capacity can be revised before resumption). Reached via `suspend_pool`; left via `resume_pool` (back to Open) or `close_pool` (terminal).
-- **Closed** — terminal. The pool rejects new `allocate` calls and new `adjust_capacity` calls. `release` calls are still accepted so callers can unwind in-flight allocations; this is the only post-Closed mutation permitted. The pool record persists indefinitely from the atom's perspective.
+- **[Open]** — the pool accepts [Allocate] calls subject to the capacity constraint (allocations that would push [Allocated] + [Count] > [Capacity] are rejected with [Over Capacity]; the pool remains [Open]). Entry state for every newly declared pool.
+- **[Suspended]** — the pool rejects all new [Allocate] calls regardless of capacity headroom. [Release] calls are still accepted (in-flight allocations can be cleanly unwound). [Adjust Capacity] is still accepted (capacity can be revised before resumption). Reached via [Suspend Pool]; left via [Resume Pool] (back to [Open]) or [Close Pool] (terminal).
+- **[Closed]** — terminal. The pool rejects new [Allocate] calls and new [Adjust Capacity] calls. [Release] calls are still accepted so callers can unwind in-flight allocations; this is the only post-[Closed] mutation permitted. The pool record persists indefinitely from the atom's perspective.
 
-**Drained is not a state.** The arithmetic condition `allocated == capacity` is observable via `query` (returns `available = 0`) and is the precondition that causes `allocate` to reject with `over-capacity`. Treating it as a state would conflate a policy decision (an actor deciding to stop new allocations) with an arithmetic property (the running total has reached the bound). The state machine names policy-driven transitions only; arithmetic conditions are derived.
+**Drained is not a state.** The arithmetic condition [Allocated] == [Capacity] is observable via [Query] (returns [Available] = 0) and is the precondition that causes [Allocate] to reject with [Over Capacity]. Treating it as a state would conflate a policy decision (an actor deciding to stop new allocations) with an arithmetic property (the running total has reached the bound). The state machine names policy-driven transitions only; arithmetic conditions are derived.
 
 **Ordering.** The pool's audit log is ordered by insertion sequence. References elsewhere in this spec to "after the most recent X," "between X and Y," or "most recent X" mean by insertion order, not by timestamp order. Timestamps on log entries are best-effort wall-time metadata sourced from the implicit clock; under skew or clock adjustment, timestamps may not be monotonic. Composing with Trusted Timestamping binds insertion order to externally-verifiable wall-time; without that composition, timestamps are advisory and insertion order is authoritative.
 
 Each pool record carries:
 
-- **`pool_id`** — opaque, immutable, system-generated. Set on `declare_pool`. Never changes.
-- **`declared_at`** — wall-time of declaration. Set on `declare_pool`. Never changes.
-- **`declaring_actor_ref`** — set on `declare_pool`. Never changes.
-- **`declaration_reason`** — set on `declare_pool`. Never changes.
-- **`capacity`** — current declared maximum. Set on `declare_pool`; modified only by `adjust_capacity`.
-- **`allocated`** — current running total. Modified only by `allocate` (incremented) and `release` (decremented).
-- **current state** — one of {Open, Suspended, Closed}. Modified only by `suspend_pool`, `resume_pool`, `close_pool`.
+- **[Pool Id]** — opaque, immutable, system-generated. Set on [Declare Pool]. Never changes.
+- **[Declared At]** — wall-time of declaration. Set on [Declare Pool]. Never changes.
+- **[Declaring Actor Ref]** — set on [Declare Pool]. Never changes.
+- **[Declaration Reason]** — set on [Declare Pool]. Never changes.
+- **[Capacity]** — current declared maximum. Set on [Declare Pool]; modified only by [Adjust Capacity].
+- **[Allocated]** — current running total. Modified only by [Allocate] (incremented) and [Release] (decremented).
+- **current [State]** — one of {[Open], [Suspended], [Closed]}. Modified only by [Suspend Pool], [Resume Pool], [Close Pool].
 - **audit log** — ordered, append-only list of allocation events, release events, capacity-adjustment events, and state-change events. Each entry is individually addressable by its respective event id.
 
-Transitions:
+Transitions — each successful write appends one audit-log event and stamps its [Recorded At] from the implicit clock:
 
-- `declare_pool(capacity, ...)` → pool created in **Open** with fresh `pool_id`, `declared_at = now`, `allocated = 0`, current capacity = supplied capacity.
-- `allocate(pool_id, count, ...)` when Open and `allocated + count ≤ capacity` → `allocated` increments by `count`; allocation event appended; state unchanged.
-- `allocate(pool_id, count, ...)` when Open and `allocated + count > capacity` → `rejected(over-capacity)`; no state change, no allocation event recorded.
-- `allocate(pool_id, count, ...)` when Suspended → `rejected(suspended)`.
-- `allocate(pool_id, count, ...)` when Closed → `rejected(closed)`.
-- `release(pool_id, count, ...)` when `count ≤ allocated` (in any state including Closed) → `allocated` decrements by `count`; release event appended; state unchanged.
-- `release(pool_id, count, ...)` when `count > allocated` → `rejected(over-release)`; no state change, no release event recorded.
-- `adjust_capacity(pool_id, new_capacity, ...)` when Open or Suspended and `new_capacity ≠ current_capacity` and `new_capacity ≥ allocated` → `capacity` updated to `new_capacity`; adjustment event appended; state unchanged.
-- `adjust_capacity(pool_id, new_capacity, ...)` when Open or Suspended and `new_capacity == current_capacity` → `rejected(invalid-request)`; no change, no event (no-op rejection — see Decision points).
-- `adjust_capacity(pool_id, new_capacity, ...)` when Open or Suspended and `new_capacity < allocated` → `rejected(over-allocated)`; no change, no event.
-- `adjust_capacity(pool_id, ..., ...)` when Closed → `rejected(closed)`.
-- `suspend_pool(pool_id, ...)` when Open → **Suspended**; state-change event appended.
-- `suspend_pool(pool_id, ...)` when Suspended → `rejected(not-open)`.
-- `suspend_pool(pool_id, ...)` when Closed → `rejected(already-closed)`.
-- `resume_pool(pool_id, ...)` when Suspended → **Open**; state-change event appended.
-- `resume_pool(pool_id, ...)` when Open → `rejected(not-suspended)`.
-- `resume_pool(pool_id, ...)` when Closed → `rejected(already-closed)`.
-- `close_pool(pool_id, ...)` when Open or Suspended → **Closed**; state-change event appended.
-- `close_pool(pool_id, ...)` when Closed → `rejected(already-closed)`.
-- `query(pool_id)` (any state) → returns the pool's current `capacity`, `allocated`, `available`, and `state`. Does not modify state; does not produce an audit event (queries are not logged at this layer; the composing Event Log handles per-query telemetry if needed).
+| action | from state | guard | effect | result |
+|--------|-----------|-------|--------|--------|
+| [Declare Pool] | *(no record)* | — | pool created in **[Open]**; fresh [Pool Id]; [Declared At] = now; [Allocated] = 0; [Capacity] = supplied | [Pool Id] |
+| [Allocate] | [Open] | [Allocated] + [Count] ≤ [Capacity] | [Allocated] += [Count]; allocation event appended; state unchanged | [Allocation Event Id] |
+| [Allocate] | [Open] | [Allocated] + [Count] > [Capacity] | none | [Over Capacity] |
+| [Allocate] | [Suspended] | — | none | [Suspended] |
+| [Allocate] | [Closed] | — | none | [Closed] |
+| [Release] | any (incl. [Closed]) | [Count] ≤ [Allocated] | [Allocated] −= [Count]; release event appended; state unchanged | [Release Event Id] |
+| [Release] | any | [Count] > [Allocated] | none | [Over Release] |
+| [Adjust Capacity] | [Open] / [Suspended] | [New Capacity] ≠ current ∧ ≥ [Allocated] | [Capacity] = [New Capacity]; adjustment event appended; state unchanged | [Adjustment Event Id] |
+| [Adjust Capacity] | [Open] / [Suspended] | [New Capacity] = current | none | [Invalid Request] |
+| [Adjust Capacity] | [Open] / [Suspended] | [New Capacity] < [Allocated] | none | [Over Allocated] |
+| [Adjust Capacity] | [Closed] | — | none | [Closed] |
+| [Suspend Pool] | [Open] | — | → **[Suspended]**; state-change event appended | [State Change Id] |
+| [Suspend Pool] | [Suspended] | — | none | [Not Open] |
+| [Suspend Pool] | [Closed] | — | none | [Already Closed] |
+| [Resume Pool] | [Suspended] | — | → **[Open]**; state-change event appended | [State Change Id] |
+| [Resume Pool] | [Open] | — | none | [Not Suspended] |
+| [Resume Pool] | [Closed] | — | none | [Already Closed] |
+| [Close Pool] | [Open] / [Suspended] | — | → **[Closed]**; state-change event appended | [State Change Id] |
+| [Close Pool] | [Closed] | — | none | [Already Closed] |
+| [Query] *(read-only — not a transition)* | any | — | none; no audit event | snapshot {[Capacity], [Allocated], [Available], [State]} |
+
+Three semantics the cells cannot hold:
+
+- *A rejected action writes nothing.* Every `none`-effect row above leaves [Allocated], [Capacity], [State], and the audit log unchanged — no event is recorded for a rejected call (see *Edge cases → Rejection visibility*). The atom enforces by precondition, never by silently clamping a value to fit.
+- *[Release] is the one mutation admitted in every state.* It is accepted in [Open], [Suspended], and [Closed] so composing patterns can unwind in-flight allocations after the pool is suspended or closed (Invariant 3's rationale).
+- *Store-write failure and rejection priority.* If a write fails after preconditions pass, the action returns [Storage Failure] with no partial commit (Invariant 14). The fixed rejection-priority order ([Not Known] → state-validity → field-format → arithmetic precondition → store write) is in Decision points, where the full per-action preconditions stay.
 
 ### Flow
 
@@ -165,97 +169,97 @@ This is the *preserve-by-precondition* discipline: the atom enforces the constra
 
 ### Decision points
 
-**Uniform validation rule.** Across all actions, every required string field (actor references, reasons) must be non-null, non-empty, and non-whitespace-only; otherwise `rejected(invalid-request)`. String validation operates on the Unicode codepoint sequence: *non-empty* means at least one codepoint; *non-whitespace-only* means at least one codepoint outside the Unicode whitespace category (`\p{White_Space}`); the 2000-character cap for reasons is a codepoint count, not a byte length, so multi-byte scripts are not penalized against single-byte ASCII (American Standard Code for Information Interchange — the basic English-character encoding). The atom additionally rejects with `invalid-request` any string field containing control characters (Unicode general category `Cc`: `U+0000`–`U+001F`, `U+007F`, `U+0080`–`U+009F`), zero-width characters (`U+200B`–`U+200D`, `U+FEFF`), or bidi-override characters (`U+202A`–`U+202E`, `U+2066`–`U+2069`) — the rationale is regulator-readability: a `reason` field whose contents are control bytes, zero-width-only, or bidi-spoofed is invisibly empty or deceptively rendered to a human auditor reading the records, and admitting such values would pass the atom's syntactic check while failing the audit-surface intent the field exists to serve. Unicode normalization (NFC and NFKC — Normalization Forms C and KC, the Unicode standard's canonical forms for giving equivalent characters one standard byte sequence; others) is *not* applied by the atom — it stores the codepoint sequence as supplied; deployments under regulators that require comparison or deduplication on string fields apply normalization at the deployment boundary before passing to the atom, and the atom records the normalized form. The atom does not perform case-folding on any string field — `acting_actor_ref` values that differ in case are distinct attribution surfaces to the atom; deployments requiring case-insensitive actor identity normalize at the boundary. Every required integer field (`capacity`, `count`, `new_capacity`) must be of the correct sign (non-negative for `capacity` and `new_capacity`; positive for `count`); otherwise `rejected(invalid-request)`.
+**Uniform validation rule.** Across all actions, every required string field (actor references, reasons) must be non-null, non-empty, and non-whitespace-only; otherwise [Invalid Request]. String validation operates on the Unicode codepoint sequence: *non-empty* means at least one codepoint; *non-whitespace-only* means at least one codepoint outside the Unicode whitespace category (`\p{White_Space}`); the 2000-character cap for reasons is a codepoint count, not a byte length, so multi-byte scripts are not penalized against single-byte ASCII (American Standard Code for Information Interchange — the basic English-character encoding). The atom additionally rejects with `invalid-request` any string field containing control characters (Unicode general category `Cc`: `U+0000`–`U+001F`, `U+007F`, `U+0080`–`U+009F`), zero-width characters (`U+200B`–`U+200D`, `U+FEFF`), or bidi-override characters (`U+202A`–`U+202E`, `U+2066`–`U+2069`) — the rationale is regulator-readability: a `reason` field whose contents are control bytes, zero-width-only, or bidi-spoofed is invisibly empty or deceptively rendered to a human auditor reading the records, and admitting such values would pass the atom's syntactic check while failing the audit-surface intent the field exists to serve. Unicode normalization (NFC and NFKC — Normalization Forms C and KC, the Unicode standard's canonical forms for giving equivalent characters one standard byte sequence; others) is *not* applied by the atom — it stores the codepoint sequence as supplied; deployments under regulators that require comparison or deduplication on string fields apply normalization at the deployment boundary before passing to the atom, and the atom records the normalized form. The atom does not perform case-folding on any string field — [Acting Actor Ref] values that differ in case are distinct attribution surfaces to the atom; deployments requiring case-insensitive actor identity normalize at the boundary. Every required integer field ([Capacity], [Count], [New Capacity]) must be of the correct sign (non-negative for [Capacity] and [New Capacity]; positive for [Count]); otherwise [Invalid Request].
 
-**At `declare_pool(capacity, declaring_actor_ref, reason)`:** All three fields must satisfy the uniform validation rule (with `capacity` non-negative integer); otherwise `rejected(invalid-request)`. If the pool store write fails, `rejected(storage-failure)` — no pool record is created.
+**At [Declare Pool]:** All three fields must satisfy the uniform validation rule (with [Capacity] a non-negative integer); otherwise [Invalid Request]. If the pool store write fails, [Storage Failure] — no pool record is created.
 
-**At `allocate(pool_id, count, allocating_actor_ref)`:** `pool_id` must reference a known pool; otherwise `rejected(not-known)`. The pool must be in Open state. If Suspended, `rejected(suspended)`. If Closed, `rejected(closed)`. `count` and `allocating_actor_ref` must satisfy the uniform validation rule; otherwise `rejected(invalid-request)`. The arithmetic precondition is: `allocated + count ≤ capacity`. If `allocated + count > capacity`, `rejected(over-capacity)`. If the write fails, `rejected(storage-failure)` — `allocated` and the audit log are unchanged.
+**At [Allocate]:** [Pool Id] must reference a known pool; otherwise [Not Known]. The pool must be in [Open] state. If [Suspended], rejected [Suspended]. If [Closed], rejected [Closed]. [Count] and [Allocating Actor Ref] must satisfy the uniform validation rule; otherwise [Invalid Request]. The arithmetic precondition is: [Allocated] + [Count] ≤ [Capacity]. If [Allocated] + [Count] > [Capacity], [Over Capacity]. If the write fails, [Storage Failure] — [Allocated] and the audit log are unchanged.
 
-**At `release(pool_id, count, releasing_actor_ref)`:** `pool_id` must reference a known pool; otherwise `rejected(not-known)`. `release` is permitted in all three states (Open, Suspended, Closed) — releases of in-flight allocations must succeed regardless of pool state so the running count can be cleanly unwound. `count` and `releasing_actor_ref` must satisfy the uniform validation rule; otherwise `rejected(invalid-request)`. The arithmetic precondition is: `count ≤ allocated`. If `count > allocated`, `rejected(over-release)` — releasing more than is allocated would violate the non-negativity invariant and almost certainly indicates a coordination bug at the caller. If the write fails, `rejected(storage-failure)`.
+**At [Release]:** [Pool Id] must reference a known pool; otherwise [Not Known]. [Release] is permitted in all three states ([Open], [Suspended], [Closed]) — releases of in-flight allocations must succeed regardless of pool state so the running count can be cleanly unwound. [Count] and [Releasing Actor Ref] must satisfy the uniform validation rule; otherwise [Invalid Request]. The arithmetic precondition is: [Count] ≤ [Allocated]. If [Count] > [Allocated], [Over Release] — releasing more than is allocated would violate the non-negativity invariant and almost certainly indicates a coordination bug at the caller. If the write fails, [Storage Failure].
 
-**At `adjust_capacity(pool_id, new_capacity, adjusting_actor_ref, reason)`:** `pool_id` must reference a known pool; otherwise `rejected(not-known)`. The pool must not be Closed; otherwise `rejected(closed)`. All four fields must satisfy the uniform validation rule; in addition, `new_capacity` must differ from the pool's current `capacity` — an adjust whose new value equals the current value is a no-op and is rejected with `invalid-request` rather than admitted (audit-log hygiene, asymmetry-resolution with allocate/release positive-count rule). The arithmetic precondition is: `new_capacity ≥ allocated`. If `new_capacity < allocated`, `rejected(over-allocated)` — the requested capacity would put the pool's already-allocated units over the bound, violating the capacity constraint. The atom enforces by precondition, never by clamping. If the write fails, `rejected(storage-failure)`.
+**At [Adjust Capacity]:** [Pool Id] must reference a known pool; otherwise [Not Known]. The pool must not be [Closed]; otherwise rejected [Closed]. All four fields must satisfy the uniform validation rule; in addition, [New Capacity] must differ from the pool's current [Capacity] — an adjust whose new value equals the current value is a no-op and is rejected with [Invalid Request] rather than admitted (audit-log hygiene, asymmetry-resolution with allocate/release positive-count rule). The arithmetic precondition is: [New Capacity] ≥ [Allocated]. If [New Capacity] < [Allocated], [Over Allocated] — the requested capacity would put the pool's already-allocated units over the bound, violating the capacity constraint. The atom enforces by precondition, never by clamping. If the write fails, [Storage Failure].
 
-**At `suspend_pool(pool_id, suspending_actor_ref, reason)`:** `pool_id` must reference a known pool; otherwise `rejected(not-known)`. The pool must be in Open state. If Suspended, `rejected(not-open)`. If Closed, `rejected(already-closed)`. Field validation as above. If the write fails, `rejected(storage-failure)`.
+**At [Suspend Pool]:** [Pool Id] must reference a known pool; otherwise [Not Known]. The pool must be in [Open] state. If [Suspended], [Not Open]. If [Closed], [Already Closed]. Field validation as above. If the write fails, [Storage Failure].
 
-**At `resume_pool(pool_id, resuming_actor_ref, reason)`:** `pool_id` must reference a known pool; otherwise `rejected(not-known)`. The pool must be in Suspended state. If Open, `rejected(not-suspended)`. If Closed, `rejected(already-closed)`. Field validation as above. If the write fails, `rejected(storage-failure)`.
+**At [Resume Pool]:** [Pool Id] must reference a known pool; otherwise [Not Known]. The pool must be in [Suspended] state. If [Open], [Not Suspended]. If [Closed], [Already Closed]. Field validation as above. If the write fails, [Storage Failure].
 
-**At `close_pool(pool_id, closing_actor_ref, reason)`:** `pool_id` must reference a known pool; otherwise `rejected(not-known)`. The pool must not already be Closed; otherwise `rejected(already-closed)`. Field validation as above. If the write fails, `rejected(storage-failure)`.
+**At [Close Pool]:** [Pool Id] must reference a known pool; otherwise [Not Known]. The pool must not already be [Closed]; otherwise [Already Closed]. Field validation as above. If the write fails, [Storage Failure].
 
-**At `query(pool_id)`:** `pool_id` must reference a known pool; otherwise `rejected(not-known)`. Query does not modify state and does not produce an audit-log entry at this layer.
+**At [Query]:** [Pool Id] must reference a known pool; otherwise [Not Known]. Query does not modify state and does not produce an audit-log entry at this layer.
 
-**Priority ordering among rejection reasons:** For any action, `not-known` is checked before state-validity checks; state-validity checks are checked before field-format checks; field-format checks are checked before arithmetic preconditions (over-capacity, over-release, over-allocated); all checks precede the store write. Each ordering decision is defended in-line.
+**Priority ordering among rejection reasons:** For any action, [Not Known] is checked before state-validity checks; state-validity checks are checked before field-format checks; field-format checks are checked before arithmetic preconditions ([Over Capacity], [Over Release], [Over Allocated]); all checks precede the store write. Each ordering decision is defended in-line.
 
-*`not-known` first* because every other check presupposes a real pool record to inspect. A call against an unknown `pool_id` has no state, no current `allocated`, no `capacity` to compare against — none of the subsequent checks are meaningful.
+*[Not Known] first* because every other check presupposes a real pool record to inspect. A call against an unknown [Pool Id] has no state, no current [Allocated], no [Capacity] to compare against — none of the subsequent checks are meaningful.
 
-*State-validity before field-format* because the pool's state is a structural property of the call's target, whereas field-format is local to the specific call. A Closed pool is a target that does not accept allocate or adjust_capacity calls at all; reporting `closed` to the caller communicates "this target is unusable for this action" before per-call fields are validated against the same target. The convention mirrors how databases reject "table does not exist" before "your column type is wrong" — target-level structural rejections precede call-level structural rejections. The cost of this ordering is that a caller passing a malformed `count` against a Closed pool sees `closed` and not `invalid-request`; the caller's malformation is masked until they retry against a non-Closed pool. The cost is accepted because the alternative — field-format first — forces every call to be validated against the pool's per-call surface before the caller learns the target is fundamentally unusable, which is the noisier path for the common case (operators draining a pool, callers trying to use a decommissioned pool).
+*State-validity before field-format* because the pool's state is a structural property of the call's target, whereas field-format is local to the specific call. A [Closed] pool is a target that does not accept [Allocate] or [Adjust Capacity] calls at all; reporting [Closed] to the caller communicates "this target is unusable for this action" before per-call fields are validated against the same target. The convention mirrors how databases reject "table does not exist" before "your column type is wrong" — target-level structural rejections precede call-level structural rejections. The cost of this ordering is that a caller passing a malformed [Count] against a [Closed] pool sees [Closed] and not [Invalid Request]; the caller's malformation is masked until they retry against a non-[Closed] pool. The cost is accepted because the alternative — field-format first — forces every call to be validated against the pool's per-call surface before the caller learns the target is fundamentally unusable, which is the noisier path for the common case (operators draining a pool, callers trying to use a decommissioned pool).
 
-*Field-format before arithmetic* because the arithmetic preconditions (`allocated + count ≤ capacity`, `count ≤ allocated`, `new_capacity ≥ allocated`) require the integer fields to be well-formed before they can be meaningfully evaluated — an `allocate(pool_id, count=-5, ...)` against an Open pool returns `invalid-request` (count is not a positive integer) rather than passing the arithmetic check by happenstance (because `allocated + (-5) ≤ capacity` holds for any non-negative `allocated`) and then rejecting on field-format afterwards.
+*Field-format before arithmetic* because the arithmetic preconditions ([Allocated] + [Count] ≤ [Capacity], [Count] ≤ [Allocated], [New Capacity] ≥ [Allocated]) require the integer fields to be well-formed before they can be meaningfully evaluated — an `allocate(pool_id, count=-5, ...)` against an [Open] pool returns [Invalid Request] ([Count] is not a positive integer) rather than passing the arithmetic check by happenstance (because [Allocated] + (−5) ≤ [Capacity] holds for any non-negative [Allocated]) and then rejecting on field-format afterwards.
 
-*Store write last* because all in-memory checks precede any durable side effect; a `storage-failure` rejection carries the same all-or-none guarantee as the precondition rejections (no partial commit, no audit-log entry written, no running-total change).
+*Store write last* because all in-memory checks precede any durable side effect; a [Storage Failure] rejection carries the same all-or-none guarantee as the precondition rejections (no partial commit, no audit-log entry written, no running-total change).
 
 ### Behavior
 
 Observed behavior, derived from how operational and regulated systems use bounded resource pools:
 
-`allocate` increments the running total by the requested count, atomically with respect to other concurrent calls under the host environment's serialization guarantees. Two concurrent allocates against a pool with one unit of headroom resolve serially — whichever wins the race produces an allocation event; the loser receives `over-capacity`. The atom does not implement fairness policy (FIFO, priority, lottery); the host environment's serialization order is what determines the outcome.
+[Allocate] increments the running total by the requested [Count], atomically with respect to other concurrent calls under the host environment's serialization guarantees. Two concurrent allocates against a pool with one unit of headroom resolve serially — whichever wins the race produces an allocation event; the loser receives [Over Capacity]. The atom does not implement fairness policy (FIFO, priority, lottery); the host environment's serialization order is what determines the outcome.
 
-`release` decrements the running total by the requested count. The atom accepts releases of any positive count up to the current `allocated`. A release of exactly the currently-allocated amount drives `allocated` to zero; subsequent releases are rejected with `over-release` until new allocations occur. The atom does not validate that the released count matches any prior allocation count — units are fungible. A caller that allocates 5 in one call and 3 in another may release in any combination summing to no more than 8.
+[Release] decrements the running total by the requested [Count]. The atom accepts releases of any positive count up to the current [Allocated]. A release of exactly the currently-allocated amount drives [Allocated] to zero; subsequent releases are rejected with [Over Release] until new allocations occur. The atom does not validate that the released count matches any prior allocation count — units are fungible. A caller that allocates 5 in one call and 3 in another may release in any combination summing to no more than 8.
 
-`adjust_capacity` modifies the bound without modifying the running total. An upward adjustment (`new_capacity > current_capacity`) is always accepted (subject to field-validation). A downward adjustment (`new_capacity < current_capacity`) is accepted only if `new_capacity ≥ allocated`; otherwise rejected with `over-allocated`. A same-value adjustment (`new_capacity == current_capacity`) is rejected with `invalid-request` — a no-op adjustment is not a legitimate use of the action, mirroring the positive-count rule on allocate/release. The atom does not permit silent clamping (set capacity to allocated count) or forced eviction (release units to fit the lower capacity) — those are policy decisions the caller must make explicitly via additional `release` calls before re-attempting the adjustment.
+[Adjust Capacity] modifies the bound without modifying the running total. An upward adjustment ([New Capacity] > current [Capacity]) is always accepted (subject to field-validation). A downward adjustment ([New Capacity] < current [Capacity]) is accepted only if [New Capacity] ≥ [Allocated]; otherwise rejected with [Over Allocated]. A same-value adjustment ([New Capacity] = current [Capacity]) is rejected with [Invalid Request] — a no-op adjustment is not a legitimate use of the action, mirroring the positive-count rule on allocate/release. The atom does not permit silent clamping (set capacity to allocated count) or forced eviction (release units to fit the lower capacity) — those are policy decisions the caller must make explicitly via additional [Release] calls before re-attempting the adjustment.
 
-`suspend_pool` halts new allocations without unwinding existing ones. Use cases: maintenance windows, regulatory holds (a credit pool suspended pending compliance review), operational pauses (a connection pool suspended during failover). Releases remain admissible; capacity adjustments remain admissible (operators can re-tune capacity while the pool is paused). The pool's running total is unchanged by the suspend itself.
+[Suspend Pool] halts new allocations without unwinding existing ones. Use cases: maintenance windows, regulatory holds (a credit pool suspended pending compliance review), operational pauses (a connection pool suspended during failover). Releases remain admissible; capacity adjustments remain admissible (operators can re-tune capacity while the pool is paused). The pool's running total is unchanged by the suspend itself.
 
-`close_pool` is terminal. Once closed, no new allocations and no capacity adjustments are admitted. Releases remain admissible so the pool's running total stays consistent with the composing patterns whose per-allocation records may still be unwinding when close occurs (see Invariant 3's defended-in-line rationale). The pool record persists in Closed indefinitely; retention and archival are a composing concept.
+[Close Pool] is terminal. Once closed, no new allocations and no capacity adjustments are admitted. Releases remain admissible so the pool's running total stays consistent with the composing patterns whose per-allocation records may still be unwinding when close occurs (see Invariant 3's defended-in-line rationale). The pool record persists in [Closed] indefinitely; retention and archival are a composing concept.
 
-`query` is read-only. It returns the pool's current capacity, allocated count, available (= capacity − allocated), and state. The query is not logged at this layer; the composing Event Log handles per-query telemetry if a deployment needs it. Queries are not subject to the pool's state — a Closed pool's data remains queryable for as long as the record persists.
+[Query] is read-only. It returns the pool's current [Capacity], [Allocated] count, [Available] (= [Capacity] − [Allocated]), and [State]. The query is not logged at this layer; the composing Event Log handles per-query telemetry if a deployment needs it. Queries are not subject to the pool's state — a [Closed] pool's data remains queryable for as long as the record persists.
 
-No action modifies declaration fields (`pool_id`, `declared_at`, `declaring_actor_ref`, `declaration_reason`) after `declare_pool`. The declaration captures the pool's origin; subsequent changes (capacity adjustment, state transition) layer on top via the audit log without overwriting the declaration record.
+No action modifies declaration fields ([Pool Id], [Declared At], [Declaring Actor Ref], [Declaration Reason]) after [Declare Pool]. The declaration captures the pool's origin; subsequent changes (capacity adjustment, state transition) layer on top via the audit log without overwriting the declaration record.
 
 ### Feedback
 
 Each successful action produces an observable, measurable change:
 
-- After `declare_pool` — a new pool appears in Open with the supplied capacity, `allocated = 0`, and fresh `pool_id`. Total pool count increases by one.
-- After `allocate` — `allocated` increments by the supplied count. An allocation event appears in the audit log with a fresh `allocation_event_id` (returned to the caller), the count, the actor, a wall-time `recorded_at`, and the `allocated_before` / `allocated_after` snapshot. `available` (queryable via `query`) decreases by the same count.
-- After `release` — `allocated` decrements by the supplied count. A release event appears in the audit log with a fresh `release_event_id` (returned to the caller), the count, the actor, a wall-time `recorded_at`, and the `allocated_before` / `allocated_after` snapshot. `available` increases by the same count.
-- After `adjust_capacity` — `capacity` is replaced by the supplied `new_capacity`. An adjustment event appears in the audit log with a fresh `adjustment_event_id` (returned to the caller), naming the prior and new capacities, the actor, the reason. `available` may change as a side effect of the new capacity (it is recomputed as `capacity − allocated`).
-- After `suspend_pool`, `resume_pool`, `close_pool` — the pool's state is the new state. A state-change event appears in the audit log with a fresh `state_change_id` (returned to the caller), naming prior state, new state, actor, reason. Pool counts segmented by state shift accordingly.
+- After [Declare Pool] — a new pool appears in [Open] with the supplied [Capacity], [Allocated] = 0, and fresh [Pool Id]. Total pool count increases by one.
+- After [Allocate] — [Allocated] increments by the supplied [Count]. An allocation event appears in the audit log with a fresh [Allocation Event Id] (returned to the caller), the [Count], the actor, a wall-time [Recorded At], and the [Allocated Before] / [Allocated After] snapshot. [Available] (queryable via [Query]) decreases by the same count.
+- After [Release] — [Allocated] decrements by the supplied [Count]. A release event appears in the audit log with a fresh [Release Event Id] (returned to the caller), the [Count], the actor, a wall-time [Recorded At], and the [Allocated Before] / [Allocated After] snapshot. [Available] increases by the same count.
+- After [Adjust Capacity] — [Capacity] is replaced by the supplied [New Capacity]. An adjustment event appears in the audit log with a fresh [Adjustment Event Id] (returned to the caller), naming the prior and new capacities, the actor, the reason. [Available] may change as a side effect of the new capacity (it is recomputed as [Capacity] − [Allocated]).
+- After [Suspend Pool], [Resume Pool], [Close Pool] — the pool's state is the new state. A state-change event appears in the audit log with a fresh [State Change Id] (returned to the caller), naming [Prior State], [New State], actor, reason. Pool counts segmented by state shift accordingly.
 
-Each rejected action produces an observable refusal with a named reason. The pool-count segmentation (Open, Suspended, Closed) is computable from the pool record set at any time; the running-total state of each pool is exposed via `query`.
+Each rejected action produces an observable refusal with a named reason. The pool-count segmentation ([Open], [Suspended], [Closed]) is computable from the pool record set at any time; the running-total state of each pool is exposed via [Query].
 
 ### Invariants
 
 The following hold across all valid sequences of actions and constitute the verification surface of the pattern:
 
-**Invariant 1 — Pool record permanence under this atom's actions; the composed-system view is bounded by the deployment's retention policy.** The atom defines no action that removes a pool record. Once declared by a successful `declare_pool` call, the `pool_id` is durably persisted and remains in the system through every subsequent state transition including `close_pool`; no atom-defined action deletes the record at any point in its lifecycle. A `storage-failure` rejection on `declare_pool` guarantees no partial record was written. Under composition with Retention Window — which applies to the pool record itself as well as to the audit log — the composed-system view may differ: pool records whose state has been Closed for longer than the deployment's retention schedule for closed-pool records may be archived to cold storage or purged entirely, mirroring Invariant 9's treatment of audit-log entries. The atom's contribution is the durability discipline (no atom-defined action removes a pool record); the deployment's Retention Window policy is the other half of what determines whether a regulator querying a stale `pool_id` receives `not-known` because the pool was never declared or because its record was purged — the rejection surface is identical to the caller (named explicitly in *Examples → Rejection paths → `not-known`*), and the regulator distinguishes the two by reading the deployment's retention manifest, not the atom's records.
+**Invariant 1 — Pool record permanence under this atom's actions; the composed-system view is bounded by the deployment's retention policy.** The atom defines no action that removes a pool record. Once declared by a successful [Declare Pool] call, the [Pool Id] is durably persisted and remains in the system through every subsequent state transition including [Close Pool]; no atom-defined action deletes the record at any point in its lifecycle. A [Storage Failure] rejection on [Declare Pool] guarantees no partial record was written. Under composition with Retention Window — which applies to the pool record itself as well as to the audit log — the composed-system view may differ: pool records whose state has been [Closed] for longer than the deployment's retention schedule for closed-pool records may be archived to cold storage or purged entirely, mirroring Invariant 9's treatment of audit-log entries. The atom's contribution is the durability discipline (no atom-defined action removes a pool record); the deployment's Retention Window policy is the other half of what determines whether a regulator querying a stale [Pool Id] receives [Not Known] because the pool was never declared or because its record was purged — the rejection surface is identical to the caller (named explicitly in *Examples → Rejection paths → [Not Known]*), and the regulator distinguishes the two by reading the deployment's retention manifest, not the atom's records.
 
-**Invariant 2 — State membership exclusivity.** Every pool known to the system is in exactly one of {Open, Suspended, Closed} at all times.
+**Invariant 2 — State membership exclusivity.** Every pool known to the system is in exactly one of {[Open], [Suspended], [Closed]} at all times.
 
-**Invariant 3 — Closed is absorbing for state transitions and for new allocations.** Once a pool enters Closed, no action transitions it elsewhere. `allocate`, `adjust_capacity`, `suspend_pool`, and `resume_pool` against a Closed pool are rejected. `release` is the single mutating action admitted in Closed; the running total can be decremented by composing patterns unwinding in-flight allocations. The rationale is cross-pattern data consistency: composing patterns such as Provisional Commitment maintain per-allocation records that may still be in non-terminal states (e.g., Held) when `close_pool` is called. When those per-allocation records reach their own terminal states (Released, Expired), the composing system calls `release` on the pool to keep the pool's running total aligned with the truth on the composing side. Rejecting `release` in Closed would not block the composing pattern from reaching its terminal states — Provisional Commitment's terminal transitions are internal to it — but it would permanently strand the pool's running total at its close-time value, producing an audit log whose final `allocated` figure does not match any observable reality. Permitting `release` in Closed preserves the data-consistency property without weakening the state-machine's terminal semantics for the operationally-meaningful transitions (suspend/resume/close, allocate, adjust_capacity).
+**Invariant 3 — Closed is absorbing for state transitions and for new allocations.** Once a pool enters [Closed], no action transitions it elsewhere. [Allocate], [Adjust Capacity], [Suspend Pool], and [Resume Pool] against a [Closed] pool are rejected. [Release] is the single mutating action admitted in [Closed]; the running total can be decremented by composing patterns unwinding in-flight allocations. The rationale is cross-pattern data consistency: composing patterns such as Provisional Commitment maintain per-allocation records that may still be in non-terminal states (e.g., Held) when [Close Pool] is called. When those per-allocation records reach their own terminal states (Released, Expired), the composing system calls [Release] on the pool to keep the pool's running total aligned with the truth on the composing side. Rejecting [Release] in [Closed] would not block the composing pattern from reaching its terminal states — Provisional Commitment's terminal transitions are internal to it — but it would permanently strand the pool's running total at its close-time value, producing an audit log whose final [Allocated] figure does not match any observable reality. Permitting [Release] in [Closed] preserves the data-consistency property without weakening the state-machine's terminal semantics for the operationally-meaningful transitions (suspend/resume/close, [Allocate], [Adjust Capacity]).
 
-**Invariant 4 — Capacity constraint.** For every pool at every instant, `allocated ≤ capacity`, conditional on the host obligations the atom names as deployment-shaped concepts (see *Edge cases → Concurrency and atomicity (concurrent-call atomicity)*, *Edge cases → Crash atomicity (mid-action process failure)*, and *Edge cases → Integer arithmetic precision*): serializable concurrent execution against the same `pool_id`, crash-atomic multi-record writes across the action's audit-log entry and running-total update, and overflow-safe integer arithmetic for `allocated + count`. Under those conditions, the atom enforces the invariant by precondition on `allocate` (rejects if `allocated + count > capacity`) and on `adjust_capacity` (rejects if `new_capacity < allocated`); there is no action sequence the atom accepts that produces a state with `allocated > capacity`. This is the load-bearing arithmetic invariant; it is what composing patterns may rely on without re-implementing the constraint, *contingent on the named host obligations being met*. A deployment that violates any of the three obligations produces an environment in which the invariant can be observed to fail despite the atom's preconditions; such a failure is a deployment-side gap, not an atom-side guarantee failure, and the deployment's audit posture must acknowledge it as such.
+**Invariant 4 — Capacity constraint.** For every pool at every instant, [Allocated] ≤ [Capacity], conditional on the host obligations the atom names as deployment-shaped concepts (see *Edge cases → Concurrency and atomicity (concurrent-call atomicity)*, *Edge cases → Crash atomicity (mid-action process failure)*, and *Edge cases → Integer arithmetic precision*): serializable concurrent execution against the same [Pool Id], crash-atomic multi-record writes across the action's audit-log entry and running-total update, and overflow-safe integer arithmetic for [Allocated] + [Count]. Under those conditions, the atom enforces the invariant by precondition on [Allocate] (rejects if [Allocated] + [Count] > [Capacity]) and on [Adjust Capacity] (rejects if [New Capacity] < [Allocated]); there is no action sequence the atom accepts that produces a state with [Allocated] > [Capacity]. This is the load-bearing arithmetic invariant; it is what composing patterns may rely on without re-implementing the constraint, *contingent on the named host obligations being met*. A deployment that violates any of the three obligations produces an environment in which the invariant can be observed to fail despite the atom's preconditions; such a failure is a deployment-side gap, not an atom-side guarantee failure, and the deployment's audit posture must acknowledge it as such.
 
-**Invariant 5 — Non-negativity.** For every pool at every instant, `allocated ≥ 0`. The atom enforces this by precondition on `release` (rejects if `count > allocated`). There is no action sequence the atom accepts that produces a negative running total.
+**Invariant 5 — Non-negativity.** For every pool at every instant, [Allocated] ≥ 0. The atom enforces this by precondition on [Release] (rejects if [Count] > [Allocated]). There is no action sequence the atom accepts that produces a negative running total.
 
-**Invariant 6 — Capacity non-negativity.** For every pool at every instant, `capacity ≥ 0`. The atom enforces this by precondition on `declare_pool` and `adjust_capacity` (both reject negative values).
+**Invariant 6 — Capacity non-negativity.** For every pool at every instant, [Capacity] ≥ 0. The atom enforces this by precondition on [Declare Pool] and [Adjust Capacity] (both reject negative values).
 
-**Invariant 7 — Declaration fields immutable.** `pool_id`, `declared_at`, `declaring_actor_ref`, and `declaration_reason` are set on `declare_pool` and never change.
+**Invariant 7 — Declaration fields immutable.** [Pool Id], [Declared At], [Declaring Actor Ref], and [Declaration Reason] are set on [Declare Pool] and never change.
 
-**Invariant 8 — Audit-log events have two surfaces with distinct lifecycles.** Every recorded event has an *audit-identifier surface* — event id, pool id, event class, arithmetic fields (`count`, `allocated_before`, `allocated_after`, `prior_capacity`, `new_capacity`), state fields where applicable (`prior_state`, `new_state`), and `recorded_at` timestamp — that the atom defines no action to modify; and an *attribution surface* — `*_actor_ref` and `reason` — that the atom likewise defines no action to modify but the composing Retention Window pattern may erase under GDPR (EU General Data Protection Regulation — the European Union's data-privacy law) Article 17 obligations when the deployment encodes personally-identifying information into those fields. Composing systems read the two surfaces with different lifecycles: the audit-identifier surface persists for as long as the event persists; the attribution surface persists until Retention Window scrubs it, after which the records still verify the arithmetic chain but no longer identify the actor. The split is structural, not stylistic — the audit-identifier surface is what makes the structural audit queries (Invariant 4 verification, Invariant 5 verification, capacity-adjustment replay, state-change replay) verifiable from records alone; the attribution surface is what makes the records personally-identifying and therefore subject to erasure obligations the audit chain must not depend on. A regulator reading the invariant must understand the operational reality: the atom's records are what the atom's actions write and never re-write, but under the Retention Window composition the atom recommends for regulated deployments, the attribution surface is by-design mutable on the composing pattern's schedule.
+**Invariant 8 — Audit-log events have two surfaces with distinct lifecycles.** Every recorded event has an *audit-identifier surface* — event id, [Pool Id], event class, arithmetic fields ([Count], [Allocated Before], [Allocated After], [Prior Capacity], [New Capacity]), state fields where applicable ([Prior State], [New State]), and [Recorded At] timestamp — that the atom defines no action to modify; and an *attribution surface* — `*_actor_ref` and [Reason] — that the atom likewise defines no action to modify but the composing Retention Window pattern may erase under GDPR (EU General Data Protection Regulation — the European Union's data-privacy law) Article 17 obligations when the deployment encodes personally-identifying information into those fields. Composing systems read the two surfaces with different lifecycles: the audit-identifier surface persists for as long as the event persists; the attribution surface persists until Retention Window scrubs it, after which the records still verify the arithmetic chain but no longer identify the actor. The split is structural, not stylistic — the audit-identifier surface is what makes the structural audit queries (Invariant 4 verification, Invariant 5 verification, capacity-adjustment replay, state-change replay) verifiable from records alone; the attribution surface is what makes the records personally-identifying and therefore subject to erasure obligations the audit chain must not depend on. A regulator reading the invariant must understand the operational reality: the atom's records are what the atom's actions write and never re-write, but under the Retention Window composition the atom recommends for regulated deployments, the attribution surface is by-design mutable on the composing pattern's schedule.
 
 **Invariant 9 — Audit-log events are append-only under this atom's actions; the composed-system view is bounded by the deployment's retention policy.** The atom defines no action that removes an event from a pool's audit log, no action that re-orders events, and no action that inserts an event before any prior event. Under the atom's actions alone, the log grows monotonically in length and in insertion order. Under composition with Retention Window — the composition the atom recommends for every regulated deployment — events that fall outside the deployment's retention window may be archived to cold storage or purged entirely, and the composed-system view of the audit log is *bounded by the retention schedule, not by the atom's append-only discipline*. The arithmetic chain (Invariant 4 verification) is reconstructable from records within the active retention window; reconstruction of pre-retention history requires the archive when one exists, and is bounded out when purge has occurred without archive. The Generation acceptance section names the verification scope explicitly. The "under this atom's actions" qualifier is load-bearing: a regulator querying the records is reading the *composed-system* view, which the atom does not single-handedly govern; the atom's append-only discipline is necessary for the composed-system audit chain but not sufficient — the deployment's retention policy is the other half of what determines what the regulator sees.
 
-**Invariant 10 — State-change events are auditable.** Every transition (Open → Suspended, Suspended → Open, any non-Closed → Closed) produces a durable state-change entry in the pool's audit log with a fresh `state_change_id`, naming the prior state, new state, acting actor reference, reason, and timestamp. No state transition is silent.
+**Invariant 10 — State-change events are auditable.** Every transition ([Open] → [Suspended], [Suspended] → [Open], any non-[Closed] → [Closed]) produces a durable state-change entry in the pool's audit log with a fresh [State Change Id], naming the [Prior State], [New State], [Acting Actor Ref], [Reason], and timestamp. No state transition is silent.
 
-**Invariant 11 — Capacity-adjustment events are auditable.** Every capacity change produces a durable adjustment entry in the audit log with a fresh `adjustment_event_id`, naming the prior capacity, the new capacity, the acting actor reference, reason, and timestamp. No capacity change is silent.
+**Invariant 11 — Capacity-adjustment events are auditable.** Every capacity change produces a durable adjustment entry in the audit log with a fresh [Adjustment Event Id], naming the [Prior Capacity], the [New Capacity], the [Adjusting Actor Ref], [Reason], and timestamp. No capacity change is silent.
 
-**Invariant 12 — Id stability.** A pool's `pool_id` is set on `declare_pool` and never changes. An allocation, release, adjustment, or state-change event's id is set when the event is written and never changes.
+**Invariant 12 — Id stability.** A pool's [Pool Id] is set on [Declare Pool] and never changes. An allocation, release, adjustment, or state-change event's id is set when the event is written and never changes.
 
-**Invariant 13 — No id reuse.** No two pools share a `pool_id`; no two events of the same class share an event id; no event id is reused across classes — across the lifetime of the system.
+**Invariant 13 — No id reuse.** No two pools share a [Pool Id]; no two events of the same class share an event id; no event id is reused across classes — across the lifetime of the system.
 
-**Invariant 14 — Action atomicity.** Each action either commits all of its intended records — pool record (for `declare_pool`), audit-log event (for `allocate`, `release`, `adjust_capacity`, `suspend_pool`, `resume_pool`, `close_pool`), running-total or capacity or state update — or none, conditional on the deployment providing crash-atomic multi-record writes (see *Edge cases → Crash atomicity (mid-action process failure)*). A `storage-failure` rejection on any action guarantees no partial record, across any record type written by that action, has been persisted *under the return-value path* — the host's write subsystem surfaced failure and the action did not commit; the crash-atomicity obligation extends the same all-or-none property to the *no-return path* in which the host fails between the audit-log append and the running-total update with no rejection delivered to the caller. Under both paths the total count of pool records is monotonically non-decreasing. A deployment that does not meet the crash-atomicity obligation can produce recovered states in which some of an action's records committed and others did not; this is a deployment-side gap, not an atom-side guarantee failure.
+**Invariant 14 — Action atomicity.** Each action either commits all of its intended records — pool record (for [Declare Pool]), audit-log event (for [Allocate], [Release], [Adjust Capacity], [Suspend Pool], [Resume Pool], [Close Pool]), running-total or capacity or state update — or none, conditional on the deployment providing crash-atomic multi-record writes (see *Edge cases → Crash atomicity (mid-action process failure)*). A [Storage Failure] rejection on any action guarantees no partial record, across any record type written by that action, has been persisted *under the return-value path* — the host's write subsystem surfaced failure and the action did not commit; the crash-atomicity obligation extends the same all-or-none property to the *no-return path* in which the host fails between the audit-log append and the running-total update with no rejection delivered to the caller. Under both paths the total count of pool records is monotonically non-decreasing. A deployment that does not meet the crash-atomicity obligation can produce recovered states in which some of an action's records committed and others did not; this is a deployment-side gap, not an atom-side guarantee failure.
 
-Invariants 4 and 5 together give the *bounded-arithmetic* property — at every reachable state, `0 ≤ allocated ≤ capacity`, conditional on the host obligations Invariant 4 names. This is the property composing patterns may treat as a precondition under those obligations; without it, every caller would have to defend the bound at every call site. Invariants 8, 9, 10, and 11 together give the *successful-change-audit* property — every *successful* change to the pool's capacity, allocation count, or state is recorded as an event whose audit-identifier surface no atom-defined action modifies, in append-only insertion order under the atom's actions; the composed-system view is bounded by Retention Window per Invariants 1, 8, and 9. The change history of successful operations is reconstructable from the records within the active retention window per the per-event and absolute modes named in Generation acceptance. *Rejected* operations produce no event at this layer; deployments requiring rejection visibility (PCI DSS (Payment Card Industry Data Security Standard — the card networks' mandatory security rules for handling cardholder data) Req. 10.2.4 invalid-access logging, breach-investigation traces of denied allocations) compose with Event Log around the atom's call surface. See *Edge cases and explicit non-goals → Rejection visibility* for the boundary. Invariant 3 gives the *terminal closure* property — a closed pool cannot be silently reopened, and post-close cleanup via `release` is the only post-terminal mutation permitted.
+Invariants 4 and 5 together give the *bounded-arithmetic* property — at every reachable state, 0 ≤ [Allocated] ≤ [Capacity], conditional on the host obligations Invariant 4 names. This is the property composing patterns may treat as a precondition under those obligations; without it, every caller would have to defend the bound at every call site. Invariants 8, 9, 10, and 11 together give the *successful-change-audit* property — every *successful* change to the pool's capacity, allocation count, or state is recorded as an event whose audit-identifier surface no atom-defined action modifies, in append-only insertion order under the atom's actions; the composed-system view is bounded by Retention Window per Invariants 1, 8, and 9. The change history of successful operations is reconstructable from the records within the active retention window per the per-event and absolute modes named in Generation acceptance. *Rejected* operations produce no event at this layer; deployments requiring rejection visibility (PCI DSS (Payment Card Industry Data Security Standard — the card networks' mandatory security rules for handling cardholder data) Req. 10.2.4 invalid-access logging, breach-investigation traces of denied allocations) compose with Event Log around the atom's call surface. See *Edge cases and explicit non-goals → Rejection visibility* for the boundary. Invariant 3 gives the *terminal closure* property — a closed pool cannot be silently reopened, and post-close cleanup via [Release] is the only post-terminal mutation permitted.
 
 ---
 
@@ -322,9 +326,9 @@ The domain examples above exercise `over-capacity` (airline step 3, banking step
 
 **`suspended` — allocate against a suspended pool.** During the database failover window from the connection-pool example, a new request invokes `allocate(pool_conn_primary, count=1, allocating_actor_ref="orders_svc") → rejected(suspended)`. The orders service retries after the resume event, or routes to a fallback. No allocation event is recorded; the pool's running total is unchanged.
 
-**`closed` — allocate or adjust_capacity against a closed pool.** After a carrier closes the flight pool, a late booking attempt: `allocate(pool_f1234, count=1, ...) → rejected(closed)`. Separately, an operator attempts to revise capacity on the same closed pool: `adjust_capacity(pool_f1234, new_capacity=55, ...) → rejected(closed)`. Both are rejected on state-validity before any field or arithmetic check; the pool's records are unchanged.
+**`closed` — [Allocate] or [Adjust Capacity] against a closed pool.** After a carrier closes the flight pool, a late booking attempt: `allocate(pool_f1234, count=1, ...) → rejected(closed)`. Separately, an operator attempts to revise capacity on the same closed pool: `adjust_capacity(pool_f1234, new_capacity=55, ...) → rejected(closed)`. Both are rejected on state-validity before any field or arithmetic check; the pool's records are unchanged.
 
-**`not-known` — action against an unknown pool_id.** A caller passes a stale or typo'd pool reference: `query(pool_garbage_id) → rejected(not-known)`. Same rejection for any action taking `pool_id`. The atom does not distinguish "never declared" from "purged by deployment policy" — the surface is the same.
+**`not-known` — action against an unknown [Pool Id].** A caller passes a stale or typo'd pool reference: `query(pool_garbage_id) → rejected(not-known)`. Same rejection for any action taking `pool_id`. The atom does not distinguish "never declared" from "purged by deployment policy" — the surface is the same.
 
 **`already-closed` / `not-open` / `not-suspended` — state-prereq violations on lifecycle actions.** An operator double-closes a pool: `close_pool(pool_c882, ...) → rejected(already-closed)` on the second call. An operator attempts to resume a pool that's already Open: `resume_pool(pool_ward_3w, ...) → rejected(not-suspended)`. An operator attempts to suspend a closed pool: `suspend_pool(pool_f1234, ...) → rejected(already-closed)`. Each communicates the specific state-prereq failure; no state change occurs.
 
@@ -346,21 +350,21 @@ Three scenarios the atom must survive in regulated contexts:
 
 ## Generation acceptance
 
-A derived implementation of Capacity Constraint Enforcement is *acceptable* — in the regulator-acceptance sense — when an external auditor, given the pool record set and its audit log together with the records of any composing patterns the deployment uses (Provisional Commitment commitments, Duplicate Prevention idempotency tokens, Actor Identity attestations, Audit Trail composite recordings, Retention Window archive manifests *and retention-boundary snapshots*, Permissions authorization decisions), can do all of the following without recourse to source code, runbooks, or developer narration. The "records alone" framing is bounded in three ways. First, this atom's records suffice for *per-event* arithmetic verification within the active retention window with no external dependency. Second, *absolute* reconstruction across the entire pool lifecycle (the running `(capacity, allocated, state)` triple at any event index from declaration onward) requires the deployment's Retention Window to produce boundary snapshots when its purge policy removes `declare_pool` or other early events; without those snapshots, absolute reconstruction is bounded out for the purged window and the auditor falls back to per-event consistency verification. Third, composing-pattern records supply the cross-reference surface (Provisional Commitment, Duplicate Prevention, Actor Identity), the rejection-visibility surface (Event Log), and the authorization decision surface (Permissions) that this atom does not own.
+A derived implementation of Capacity Constraint Enforcement is *acceptable* — in the regulator-acceptance sense — when an external auditor, given the pool record set and its audit log together with the records of any composing patterns the deployment uses (Provisional Commitment commitments, Duplicate Prevention idempotency tokens, Actor Identity attestations, Audit Trail composite recordings, Retention Window archive manifests *and retention-boundary snapshots*, Permissions authorization decisions), can do all of the following without recourse to source code, runbooks, or developer narration. The "records alone" framing is bounded in three ways. First, this atom's records suffice for *per-event* arithmetic verification within the active retention window with no external dependency. Second, *absolute* reconstruction across the entire pool lifecycle (the running ([Capacity], [Allocated], [State]) triple at any event index from declaration onward) requires the deployment's Retention Window to produce boundary snapshots when its purge policy removes [Declare Pool] or other early events; without those snapshots, absolute reconstruction is bounded out for the purged window and the auditor falls back to per-event consistency verification. Third, composing-pattern records supply the cross-reference surface (Provisional Commitment, Duplicate Prevention, Actor Identity), the rejection-visibility surface (Event Log), and the authorization decision surface (Permissions) that this atom does not own.
 
 **Reconstruct the pool's successful-change history within the active retention window.** Two reconstruction modes the records support, with different evidentiary scope:
 
-*Per-event consistency verification — records-alone verifiable from the active retention window with no external starting state.* For each surviving event, the auditor verifies that the snapshots are internally consistent: for allocate events, `allocated_after == allocated_before + count` and `allocated_after ≤ capacity_in_effect_at_this_event_index`; for release events, `allocated_after == allocated_before - count` and `allocated_after ≥ 0`; for adjustment events, the `prior_capacity` / `new_capacity` pair is present and `new_capacity` differs from `prior_capacity` (the no-op-adjust rejection rule); for state-change events, the `prior_state` / `new_state` pair is present. The per-event symmetric snapshots (Outputs section) and Invariants 8, 9, 10, 11, and 14 together make this mode verifiable from records within the active retention window with no dependency on any pre-window history — each event is internally self-witnessing.
+*Per-event consistency verification — records-alone verifiable from the active retention window with no external starting state.* For each surviving event, the auditor verifies that the snapshots are internally consistent: for allocate events, [Allocated After] == [Allocated Before] + [Count] and [Allocated After] ≤ capacity in effect at this event index; for release events, [Allocated After] == [Allocated Before] − [Count] and [Allocated After] ≥ 0; for adjustment events, the [Prior Capacity] / [New Capacity] pair is present and [New Capacity] differs from [Prior Capacity] (the no-op-adjust rejection rule); for state-change events, the [Prior State] / [New State] pair is present. The per-event symmetric snapshots (Outputs section) and Invariants 8, 9, 10, 11, and 14 together make this mode verifiable from records within the active retention window with no dependency on any pre-window history — each event is internally self-witnessing.
 
-*Absolute reconstruction — `(capacity, allocated, state)` at any event index.* Replay the audit log forward in insertion order from `declare_pool` (canonical starting state: `allocated = 0`, `capacity = declared_capacity`, `state = Open`), maintaining the running triple across each event. This mode is records-alone verifiable for the lifetime of the pool only when `declare_pool` is among the surviving records. Under composition with Retention Window where purging has removed `declare_pool` (and possibly other early events), absolute reconstruction starting from the earliest surviving event requires a *retention-boundary snapshot* — the `(capacity, allocated, state)` triple immediately before the earliest surviving event — that the composing Retention Window pattern must produce alongside its purge action. Without the boundary snapshot, absolute reconstruction is bounded out for the purged window: the auditor falls back to per-event consistency verification (the mode above) and accepts that the *absolute* state at any purged-window index is not records-alone derivable from this atom's records. The atom's responsibility is the per-event snapshots that make per-event consistency verifiable; Retention Window's responsibility is the boundary snapshot when its purging policy removes the starting record; together the two records sets restore absolute reconstruction. When the Trusted Timestamping composition binds insertion order to verifiable wall-time, both modes extend to wall-time queries on top of event-index queries; without that composition, both modes are event-index-authoritative and timestamps are advisory.
+*Absolute reconstruction — ([Capacity], [Allocated], [State]) at any event index.* Replay the audit log forward in insertion order from [Declare Pool] (canonical starting state: [Allocated] = 0, [Capacity] = declared capacity, [State] = [Open]), maintaining the running triple across each event. This mode is records-alone verifiable for the lifetime of the pool only when [Declare Pool] is among the surviving records. Under composition with Retention Window where purging has removed [Declare Pool] (and possibly other early events), absolute reconstruction starting from the earliest surviving event requires a *retention-boundary snapshot* — the ([Capacity], [Allocated], [State]) triple immediately before the earliest surviving event — that the composing Retention Window pattern must produce alongside its purge action. Without the boundary snapshot, absolute reconstruction is bounded out for the purged window: the auditor falls back to per-event consistency verification (the mode above) and accepts that the *absolute* state at any purged-window index is not records-alone derivable from this atom's records. The atom's responsibility is the per-event snapshots that make per-event consistency verifiable; Retention Window's responsibility is the boundary snapshot when its purging policy removes the starting record; together the two records sets restore absolute reconstruction. When the Trusted Timestamping composition binds insertion order to verifiable wall-time, both modes extend to wall-time queries on top of event-index queries; without that composition, both modes are event-index-authoritative and timestamps are advisory.
 
-**Verify the capacity constraint holds at every event index from records alone.** For every allocation event in the log, the `(allocated_before + count)` must satisfy `≤ capacity_in_effect_at_this_event_index`, and `allocated_after` must equal `allocated_before + count`. Invariant 4 is structurally enforced by the atom's allocate precondition; the auditor's query is a finite walk over the log returning the empty set for clean records. The auditor may verify Invariant 4 *per-event* by inspecting `allocated_after ≤ capacity_in_effect` directly — records-alone verifiable from the active retention window without dependency on pre-window history — or *cumulatively* by replay from `declare_pool` when that record survives; both modes are supported by the symmetric snapshot fields. The capacity in effect at any event index is derivable from the audit log: it is the capacity declared at `declare_pool` adjusted by every `adjust_capacity` event preceding the current event in insertion order *when `declare_pool` is among the surviving records*. Under Retention Window purge that has removed `declare_pool`, the capacity in effect at the earliest surviving event is supplied by the Retention Window boundary snapshot (see the reconstruction check above); from that snapshot forward, capacity-in-effect derivation proceeds in insertion order over surviving `adjust_capacity` events.
+**Verify the capacity constraint holds at every event index from records alone.** For every allocation event in the log, ([Allocated Before] + [Count]) must satisfy ≤ capacity in effect at this event index, and [Allocated After] must equal [Allocated Before] + [Count]. Invariant 4 is structurally enforced by the atom's allocate precondition; the auditor's query is a finite walk over the log returning the empty set for clean records. The auditor may verify Invariant 4 *per-event* by inspecting [Allocated After] ≤ capacity in effect directly — records-alone verifiable from the active retention window without dependency on pre-window history — or *cumulatively* by replay from [Declare Pool] when that record survives; both modes are supported by the symmetric snapshot fields. The capacity in effect at any event index is derivable from the audit log: it is the capacity declared at [Declare Pool] adjusted by every [Adjust Capacity] event preceding the current event in insertion order *when [Declare Pool] is among the surviving records*. Under Retention Window purge that has removed [Declare Pool], the capacity in effect at the earliest surviving event is supplied by the Retention Window boundary snapshot (see the reconstruction check above); from that snapshot forward, capacity-in-effect derivation proceeds in insertion order over surviving [Adjust Capacity] events.
 
-**Verify the non-negativity invariant holds at every event index from records alone.** For every release event, the `count` must satisfy `≤ allocated_before`, and `allocated_after` must equal `allocated_before - count` and must be `≥ 0`. Invariant 5 is enforced by the release precondition; the per-event verification mode is supported by the snapshot fields, and the structural guarantee mirrors Invariant 4.
+**Verify the non-negativity invariant holds at every event index from records alone.** For every release event, the [Count] must satisfy ≤ [Allocated Before], and [Allocated After] must equal [Allocated Before] − [Count] and must be ≥ 0. Invariant 5 is enforced by the release precondition; the per-event verification mode is supported by the snapshot fields, and the structural guarantee mirrors Invariant 4.
 
-**Confirm every successful state change and capacity adjustment is attributed to an actor with a reason.** Each state-change event (Invariant 10) and each capacity-adjustment event (Invariant 11) carries `acting_actor_ref` and `reason`. Allocation and release events carry `allocating_actor_ref` / `releasing_actor_ref` (no `reason` field — these are routine arithmetic operations). The auditor can trace every successful change to an attributing actor and, for policy-driven changes (suspend/resume/close/adjust), to a stated rationale. When `*_actor_ref` or `reason` fields have been scrubbed under Retention Window composition (per Invariant 8's audit-identifier/attribution split), the arithmetic chain remains verifiable; the attribution surface is bounded to whatever the retention policy preserved. *Attribution is not authorization.* The atom's records establish *who acted*; they do not establish *that the actor was permitted to act*. An auditor asking "was this release authorized?" reads Permissions' records for the decision and this atom's records for the action the decision admitted — the two surfaces compose, per *Edge cases → Authorization* and the Permissions Composition note.
+**Confirm every successful state change and capacity adjustment is attributed to an actor with a reason.** Each state-change event (Invariant 10) and each capacity-adjustment event (Invariant 11) carries [Acting Actor Ref] and [Reason]. Allocation and release events carry [Allocating Actor Ref] / [Releasing Actor Ref] (no [Reason] field — these are routine arithmetic operations). The auditor can trace every successful change to an attributing actor and, for policy-driven changes (suspend/resume/close/adjust), to a stated rationale. When `*_actor_ref` or [Reason] fields have been scrubbed under Retention Window composition (per Invariant 8's audit-identifier/attribution split), the arithmetic chain remains verifiable; the attribution surface is bounded to whatever the retention policy preserved. *Attribution is not authorization.* The atom's records establish *who acted*; they do not establish *that the actor was permitted to act*. An auditor asking "was this release authorized?" reads Permissions' records for the decision and this atom's records for the action the decision admitted — the two surfaces compose, per *Edge cases → Authorization* and the Permissions Composition note.
 
-**Identify the composing patterns active in this deployment from cross-reference records.** Whether Provisional Commitment is wired in for per-allocation lifecycle (the auditor inspects PC's commitment records, each of which cross-references an `allocation_event_id` from this atom), whether Duplicate Prevention is wired in for idempotent allocation under retry (DP's idempotency tokens point at the prior allocation_event_id), whether Actor Identity is wired in for non-repudiable attribution (AI's attestations are keyed by event id), whether Trusted Timestamping is wired in for verifiable wall-time anchoring (TT's anchor records reference event ids), whether Audit Trail is wired in for tamper-evident composite recording (Audit Trail composes Event Log + Actor Identity + Retention Window + Tamper Evidence around this atom's event surface), and whether Retention Window is wired in for audit-log lifecycle (RW's retention manifests name the policy in effect for this pool). Identification is from the composing pattern's records, not from this atom's records — the atom emits the event-id surface that composing patterns key against.
+**Identify the composing patterns active in this deployment from cross-reference records.** Whether Provisional Commitment is wired in for per-allocation lifecycle (the auditor inspects PC's commitment records, each of which cross-references an [Allocation Event Id] from this atom), whether Duplicate Prevention is wired in for idempotent allocation under retry (DP's idempotency tokens point at the prior [Allocation Event Id]), whether Actor Identity is wired in for non-repudiable attribution (AI's attestations are keyed by event id), whether Trusted Timestamping is wired in for verifiable wall-time anchoring (TT's anchor records reference event ids), whether Audit Trail is wired in for tamper-evident composite recording (Audit Trail composes Event Log + Actor Identity + Retention Window + Tamper Evidence around this atom's event surface), and whether Retention Window is wired in for audit-log lifecycle (RW's retention manifests name the policy in effect for this pool). Identification is from the composing pattern's records, not from this atom's records — the atom emits the event-id surface that composing patterns key against.
 
 **Rejection visibility is explicitly out-of-scope at this atom.** An auditor asking "show me every rejected allocate during the breach window" or "how many over-capacity rejections did this pool emit?" cannot answer from this atom's records alone — rejections produce no event at this layer. Deployments under PCI DSS Req. 10.2.4 (invalid-access logging) or whose breach-investigation surface requires denied-attempt visibility compose with Event Log around the atom's call surface; Event Log records the call site, the rejection reason, and the actor reference, producing the rejection-visibility surface this atom does not. The Generation acceptance bar for rejection visibility is satisfied at the composed-system level, not by this atom in isolation.
 
@@ -370,41 +374,460 @@ A derived implementation of Capacity Constraint Enforcement is *acceptable* — 
 
 What this atom does not cover:
 
-**Per-allocation identity.** Units are fungible at this atom's grain. An allocate of 5 units produces one allocation event with one id, not five sub-records or five allocation ids. If a caller needs to track specific resources (this seat, this bed, this connection handle), the composing Provisional Commitment atom supplies the per-allocation lifecycle; this atom supplies only the pool's arithmetic. The boundary is sharp: Provisional Commitment owns "this specific resource is held for this specific requester for this specific window"; Capacity Constraint Enforcement owns "the running total against the pool's bound." Reserve from Pool is the composition that wires them together.
+**Per-allocation identity.** Units are fungible at this atom's grain. An [Allocate] of 5 units produces one allocation event with one id, not five sub-records or five allocation ids. If a caller needs to track specific resources (this seat, this bed, this connection handle), the composing Provisional Commitment atom supplies the per-allocation lifecycle; this atom supplies only the pool's arithmetic. The boundary is sharp: Provisional Commitment owns "this specific resource is held for this specific requester for this specific window"; Capacity Constraint Enforcement owns "the running total against the pool's bound." Reserve from Pool is the composition that wires them together.
 
-**Fairness, priority, and contention policy.** Two concurrent allocates against a pool with one unit of headroom resolve under the host environment's serialization guarantees; whichever wins the race takes the unit, the loser receives `over-capacity`. The atom does not implement FIFO ordering, priority queueing, or any other fairness discipline. A deployment that needs fairness composes a Queueing or Priority Scheduling pattern in front of `allocate`.
+**Fairness, priority, and contention policy.** Two concurrent allocates against a pool with one unit of headroom resolve under the host environment's serialization guarantees; whichever wins the race takes the unit, the loser receives [Over Capacity]. The atom does not implement FIFO ordering, priority queueing, or any other fairness discipline. A deployment that needs fairness composes a Queueing or Priority Scheduling pattern in front of [Allocate].
 
-**Authorization.** The atom attributes each action to the caller's `*_actor_ref` field but does not constrain who may invoke which action. A caller with knowledge of `pool_id` and the current `allocated` value can drive the running total to zero via `release` calls they are not entitled to make; an actor outside the operator set can adjust capacity downward (subject only to the arithmetic precondition) or close a pool, and the records will show every such action faithfully attributed without recording whether the attribution was *permitted*. The atom's actions accept any non-empty actor reference because authorization is a different concept — who is permitted to act on this pool is a separate state machine (role assignments, capability grants, scope checks) that recurs across every regulated atom and ought to compose with the host, not be absorbed into it. The composing pattern is [Permissions](./permissions.md), which sits in front of `allocate`, `release`, `adjust_capacity`, `suspend_pool`, `resume_pool`, and `close_pool` and rejects unauthorized callers before they reach this atom's surface. Without that composition, the atom's records satisfy attribution (Invariants 8, 10, 11 — who acted, with what reason, against what state) but not authorization (was the actor entitled to act); a regulator querying "was this release authorized?" reads Permissions' records for the decision and this atom's records for the action that the decision admitted. Deployments under regulators requiring explicit authorization controls (SOX segregation-of-duties for credit-line adjustments, HIPAA (Health Insurance Portability and Accountability Act — US federal law governing healthcare data privacy and security) minimum-necessary for healthcare bed allocation, PCI DSS Req. 7 for least-privilege access to payment-related capacity pools) compose with Permissions; the atom contributes the call surface and the attribution field, Permissions contributes the authorization decision.
+**Authorization.** The atom attributes each action to the caller's `*_actor_ref` field but does not constrain who may invoke which action. A caller with knowledge of [Pool Id] and the current [Allocated] value can drive the running total to zero via [Release] calls they are not entitled to make; an actor outside the operator set can adjust capacity downward (subject only to the arithmetic precondition) or close a pool, and the records will show every such action faithfully attributed without recording whether the attribution was *permitted*. The atom's actions accept any non-empty actor reference because authorization is a different concept — who is permitted to act on this pool is a separate state machine (role assignments, capability grants, scope checks) that recurs across every regulated atom and ought to compose with the host, not be absorbed into it. The composing pattern is [Permissions](./permissions.md), which sits in front of [Allocate], [Release], [Adjust Capacity], [Suspend Pool], [Resume Pool], and [Close Pool] and rejects unauthorized callers before they reach this atom's surface. Without that composition, the atom's records satisfy attribution (Invariants 8, 10, 11 — who acted, with what reason, against what state) but not authorization (was the actor entitled to act); a regulator querying "was this release authorized?" reads Permissions' records for the decision and this atom's records for the action that the decision admitted. Deployments under regulators requiring explicit authorization controls (SOX segregation-of-duties for credit-line adjustments, HIPAA (Health Insurance Portability and Accountability Act — US federal law governing healthcare data privacy and security) minimum-necessary for healthcare bed allocation, PCI DSS Req. 7 for least-privilege access to payment-related capacity pools) compose with Permissions; the atom contributes the call surface and the attribution field, Permissions contributes the authorization decision.
 
-**Preemption and eviction.** The atom does not evict existing allocations to make room for new ones. A high-priority allocate request against a fully-allocated pool is rejected with `over-capacity` regardless of any priority signal; the caller's options are to release something (which requires knowing what to release — a per-allocation concept) or to wait. Preemption logic — releasing the lowest-priority allocation to admit a higher-priority one — is a composing concept at a layer that has per-allocation identity to act on.
+**Preemption and eviction.** The atom does not evict existing allocations to make room for new ones. A high-priority allocate request against a fully-allocated pool is rejected with [Over Capacity] regardless of any priority signal; the caller's options are to release something (which requires knowing what to release — a per-allocation concept) or to wait. Preemption logic — releasing the lowest-priority allocation to admit a higher-priority one — is a composing concept at a layer that has per-allocation identity to act on.
 
 **Capacity bursting, overcommit, and soft limits.** Some operational systems permit short-term overcommit (the airline industry's overbooking practice, the database engine's connection-pool-with-burst headroom). This atom enforces a hard constraint and rejects on the bound; deployments needing overcommit compose with a separate Burst Capacity or Soft Limit pattern that maintains a tolerance margin and emits warning signals before hard rejection.
 
 **Allocation expiry and per-allocation lifecycle.** The atom does not model allocations with a bounded lifetime. An allocate-without-corresponding-release leaves the units consumed indefinitely. A deployment that needs allocations to time out and auto-release composes with Provisional Commitment (which has Held/Confirmed/Released/Expired states) or with a Lease pattern; this atom handles the arithmetic regardless of which lifecycle pattern governs each allocation.
 
-**Resource semantics.** What a "unit" represents — a seat, a bed, a dollar, a connection handle, a physical SKU — is a host-system policy decision encoded in the `count` values the caller passes. The atom does not interpret units beyond their arithmetic.
+**Resource semantics.** What a "unit" represents — a seat, a bed, a dollar, a connection handle, a physical SKU — is a host-system policy decision encoded in the [Count] values the caller passes. The atom does not interpret units beyond their arithmetic.
 
 **Pool migration, merging, and splitting.** The atom does not provide actions to move units between pools or to merge two pools into one. A deployment that needs migration composes by closing the source pool and declaring a new one with adjusted capacity; the per-allocation re-allocation against the new pool is the composing system's to handle.
 
-**Notification on state change or near-capacity.** Pool transitions (Open → Suspended, drained-condition reached) may be operationally significant signals downstream — page the on-call, throttle upstream traffic, route to a fallback pool. The atom emits state-change events to its audit log; propagating those events to consumers composes with Subscription and Notification.
+**Notification on state change or near-capacity.** Pool transitions ([Open] → [Suspended], drained-condition reached) may be operationally significant signals downstream — page the on-call, throttle upstream traffic, route to a fallback pool. The atom emits state-change events to its audit log; propagating those events to consumers composes with Subscription and Notification.
 
-**Concurrency and atomicity (concurrent-call atomicity).** Concurrent actions against the same `pool_id` resolve under the host environment's serialization guarantees. Each action's effects (running-total update, audit-log append) are atomic with respect to other concurrent calls — but the atom does not specify the serialization mechanism. Multi-action transactions (e.g., release-N-from-pool-A-and-allocate-N-to-pool-B atomically) belong to a Transaction composition.
+**Concurrency and atomicity (concurrent-call atomicity).** Concurrent actions against the same [Pool Id] resolve under the host environment's serialization guarantees. Each action's effects (running-total update, audit-log append) are atomic with respect to other concurrent calls — but the atom does not specify the serialization mechanism. Multi-action transactions (e.g., release-N-from-pool-A-and-allocate-N-to-pool-B atomically) belong to a Transaction composition.
 
-**Crash atomicity (mid-action process failure).** Invariant 14 promises all-or-none commit signaled by `storage-failure` rejection when the host's write subsystem surfaces failure as a return value. A *crash* — host process termination or kernel panic between (a) audit-log append and (b) running-total update, with no rejection returned to the caller — is a distinct failure mode the atom names as a deployment obligation. The deployment must provide crash-atomic multi-record writes: either a transactional store that commits or rolls back the action's records atomically across host failure (so that crash recovery observes only the "all" or "none" state), or a write-ahead log with replay-on-recovery that achieves the same effect. Without that guarantee, a crash can leave Invariant 4 violable — the audit-log event may show an allocation that did not increment the running total, or vice versa, and a regulator asking "show me your evidence that no in-progress action at the moment of crash violated the capacity bound" cannot be answered from the atom's records alone. The atom does not specify the mechanism (database transactions, append-only WAL — write-ahead log, a durability technique that records intended changes before applying them, journaling filesystem, replicated state machine); the obligation lives with the deployment, and the deployment's choice is auditable as part of the implementation's claim to Generation acceptance. The caller's reconciliation surface — "did my call succeed?" after a crash that swallowed the return value — composes with Duplicate Prevention (caller-supplied idempotency token surfaces the prior result without producing a second allocation) and with `query` against the pool's post-recovery state.
+**Crash atomicity (mid-action process failure).** Invariant 14 promises all-or-none commit signaled by [Storage Failure] rejection when the host's write subsystem surfaces failure as a return value. A *crash* — host process termination or kernel panic between (a) audit-log append and (b) running-total update, with no rejection returned to the caller — is a distinct failure mode the atom names as a deployment obligation. The deployment must provide crash-atomic multi-record writes: either a transactional store that commits or rolls back the action's records atomically across host failure (so that crash recovery observes only the "all" or "none" state), or a write-ahead log with replay-on-recovery that achieves the same effect. Without that guarantee, a crash can leave Invariant 4 violable — the audit-log event may show an allocation that did not increment the running total, or vice versa, and a regulator asking "show me your evidence that no in-progress action at the moment of crash violated the capacity bound" cannot be answered from the atom's records alone. The atom does not specify the mechanism (database transactions, append-only WAL — write-ahead log, a durability technique that records intended changes before applying them, journaling filesystem, replicated state machine); the obligation lives with the deployment, and the deployment's choice is auditable as part of the implementation's claim to Generation acceptance. The caller's reconciliation surface — "did my call succeed?" after a crash that swallowed the return value — composes with Duplicate Prevention (caller-supplied idempotency token surfaces the prior result without producing a second allocation) and with [Query] against the pool's post-recovery state.
 
-**Integer arithmetic precision.** The atom traffics in non-negative integer capacity and positive integer counts; the load-bearing arithmetic invariant (Invariant 4) depends on `allocated + count` being computable without loss. Integer width (32-bit, 64-bit, arbitrary-precision) is handled at the deployment layer. A deployment that uses fixed-width signed integers and admits `allocated + count > MAX_INT` could observe silent wraparound that violates Invariant 4 — the atom's precondition would compare a wrapped (negative) sum against `capacity`, see the comparison pass, and commit an allocation that puts the running total above capacity. Implementations are expected to use overflow-safe arithmetic (arbitrary-precision integers, or fixed-width with explicit overflow detection that surfaces as `invalid-request`); the atom does not specify the mechanism but the obligation lives with the deployment. Similar consideration applies to `release` (`allocated - count`, which can't go negative under the precondition, but the subtraction itself must be computed safely) and `adjust_capacity` (`new_capacity ≥ allocated`).
+**Integer arithmetic precision.** The atom traffics in non-negative integer capacity and positive integer counts; the load-bearing arithmetic invariant (Invariant 4) depends on [Allocated] + [Count] being computable without loss. Integer width (32-bit, 64-bit, arbitrary-precision) is handled at the deployment layer. A deployment that uses fixed-width signed integers and admits [Allocated] + [Count] > `MAX_INT` could observe silent wraparound that violates Invariant 4 — the atom's precondition would compare a wrapped (negative) sum against [Capacity], see the comparison pass, and commit an allocation that puts the running total above capacity. Implementations are expected to use overflow-safe arithmetic (arbitrary-precision integers, or fixed-width with explicit overflow detection that surfaces as [Invalid Request]); the atom does not specify the mechanism but the obligation lives with the deployment. Similar consideration applies to [Release] ([Allocated] − [Count], which can't go negative under the precondition, but the subtraction itself must be computed safely) and [Adjust Capacity] ([New Capacity] ≥ [Allocated]).
 
-**Id-generation discipline.** The atom requires the deployment to produce `pool_id` and event-id values that are unique across the lifetime of the system: no two pools share a `pool_id`; no two events of the same class share an event id; no event id is reused across classes (Invariants 12 and 13). The atom does not specify the generation mechanism — UUIDv4 / UUIDv7 (Universally Unique Identifier, versions 4 and 7 — standard 128-bit random or time-ordered identifiers), content-hashed identifiers, or a coordinated monotonic sequence generator are all viable — but the obligation lives with the deployment. A generator that admits collisions under concurrent `declare_pool` calls (e.g., a sequence counter without coordination across writers) or that re-uses ids after Retention Window purge violates Invariants 12 and 13, and the audit chain's appeal to "the event identified by `allocation_event_id = X`" becomes ambiguous: a regulator who finds two events sharing an id has found evidence of a generator failure that invalidates downstream cross-references, and no atom-side discipline can compensate. The cross-reference surfaces this atom supports for composing patterns (Provisional Commitment commitments keyed by `allocation_event_id`, Actor Identity attestations keyed by event id, Audit Trail composite recordings keyed by event id, Permissions decisions keyed by call surface) depend structurally on id uniqueness. Implementations are expected to use a generator whose collision probability over the deployment's lifetime is negligible — UUIDv4 is the typical floor for distributed deployments; in-database generators with serialized id allocation are appropriate when a single writer can coordinate. The obligation extends across deployments that perform Retention Window purge: a purged id must not be reused for a subsequently-declared pool or event, even though the originally-bearing record no longer exists in the active log.
+**Id-generation discipline.** The atom requires the deployment to produce [Pool Id] and event-id values that are unique across the lifetime of the system: no two pools share a [Pool Id]; no two events of the same class share an event id; no event id is reused across classes (Invariants 12 and 13). The atom does not specify the generation mechanism — UUIDv4 / UUIDv7 (Universally Unique Identifier, versions 4 and 7 — standard 128-bit random or time-ordered identifiers), content-hashed identifiers, or a coordinated monotonic sequence generator are all viable — but the obligation lives with the deployment. A generator that admits collisions under concurrent [Declare Pool] calls (e.g., a sequence counter without coordination across writers) or that re-uses ids after Retention Window purge violates Invariants 12 and 13, and the audit chain's appeal to "the event identified by [Allocation Event Id] = X" becomes ambiguous: a regulator who finds two events sharing an id has found evidence of a generator failure that invalidates downstream cross-references, and no atom-side discipline can compensate. The cross-reference surfaces this atom supports for composing patterns (Provisional Commitment commitments keyed by [Allocation Event Id], Actor Identity attestations keyed by event id, Audit Trail composite recordings keyed by event id, Permissions decisions keyed by call surface) depend structurally on id uniqueness. Implementations are expected to use a generator whose collision probability over the deployment's lifetime is negligible — UUIDv4 is the typical floor for distributed deployments; in-database generators with serialized id allocation are appropriate when a single writer can coordinate. The obligation extends across deployments that perform Retention Window purge: a purged id must not be reused for a subsequently-declared pool or event, even though the originally-bearing record no longer exists in the active log.
 
 **Clock semantics.** Timestamps on audit-log events come from an implicit clock. Skew, monotonicity, and timezone handling are handled at the deployment layer. Insertion order — not timestamp order — is the authoritative ordering for "after," "between," and "most recent" references; Trusted Timestamping composes to bind insertion order to externally-verifiable wall-time.
 
-**Retention of audit-log entries and pool records.** Invariants 1, 8, and 9 establish what the atom's actions never modify or remove (the pool record itself; events' audit-identifier surface; events' append-only insertion order). The atom does not set the retention policy for how long pool records and audit-log entries remain queryable before archival or purge. Composing systems whose regulators require multi-year retention of capacity-management evidence (SOX-scope credit-limit pools, FRCP-scope (Federal Rules of Civil Procedure — the rules governing civil lawsuits in US federal courts) inventory adjustments) compose with Retention Window. Under that composition the composed-system view of both surfaces — the pool record and the audit log — is bounded by the retention schedule; the atom's Generation acceptance reconstruction is scoped to records within the active window, with archived history out-of-scope when the deployment maintains no archive. The split between scrubbing (Retention Window erasing PII-bearing `*_actor_ref` and `reason` fields while preserving the audit-identifier surface) and purging (Retention Window removing events or pool records entirely) is named in Invariants 1, 8, and 9 and elaborated in the Retention Window Composition note.
+**Retention of audit-log entries and pool records.** Invariants 1, 8, and 9 establish what the atom's actions never modify or remove (the pool record itself; events' audit-identifier surface; events' append-only insertion order). The atom does not set the retention policy for how long pool records and audit-log entries remain queryable before archival or purge. Composing systems whose regulators require multi-year retention of capacity-management evidence (SOX-scope credit-limit pools, FRCP-scope (Federal Rules of Civil Procedure — the rules governing civil lawsuits in US federal courts) inventory adjustments) compose with Retention Window. Under that composition the composed-system view of both surfaces — the pool record and the audit log — is bounded by the retention schedule; the atom's Generation acceptance reconstruction is scoped to records within the active window, with archived history out-of-scope when the deployment maintains no archive. The split between scrubbing (Retention Window erasing PII-bearing `*_actor_ref` and [Reason] fields while preserving the audit-identifier surface) and purging (Retention Window removing events or pool records entirely) is named in Invariants 1, 8, and 9 and elaborated in the Retention Window Composition note.
 
-**Rejection visibility.** A rejected action — `over-capacity`, `over-release`, `over-allocated`, `not-known`, `suspended`, `closed`, `not-open`, `not-suspended`, `already-closed`, `invalid-request`, `storage-failure` — produces no event in this atom's audit log. The atom's records witness *successful* state changes; the *attempt* surface is invisible at this layer. The boundary is deliberate: the load-bearing arithmetic invariant is about pool state, not about call attempts, and recording every rejection (especially `not-known` and `invalid-request`, which are typically caller-side bugs in volume) would conflate "the pool's state changed" with "someone tried." Deployments whose regulators require visibility into rejected attempts compose with Event Log around the atom's call surface: Event Log records the call site, the rejection reason, the actor reference, and the wall-time, producing a deployment-grain attempt journal alongside the atom's pool-grain change journal. The PCI DSS Req. 10.2.4 obligation (logging invalid logical access attempts), the breach-investigation surface for denial-pattern probing, and the regulator-audit question "how many over-capacity rejections did this pool emit during the window?" are all satisfied at the composed-system level through Event Log, not by this atom in isolation. The atom names the rejection reasons precisely so that the composing Event Log has a stable vocabulary to record against.
+**Rejection visibility.** A rejected action — [Over Capacity], [Over Release], [Over Allocated], [Not Known], [Suspended], [Closed], [Not Open], [Not Suspended], [Already Closed], [Invalid Request], [Storage Failure] — produces no event in this atom's audit log. The atom's records witness *successful* state changes; the *attempt* surface is invisible at this layer. The boundary is deliberate: the load-bearing arithmetic invariant is about pool state, not about call attempts, and recording every rejection (especially [Not Known] and [Invalid Request], which are typically caller-side bugs in volume) would conflate "the pool's state changed" with "someone tried." Deployments whose regulators require visibility into rejected attempts compose with Event Log around the atom's call surface: Event Log records the call site, the rejection reason, the actor reference, and the wall-time, producing a deployment-grain attempt journal alongside the atom's pool-grain change journal. The PCI DSS Req. 10.2.4 obligation (logging invalid logical access attempts), the breach-investigation surface for denial-pattern probing, and the regulator-audit question "how many over-capacity rejections did this pool emit during the window?" are all satisfied at the composed-system level through Event Log, not by this atom in isolation. The atom names the rejection reasons precisely so that the composing Event Log has a stable vocabulary to record against.
 
 **Cross-pool invariants.** The atom maintains per-pool invariants. Cross-pool rules (e.g., "the sum of allocations across all flight pools serving a corridor cannot exceed the carrier's network-wide cap") are composing concepts at a layer that aggregates over pools.
 
 Where the atom breaks down: when the underlying resource is not actually fungible at any meaningful grain (every seat is distinct because of legroom or premium status — at which point per-allocation identity belongs at this layer too, which is a sign the deployment wants Provisional Commitment, not this atom); when capacity is not a single integer but a multi-dimensional vector (memory bytes *and* CPU shares *and* network bandwidth — a generalized resource-bundle pool, not the single-resource pool this atom models); when the constraint must be probabilistic rather than hard (a TCP-style (Transmission Control Protocol — the core internet protocol whose congestion control backs off under load) admission control with backoff — that's a Rate Limiter pattern, not this atom).
+
+---
+
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the atom above.)*
+
+#### Declare Pool
+
+The behavior that creates a new bounded pool. It records the supplied [Capacity], [Declaring Actor Ref], and [Declaration Reason], enters the pool in [Open] with [Allocated] = 0, stamps [Declared At], and returns the fresh [Pool Id].
+
+Kind: Operation
+
+#### Allocate
+
+The behavior that consumes units against a pool, incrementing [Allocated] by [Count] when the pool is [Open] and the bound admits it. Returns an [Allocation Event Id]. Rejected [Over Capacity] when [Allocated] + [Count] > [Capacity], [Suspended] or [Closed] when the pool is not [Open].
+
+Kind: Operation
+
+#### Release
+
+The behavior that returns units to a pool, decrementing [Allocated] by [Count]. Admitted in every state ([Open], [Suspended], [Closed]) so in-flight allocations can be unwound. Returns a [Release Event Id]; rejected [Over Release] when [Count] > [Allocated].
+
+Kind: Operation
+
+#### Adjust Capacity
+
+The behavior that revises a pool's [Capacity] to a [New Capacity] without changing [Allocated]. Permitted while not [Closed], when [New Capacity] differs from the current [Capacity] and is ≥ [Allocated]. Returns an [Adjustment Event Id]; rejected [Over Allocated] when [New Capacity] < [Allocated], [Invalid Request] on a no-op, [Closed] when the pool is closed.
+
+Kind: Operation
+
+#### Suspend Pool
+
+The behavior that moves a pool [Open] → [Suspended], halting new allocations while still admitting [Release] and [Adjust Capacity]. Returns a [State Change Id]; rejected [Not Open] if already suspended, [Already Closed] if closed.
+
+Kind: Operation
+
+#### Resume Pool
+
+The behavior that moves a pool [Suspended] → [Open], readmitting allocations. Returns a [State Change Id]; rejected [Not Suspended] if already open, [Already Closed] if closed.
+
+Kind: Operation
+
+#### Close Pool
+
+The behavior that moves a pool to the terminal [Closed] state. New allocations and capacity adjustments are refused thereafter; [Release] is still admitted. Returns a [State Change Id]; rejected [Already Closed] if already closed.
+
+Kind: Operation
+
+#### Query
+
+The read-only behavior that returns a pool's current { [Capacity], [Allocated], [Available], [State] } snapshot. It changes nothing and writes no audit-log entry.
+
+Kind: Operation
+
+#### Pool Id
+
+The opaque, immutable, system-generated identity of a pool, produced by [Declare Pool] and never reused. The declaration metadata, [Capacity], [Allocated], and [State] are properties of the pool, not its identity.
+
+Kind:     Field
+Field of: Pool
+Projects: pool_id
+
+#### Capacity
+
+The current declared maximum total allocation a pool admits — a non-negative integer. Set on [Declare Pool], modified only by [Adjust Capacity]. The load-bearing bound: [Allocated] ≤ [Capacity] always holds (Invariant 4).
+
+Kind:     Field
+Field of: Pool
+Projects: capacity
+
+#### Allocated
+
+The pool's current running total of consumed units — a non-negative integer. Modified only by [Allocate] (increment) and [Release] (decrement); never exceeds [Capacity] (Invariant 4) and never goes below 0 (Invariant 5).
+
+Kind:     Field
+Field of: Pool
+Projects: allocated
+
+#### Available
+
+The derived headroom, [Capacity] − [Allocated], reported by [Query]. Recomputed from [Capacity] and [Allocated]; not stored independently.
+
+Kind:     Field
+Field of: Pool
+Projects: available
+
+#### State
+
+The pool's lifecycle state — one of [Open], [Suspended], [Closed]. Set to [Open] on [Declare Pool]; modified only by [Suspend Pool], [Resume Pool], [Close Pool].
+
+Kind:     Field
+Field of: Pool
+Projects: state
+
+#### Declared At
+
+The wall-time a pool was declared, stamped from the implicit clock ([Now]) on [Declare Pool]. Immutable thereafter.
+
+Kind:     Field
+Field of: Pool
+Projects: declared_at
+
+#### Declaring Actor Ref
+
+The opaque reference to the actor that declared the pool. Set on [Declare Pool], immutable thereafter. Attribution only; non-repudiable proof composes with Actor Identity.
+
+Kind:     Field
+Field of: Pool
+Projects: declaring_actor_ref
+
+#### Declaration Reason
+
+The caller-supplied reason recorded at [Declare Pool]. Immutable thereafter.
+
+Kind:     Field
+Field of: Pool
+Projects: declaration_reason
+
+#### Allocation Event Id
+
+The opaque, immutable, system-generated id of an allocation event, produced by each [Allocate] and individually addressable on the pool's audit log. Composing patterns key against it.
+
+Kind:     Field
+Field of: the allocation event
+Projects: allocation_event_id
+
+#### Release Event Id
+
+The opaque, immutable, system-generated id of a release event, produced by each [Release].
+
+Kind:     Field
+Field of: the release event
+Projects: release_event_id
+
+#### Adjustment Event Id
+
+The opaque, immutable, system-generated id of a capacity-adjustment event, produced by each [Adjust Capacity].
+
+Kind:     Field
+Field of: the capacity-adjustment event
+Projects: adjustment_event_id
+
+#### State Change Id
+
+The opaque, immutable, system-generated id of a state-change event, produced by each [Suspend Pool], [Resume Pool], or [Close Pool].
+
+Kind:     Field
+Field of: the state-change event
+Projects: state_change_id
+
+#### Count
+
+The positive-integer number of units an [Allocate] or [Release] operates on, recorded on the resulting event. Zero is not a legitimate count.
+
+Kind:     Field
+Field of: the allocation/release event
+Projects: count
+
+#### Allocated Before
+
+The pool's [Allocated] value immediately before an allocation or release event — the before half of the event's symmetric snapshot.
+
+Kind:     Field
+Field of: the allocation/release event
+Projects: allocated_before
+
+#### Allocated After
+
+The pool's [Allocated] value immediately after an allocation or release event ([Allocated Before] + [Count] for allocate, − [Count] for release) — the witness that lets an auditor verify Invariant 4 or 5 per-event.
+
+Kind:     Field
+Field of: the allocation/release event
+Projects: allocated_after
+
+#### Prior Capacity
+
+The pool's [Capacity] immediately before a capacity-adjustment event.
+
+Kind:     Field
+Field of: the capacity-adjustment event
+Projects: prior_capacity
+
+#### New Capacity
+
+The revised [Capacity] supplied to [Adjust Capacity] and recorded on the adjustment event. Must be non-negative, differ from the current [Capacity], and be ≥ [Allocated].
+
+Kind:     Field
+Field of: the capacity-adjustment event
+Projects: new_capacity
+
+#### Prior State
+
+The pool's [State] immediately before a state-change event.
+
+Kind:     Field
+Field of: the state-change event
+Projects: prior_state
+
+#### New State
+
+The pool's [State] immediately after a state-change event.
+
+Kind:     Field
+Field of: the state-change event
+Projects: new_state
+
+#### Recorded At
+
+The wall-time an event was appended to the audit log, stamped from the implicit clock ([Now]). Best-effort metadata; insertion order, not timestamp order, is authoritative.
+
+Kind:     Field
+Field of: the audit-log event
+Projects: recorded_at
+
+#### Allocating Actor Ref
+
+The opaque reference to the actor performing an [Allocate], recorded on the allocation event.
+
+Kind:     Field
+Field of: the allocation event
+Projects: allocating_actor_ref
+
+#### Releasing Actor Ref
+
+The opaque reference to the actor performing a [Release], recorded on the release event.
+
+Kind:     Field
+Field of: the release event
+Projects: releasing_actor_ref
+
+#### Adjusting Actor Ref
+
+The opaque reference to the actor performing an [Adjust Capacity], recorded on the adjustment event.
+
+Kind:     Field
+Field of: the capacity-adjustment event
+Projects: adjusting_actor_ref
+
+#### Acting Actor Ref
+
+The opaque reference to the actor performing a state transition, recorded on the state-change event.
+
+Kind:     Field
+Field of: the state-change event
+Projects: acting_actor_ref
+
+#### Reason
+
+The caller-supplied reason string recorded on a capacity-adjustment or state-change event (and, as [Declaration Reason], on the pool). Required on [Declare Pool], [Adjust Capacity], [Suspend Pool], [Resume Pool], [Close Pool]; not required on the routine [Allocate]/[Release].
+
+Kind:     Field
+Field of: the audit-log event
+Projects: reason
+
+#### Now
+
+The wall-time reading the implicit clock supplies, consumed to stamp [Declared At] and each event's [Recorded At]. Not stored under this name; the stored forms are the timestamps.
+
+Kind:         Parameter
+Parameter of: Declare Pool
+Projects:     now
+
+#### Open
+
+The entry and operating state: the pool accepts [Allocate] calls subject to the bound. Reached on [Declare Pool] and on [Resume Pool]; left by [Suspend Pool] or [Close Pool].
+
+Kind:      Member
+Member of: the pool state
+Role:      Outcome
+
+#### Suspended
+
+The paused state: new [Allocate] calls are refused regardless of headroom, while [Release] and [Adjust Capacity] remain admitted. Reached by [Suspend Pool]; left by [Resume Pool] (to [Open]) or [Close Pool]. Also the rejection reason [Allocate] returns against a suspended pool.
+
+Kind:      Member
+Member of: the pool state
+Role:      Outcome
+
+#### Closed
+
+The terminal state: [Allocate] and [Adjust Capacity] are refused, [Release] still admitted so in-flight allocations unwind. Reached by [Close Pool]; absorbing (Invariant 3). Also the rejection reason [Allocate]/[Adjust Capacity] return against a closed pool.
+
+Kind:      Member
+Member of: the pool state
+Role:      Outcome
+
+#### Over Capacity
+
+The refusal [Allocate] returns when [Allocated] + [Count] > [Capacity] — the allocation would breach the bound. No event is recorded; the pool remains [Open].
+
+Kind:      Member
+Member of: the Allocate rejection
+Role:      Outcome
+Projects:  over-capacity
+
+#### Over Release
+
+The refusal [Release] returns when [Count] > [Allocated] — releasing more than is allocated would drive the running total negative. No event is recorded.
+
+Kind:      Member
+Member of: the Release rejection
+Role:      Outcome
+Projects:  over-release
+
+#### Over Allocated
+
+The refusal [Adjust Capacity] returns when [New Capacity] < [Allocated] — the requested bound would put already-allocated units over capacity. No change, no event.
+
+Kind:      Member
+Member of: the Adjust Capacity rejection
+Role:      Outcome
+Projects:  over-allocated
+
+#### Not Known
+
+The refusal any [Pool Id]-taking action returns when the id references no recorded pool — a lookup miss, checked before every other precondition. After deployment-side purge it also subsumes once-declared-but-purged pools.
+
+Kind:      Member
+Member of: the action rejection
+Role:      Outcome
+Projects:  not-known
+
+#### Not Open
+
+The refusal [Suspend Pool] returns when the pool is not in [Open] state (it is already [Suspended]).
+
+Kind:      Member
+Member of: the Suspend Pool rejection
+Role:      Outcome
+Projects:  not-open
+
+#### Not Suspended
+
+The refusal [Resume Pool] returns when the pool is not in [Suspended] state (it is [Open]).
+
+Kind:      Member
+Member of: the Resume Pool rejection
+Role:      Outcome
+Projects:  not-suspended
+
+#### Already Closed
+
+The refusal [Suspend Pool], [Resume Pool], or [Close Pool] returns when the pool is already [Closed] — terminal, no further state transitions.
+
+Kind:      Member
+Member of: the lifecycle-action rejection
+Role:      Outcome
+Projects:  already-closed
+
+#### Invalid Request
+
+The refusal any action returns when a required field is malformed — a null/empty/whitespace-only or control/zero-width/bidi-tainted string, a wrong-signed integer, or a no-op [Adjust Capacity] whose [New Capacity] equals the current [Capacity]. A field-format rejection before any arithmetic check or store write.
+
+Kind:      Member
+Member of: the action rejection
+Role:      Outcome
+Projects:  invalid-request
+
+#### Storage Failure
+
+The refusal any action returns when the durable write fails after all preconditions pass. All-or-none: no partial record, no audit-log entry, no running-total change (Invariant 14).
+
+Kind:      Member
+Member of: the action rejection
+Role:      Outcome
+Projects:  storage-failure
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Declare Pool]: #declare-pool
+[Allocate]: #allocate
+[Release]: #release
+[Adjust Capacity]: #adjust-capacity
+[Suspend Pool]: #suspend-pool
+[Resume Pool]: #resume-pool
+[Close Pool]: #close-pool
+[Query]: #query
+[Pool Id]: #pool-id
+[Capacity]: #capacity
+[Allocated]: #allocated
+[Available]: #available
+[State]: #state
+[Declared At]: #declared-at
+[Declaring Actor Ref]: #declaring-actor-ref
+[Declaration Reason]: #declaration-reason
+[Allocation Event Id]: #allocation-event-id
+[Release Event Id]: #release-event-id
+[Adjustment Event Id]: #adjustment-event-id
+[State Change Id]: #state-change-id
+[Count]: #count
+[Allocated Before]: #allocated-before
+[Allocated After]: #allocated-after
+[Prior Capacity]: #prior-capacity
+[New Capacity]: #new-capacity
+[Prior State]: #prior-state
+[New State]: #new-state
+[Recorded At]: #recorded-at
+[Allocating Actor Ref]: #allocating-actor-ref
+[Releasing Actor Ref]: #releasing-actor-ref
+[Adjusting Actor Ref]: #adjusting-actor-ref
+[Acting Actor Ref]: #acting-actor-ref
+[Reason]: #reason
+[Now]: #now
+[Open]: #open
+[Suspended]: #suspended
+[Closed]: #closed
+[Over Capacity]: #over-capacity
+[Over Release]: #over-release
+[Over Allocated]: #over-allocated
+[Not Known]: #not-known
+[Not Open]: #not-open
+[Not Suspended]: #not-suspended
+[Already Closed]: #already-closed
+[Invalid Request]: #invalid-request
+[Storage Failure]: #storage-failure
 
 ---
 
@@ -454,7 +877,10 @@ The atom inherits from:
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 Capacity Constraint Enforcement is atom #8 in the ROADMAP's draft order and the third entry in `resource-lifecycle` after Provisional Commitment and Soft Delete. The closest existing pattern is Provisional Commitment — same category, same kind of resource-encumbrance concern — and the draft mirrors its shape, identity-model discipline, and authoring conventions. The regulated-overlay conventions (Regulated adversarial scenarios, Generation acceptance) are included per the methodology's required-when clause — three of the five domain examples (airline, banking, healthcare) invoke regulated domains. The conventions are inherited from the methodology directly rather than re-derived from predecessor patterns.
 
@@ -529,3 +955,9 @@ Sub-finding style notes (neither blocking nor counted toward foundational class)
 *Buggy twin (vacuity guard).* [`capacity-constraint-enforcement-buggy.tla`](./capacity-constraint-enforcement-buggy.tla) drops both the `status[w] = "allocated"` guard and the `allocated ≥ 1` guard from `ReleaseBuggy` — modeling a **release-without-prior-allocation bug**: `ReleaseBuggy` fires on any worker in any state. `AllocateAtomic` is retained unchanged so that Inv4 is not violated; the bug isolates to the release path and Inv5_NonNegativity. The checker rejects the twin at 3 states in a single step: `Init` (allocated = 0, all workers "idle"), `ReleaseBuggy(w1)` (allocated → -1) — Inv5_NonNegativity violated immediately because no status guard prevents a release-with-nothing-allocated. The twin proves the release guard is load-bearing: drop it and non-negativity is reachably violated from the initial state; keep it and the invariant holds under every interleaving. The Inv 4 TOCTOU non-atomic-allocate hazard is retained as a **second isolated twin**, [`capacity-constraint-enforcement-buggy-toctou.tla`](./capacity-constraint-enforcement-buggy-toctou.tla) (`AllocateObserve`/`AllocateCommit` split lets two workers observe the last free unit and both commit, overshooting to 3 > 2; rejected at 27 states on `Inv4_CapacityConstraint`, with Inv5 holding). The two isolated twins give Inv 4 and Inv 5 each their own dedicated counterexample; both are auto-discovered and required-to-reject by `tools/harness/audit.mjs`.
 
 *Conflict-protocol outcome.* None triggered. The model **corroborates** the English — under atomic allocate and guarded release both the capacity bound and non-negativity hold across every interleaving, exactly as Invariants 4 and 5 claim contingent on the host obligations, and the buggy twin makes the contingency mechanical. No counterexample flowed back; the canonical English is unchanged. Reproduce with `cd tools/harness && bash bootstrap.sh && node check.mjs ../../atoms/capacity-constraint-enforcement.tla` (and `… capacity-constraint-enforcement-buggy.tla --buggy`).
+
+---
+
+**Showcase pass — 2026-06-29 (from-scratch full-showcase conversion).** This atom had no `[Term]` annotation; this pass does the four-kind annotation **and** the showcase disciplines together, mirroring the [`duplicate-prevention.md`](./duplicate-prevention.md), [`provisional-commitment.md`](./provisional-commitment.md), and [`session.md`](./session.md) exemplars — the largest conversion in the corpus (8 operations, four audit-event classes, 14 invariants). **Annotation inventory (46 Terms):** eight **Operations** ([Declare Pool], [Allocate], [Release], [Adjust Capacity], [Suspend Pool], [Resume Pool], [Close Pool], [Query]); twenty-five **Fields** — the pool-level [Pool Id], [Capacity], [Allocated], [Available], [State], [Declared At], [Declaring Actor Ref], [Declaration Reason], plus the four event ids ([Allocation Event Id], [Release Event Id], [Adjustment Event Id], [State Change Id]) and the per-event data fields ([Count], [Allocated Before], [Allocated After], [Prior Capacity], [New Capacity], [Prior State], [New State], [Recorded At], [Allocating Actor Ref], [Releasing Actor Ref], [Adjusting Actor Ref], [Acting Actor Ref], [Reason]); one **Parameter** ([Now], the implicit clock, never stored under that name); and twelve **Members** — the three states [Open]/[Suspended]/[Closed] (no `Projects:` — pure states; [Suspended]/[Closed] double as the `allocate`-against-that-state rejection reasons) and the nine rejection reasons [Over Capacity], [Over Release], [Over Allocated], [Not Known], [Not Open], [Not Suspended], [Already Closed], [Invalid Request], [Storage Failure]. The discriminator *stored-as-itself → Field, consumed/transient → Parameter* placed every datum: [Count]/[New Capacity]/the actor refs/[Reason] are stored on events (Fields) even though they are also action arguments; only the clock reading [Now] is consumed-not-stored. No **Type** card — the record is referred to plainly as "a pool" (Fields are *Field of: Pool* or *Field of:* their event class), mirroring [`permissions.md`](./permissions.md). Casing left the prose into each card's `Projects:` line; every target's lowering is derived by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs). Survivors kept backticked: the eight action signatures' projected-contract forms; the concrete example invocations and their literal values/returns throughout Flow and Examples (the domain walkthroughs are illustrative wire-level calls, kept concrete as in the exemplars); the `*_actor_ref` wildcard and the `MAX_INT` / `WAL` literals. **Disciplines:** Summary moved to the very top + the descriptive blockquote folded out as redundant (every claim already carried by Summary/Intent/State/Invariants) + [`prose.md`](../working-ideas/prose.md) cut #1 (Summary run-on split, lossless); cut #5 — the State `Transitions:` list (twenty mixed lifecycle-and-arithmetic bullets) rendered as a **transition table** (action · from state · guard · effect · result), with three cell-resistant semantics kept in prose beside it (rejected-action-writes-nothing; [Release] the one mutation admitted in every state; store-write-failure all-or-none plus the fixed rejection priority cross-referenced to Decision points); Lineage collapsed into this `<details>`. Cuts #2/#3 assessed and skipped (acronyms inline; provenance lives in the invariants/Composition notes). **Representational only** — every invariant and its number (1–14) is unchanged in force, including Invariant 4's [Allocated] ≤ [Capacity] bound with its three named host obligations, Invariant 5's non-negativity, the per-event snapshot arithmetic ([Allocated After] = [Allocated Before] ± [Count]), the audit-identifier/attribution two-surface split (Invariant 8), and the append-only discipline (Invariant 9); all eight projected-contract signatures, the priority ordering, and the Generation-acceptance reconstruction modes are identical; every `[Term]` resolves to its card. **Re-verified, not re-grounded:** Status stays at `grounded on Final Critique 5 — 2026-05-20`. Gates: linter 0 (incl. the O-term resolver — all of this page's markers resolve against the registry); the TLA+ model `capacity-constraint-enforcement.tla` and **both** buggy twins (`capacity-constraint-enforcement-buggy.tla`, `capacity-constraint-enforcement-buggy-toctou.tla`) are **UNTOUCHED** and still PASS / correctly-rejected (Inv5 underflow and Inv4 TOCTOU hazards); the derived manifest projects an identifier kind (Field) and an enumerated kind (Member); `git status` shows only this `.md` modified (no `.tla`/`.cfg`); diff read line-by-line against the same-claim-or-weaker test.
+
+</details>
