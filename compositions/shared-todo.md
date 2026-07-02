@@ -15,8 +15,17 @@ toc: true
 {:toc}
 </details>
 
+## Summary
 
-> A multi-actor task composition: a shared list where actors see tasks according to their grants, act on tasks according to their grants, and hold responsibility for tasks according to their assignments. Composes Personal Todo, Permissions, and Assignment — task lifecycle, authorization surface, and responsibility binding — into a single coherent artifact. The emergent guarantee: every mutation is gated by an explicit permission check, and every task has at most one responsible actor at any time.
+Shared Todo turns a single-user task list into a shared, multi-person one where every change is gated by a permission check and every task has at most one person responsible for it at a time.
+
+It combines three simpler patterns: a task list (Personal Todo), a grant-based permission system (Permissions), and a responsibility-tracking pattern (Assignment). None of the three knows about the others — the task list has no notion of who is acting, the permission system treats access scopes as meaningless strings until the composition gives them meaning, and the responsibility tracker records who owns a task but does not enforce anything.
+
+The composition wires them together so that every action passes a permission check first, deleting a task automatically recalls whoever was responsible for it, and two new queries become possible that no single pattern could answer alone: who is responsible for a task right now, and which tasks a given person is allowed to see.
+
+Combining the patterns produces guarantees none has alone — no one can change the list beyond their granted permissions, no responsibility is left dangling against a deleted task, and the full history of who could do what and who owned what is recoverable from the records. This is the standard building block for any collaborative task system where ownership and access control must be auditable.
+
+The most common uses are software development sprint boards with role-based edit and assignment rights, support queue systems where tickets are assigned to agents with different tier-level access, clinical care planning where nurses and physicians share a task list but hold different permissions over it, and legal or compliance workflows where checklist items require clear ownership and an auditable record of who held which permission.
 
 ---
 
@@ -29,14 +38,6 @@ The pattern addresses the form of multi-actor work that recurs across virtually 
 The shape is constant across all of them: actors see and act on tasks according to granted scopes (opaque permission tokens, such as `tasks:edit`, that the composition defines and Permissions enforces); one actor is responsible for each task at any given time; the full history of who held what permission and who was responsible for what task is recoverable from the records alone.
 
 This is a composition, not a new primitive. Personal Todo, Permissions, and Assignment are unchanged. The composition is the wiring that makes their three concepts coherent — a single multi-actor task surface rather than three separate record stores the caller has to coordinate by hand.
-
----
-
-## Summary
-
-Shared Todo turns a single-user task list into a shared, multi-person one where every change is gated by a permission check and every task has at most one person responsible for it at a time. It combines three simpler patterns: a task list (Personal Todo), a grant-based permission system (Permissions), and a responsibility-tracking pattern (Assignment). None of the three knows about the others — the task list has no notion of who is acting, the permission system treats access scopes as meaningless strings until the composition gives them meaning, and the responsibility tracker records who owns a task but does not enforce anything. The composition wires them together so that every action passes a permission check first, deleting a task automatically recalls whoever was responsible for it, and two new queries become possible that no single pattern could answer alone: who is responsible for a task right now, and which tasks a given person is allowed to see. Combining the patterns produces guarantees none has alone — no one can change the list beyond their granted permissions, no responsibility is left dangling against a deleted task, and the full history of who could do what and who owned what is recoverable from the records. This is the standard building block for any collaborative task system where ownership and access control must be auditable.
-
-The most common uses are software development sprint boards with role-based edit and assignment rights, support queue systems where tickets are assigned to agents with different tier-level access, clinical care planning where nurses and physicians share a task list but hold different permissions over it, and legal or compliance workflows where checklist items require clear ownership and an auditable record of who held which permission.
 
 ---
 
@@ -56,8 +57,8 @@ The composition owns no emergent record store beyond the three constituent atoms
 
 Two derived queries the composition surfaces that neither constituent answers alone:
 
-- **`responsible_actor(task_id) → assignee_ref | unassigned`** — joins Personal Todo (does the task exist?) and Assignment (who holds the active assignment?).
-- **`visible_tasks(actor_ref) → [task_id, ...]`** — joins Personal Todo (the full task set) and Permissions (which tasks the actor may see). In the canonical single-list deployment, `tasks:view` is a list-level grant and returns all tasks or none; finer-grained per-task visibility belongs to a scoped Permissions deployment described in Edge cases.
+- **[Responsible Actor]** — (Projected contract: `responsible_actor(task_id) → assignee_ref | unassigned`) — joins Personal Todo (does the task exist?) and Assignment (who holds the active assignment?).
+- **[Visible Tasks]** — (Projected contract: `visible_tasks(actor_ref) → [task_id, ...]`) — joins Personal Todo (the full task set) and Permissions (which tasks the actor may see). In the canonical single-list deployment, [Tasks View] is a list-level grant and returns all tasks or none; finer-grained per-task visibility belongs to a scoped Permissions deployment described in Edge cases.
 
 ### Scope vocabulary
 
@@ -65,47 +66,47 @@ Permissions treats action scopes as opaque. Shared Todo defines the canonical sc
 
 | Scope | Permits |
 |-------|---------|
-| `tasks:view` | Read the shared task list — see tasks and their current assignees |
-| `tasks:add` | Call `add` on Personal Todo |
-| `tasks:edit` | Call `edit` on any pending task |
-| `tasks:complete` | Call `complete` on any task |
-| `tasks:delete` | Call `delete` on any task |
-| `tasks:assign` | Call `assign` and `reassign` on Assignment |
-| `tasks:recall` | Call `recall` on Assignment |
+| [Tasks View] | Read the shared task list — see tasks and their current assignees |
+| [Tasks Add] | Call `add` on Personal Todo |
+| [Tasks Edit] | Call `edit` on any pending task |
+| [Tasks Complete] | Call `complete` on any task |
+| [Tasks Delete] | Call `delete` on any task |
+| [Tasks Assign] | Call `assign` and `reassign` on Assignment |
+| [Tasks Recall] | Call `recall` on Assignment |
 
 The vocabulary is deployment-configurable. A deployment that distinguishes "edit your own tasks" from "edit any task" introduces finer-grained scopes (`tasks:edit:own`, `tasks:edit:any`) and adjusts the wiring accordingly; the canonical vocabulary above is the minimum useful set. The Permissions instance is the single source of truth for what a given actor may do; the scope vocabulary is the contract between the deployment and the composition wiring.
 
 ### Action wiring
 
-Every action follows the same two-step shape: Permissions check first, atom call second. A `denied` result from Permissions short-circuits the action and surfaces `permission-denied` to the caller; the constituent atoms are not invoked.
+Every action follows the same two-step shape: Permissions check first, atom call second. A `denied` result from Permissions short-circuits the action and surfaces [Permission Denied] to the caller; the constituent atoms are not invoked.
 
-- **`add_task(actor_ref, description) → task_id | rejected(permission-denied | invalid-description | duplicate-active | storage-failure)`**
-  1. `Permissions.permitted(actor_ref, tasks:add)` → if `denied`, return `permission-denied`.
+- **[Add Task]** — (Projected contract: `add_task(actor_ref, description) → task_id | rejected(permission-denied | invalid-description | duplicate-active | storage-failure)`)
+  1. `Permissions.permitted(actor_ref, tasks:add)` → if `denied`, return [Permission Denied].
   2. `PersonalTodo.add(description)` → `task_id | rejected(invalid-description | duplicate-active | storage-failure)`. Return the result.
 
-- **`edit_task(actor_ref, task_id, new_description) → ok | rejected(permission-denied | not-known | not-editable | invalid-description | duplicate-active | storage-failure)`**
-  1. `Permissions.permitted(actor_ref, tasks:edit)` → if `denied`, return `permission-denied`.
+- **[Edit Task]** — (Projected contract: `edit_task(actor_ref, task_id, new_description) → ok | rejected(permission-denied | not-known | not-editable | invalid-description | duplicate-active | storage-failure)`)
+  1. `Permissions.permitted(actor_ref, tasks:edit)` → if `denied`, return [Permission Denied].
   2. `PersonalTodo.edit(task_id, new_description)` → `ok | rejected(not-known | not-editable | invalid-description | duplicate-active | storage-failure)`. Return the result.
 
-- **`complete_task(actor_ref, task_id) → ok | rejected(permission-denied | not-known | not-pending | storage-failure)`**
-  1. `Permissions.permitted(actor_ref, tasks:complete)` → if `denied`, return `permission-denied`.
+- **[Complete Task]** — (Projected contract: `complete_task(actor_ref, task_id) → ok | rejected(permission-denied | not-known | not-pending | storage-failure)`)
+  1. `Permissions.permitted(actor_ref, tasks:complete)` → if `denied`, return [Permission Denied].
   2. `PersonalTodo.complete(task_id)` → `ok | rejected(not-known | not-pending | storage-failure)`. Return the result. The assignment for `task_id`, if Active, is not automatically recalled; see Edge cases.
 
-- **`delete_task(actor_ref, task_id) → ok | rejected(permission-denied | not-known | storage-failure)`**
-  1. `Permissions.permitted(actor_ref, tasks:delete)` → if `denied`, return `permission-denied`.
+- **[Delete Task]** — (Projected contract: `delete_task(actor_ref, task_id) → ok | rejected(permission-denied | not-known | storage-failure)`)
+  1. `Permissions.permitted(actor_ref, tasks:delete)` → if `denied`, return [Permission Denied].
   2. If `Assignment.active_for(task_id)` returns an active assignment, call `Assignment.recall(assignment_id)` — the cascade-on-delete rule; see Composition-level invariants. If this `recall` returns `rejected(storage-failure)`, return `storage-failure` immediately; do not proceed to step 3.
   3. `PersonalTodo.delete(task_id)` → `ok | rejected(not-known | storage-failure)`. Return the result.
 
-- **`assign_task(actor_ref, task_id, assignee_ref) → assignment_id | rejected(permission-denied | already-assigned | invalid-request | storage-failure)`**
-  1. `Permissions.permitted(actor_ref, tasks:assign)` → if `denied`, return `permission-denied`.
+- **[Assign Task]** — (Projected contract: `assign_task(actor_ref, task_id, assignee_ref) → assignment_id | rejected(permission-denied | already-assigned | invalid-request | storage-failure)`)
+  1. `Permissions.permitted(actor_ref, tasks:assign)` → if `denied`, return [Permission Denied].
   2. `Assignment.assign(task_id, assignee_ref)` → `assignment_id | rejected(invalid-request | already-assigned | storage-failure)`. Return the result.
 
-- **`reassign_task(actor_ref, assignment_id, new_assignee_ref) → new_assignment_id | rejected(permission-denied | not-known | not-active | invalid-request | storage-failure)`**
-  1. `Permissions.permitted(actor_ref, tasks:assign)` → if `denied`, return `permission-denied`.
+- **[Reassign Task]** — (Projected contract: `reassign_task(actor_ref, assignment_id, new_assignee_ref) → new_assignment_id | rejected(permission-denied | not-known | not-active | invalid-request | storage-failure)`)
+  1. `Permissions.permitted(actor_ref, tasks:assign)` → if `denied`, return [Permission Denied].
   2. `Assignment.reassign(assignment_id, new_assignee_ref)` → `new_assignment_id | rejected(not-known | not-active | invalid-request | storage-failure)`. Return the result.
 
-- **`recall_assignment(actor_ref, assignment_id) → ok | rejected(permission-denied | not-known | not-active | storage-failure)`**
-  1. `Permissions.permitted(actor_ref, tasks:recall)` → if `denied`, return `permission-denied`.
+- **[Recall Assignment]** — (Projected contract: `recall_assignment(actor_ref, assignment_id) → ok | rejected(permission-denied | not-known | not-active | storage-failure)`)
+  1. `Permissions.permitted(actor_ref, tasks:recall)` → if `denied`, return [Permission Denied].
   2. `Assignment.recall(assignment_id)` → `ok | rejected(not-known | not-active | storage-failure)`. Return the result.
 
 Read-only queries (`visible_tasks`, `responsible_actor`, task detail by id) check `tasks:view` before reading from Personal Todo or Assignment. A `denied` on `tasks:view` returns an empty result or `permission-denied`, depending on deployment policy.
@@ -122,7 +123,7 @@ These invariants emerge from the composition. None belong to a single constituen
 
 - **Invariant 1 — Permission enforcement.** No actor performs a state-changing action (add, edit, complete, delete, assign, reassign, recall) without a `permitted` result from the Permissions instance for the corresponding scope. A `denied` result short-circuits the action before any constituent atom is invoked.
 - **Invariant 2 — At most one responsible actor per task.** At any time, no task in the shared list has more than one Active assignment. Inherited from Assignment's Invariant 1 and surfaced through the composition's single Assignment instance.
-- **Invariant 3 — Cascade-on-delete.** When a task is deleted, any Active assignment for that task is recalled before the deletion completes. After a successful `delete_task`, no Active assignment exists for the deleted `task_id`.
+- **Invariant 3 — Cascade-on-delete.** When a task is deleted, any Active assignment for that task is recalled before the deletion completes. After a successful [Delete Task], no Active assignment exists for the deleted `task_id`.
 - **Invariant 4 — Responsibility queryability.** For any task in the Personal Todo store, the composition can answer *who is responsible right now* and *who has been responsible over time* from the Assignment store alone, without recourse to external records.
 - **Invariant 5 — Authorization history completeness.** For any actor and any scope, the full grant history (who was granted what, when, and whether it was revoked) is recoverable from the Permissions store alone. The grant record survives the task it governed.
 - **Invariant 6 — Personal Todo's invariants preserved.** All Personal Todo invariants hold over the underlying instance. The composition never bypasses Personal Todo's preconditions; its rejections (`not-pending`, `not-known`, `duplicate-active`, etc.) flow through unchanged to the caller.
@@ -179,16 +180,171 @@ The accountability record is complete: which nurse held responsibility at each s
 
 What this composition does not cover:
 
-- **Per-task visibility scoping.** The canonical scope vocabulary uses `tasks:view` as a list-level grant — an actor either sees all tasks or none. Per-task visibility (actor A can see task 1 but not task 2) requires a finer-grained scope vocabulary (`tasks:view:task_id`) or a separate resource-scoped Permissions instance per task. That is deployment configuration, not part of the canonical composition.
-- **Assignment implies view access.** The composition does not automatically grant `tasks:view` to actors who receive an assignment. An actor assigned to a task they cannot see is a valid (if unusual) state. Deployments that want assignment to imply view access should issue a `tasks:view` grant alongside each assignment, or introduce a composing pattern that does so.
-- **Self-assignment.** An actor with `tasks:assign` can assign a task to themselves. The composition does not prevent it; if the deployment policy prohibits self-assignment, the composition wiring should add a check that `actor_ref ≠ assignee_ref` before calling `Assignment.assign`.
-- **Completion handling for assignments.** When a task is completed, its Active assignment is not automatically recalled. The assignment record remains Active as a completion-attribution record — *who was responsible when this was completed* — unless the deployment policy calls `recall_assignment` on completion. Both patterns are valid; the composition supports either.
+- **Per-task visibility scoping.** The canonical scope vocabulary uses [Tasks View] as a list-level grant — an actor either sees all tasks or none. Per-task visibility (actor A can see task 1 but not task 2) requires a finer-grained scope vocabulary (`tasks:view:task_id`) or a separate resource-scoped Permissions instance per task. That is deployment configuration, not part of the canonical composition.
+- **Assignment implies view access.** The composition does not automatically grant [Tasks View] to actors who receive an assignment. An actor assigned to a task they cannot see is a valid (if unusual) state. Deployments that want assignment to imply view access should issue a [Tasks View] grant alongside each assignment, or introduce a composing pattern that does so.
+- **Self-assignment.** An actor with [Tasks Assign] can assign a task to themselves. The composition does not prevent it; if the deployment policy prohibits self-assignment, the composition wiring should add a check that `actor_ref ≠ assignee_ref` before calling `Assignment.assign`.
+- **Completion handling for assignments.** When a task is completed, its Active assignment is not automatically recalled. The assignment record remains Active as a completion-attribution record — *who was responsible when this was completed* — unless the deployment policy calls [Recall Assignment] on completion. Both patterns are valid; the composition supports either.
 - **Deletion of assigned tasks.** The cascade-on-delete rule recalls the Active assignment before deleting the task. Recalled is the correct terminal state for an assignment on a deleted task (the task no longer exists; the actor's responsibility is discharged by the deletion, not by their own action). The assignment history, including the recall, remains in the Assignment store.
 - **Undo.** The composition does not include undo. Adding undo requires composing with an Event Log instance (as Undo History demonstrates); the three-atom Shared Todo composition does not absorb it.
-- **Audit trail.** The composition does not include tamper-evident audit logging. Deployments with regulated audit obligations compose Shared Todo's action surface with Audit Trail — each `add_task`, `assign_task`, `complete_task` etc. becomes a `record_action` call in the Audit Trail composition. The two compositions are independent; stacking them is the regulated-deployment pattern.
+- **Audit trail.** The composition does not include tamper-evident audit logging. Deployments with regulated audit obligations compose Shared Todo's action surface with Audit Trail — each [Add Task], [Assign Task], [Complete Task] etc. becomes a `record_action` call in the Audit Trail composition. The two compositions are independent; stacking them is the regulated-deployment pattern.
 - **Task priorities, dependencies, due dates.** Each is a separate atom composing with Personal Todo. The Shared Todo composition names Personal Todo as its constituent; extending with priority or due-date atoms means composing a richer task atom, not modifying Shared Todo.
-- **Concurrent action races.** Two actors simultaneously calling `assign_task` for the same `task_id` resolve serially under the host environment's serialization guarantees; Assignment's `already-assigned` rejection handles the loser. Two actors simultaneously calling `delete_task` for the same `task_id` resolve serially; Personal Todo's `not-known` rejection handles the loser.
-- **Revoked grants mid-session.** If an actor's `tasks:edit` grant is revoked while they have an edit in flight, the timing depends on when `permitted` is called. The composition checks `permitted` at action initiation; whether in-flight operations are re-checked mid-execution is handled at the deployment layer.
+- **Concurrent action races.** Two actors simultaneously calling [Assign Task] for the same `task_id` resolve serially under the host environment's serialization guarantees; Assignment's `already-assigned` rejection handles the loser. Two actors simultaneously calling [Delete Task] for the same `task_id` resolve serially; Personal Todo's `not-known` rejection handles the loser.
+- **Revoked grants mid-session.** If an actor's [Tasks Edit] grant is revoked while they have an edit in flight, the timing depends on when `permitted` is called. The composition checks `permitted` at action initiation; whether in-flight operations are re-checked mid-execution is handled at the deployment layer.
+
+---
+
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are the composed action-wirings and derived queries plus the scope vocabulary it defines; references to the constituent atoms ([Personal Todo](../atoms/personal-todo.md), [Permissions](../atoms/permissions.md), [Assignment](../atoms/assignment.md)) and their operations remain qualified calls to those atoms. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Add Task
+
+The composition action that adds a task to the shared list — gates on [Tasks Add] via Permissions, then delegates to Personal Todo's `add`. Returns the new `task_id`, or [Permission Denied] before any delegated Personal Todo rejection.
+
+Kind: Operation
+
+#### Edit Task
+
+The composition action that edits a pending task's description — gates on [Tasks Edit], then delegates to Personal Todo's `edit`. Rejected [Permission Denied] or a delegated Personal Todo rejection.
+
+Kind: Operation
+
+#### Complete Task
+
+The composition action that marks a task done — gates on [Tasks Complete], then delegates to Personal Todo's `complete`. Does not auto-recall the task's Active assignment (that is deployment policy). Rejected [Permission Denied] or a delegated rejection.
+
+Kind: Operation
+
+#### Delete Task
+
+The composition action that deletes a task — gates on [Tasks Delete], recalls any Active assignment first (the cascade-on-delete rule, Invariant 3), then delegates to Personal Todo's `delete`. Rejected [Permission Denied] or a delegated rejection.
+
+Kind: Operation
+
+#### Assign Task
+
+The composition action that binds responsibility for a task to an actor — gates on [Tasks Assign], then delegates to Assignment's `assign`. Returns the new `assignment_id`, or [Permission Denied] / a delegated rejection.
+
+Kind: Operation
+
+#### Reassign Task
+
+The composition action that moves responsibility to a new actor — gates on [Tasks Assign], then delegates to Assignment's `reassign`. Returns the new `assignment_id`, or [Permission Denied] / a delegated rejection.
+
+Kind: Operation
+
+#### Recall Assignment
+
+The composition action that withdraws responsibility — gates on [Tasks Recall], then delegates to Assignment's `recall`. Rejected [Permission Denied] or a delegated rejection.
+
+Kind: Operation
+
+#### Responsible Actor
+
+The derived read query joining Personal Todo and Assignment — returns the actor holding the active assignment for a task, or `unassigned`. Neither constituent answers it alone.
+
+Kind: Operation
+
+#### Visible Tasks
+
+The derived read query joining Personal Todo and Permissions — returns the tasks an actor may see (those for which [Tasks View] is granted). Neither constituent answers it alone.
+
+Kind: Operation
+
+#### Tasks View
+
+The scope permitting read of the shared task list (tasks and their assignees). Gates [Visible Tasks] and the other read queries; a list-level grant in the canonical deployment.
+
+Kind:      Member
+Member of: the scope vocabulary
+Role:      Scope
+Projects:  tasks:view
+
+#### Tasks Add
+
+The scope permitting [Add Task] (which delegates to Personal Todo's `add`).
+
+Kind:      Member
+Member of: the scope vocabulary
+Role:      Scope
+Projects:  tasks:add
+
+#### Tasks Edit
+
+The scope permitting [Edit Task] on any pending task.
+
+Kind:      Member
+Member of: the scope vocabulary
+Role:      Scope
+Projects:  tasks:edit
+
+#### Tasks Complete
+
+The scope permitting [Complete Task] on any task.
+
+Kind:      Member
+Member of: the scope vocabulary
+Role:      Scope
+Projects:  tasks:complete
+
+#### Tasks Delete
+
+The scope permitting [Delete Task] on any task.
+
+Kind:      Member
+Member of: the scope vocabulary
+Role:      Scope
+Projects:  tasks:delete
+
+#### Tasks Assign
+
+The scope permitting [Assign Task] and [Reassign Task].
+
+Kind:      Member
+Member of: the scope vocabulary
+Role:      Scope
+Projects:  tasks:assign
+
+#### Tasks Recall
+
+The scope permitting [Recall Assignment].
+
+Kind:      Member
+Member of: the scope vocabulary
+Role:      Scope
+Projects:  tasks:recall
+
+#### Permission Denied
+
+The composition's own rejection — returned by any composition action when the up-front Permissions check yields `denied`; it short-circuits before any constituent atom is invoked (Invariant 1).
+
+Kind:      Member
+Member of: the action rejection
+Role:      Outcome
+Projects:  permission-denied
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Add Task]: #add-task
+[Edit Task]: #edit-task
+[Complete Task]: #complete-task
+[Delete Task]: #delete-task
+[Assign Task]: #assign-task
+[Reassign Task]: #reassign-task
+[Recall Assignment]: #recall-assignment
+[Responsible Actor]: #responsible-actor
+[Visible Tasks]: #visible-tasks
+[Tasks View]: #tasks-view
+[Tasks Add]: #tasks-add
+[Tasks Edit]: #tasks-edit
+[Tasks Complete]: #tasks-complete
+[Tasks Delete]: #tasks-delete
+[Tasks Assign]: #tasks-assign
+[Tasks Recall]: #tasks-recall
+[Permission Denied]: #permission-denied
 
 ---
 
@@ -198,7 +354,10 @@ What this composition does not cover:
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 Shared Todo is the composition that motivated the Permissions and Assignment atoms. Both were drafted as direct prerequisites; this composition is the context that explains why each atom is the shape it is.
 
@@ -238,3 +397,7 @@ Shared Todo is the composition that motivated the Permissions and Assignment ato
 **Formal model — 2026-06-03: TLA+ authored and verified; pattern promoted to `grounded`.** Derived model [`shared-todo.tla`](./shared-todo.tla) + config [`shared-todo.cfg`](./shared-todo.cfg), checked by `tla-checker` via `tools/harness/check.mjs`. *What it checks:* one task; `taskExists` (Personal Todo presence) and `assignmentActive` (an Active Assignment). The load-bearing **Invariant 3** (cascade-on-delete) is checked as `Inv_CascadeOnDelete == ~taskExists ⇒ ~assignmentActive` — after a delete, no Active assignment dangles. The correct `delete_task` performs the recall-then-delete cascade atomically. Exhaustive: 3 states, holds. *Buggy twin* [`shared-todo-buggy.tla`](./shared-todo-buggy.tla) deletes the task without recalling its Active assignment first; rejected at 4 states (Assign → DeleteTask → `taskExists = FALSE` while `assignmentActive = TRUE`, a dangling assignment). *Out of model scope:* Permissions enforcement (Invariant 1), at-most-one-responsible (Invariant 2 — inherited from Assignment; see `atoms/assignment.tla`), history queryability. *Conflict-protocol outcome:* none — the model **corroborates** the English; canonical English unchanged.
 
 **AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This composition grounded 2026-05-20 under the early process — foundation plus refinement, no fresh-reader AI adversarial round — and carried the legacy grandfathered token; its constituent atoms were re-grounded at Final Critique 4 on 2026-06-18. This round is that missing AI-conducted adversarial round (fresh-reader Opus, Happy-Torvalds-X2); it is the composition's Final Critique 4 (Rounds 1–3 the foundation/refinement baseline, per pressure-testing.md §Round structure). The composition's own logic (cascade-on-delete and the two derived queries) was already logic-confinement-clean — it delegates all clock and id allocation to its now-grounded constituents (Personal Todo, Permissions, Assignment) — so no foundational finding arose. One refining fix folded: the unreachable `not-pending` rejection propagated from Personal Todo was dropped from `edit_task` and the delegated `edit`; `complete`'s reachable `not-pending` is preserved.. Caller signatures unchanged and the invariant set held at 8 (read the actual count from the spec and confirm no change), so the fixes are additive with no constituent-change cascade. Formal-layer vote stands YES (model present and verifying); not reopened. Confirming fresh-reader Opus clearance gate (2026-06-18): CLEAR, 0 foundational, no new surface. It has no compositional dependents (leaf). Grounds at Final Critique 4.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, or rejection taxonomy changed. First composition converted to the showcase standard; the convention established for compositions: card the composition's *own* concepts and leave constituent references as qualified calls and full atom-links. (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases (17 terms): 9 Operations — the 7 composed action-wirings ([Add Task], [Edit Task], [Complete Task], [Delete Task], [Assign Task], [Reassign Task], [Recall Assignment]) plus the 2 derived queries ([Responsible Actor], [Visible Tasks]); 0 Types / 0 Fields / 0 Parameters (the composition owns no emergent record store — its state is the join of the three constituents); and 8 Members — the 7-scope vocabulary ([Tasks View], [Tasks Add], [Tasks Edit], [Tasks Complete], [Tasks Delete], [Tasks Assign], [Tasks Recall]) it defines for its Permissions instance, plus its own [Permission Denied] rejection. Survivors left backticked: the one labeled projected-contract signature per composed Operation; the qualified constituent calls (`Personal Todo.add`, `Permissions.permitted`, `Assignment.recall`, `Assignment.active_for`, and so on) and their outcomes (`permitted`/`denied`, `ok`, `unassigned`); the inherited constituent rejection tokens that flow through (`not-pending`, `not-known`, `not-editable`, `duplicate-active`, `invalid-description`, `already-assigned`, `not-active`, `invalid-request`, `storage-failure`); constituent field/id tokens (`task_id`, `assignee_ref`, `assignment_id`, `recalled_at`); the hypothetical finer scopes (`tasks:view:task_id`, `tasks:edit:own`); and concrete example calls, ids, and grants. Constituent atom names remain the existing full links to `../atoms/*`. (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), the descriptive top blockquote folded out after confirming each claim is carried by Summary/Intent/Composes/Composition-level invariants; no *also-known-as* line existed, so none was invented. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #1** — the single-paragraph Summary split into one-idea-per-sentence paragraphs, lossless (its second paragraph, on common uses, kept intact). (e) **prose cut #5 — skipped (with reason):** the composition owns no emergent state machine (its lifecycle states live in the constituents — Personal Todo's Pending→Done, Assignment's Active/Recalled/Transferred); its own action wiring is a uniform permission-check-then-delegate shape already listed crisply in Action wiring, with the one cascade-on-delete deviation called out there. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-06-18`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (17 terms); 8 composition-level invariants preserved; `.tla` untouched — harness re-run green: `shared-todo.tla` PASS + `shared-todo-buggy.tla --buggy` rejected.
+
+</details>
