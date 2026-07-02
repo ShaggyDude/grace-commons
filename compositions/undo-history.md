@@ -16,7 +16,15 @@ toc: true
 </details>
 
 
-> A composition: every Personal Todo action is reversible. Composes Personal Todo with Event Log to give the user a familiar Cmd+Z experience without modifying either constituent atom.
+## Summary
+
+Undo History combines two simpler patterns — a single-user task list (Personal Todo) and an add-only record of everything that happens (Event Log) — to give the task list a familiar undo (Cmd+Z) capability that neither part has on its own.
+
+The trick is that the list's current state is not stored directly; it is recomputed by replaying the recorded history of actions, skipping any that have been undone. Every action a user takes adds an entry to the history; undoing adds an entry that marks the most recent action as skipped; replaying the adjusted history produces exactly the state the user expects.
+
+Combining the two patterns produces guarantees neither has alone — chiefly that undoing a deletion brings the task back with its original identifier, timestamps, and description intact, rather than as a brand-new task. (A property that appears only when patterns are combined is called an emergent guarantee.)
+
+This is the building block for any single-user surface where people expect undo to work and a recoverable history is wanted as a side effect.
 
 ---
 
@@ -24,15 +32,9 @@ toc: true
 
 The user expects a familiar undo capability — the ability to take back the last thing they did. Personal Todo on its own does not provide this: each action is committed and there is no native "undo" surface. Event Log on its own provides a faithful record of what happened but does not act on it.
 
-This composition composes the two. Every action the user takes against Personal Todo is recorded in an Event Log instance owned by the composition. An additional `undo` action consults the log, identifies the most recent forward action not already undone, and adjusts the composition's derived Personal Todo state to be equivalent to the state had that action never occurred.
+This composition composes the two. Every action the user takes against Personal Todo is recorded in an Event Log instance owned by the composition. An additional [Undo] action consults the log, identifies the most recent forward action not already undone, and adjusts the composition's derived Personal Todo state to be equivalent to the state had that action never occurred.
 
 The composition is event-sourced (state is derived by replaying a log of recorded events rather than storing the current state directly). Personal Todo state at any moment is defined as the result of replaying the log's non-undone events from the beginning. Forward actions append events; undo appends compensating events; replay produces the current state. Personal Todo's atom spec is unchanged. Event Log's atom spec is unchanged. The composition is the wiring.
-
----
-
-## Summary
-
-Undo History combines two simpler patterns — a single-user task list (Personal Todo) and an add-only record of everything that happens (Event Log) — to give the task list a familiar undo (Cmd+Z) capability that neither part has on its own. The trick is that the list's current state is not stored directly; it is recomputed by replaying the recorded history of actions, skipping any that have been undone. Every action a user takes adds an entry to the history; undoing adds an entry that marks the most recent action as skipped; replaying the adjusted history produces exactly the state the user expects. Combining the two patterns produces guarantees neither has alone — chiefly that undoing a deletion brings the task back with its original identifier, timestamps, and description intact, rather than as a brand-new task. (A property that appears only when patterns are combined is called an emergent guarantee.) This is the building block for any single-user surface where people expect undo to work and a recoverable history is wanted as a side effect.
 
 ---
 
@@ -63,25 +65,25 @@ The composition writes five event types into its Event Log instance:
 
 The composition replaces Personal Todo's direct API surface. Users call the composition's actions; the composition updates both the Event Log and the derived state.
 
-- **`add(description) → id | rejected(invalid-description | duplicate-active | storage-failure)`** — Validate against Personal Todo's `add` precondition (description policy + active-set uniqueness against the *current derived state*); reject with `invalid-description` or `duplicate-active` if the precondition fails. On success, the host allocates the new unit `id` at the composition's I/O seam (injected before the action's transition; not generated inside it), append `{type: "add", id, description}` to the Event Log. If the append returns `rejected(storage-failure)`, return `storage-failure` to the caller without updating the derived state — the action did not happen. On successful append, update the derived state, return `id`.
-- **`edit(id, newDescription) → ok | rejected(not-known | not-editable | invalid-description | duplicate-active | storage-failure)`** — Validate against Personal Todo's `edit` precondition; reject with `not-known`, `not-editable`, `invalid-description`, or `duplicate-active` if the precondition fails. On success, capture the unit's current description as `prior_description`, append `{type: "edit", id, prior_description, new_description}`. If the append returns `rejected(storage-failure)`, return `storage-failure` without updating the derived state. On successful append, update the derived state, return `ok`.
-- **`complete(id) → ok | rejected(not-known | not-pending | storage-failure)`** — Validate against Personal Todo's `complete` precondition; reject with `not-known` or `not-pending` if the precondition fails. On success, append `{type: "complete", id}`. If the append returns `rejected(storage-failure)`, return `storage-failure` without updating the derived state. On successful append, update the derived state, return `ok`.
-- **`delete(id) → ok | rejected(not-known | storage-failure)`** — Validate against Personal Todo's `delete` precondition; reject with `not-known` if the precondition fails. On success, capture the unit's full state as `snapshot`, append `{type: "delete", id, snapshot}`. If the append returns `rejected(storage-failure)`, return `storage-failure` without updating the derived state. On successful append, update the derived state, return `ok`.
-- **`undo() → undone_event_type | rejected(nothing-to-undo | storage-failure)`** — Identify the most recent forward event (type ∈ {add, edit, complete, delete}) whose `event_id` is not already in the undone set. If none, reject as `nothing-to-undo`. Otherwise, append `{type: "undo", undone_event_id, undone_event_type}` to the Event Log. If the append returns `rejected(storage-failure)`, return `storage-failure` without recomputing the derived state — the undo did not happen. On successful append, recompute the derived state per the Replay semantics section below (replaying the Event Log and skipping events whose `event_id` is now in the undone set), return the type of the undone action. **The undone action is reversed by *re-derivation*, not by any reversing call to Personal Todo:** the constituent is never asked to undo a transition (e.g. to move a unit from Done back to Pending). The recomputed state is simply one in which the skipped event never occurred, so Personal Todo's persistence-of-completion invariant is never challenged — the composition operates at the log level, the atom only ever sees forward, valid actions during replay (Invariant 4).
-- **`read_history(query) → ordered_sequence_of_events | rejected(invalid-query)`** — Pass through to Event Log's `read`. The user can inspect their history at any time.
+- **[Add]** — (Projected contract: `add(description) → id | rejected(invalid-description | duplicate-active | storage-failure)`) — Validate against Personal Todo's `add` precondition (description policy + active-set uniqueness against the *current derived state*); reject with `invalid-description` or `duplicate-active` if the precondition fails. On success, the host allocates the new unit `id` at the composition's I/O seam (injected before the action's transition; not generated inside it), append `{type: "add", id, description}` to the Event Log. If the append returns `rejected(storage-failure)`, return `storage-failure` to the caller without updating the derived state — the action did not happen. On successful append, update the derived state, return `id`.
+- **[Edit]** — (Projected contract: `edit(id, newDescription) → ok | rejected(not-known | not-editable | invalid-description | duplicate-active | storage-failure)`) — Validate against Personal Todo's `edit` precondition; reject with `not-known`, `not-editable`, `invalid-description`, or `duplicate-active` if the precondition fails. On success, capture the unit's current description as the [Prior Description], append `{type: "edit", id, prior_description, new_description}`. If the append returns `rejected(storage-failure)`, return `storage-failure` without updating the derived state. On successful append, update the derived state, return `ok`.
+- **[Complete]** — (Projected contract: `complete(id) → ok | rejected(not-known | not-pending | storage-failure)`) — Validate against Personal Todo's `complete` precondition; reject with `not-known` or `not-pending` if the precondition fails. On success, append `{type: "complete", id}`. If the append returns `rejected(storage-failure)`, return `storage-failure` without updating the derived state. On successful append, update the derived state, return `ok`.
+- **[Delete]** — (Projected contract: `delete(id) → ok | rejected(not-known | storage-failure)`) — Validate against Personal Todo's `delete` precondition; reject with `not-known` if the precondition fails. On success, capture the unit's full state as its [Snapshot], append `{type: "delete", id, snapshot}`. If the append returns `rejected(storage-failure)`, return `storage-failure` without updating the derived state. On successful append, update the derived state, return `ok`.
+- **[Undo]** — (Projected contract: `undo() → undone_event_type | rejected(nothing-to-undo | storage-failure)`) — Identify the most recent forward event (type ∈ {add, edit, complete, delete}) whose `event_id` is not already in the undone set. If none, reject as [Nothing To Undo]. Otherwise, append `{type: "undo", undone_event_id, undone_event_type}` to the Event Log. If the append returns `rejected(storage-failure)`, return `storage-failure` without recomputing the derived state — the undo did not happen. On successful append, recompute the derived state per the Replay semantics section below (replaying the Event Log and skipping events whose `event_id` is now in the undone set), return the [Undone Event Type] — the type of the undone action. **The undone action is reversed by *re-derivation*, not by any reversing call to Personal Todo:** the constituent is never asked to undo a transition (e.g. to move a unit from Done back to Pending). The recomputed state is simply one in which the skipped event never occurred, so Personal Todo's persistence-of-completion invariant is never challenged — the composition operates at the log level, the atom only ever sees forward, valid actions during replay (Invariant 4).
+- **[Read History]** — (Projected contract: `read_history(query) → ordered_sequence_of_events | rejected(invalid-query)`) — Pass through to Event Log's `read`. The user can inspect their history at any time.
 
 ### Replay semantics
 
 The derived Personal Todo state at any moment is computed as follows:
 
 1. Read all events from the Event Log in `sequence_number` order.
-2. Build the **undone set**: the set of `undone_event_id` values from all `undo` events.
+2. Build the **undone set**: the set of [Undone Event Id] values from all `undo` events.
 3. For each event in order:
    - If the event's type is `undo`, skip (already accounted for in the undone set).
    - If the event's `event_id` is in the undone set, skip.
    - Otherwise, apply the event to a Personal Todo–shaped state under construction:
      - `add` → introduce a unit at the recorded `id` in Pending, with `added_at = recorded_at` and the recorded `description`.
-     - `edit` → replace the unit's `description` with `new_description`; set `last_edited_at = recorded_at`.
+     - `edit` → replace the unit's `description` with the [New Description]; set `last_edited_at = recorded_at`.
      - `complete` → move the unit at `id` from Pending to Done with `completed_at = recorded_at`.
      - `delete` → remove the unit at `id` from the state.
 
@@ -167,6 +169,120 @@ Where the composition breaks down: when the underlying Event Log cannot guarante
 
 ---
 
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are the composed action-wirings it exposes ([Add], [Edit], [Complete], [Delete], [Undo]) and the derived read over its log ([Read History]), plus the fields of the event records it owns ([Snapshot], [Prior Description], [New Description], [Undone Event Id], [Undone Event Type]) and its own [Nothing To Undo] rejection. It defines **no new record type**: its exposed state is a derived projection of [Personal Todo](../atoms/personal-todo.md)'s shape (event-sourced — recomputed by replay, not stored) and its events live in an [Event Log](../atoms/event-log.md) instance, so its Fields are carded against the plain-noun event records (the delete / edit / undo event). References to the constituent atoms and their operations — Personal Todo's `add`/`edit`/`complete`/`delete` preconditions, Event Log's `append`/`read` — remain qualified calls to those atoms. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Add
+
+The composition action that records a new task: it validates Personal Todo's `add` precondition against the current derived state, has the host allocate the unit `id` at the I/O seam, and appends an `add` event. Returns the new `id`, or a delegated Personal Todo / Event Log rejection.
+
+Kind: Operation
+
+#### Edit
+
+The composition action that changes a task's description: it validates Personal Todo's `edit` precondition, then appends an `edit` event carrying the [Prior Description] and the [New Description]. Returns `ok`, or a delegated rejection.
+
+Kind: Operation
+
+#### Complete
+
+The composition action that marks a task done: it validates Personal Todo's `complete` precondition, then appends a `complete` event. Returns `ok`, or a delegated rejection.
+
+Kind: Operation
+
+#### Delete
+
+The composition action that removes a task: it validates Personal Todo's `delete` precondition, captures the unit's full state as its [Snapshot], then appends a `delete` event. Returns `ok`, or a delegated rejection. The removal is reversible — [Undo] restores the unit by replaying the surviving events.
+
+Kind: Operation
+
+#### Undo
+
+The composition's emergent action: it finds the most recent forward event not already undone, appends an `undo` event naming it (via the [Undone Event Id] and [Undone Event Type]), and recomputes the derived state by replay. Returns the [Undone Event Type], or [Nothing To Undo] when every forward event is already undone. Neither constituent atom offers this alone.
+
+Kind: Operation
+
+#### Read History
+
+The derived read query: a passthrough to the Event Log's `read` that returns the recorded event sequence — forward actions and undos — for a query. Lets the user inspect their history at any time.
+
+Kind: Operation
+
+#### Snapshot
+
+The delete event's captured copy of the unit's full state — its `description`, current Pending/Done state, and all defined timestamps — recorded so replay can reconstruct the unit faithfully.
+
+Kind:      Field
+Field of:  the delete event
+Role:      the deleted unit's full prior state
+Projects:  snapshot
+
+#### Prior Description
+
+The edit event's record of the task description as it stood before the edit.
+
+Kind:      Field
+Field of:  the edit event
+Role:      the pre-edit description
+Projects:  prior_description
+
+#### New Description
+
+The edit event's record of the description the edit sets — applied to the unit on replay.
+
+Kind:      Field
+Field of:  the edit event
+Role:      the post-edit description
+Projects:  new_description
+
+#### Undone Event Id
+
+The undo event's reference to the forward event it cancels — the most recent one not already in the undone set. Replay skips the event bearing this id.
+
+Kind:      Field
+Field of:  the undo event
+Role:      the target forward event
+Projects:  undone_event_id
+
+#### Undone Event Type
+
+The undo event's record of the cancelled forward event's kind (`add`, `edit`, `complete`, or `delete`) — returned to the caller of [Undo].
+
+Kind:      Field
+Field of:  the undo event
+Role:      the kind of action undone
+Projects:  undone_event_type
+
+#### Nothing To Undo
+
+The [Undo] action's own rejection — returned when every forward event in the log is already in the undone set, so there is nothing left to reverse. The log and derived state are left unchanged.
+
+Kind:      Member
+Member of: the undo rejection
+Role:      Outcome
+Projects:  nothing-to-undo
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Add]: #add
+[Edit]: #edit
+[Complete]: #complete
+[Delete]: #delete
+[Undo]: #undo
+[Read History]: #read-history
+[Snapshot]: #snapshot
+[Prior Description]: #prior-description
+[New Description]: #new-description
+[Undone Event Id]: #undone-event-id
+[Undone Event Type]: #undone-event-type
+[Nothing To Undo]: #nothing-to-undo
+
+---
+
 ## Standards references
 
 This composition draws on:
@@ -186,7 +302,10 @@ The two atoms it composes carry their own standards inheritance — Personal Tod
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 This application survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first revision.
 
@@ -255,3 +374,7 @@ No GAP rows remain. The three invariants the 2026-06-03 entry listed as out-of-m
 **Conflict-protocol outcome:** none — the extended model **corroborates** the English (the replay-recompute-on-undo wiring, the storage-failure "action did not happen" branch, and Inv 1–4 all hold as written); canonical English unchanged. Tier C (Invariant 6 identity-preservation content) remains the next formal increment.
 
 **AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This composition grounded 2026-05-20 under the early process — foundation plus refinement, no fresh-reader AI adversarial round — and carried the legacy grandfathered token; its constituent atoms were re-grounded at Final Critique 4 on 2026-06-18. This round is that missing AI-conducted adversarial round (fresh-reader Opus, Happy-Torvalds-X2); it is the composition's Final Critique 4 (Rounds 1–3 the foundation/refinement baseline, per pressure-testing.md §Round structure). Two foundational findings closed: F1 — the unreachable `not-pending` rejection (propagated from Personal Todo) dropped from `edit` (`complete`'s reachable `not-pending` preserved); F2 — Logic Confinement on the composition's own `add`: because Undo History replaces Personal Todo's API surface (it is event-sourced; the atom is not called at the live edge), it is the host layer for `add`, so the unit `id` is now host-allocated at the composition's I/O seam and injected, not minted inside the action (`event_id`/`recorded_at` remain sourced from Event Log's `append`). Refining: a cross-reference to Event Log's re-scoped Invariant 5 (read consistency over successfully-appended events) added in Replay semantics.. Caller signatures unchanged and the invariant set held at 7 (read the actual count from the spec and confirm no change), so the fixes are additive with no constituent-change cascade. Formal-layer vote stands YES (Tier A+B TLA+ model with three buggy twins); the id-allocation site and rejection arms are out of model scope, so the fixes do not reopen it. Confirming fresh-reader Opus clearance gate (2026-06-18): CLEAR, 0 foundational, no new surface. It has no compositional dependents (leaf); it is the replay-skip sibling of Compensable Workflow. Grounds at Final Critique 4.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at seven). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases (12 terms): 6 Operations — the five composed action-wirings ([Add], [Edit], [Complete], [Delete], [Undo]) plus the derived read ([Read History]); 5 Fields — the composition-own event-record payloads, carded against their plain-noun events ([Snapshot] on the delete event, [Prior Description] / [New Description] on the edit event, [Undone Event Id] / [Undone Event Type] on the undo event); and 1 Member — the composition's own [Nothing To Undo] rejection. **No Type card** and **no Parameters**: the composition is event-sourced (its exposed state is a derived projection of Personal Todo's shape, recomputed by replay, not a stored record it names), and the values its actions consume (`id`, `description`, `query`) are constituent-sourced. Survivors left backticked: the one labeled projected-contract signature per composed Operation; the qualified constituent calls and preconditions (Personal Todo's `add`/`edit`/`complete`/`delete`, Event Log's `append`/`read`) and their outcomes (`ok`); the constituent-sourced event fields (`event_id`, `recorded_at`, `id`, `description`, `added_at`, `last_edited_at`, `completed_at`, `sequence_number`); the inherited constituent rejection tokens (`invalid-description`, `duplicate-active`, `not-known`, `not-editable`, `not-pending`, `storage-failure`, `invalid-query`); the five event-type wire values (`add`/`edit`/`complete`/`delete`/`undo`); and concrete example calls, ids, and states. Constituent atom names remain the existing full links to `../atoms/*`; constituent operations stay backticked qualified calls rather than cross-page links (a deliberate convention — the linter verifies linked files exist but not that `#anchors` resolve, so op-level cross-page anchors would ship silently broken). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), the descriptive top blockquote folded out after confirming each claim (reversibility, the two-atom composition, Cmd+Z, constituents unchanged) is carried by Summary / Intent / Composes; no *also-known-as* line existed, so none was invented. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #1** — the single-paragraph Summary split into one-idea-per-sentence paragraphs, lossless. (e) **prose cut #5 — skipped (with reason):** the composition owns no emergent state machine — the only lifecycle states are Personal Todo's Pending→Done (a constituent's), and the composition's own action wiring is a uniform validate-precondition → append-event → recompute-by-replay shape already stated crisply in Action wiring and Replay semantics. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-06-18`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (12 terms); seven composition-level invariants preserved; the `.tla` models untouched — harness re-run green: `undo-history.tla` PASS + all three buggy twins (`undo-history-buggy`, `undo-history-stale-buggy`, `undo-history-phantom-buggy`) rejected under `--buggy`.
+
+</details>
