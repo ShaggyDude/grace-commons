@@ -1,5 +1,5 @@
 ---
-title: Compositions
+title: Conceptual Compositions
 nav_order: 8
 has_children: true
 permalink: /compositions/

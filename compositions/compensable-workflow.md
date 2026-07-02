@@ -16,7 +16,17 @@ toc: true
 </details>
 
 
-> A composition: a forward sequence of local steps — reserve, charge, ship — each paired with a recorded *compensating action* (a step that reverses the first one's effect, e.g. charge → refund), made eventually all-or-nothing across failure without a distributed transaction. Composes State Machine with Event Log so that, on failure or cancel, every completed step whose effect already escaped the system is reversed by running its compensating action — not by forgetting the step. This is the **external-side-effect complement of Undo History**: Undo reverses by *replay-skip* (recompute as if the action never happened), which works only while the effect lives in the log; this composition reverses by an *explicit compensating action* precisely because the effect escaped the log. Neither constituent atom is modified; the composition is the wiring.
+## Summary
+
+Compensable Workflow wires two building blocks — a workflow state machine (a process that moves through a declared sequence of steps, one step current at a time) and an event log (an add-only record of everything that happens) — so that a multi-step process can be undone *as a whole* even after some of its steps have already had real-world effects.
+
+The trick is that each forward step is recorded together with a **compensating action**: a second step that reverses the first one's effect, the way a refund reverses a charge or a cancellation reverses a reservation. While everything is going well the compensable workflow just advances, step by step. If a step fails (or someone cancels), the compensable workflow runs the compensating actions for the steps that already finished, in reverse order — so the process ends up either fully done or fully undone, never stranded half-finished.
+
+(A guarantee that appears only when the two building blocks are combined is called an *emergent guarantee*; here the headline one is **all-or-compensated** — no finished step's real-world effect is left standing after an abort.)
+
+Because the engine that runs a compensable workflow normally *retries* steps that may have failed, every step and every compensation must be **idempotent** — safe to run more than once with the same result — which the composition enforces with a per-effect key.
+
+This is the building block for order processing, travel and financial bookings, and supply-chain flows: anywhere a sequence of real, external actions needs to come out all-or-nothing without a single database transaction wrapping them.
 
 ---
 
@@ -34,19 +44,13 @@ This composition is **not a new primitive.** State Machine and Event Log are unc
 
 ---
 
-## Summary
-
-Compensable Workflow wires two building blocks — a workflow state machine (a process that moves through a declared sequence of steps, one step current at a time) and an event log (an add-only record of everything that happens) — so that a multi-step process can be undone *as a whole* even after some of its steps have already had real-world effects. The trick is that each forward step is recorded together with a **compensating action**: a second step that reverses the first one's effect, the way a refund reverses a charge or a cancellation reverses a reservation. While everything is going well the compensable workflow just advances, step by step. If a step fails (or someone cancels), the compensable workflow runs the compensating actions for the steps that already finished, in reverse order — so the process ends up either fully done or fully undone, never stranded half-finished. (A guarantee that appears only when the two building blocks are combined is called an *emergent guarantee*; here the headline one is **all-or-compensated** — no finished step's real-world effect is left standing after an abort.) Because the engine that runs a compensable workflow normally *retries* steps that may have failed, every step and every compensation must be **idempotent** — safe to run more than once with the same result — which the composition enforces with a per-effect key. This is the building block for order processing, travel and financial bookings, and supply-chain flows: anywhere a sequence of real, external actions needs to come out all-or-nothing without a single database transaction wrapping them.
-
----
-
 ## Composes
 
 - **[State Machine](../atoms/state-machine.md)** — the step-sequence spine. The compensable workflow's steps and their legal order are a declared state machine (states, transitions, an initial state, terminal states); the compensable workflow's *position* is the instance's `current_state`; the forward and compensating moves are declared transitions. The composition instantiates one State Machine instance per compensable workflow run and calls `fire` as its sole state-change path — it never reverses a fired transition (the atom has no such surface), it fires a *forward* compensating transition instead. It relies on the atom's declared-transition discipline, single-current-state guarantee, terminal absorption, and replay-deterministic append-only history (Invariants 2, 4, 5, 7), and on its guard-gating-without-evaluation (Invariant 8): the *decision* to abandon and compensate is evaluated here, at the composition layer, not by the atom.
 
 - **[Event Log](../atoms/event-log.md)** — the durable record of the run. The composition owns one Event Log instance per compensable workflow and appends one event for each step completion and each compensation run. The compensable workflow position, the set of completed steps, the registered compensating actions, and the set of effects already applied are all **derived** from this log by replay — the composition stores no separate copy of them. This mirrors Undo History's event-sourced design and is what keeps the compensable workflow a composition rather than a new stateful atom: there is no non-derivable state. It relies on the log's append-only and total-order guarantees (Invariants 1, 3) and on `append`'s `storage-failure` rejection.
 
-The **compensating action** itself is *sub-atomic* — a recorded closure (the reversing operation plus the arguments captured at the step's completion), the same primitive Undo History uses for its compensating events, not a freestanding atom.
+The **[Compensating Action]** itself is *sub-atomic* — a recorded closure (the reversing operation plus the arguments captured at the step's completion), the same primitive Undo History uses for its compensating events, not a freestanding atom.
 
 Two neighbours, named here so the boundaries are explicit. [Execute Gated Workflow](./execute-gated-workflow.md) is the **sibling over the same spine**: it also wires State Machine, but for *human-approval gating of forward progress* (a transition fires only after a real Approval Step is Approved). This composition wires the same spine for *failure-compensation of completed steps*. The two are orthogonal — a regulated compensable workflow would compose both. [Undo History](./undo-history.md) is the **complement**, reversing by replay-skip where this composition reverses by compensating action (see Intent). The [Audit Trail](./audit-trail.md) regulated-audit substrate is deliberately *not* composed in this base shape (see Edge cases).
 
@@ -58,15 +62,15 @@ Two neighbours, named here so the boundaries are explicit. [Execute Gated Workfl
 
 The composition owns emergent state that wires the two atoms into one compensable-workflow surface. Every element is reconstructible by replaying the Event Log — a **derived index** in the sense of [`execution-contract.md`](../execution-contract.md) §Composition state — so the composition holds no truth the log does not. The State Machine constituent owns the compensable workflow position (`current_state`) and the transition history.
 
-- **`compensable workflow_store`** — the set of compensable workflow instance records. Each record carries `compensable workflow_id` (the State Machine `instance_id`, assigned by the constituent at start), `definition_ref` (an opaque reference to the deployment-declared step/compensation sequence supplied at start), `subject_ref` (the entity the compensable workflow acts on — an order id, a booking id), `started_at`, and the terminal `outcome` once reached (`committed | compensated` — `halted` is a non-terminal holding state, carried as a phase, not an outcome). Every field is set once at start and is immutable thereafter, and is itself recoverable from the `compensable workflow_started` event — the store is a convenience projection, not independent state.
+- **`compensable workflow_store`** — the set of compensable workflow instance records. Each record carries `compensable workflow_id` (the State Machine `instance_id`, assigned by the constituent at start), `definition_ref` (an opaque reference to the deployment-declared step/compensation sequence supplied at start), `subject_ref` (the entity the compensable workflow acts on — an order id, a booking id), `started_at`, and the terminal `outcome` once reached ([Committed] | [Compensated] — [Halted] is a non-terminal holding state, carried as a phase, not an outcome). Every field is set once at start and is immutable thereafter, and is itself recoverable from the `compensable workflow_started` event — the store is a convenience projection, not independent state.
 
 - **`step_log`** — the Event Log instance for this compensable workflow. It holds the run's events: `compensable workflow_started`, `step_completed` (carrying the step name, the registered `compensation_ref` with its captured arguments, and the step's `effect_key`), `compensation_run` (carrying the step it compensates and the compensation's own `effect_key`), the phase markers `compensation_begun` (forward → compensating) and `compensable workflow_halted` (compensating → the non-terminal holding state, on a stalled compensation), and the terminal markers `compensable workflow_committed` / `compensable workflow_compensated`. This is the source of truth; every element below is a projection of it.
 
 - **`completed_steps`** *(derived index)* — the ordered list of steps that have completed and not yet been compensated, newest last. Rebuilt by replaying `step_completed` minus `compensation_run`. Read in reverse to drive compensation order.
 
-- **`compensation_registry`** *(derived index)* — map from a completed step to the compensating action registered for it (the `compensation_ref` and the arguments captured at completion — e.g. the `charge_id` a refund needs). Populated from `step_completed` events; consulted when the compensable workflow compensates. A step is reversed using the data recorded *at its completion*, never recomputed from current state.
+- **`compensation_registry`** *(derived index)* — map from a completed step to the compensating action registered for it (the [Compensation Ref] and the arguments captured at completion — e.g. the `charge_id` a refund needs). Populated from `step_completed` events; consulted when the compensable workflow compensates. A step is reversed using the data recorded *at its completion*, never recomputed from current state.
 
-- **`applied_effects`** *(derived index)* — the set of `effect_key`s for step effects and compensation effects already applied. Rebuilt from the log. This is the at-most-once ledger behind idempotency under retry (Invariant 7): an effect whose key is already present is recognized as done and not re-applied. Each `effect_key` is **stable across retries** — derived deterministically from `(compensable workflow_id, step)` for a step effect and `(compensable workflow_id, step, compensation)` for a compensation, never minted fresh per attempt — so a retried effect collides with its own prior key rather than escaping the dedup. A random per-attempt key would defeat the ledger.
+- **`applied_effects`** *(derived index)* — the set of `effect_key`s for step effects and compensation effects already applied. Rebuilt from the log. This is the at-most-once ledger behind idempotency under retry (Invariant 7): an effect whose key is already present is recognized as done and not re-applied. Each [Effect Key] is **stable across retries** — derived deterministically from `(compensable workflow_id, step)` for a step effect and `(compensable workflow_id, step, compensation)` for a compensation, never minted fresh per attempt — so a retried effect collides with its own prior key rather than escaping the dedup. A random per-attempt key would defeat the ledger.
 
 ### Derivation semantics
 
@@ -94,23 +98,23 @@ Composition-boundary validation, applied before any constituent call:
 
 - **`compensable workflow_id`, `subject_ref`, `definition_ref`, `compensation_ref`, `effect_key`** — each must contain at least one non-whitespace character; null, empty, or whitespace-only is `invalid-request`.
 - **`reason`** (optional on `cancel`) — if supplied, at least one non-whitespace character.
-- **The compensable workflow definition, validated at `start_compensable workflow`.** Every declared step that performs an *external effect* (one whose result escapes this compensable workflow's own log — a charge, a shipment, an outbound message) **must declare a compensating action**, or be explicitly marked `read-only` (no external effect to reverse) or `pivot` (the commit point past which the compensable workflow only rolls forward — see Edge cases). A step with an external effect and no compensation and no such marker is `invalid-definition`: the composition refuses it up front, because all-or-compensated (Invariant 4) cannot be promised for an effect nothing can reverse. This is the compensable workflow analog of Execute Gated Workflow's rule that `gate_spec` must cover every guarded transition.
+- **The compensable workflow definition, validated at `start_compensable workflow`.** Every declared step that performs an *external effect* (one whose result escapes this compensable workflow's own log — a charge, a shipment, an outbound message) **must declare a compensating action**, or be explicitly marked `read-only` (no external effect to reverse) or `pivot` (the commit point past which the compensable workflow only rolls forward — see Edge cases). A step with an external effect and no compensation and no such marker is [Invalid Definition]: the composition refuses it up front, because all-or-compensated (Invariant 4) cannot be promised for an effect nothing can reverse. This is the compensable workflow analog of Execute Gated Workflow's rule that `gate_spec` must cover every guarded transition.
 
 ### Action wiring
 
-The composition exposes a small surface. The load-bearing action is the emergent **`advance`** — neither constituent atom has it — which in the forward phase runs the next step and in the compensating phase runs the next compensation; this is the *advance-or-compensate* verb the pattern is named for. Every action that changes state appends exactly one Event Log event; if the append is rejected with `storage-failure`, the action did not happen and no derived state changes (mirroring Undo History's storage-failure discipline).
+The composition exposes a small surface. The load-bearing action is the emergent **[Advance]** — neither constituent atom has it — which in the forward phase runs the next step and in the compensating phase runs the next compensation; this is the *advance-or-compensate* verb the pattern is named for. Every action that changes state appends exactly one Event Log event; if the append is rejected with `storage-failure`, the action did not happen and no derived state changes (mirroring Undo History's storage-failure discipline).
 
-- **`start_compensable workflow(definition, subject_ref, [reason]) → {compensable workflow_id} | rejected(invalid-definition | invalid-request | storage-failure)`** — validate the definition per Primitive policies (reject `invalid-definition` if any external-effect step lacks a compensation or marker). Instantiate one State Machine with the step/compensation sequence as its declared transitions and *not-started* as the initial state. Append `compensable workflow_started` to the Event Log; write the `compensable workflow_store` spine record. On any `append`/`storage-failure`, surface `storage-failure` and issue no `compensable workflow_id` — the compensable workflow did not start. Return `{compensable workflow_id}`.
+- **[Start Workflow]** — (Projected contract: `start_compensable workflow(definition, subject_ref, [reason]) → {compensable workflow_id} | rejected(invalid-definition | invalid-request | storage-failure)`) — validate the definition per Primitive policies (reject `invalid-definition` if any external-effect step lacks a compensation or marker). Instantiate one State Machine with the step/compensation sequence as its declared transitions and *not-started* as the initial state. Append `compensable workflow_started` to the Event Log; write the `compensable workflow_store` spine record. On any `append`/`storage-failure`, surface `storage-failure` and issue no `compensable workflow_id` — the compensable workflow did not start. Return `{compensable workflow_id}`.
 
-- **`advance(compensable workflow_id) → {step, outcome} | rejected(not-known | already-terminal | step-failed | storage-failure)`** — the emergent advance-or-compensate action. Look up `compensable workflow_store[compensable workflow_id]` (`not-known` if absent). If the position is a terminal state, return `already-terminal`.
-  - *Forward phase.* Execute the next declared step's effect **under its `effect_key`** (per Invariant 7: if `applied_effects` already holds the key, the effect is recognized as done and not re-run — this is what makes a retried `advance` safe). On the effect succeeding, append one `step_completed` event registering the step's `compensation_ref`, the arguments to reverse *this* step, and the `effect_key`; then `fire` the State Machine forward. If the step's effect fails, record no completion, append `compensation_begun` to enter the compensating phase, and return `step-failed`. A step is complete only when both its effect and its `step_completed` append have landed; if the append fails after the effect succeeded, surface `storage-failure` and leave the compensable workflow at the prior position — the retry of `advance` re-attempts the step under the same `effect_key`, the effect is recognized as already applied (no double-charge), and the append is retried. (This effect-then-record window is the cross-store partial-failure case; see Edge cases.)
+- **[Advance]** — (Projected contract: `advance(compensable workflow_id) → {step, outcome} | rejected(not-known | already-terminal | step-failed | storage-failure)`) — the emergent advance-or-compensate action. Look up `compensable workflow_store[compensable workflow_id]` (`not-known` if absent). If the position is a terminal state, return `already-terminal`.
+  - *Forward phase.* Execute the next declared step's effect **under its `effect_key`** (per Invariant 7: if `applied_effects` already holds the key, the effect is recognized as done and not re-run — this is what makes a retried `advance` safe). On the effect succeeding, append one `step_completed` event registering the step's `compensation_ref`, the arguments to reverse *this* step, and the `effect_key`; then `fire` the State Machine forward. If the step's effect fails, record no completion, append `compensation_begun` to enter the compensating phase, and return [Step Failed]. A step is complete only when both its effect and its `step_completed` append have landed; if the append fails after the effect succeeded, surface `storage-failure` and leave the compensable workflow at the prior position — the retry of `advance` re-attempts the step under the same `effect_key`, the effect is recognized as already applied (no double-charge), and the append is retried. (This effect-then-record window is the cross-store partial-failure case; see Edge cases.)
   - *Compensating phase.* Run the compensating action for the most recently completed, not-yet-compensated step (per `compensation_order`), again **under its own `effect_key`**. On success append `compensation_run` and `fire` the compensable workflow one step closer to the compensated terminal. When no completed-uncompensated steps remain, append `compensable workflow_compensated` and the compensable workflow reaches its compensated terminal. If a compensation fails, apply `on_compensation_failure` (default: append `compensable workflow_halted`, entering the non-terminal holding state); a later `advance` from `halted` re-runs the stalled compensation under its same `effect_key`, so a repaired obstacle resumes compensation rather than restarting it.
 
-- **`cancel(compensable workflow_id, [reason]) → {outcome} | rejected(not-known | already-terminal | storage-failure)`** — request abort of an in-flight compensable workflow. Append `compensation_begun` to move it from the forward phase into the compensating phase (subsequent `advance` calls run compensations). A compensable workflow already committed or compensated returns `already-terminal`; a compensable workflow past its `pivot` returns its roll-forward disposition (see Edge cases).
+- **[Cancel]** — (Projected contract: `cancel(compensable workflow_id, [reason]) → {outcome} | rejected(not-known | already-terminal | storage-failure)`) — request abort of an in-flight compensable workflow. Append `compensation_begun` to move it from the forward phase into the compensating phase (subsequent `advance` calls run compensations). A compensable workflow already committed or compensated returns `already-terminal`; a compensable workflow past its `pivot` returns its roll-forward disposition (see Edge cases).
 
-- **`position(compensable workflow_id) → {phase, step, outcome} | rejected(not-known)`** — read the compensable workflow's phase and current step, derived from the State Machine current state.
+- **[Position]** — (Projected contract: `position(compensable workflow_id) → {phase, step, outcome} | rejected(not-known)`) — read the compensable workflow's phase and current step, derived from the State Machine current state.
 
-- **`read_log(compensable workflow_id, query) → ordered_sequence_of_events | rejected(not-known | invalid-query)`** — pass-through to the Event Log's `read`; the full step/compensation trail at any time.
+- **[Read Log]** — (Projected contract: `read_log(compensable workflow_id, query) → ordered_sequence_of_events | rejected(not-known | invalid-query)`) — pass-through to the Event Log's `read`; the full step/compensation trail at any time.
 
 ### The load-bearing wiring decision
 
@@ -199,6 +203,130 @@ Where the composition breaks down: when a step's external effect is genuinely ir
 
 ---
 
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are the composed action-wirings it exposes ([Start Workflow], [Advance], [Cancel]) and the two derived reads ([Position], [Read Log]), the signature concept it introduces (the [Compensating Action]), the fields of the recorded effects it owns ([Effect Key], [Compensation Ref]), its own terminal outcomes and holding state ([Committed], [Compensated], [Halted]), and its own rejections ([Invalid Definition], [Step Failed]). Its emergent state is entirely a **derived index** of the Event Log (the `compensable workflow_store`, `completed_steps`, `compensation_registry`, `applied_effects`) — it stores no truth the log does not, so those projections are left as backticked derived-index tokens rather than carded. References to the constituent atoms and their operations — State Machine's `fire` / `current_state`, Event Log's `append` / `read` — the inherited rejection tokens (`not-known`, `already-terminal`, `invalid-request`, `storage-failure`, `invalid-query`), and the deployment configuration knobs (`compensation_order`, `on_compensation_failure`) remain qualified/backticked, not carded here. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Start Workflow
+
+The composition action that begins a run: it validates the definition (rejecting [Invalid Definition] if any external-effect step lacks a [Compensating Action] or marker), instantiates one State Machine over the declared step/compensation sequence, and appends the `compensable workflow_started` event. Returns the run's `compensable workflow_id`.
+
+Kind: Operation
+
+#### Advance
+
+The composition's emergent, load-bearing action — the *advance-or-compensate* verb neither constituent has. In the forward phase it runs the next step under its [Effect Key] and records completion; in the compensating phase it runs the next [Compensating Action], newest-first. Returns the step and outcome, or [Step Failed] when a forward step's effect fails (flipping the run to compensating).
+
+Kind: Operation
+
+#### Cancel
+
+The composition action that requests abort of an in-flight run — it appends `compensation_begun` to move the run from the forward phase into the compensating phase, so subsequent [Advance] calls run compensations. A terminal run returns `already-terminal`; a run past its `pivot` returns its roll-forward disposition.
+
+Kind: Operation
+
+#### Position
+
+The derived read query returning the run's phase, current step, and outcome — derived from the State Machine current state (Invariant 2), not stored separately.
+
+Kind: Operation
+
+#### Read Log
+
+The derived read query — a passthrough to the Event Log's `read` returning the run's full step/compensation trail at any time.
+
+Kind: Operation
+
+#### Compensating Action
+
+The composition's signature concept: a captured operation-plus-arguments paired to a forward step and recorded at that step's completion, which semantically reverses the step's external effect (a refund reverses a charge, a release reverses a reservation). Sub-atomic — a recorded closure, the same primitive Undo History uses for its compensating events, not a freestanding atom. Run in reverse completion order on abort.
+
+Kind: Type
+
+#### Effect Key
+
+The at-most-once idempotency key carried by each recorded step effect and compensation. Stable across retries — derived deterministically from the run id and step (and compensation), never minted fresh per attempt — so a retried effect collides with its own prior key. The applied-effect ledger keys off it; an effect whose key is already present is recognized as done and not re-applied (Invariant 7).
+
+Kind:      Field
+Field of:  a recorded effect
+Role:      the at-most-once dedup key
+Projects:  effect_key
+
+#### Compensation Ref
+
+The reference to a completed step's registered [Compensating Action], recorded in its `step_completed` event alongside the arguments captured at completion. Consulted, newest-first, when the run compensates.
+
+Kind:      Field
+Field of:  the step-completion record
+Role:      the step's registered reversal
+Projects:  compensation_ref
+
+#### Committed
+
+The terminal outcome in which every step completed and all effects are meant to stand. One of the run's two resting outcomes.
+
+Kind:      Member
+Member of: the run outcome
+Role:      terminal outcome
+Projects:  committed
+
+#### Compensated
+
+The terminal outcome in which the run aborted and every completed step's [Compensating Action] has been run. The other of the two resting outcomes.
+
+Kind:      Member
+Member of: the run outcome
+Role:      terminal outcome
+Projects:  compensated
+
+#### Halted
+
+The explicitly-surfaced, **non-terminal** holding state a stalled compensation enters (`on_compensation_failure = halt-and-surface`). Not a third terminal: a repaired obstacle lets a retried [Advance] resume compensation (`compensating → halted → compensating → compensated`). Carries the outstanding compensation as a visible, routed obligation — never a silent partial.
+
+Kind:      Member
+Member of: the run phase
+Role:      non-terminal holding state
+Projects:  halted
+
+#### Invalid Definition
+
+The composition's own rejection at [Start Workflow] — returned when the supplied definition has an external-effect step with no [Compensating Action] and no `read-only` / `pivot` marker. The run never starts, because all-or-compensated cannot be promised for an irreversible effect.
+
+Kind:      Member
+Member of: the start rejection
+Role:      Rejection
+Projects:  invalid-definition
+
+#### Step Failed
+
+The composition's own outcome from [Advance] when a forward step's external effect fails — no completion is recorded, `compensation_begun` is appended (flipping the run to the compensating phase), and this is returned to the caller.
+
+Kind:      Member
+Member of: the advance rejection
+Role:      Outcome
+Projects:  step-failed
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Start Workflow]: #start-workflow
+[Advance]: #advance
+[Cancel]: #cancel
+[Position]: #position
+[Read Log]: #read-log
+[Compensating Action]: #compensating-action
+[Effect Key]: #effect-key
+[Compensation Ref]: #compensation-ref
+[Committed]: #committed
+[Compensated]: #compensated
+[Halted]: #halted
+[Invalid Definition]: #invalid-definition
+[Step Failed]: #step-failed
+
+---
+
 ## Standards references
 
 This composition draws on:
@@ -218,7 +346,10 @@ It composes with, and is positioned against, two library patterns: [Undo History
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 This is a fresh draft; Lineage accumulates as the pattern survives passes.
 
@@ -269,3 +400,7 @@ No GAP rows: both vote-named load-bearing invariants (4, 7) are covered with the
 This round is the merged Phase 3 / Phase 4 closing review (Final Critique 4); with 0 foundational findings it **grounds the pattern** — `grounded on Final Critique 4 — 2026-06-16`. The refinement history preceding it: draft → self-review (GRID / EOS / Linus) → one council round (F1 / F2) → this fresh-reader Opus round.
 
 **Structural milestone.** Crosses the boundary [Undo History](./undo-history.md) names as its breakdown — *external side effects not reversible by replay-skip* — closing that forthcoming reference by naming this composition as the pattern on the other side of it. Second consumer of the sub-atomic compensating-action primitive after Undo History. Sibling of [Execute Gated Workflow](./execute-gated-workflow.md) over the shared State Machine spine (human-approval gating versus failure-compensation). Gives the obligation-realization boundary's *compensable workflow* realization a named composition that specifies what that realization must observably guarantee.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at nine). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases (13 terms): 5 Operations — the three composed action-wirings ([Start Workflow], [Advance], [Cancel]) plus the two derived reads ([Position], [Read Log]); 1 Type — the composition's signature [Compensating Action] concept; 2 Fields — the recorded-effect payloads ([Effect Key], [Compensation Ref]); and 5 Members — the terminal outcomes and holding state ([Committed], [Compensated], [Halted]) plus the composition's own rejections ([Invalid Definition], [Step Failed]). **No emergent record store carded:** the composition's own state is entirely a derived index of the Event Log (`compensable workflow_store`, `completed_steps`, `compensation_registry`, `applied_effects`), left as backticked derived-index tokens per the Execution-Contract Composition-state rule. Survivors left backticked: the one labeled projected-contract signature per composed Operation; the qualified constituent calls (State Machine's `fire` / `current_state`, Event Log's `append` / `read`) and the run's event-type wire values (`compensable workflow_started`, `step_completed`, `compensation_run`, `compensation_begun`, `compensable workflow_halted`, `compensable workflow_committed` / `compensable workflow_compensated`); the inherited rejection tokens (`not-known`, `already-terminal`, `invalid-request`, `storage-failure`, `invalid-query`); the step markers (`read-only`, `pivot`) and configuration knobs (`compensation_order`, `on_compensation_failure`); the derived-index tokens; and concrete example ids, steps, and effect keys. Constituent atom names remain the existing full links to `../atoms/*`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), the descriptive top blockquote folded out after confirming each claim (compensating-action pairing, the two-atom composition, eventual all-or-nothing without a distributed transaction, the replay-skip-complement framing, constituents unchanged) is carried by Summary / Intent / Composes; no *also-known-as* line existed, so none was invented (the *Saga* name lives in Standards references). (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #1** — the single-paragraph Summary split into one-idea-per-paragraph units, lossless. (e) **prose cut #5 — skipped (with reason):** the composition owns no emergent fixed state machine of its own — the step states are the State Machine constituent's, deployment-declared per definition; the composition's own phase progression (forward → compensating → `committed`|`compensated`, with `halted` a non-terminal holding state) is already stated crisply in Derivation semantics and Invariant 6, so no prose state-machine description needs condensing into a table. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-06-16`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (13 terms); nine composition-level invariants preserved; the `.tla` models untouched — harness re-run green: `compensable-workflow.tla` PASS + both buggy twins (`compensable-workflow-skip-comp-buggy`, `compensable-workflow-double-apply-buggy`) rejected under `--buggy`.
+
+</details>
