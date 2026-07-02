@@ -16,7 +16,17 @@ toc: true
 </details>
 
 
-> A composition: every state-changing call against Provisional Commitment is safely retryable. Composes Provisional Commitment with Duplicate Prevention to give the caller *exactly-once-within-window* semantics — same idempotency token, same result, regardless of how many times the call is retried, regardless of which terminal state the commitment is currently in.
+## Summary
+
+Idempotent Reservation makes reservation actions safe to retry. It combines two simpler patterns: one that manages a held resource (Provisional Commitment — a resource held, then Confirmed, Released, or Expired) and one that spots repeated submissions within a set time window (Duplicate Prevention).
+
+The problem it solves is everyday over unreliable networks: a client asks to hold a resource, the reply gets lost, the client retries — and without protection the retry creates a second, accidental hold.
+
+The fix is a token the caller attaches to every action: if the same token has been seen within the window, the system returns the original result (same identifier, same outcome) instead of doing the action again.
+
+The result is "exactly-once" behavior — the underlying reservation sees one real action no matter how many times it is retried, a token is locked to one specific operation (reusing it for something else is rejected), and so a single intended action can never become a double-hold. (Guarantees that appear only when patterns are combined are called emergent guarantees.)
+
+This is the same mechanism every payment processor uses to stop a retried charge from billing twice, and it applies anywhere a duplicated action is a real defect — payments, hospital resource allocation, inventory reservation.
 
 ---
 
@@ -27,12 +37,6 @@ Real reservation systems run over unreliable networks. A client submits `place_h
 This composition solves the problem at the composition layer rather than absorbing it into Provisional Commitment. The caller supplies an **`idempotency_token`** on every state-changing call. The composition checks the token against a [Duplicate Prevention](../atoms/duplicate-prevention.md) instance; if the token has been seen within the window (the configurable time period during which repeated tokens are detected and deduplicated), the composition returns the *original* response (the same commitment id, the same `ok`, the same rejection reason) without invoking [Provisional Commitment](../atoms/provisional-commitment.md) a second time. The constituent atoms are unchanged; the composition is the wiring.
 
 This is the same composition that runs in every payment processor in production today — Stripe's `Idempotency-Key`, Adyen's idempotency header, ISO 20022's (the International Organization for Standardization standard for financial-messaging data) message uniqueness identifier, the IETF (Internet Engineering Task Force — the body that develops internet standards) draft idempotency-key spec. Different vocabularies; identical mechanic.
-
----
-
-## Summary
-
-Idempotent Reservation makes reservation actions safe to retry. It combines two simpler patterns: one that manages a held resource (Provisional Commitment — a resource held, then Confirmed, Released, or Expired) and one that spots repeated submissions within a set time window (Duplicate Prevention). The problem it solves is everyday over unreliable networks: a client asks to hold a resource, the reply gets lost, the client retries — and without protection the retry creates a second, accidental hold. The fix is a token the caller attaches to every action: if the same token has been seen within the window, the system returns the original result (same identifier, same outcome) instead of doing the action again. The result is "exactly-once" behavior — the underlying reservation sees one real action no matter how many times it is retried, a token is locked to one specific operation (reusing it for something else is rejected), and so a single intended action can never become a double-hold. (Guarantees that appear only when patterns are combined are called emergent guarantees.) This is the same mechanism every payment processor uses to stop a retried charge from billing twice, and it applies anywhere a duplicated action is a real defect — payments, hospital resource allocation, inventory reservation.
 
 ---
 
@@ -49,7 +53,7 @@ Idempotent Reservation makes reservation actions safe to retry. It combines two 
 
 The composition owns one piece of state that neither constituent atom carries:
 
-- **`token_results`** — a map from `idempotency_token` to a recorded outcome: `(action_type, parameters_digest, result)`. `action_type` is one of `place_hold`, `confirm`, `release`, `expire`. `parameters_digest` is a collision-resistant digest of the non-token call parameters, **computed by a pure function or configured digest mechanism at the composition's I/O seam and injected into the transition** — the digest is an explicit input derived from the already-present non-token call parameters, not cryptography improvised inside core logic (see Configuration §`digest_function`; the mechanism-capability pattern per [`execution-contract.md`](../execution-contract.md) §Logic Confinement Principle). The serialization format must be stable and canonical (e.g., sorted key-value pairs encoded with a length prefix); the digest function and serialization convention must be consistent across all instances sharing the `token_results` store — inconsistency across replicas or versions causes legitimate retries to be misclassified as `token-collision`. `result` is the original response — either the produced `id` (for `place_hold`) or `ok`, or the rejection reason — exactly as returned to the caller on the first call.
+- **`token_results`** — a map from `idempotency_token` to a recorded outcome: `(action_type, parameters_digest, result)`. [Action Type] is one of `place_hold`, `confirm`, `release`, `expire`. [Parameters Digest] is a collision-resistant digest of the non-token call parameters, **computed by a pure function or configured digest mechanism at the composition's I/O seam and injected into the transition** — the digest is an explicit input derived from the already-present non-token call parameters, not cryptography improvised inside core logic (see Configuration §`digest_function`; the mechanism-capability pattern per [`execution-contract.md`](../execution-contract.md) §Logic Confinement Principle). The serialization format must be stable and canonical (e.g., sorted key-value pairs encoded with a length prefix); the digest function and serialization convention must be consistent across all instances sharing the `token_results` store — inconsistency across replicas or versions causes legitimate retries to be misclassified as `token-collision`. [Result] is the original response — either the produced `id` (for `place_hold`) or `ok`, or the rejection reason — exactly as returned to the caller on the first call.
 
 **Classification: extraction-pending.** `token_results` carries non-derivable truth — which result was returned for a given token — that no replay of Provisional Commitment plus Duplicate Prevention can reproduce: Duplicate Prevention answers *have I seen this identity?* (membership, no payload) and does not act on the result. Per [`execution-contract.md`](../execution-contract.md) §Composition state, a composition element that carries truth not reconstructible from constituent stores is a not-yet-extracted atom, and until that atom lands the element is declared here as recorded debt riding the extraction's schedule. The proposed atom is an **Idempotency Result Memo** (token → result; write-once; window-governed eviction); the extraction is opened as a roadmap proposal (see [`roadmap.md`](../roadmap.md)).
 
@@ -72,19 +76,19 @@ Composition-boundary validation for string-typed inputs:
 
 ### Action wiring
 
-The composition replaces Provisional Commitment's direct API surface. Each action carries a required `idempotency_token` parameter; otherwise the parameters and return shape match Provisional Commitment's.
+The composition replaces Provisional Commitment's direct API surface. Each action carries a required [Idempotency Token] parameter; otherwise the parameters and return shape match Provisional Commitment's.
 
-- **`place_hold(resource, requester, duration, idempotency_token) → id | rejected(invalid-request | token-collision | resource-unavailable)`**
+- **[Place Hold]** — (Projected contract: `place_hold(resource, requester, duration, idempotency_token) → id | rejected(invalid-request | token-collision | resource-unavailable)`)
   1. Validate `idempotency_token` is well-formed (non-empty, within length); otherwise `rejected(invalid-request)`.
   2. Call `DuplicatePrevention.check(idempotency_token)`.
      - If `seen`: look up `token_results[idempotency_token]`. If the recorded `action_type` is `place_hold` and the recorded `parameters_digest` matches the current call's digest, return the recorded `result` (the original `id` or rejection reason). If `action_type` differs or `parameters_digest` does not match, return `rejected(token-collision)`.
      - If `not-seen`: delegate to `ProvisionalCommitment.place_hold(resource, requester, duration)`. Whatever the constituent returns — `id`, `resource-unavailable`, `invalid-request` — record it: `token_results[idempotency_token] = (place_hold, digest, result)`. Call `DuplicatePrevention.record(idempotency_token)`. Return the result to the caller.
 
-- **`confirm(id, idempotency_token) → ok | rejected(invalid-request | token-collision | not-held | window-elapsed)`** — same wiring as `place_hold`. Token validated; `check` consulted. If `seen`: return cached result if `action_type = confirm` and `parameters_digest` matches; otherwise `rejected(token-collision)`. If `not-seen`: delegate to `ProvisionalCommitment.confirm(id)`; record result; return. Constituent rejections (`not-held`, `window-elapsed`) pass through and are cached.
+- **[Confirm]** — (Projected contract: `confirm(id, idempotency_token) → ok | rejected(invalid-request | token-collision | not-held | window-elapsed)`) — same wiring as `place_hold`. Token validated; `check` consulted. If `seen`: return cached result if `action_type = confirm` and `parameters_digest` matches; otherwise `rejected(token-collision)`. If `not-seen`: delegate to `ProvisionalCommitment.confirm(id)`; record result; return. Constituent rejections (`not-held`, `window-elapsed`) pass through and are cached.
 
-- **`release(id, idempotency_token) → ok | rejected(invalid-request | token-collision | not-held)`** — same wiring. If `seen` and `action_type = release` with matching digest: return cached result. If `seen` with mismatched action or digest: `rejected(token-collision)`. If `not-seen`: delegate to `ProvisionalCommitment.release(id)`; record and return.
+- **[Release]** — (Projected contract: `release(id, idempotency_token) → ok | rejected(invalid-request | token-collision | not-held)`) — same wiring. If `seen` and `action_type = release` with matching digest: return cached result. If `seen` with mismatched action or digest: `rejected(token-collision)`. If `not-seen`: delegate to `ProvisionalCommitment.release(id)`; record and return.
 
-- **`expire(id, idempotency_token) → ok | rejected(invalid-request | token-collision | not-held)`** — same wiring. If `seen` and `action_type = expire` with matching digest: return cached result. Otherwise `rejected(token-collision)`. If `not-seen`: delegate to `ProvisionalCommitment.expire(id)`; record and return.
+- **[Expire]** — (Projected contract: `expire(id, idempotency_token) → ok | rejected(invalid-request | token-collision | not-held)`) — same wiring. If `seen` and `action_type = expire` with matching digest: return cached result. Otherwise `rejected(token-collision)`. If `not-seen`: delegate to `ProvisionalCommitment.expire(id)`; record and return.
 
 Read-only queries (listing Held commitments, inspecting a commitment by id) pass through to Provisional Commitment without token consultation; idempotency applies only to state-changing actions.
 
@@ -100,7 +104,7 @@ The only outcome the composition does *not* cache is the `invalid-request` rejec
 
 These invariants emerge from the composition. None of them belong to a single constituent atom; each requires both atoms working together to hold.
 
-- **Invariant 1 — Idempotent place_hold within the window.** For any `idempotency_token` currently within the Duplicate Prevention window, repeated `place_hold(... , idempotency_token)` calls with matching `parameters_digest` return the same response — the same `id` on success, or the same rejection reason on failure.
+- **Invariant 1 — Idempotent [Place Hold] within the window.** For any `idempotency_token` currently within the Duplicate Prevention window, repeated `place_hold(... , idempotency_token)` calls with matching `parameters_digest` return the same response — the same `id` on success, or the same rejection reason on failure.
 - **Invariant 2 — Idempotent state transitions within the window.** Same property holds for `confirm`, `release`, and `expire`. A retry within the window returns the cached response; the constituent atom is not invoked a second time.
 - **Invariant 3 — Token-to-commitment one-to-one within the window.** At most one commitment id is bound to any given `idempotency_token` while that token is in the window. Two distinct commitments cannot share a token.
 - **Invariant 4 — Token-action binding.** Each `idempotency_token` is bound to one logical operation. Reusing the same token for a different `action_type` or with a different `parameters_digest` is rejected as `token-collision`.
@@ -109,7 +113,7 @@ These invariants emerge from the composition. None of them belong to a single co
 - **Invariant 7 — Token expiry releases the binding.** After Duplicate Prevention's eventual-expiry invariant elapses the token, `token_results[token]` is evicted in the same step. A subsequent call with the same token is treated as a fresh request and may produce a new commitment id. The critical eviction ordering constraint: a `token_results` entry must never be evicted while its corresponding token remains in Duplicate Prevention's recorded set — that would cause `check → seen` with no result to return, a defect. The safe direction is the reverse: a stale `token_results` entry for an already-evicted token is a memory leak but not a correctness failure, because the action wiring only consults `token_results` when `check → seen`. The eviction ordering is enforced by a **composition-introduced eviction surface** that checks Duplicate Prevention membership before evicting any `token_results` entry — no entry is evicted unless `DuplicatePrevention.check(token) → not-seen`; alternatively a deployment may discharge this as a **declared coupling** in which the `token_results` store and the Duplicate Prevention store share a single eviction boundary (e.g., a single TTL-governed store keyed on the token), making the ordering a structural property of the deployment rather than a procedural check. *Conditional on:* `token_results` persisted atomically with each successful action (see Edge cases — Durability of the token-results map).
 - **Invariant 8 — Exactly-once effect within the window.** *Conditional on:* (a) per-token serialization — the implementation must serialize concurrent calls carrying the same token so the cache is populated before any second execution branch can delegate to Provisional Commitment (see Edge cases — Cancellation of in-flight retries); (b) `token_results` persisted atomically with each successful action (see Edge cases — Durability of the token-results map). Provided both conditions hold: for any state change the caller intends — placing one hold, confirming one commitment, releasing one commitment, expiring one — the underlying Provisional Commitment instance observes exactly one corresponding action invocation regardless of retry count, as long as all retries use the same token within the window.
 
-Idempotent place_hold and exactly-once effect together give the *no-double-spend* property — the contract that makes this composition usable in payments, healthcare, and every other domain where a duplicated state change is a defect rather than a no-op. Token-action binding gives the *token-discipline* property that prevents accidental reuse across distinct operations.
+Idempotent [Place Hold] and exactly-once effect together give the *no-double-spend* property — the contract that makes this composition usable in payments, healthcare, and every other domain where a duplicated state change is a defect rather than a no-op. Token-action binding gives the *token-discipline* property that prevents accidental reuse across distinct operations.
 
 ---
 
@@ -149,7 +153,7 @@ Three scenarios the composition must survive in regulated contexts, beyond happy
 - **Regulator audit — "show me every double-charge."** An auditor queries the underlying Provisional Commitment instance for commitments sharing a `(resource, requester, placed_at-near)` signature. The composition's `Invariant 3 — Token-to-commitment one-to-one within the window` guarantees the query returns the empty set within the window; outside the window the audit must distinguish *legitimate sequential holds* (separate logical operations with separate tokens) from *retry-induced doubles* (which the composition has structurally prevented). The auditor sees a structural guarantee, not a procedural promise.
 - **Disputed transaction — "you charged me twice."** The investigator inspects the composition's `token_results` map (or its persistent journal). If two of the customer's submitted requests carried the *same* token, the composition's cache produced one commitment and replayed the response — there is no double-spend to dispute. If the customer's client generated *different* tokens for what they intended as the same operation, the composition correctly processed them as independent operations; the dispute belongs to the client's token-generation logic, not to the reservation system.
 - **Replay attack — adversary captures and replays a token.** An adversary captures an in-flight request and replays it later within the window. The composition correctly returns the cached result. The replay produces no new state change — `Invariant 2 — Idempotent state transitions within the window`. Replays *outside* the window are treated as fresh requests; the adversary may succeed in placing a new commitment if the resource is available and they hold valid credentials, but that is an authentication / authorization failure (see [Actor Identity](../atoms/actor-identity.md)), not an idempotency failure.
-- **Token reuse collision — caller accidentally reuses a token across two operations.** A developer reuses `idem_x73a` (originally used for `place_hold(room_307, ...)`) in a subsequent `confirm(rm_b4c, idem_x73a)` call. The composition checks: `DuplicatePrevention.check(idem_x73a) → seen`; looks up `token_results[idem_x73a]` and finds `action_type = place_hold`. Current call's `action_type = confirm` — mismatch. Returns `rejected(token-collision)`. No state change occurs. The caller must use a fresh token for the confirm. Invariant 4 (*Token-action binding*) is the structural guarantee; `token-collision` is its observable form.
+- **Token reuse collision — caller accidentally reuses a token across two operations.** A developer reuses `idem_x73a` (originally used for `place_hold(room_307, ...)`) in a subsequent `confirm(rm_b4c, idem_x73a)` call. The composition checks: `DuplicatePrevention.check(idem_x73a) → seen`; looks up `token_results[idem_x73a]` and finds `action_type = place_hold`. Current call's `action_type = confirm` — mismatch. Returns `rejected(token-collision)`. No state change occurs. The caller must use a fresh token for the confirm. Invariant 4 (*Token-action binding*) is the structural guarantee; [Token Collision] is its observable form.
 
 ---
 
@@ -168,6 +172,96 @@ What this composition does not cover:
 - **Cancellation of in-flight retries.** If the first call is still in progress when the retry arrives, the composition must serialize: the second call waits for the first to complete and then returns the cached result. Concurrent execution of two calls with the same token could produce two underlying actions before the cache is populated. Serialization is a serializable-by-token requirement on the implementation; the spec assumes it.
 
 Where the composition breaks down: when the underlying Duplicate Prevention instance loses recorded tokens (durability failure) and Provisional Commitment retains the corresponding commitments — leading to a token treated as not-seen and a fresh commitment placed alongside the existing one; when the client generates a fresh token on every retry (token discipline lost at the client); when the resource registry's *availability* check is non-deterministic and the first call's outcome is genuinely not reproducible.
+
+---
+
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are the retry-safe action-wirings it exposes ([Place Hold], [Confirm], [Release], [Expire]), the [Idempotency Token] it introduces on every call, and the fields of the recorded outcome it caches ([Action Type], [Parameters Digest], [Result]) plus its own [Token Collision] rejection. It carries one piece of own state — the `token_results` map (classified extraction-pending, the proposed *Idempotency Result Memo* atom) — left as a backticked store token rather than carded as a Type, so its Fields are carded against the plain-noun recorded outcome. References to the constituent atoms and their operations — Provisional Commitment's `place_hold`/`confirm`/`release`/`expire`, Duplicate Prevention's `check`/`record` — the inherited rejection tokens (`resource-unavailable`, `not-held`, `window-elapsed`, `invalid-request`), and the deployment configuration knobs (`idempotency_window`, `token_max_length`, `digest_function`) all remain qualified/backticked, not carded here. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Place Hold
+
+The composition action that places a hold, made retry-safe: it validates the [Idempotency Token], and on a first call delegates to Provisional Commitment's `place_hold` and caches the outcome against the token; a retry within the window replays the cached [Result] instead of delegating again. Returns the commitment `id`, or a cached / delegated rejection.
+
+Kind: Operation
+
+#### Confirm
+
+The retry-safe confirm action — same token-check-then-delegate wiring as [Place Hold], delegating to Provisional Commitment's `confirm`. A within-window retry returns the cached `ok`, hiding the terminal-absorption `not-held` a direct retry would hit; a token bound to a different [Action Type] is rejected [Token Collision].
+
+Kind: Operation
+
+#### Release
+
+The retry-safe release action — same wiring, delegating to Provisional Commitment's `release`. A within-window retry returns the cached result; cross-action or cross-parameter reuse is rejected [Token Collision].
+
+Kind: Operation
+
+#### Expire
+
+The retry-safe expire action — same wiring, delegating to Provisional Commitment's `expire`. A within-window retry returns the cached result; cross-action or cross-parameter reuse is rejected [Token Collision].
+
+Kind: Operation
+
+#### Idempotency Token
+
+The caller-supplied key attached to every state-changing call. The composition introduces it (Provisional Commitment's actions do not carry it); it keys the recorded outcome and is the identity recorded in Duplicate Prevention. Treated as opaque, compared byte-exact, and validated (non-empty, within `token_max_length`) before any constituent is consulted.
+
+Kind:         Parameter
+Parameter of: the state-changing actions ([Place Hold], [Confirm], [Release], [Expire])
+Role:         the idempotency key (also the recorded-outcome key and the Duplicate Prevention identity)
+Projects:     idempotency_token
+
+#### Action Type
+
+The recorded outcome's record of which logical operation the token was bound to — one of `place_hold`, `confirm`, `release`, `expire`. A retry whose action differs from the recorded one is rejected [Token Collision] (Invariant 4).
+
+Kind:      Field
+Field of:  the recorded outcome
+Role:      the token's bound operation
+Projects:  action_type
+
+#### Parameters Digest
+
+The recorded outcome's collision-resistant digest of the non-token call parameters, computed at the composition's I/O seam and injected. A retry whose digest differs from the recorded one is rejected [Token Collision]; digest-function drift across replicas misclassifies legitimate retries.
+
+Kind:      Field
+Field of:  the recorded outcome
+Role:      the token's bound parameters
+Projects:  parameters_digest
+
+#### Result
+
+The recorded outcome's copy of the original response — the produced `id` or `ok`, or the rejection reason — exactly as returned to the caller on the first call. Every outcome is cached, success or rejection (the cache-the-failure rule).
+
+Kind:      Field
+Field of:  the recorded outcome
+Role:      the replayed response
+Projects:  result
+
+#### Token Collision
+
+The composition's own rejection — returned when a token already in the window is reused for a different [Action Type] or with a different [Parameters Digest]. Its structural guarantee is Invariant 4 (token-action binding); no state change occurs.
+
+Kind:      Member
+Member of: the action rejection
+Role:      Outcome
+Projects:  token-collision
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Place Hold]: #place-hold
+[Confirm]: #confirm
+[Release]: #release
+[Expire]: #expire
+[Idempotency Token]: #idempotency-token
+[Action Type]: #action-type
+[Parameters Digest]: #parameters-digest
+[Result]: #result
+[Token Collision]: #token-collision
 
 ---
 
@@ -202,7 +296,7 @@ A derived implementation of Idempotent Reservation is *acceptable* — in the re
 These checks can be answered by reading the composition's stored records directly:
 
 - **Reconstruct the lifecycle of any commitment.** Through the underlying Provisional Commitment instance, as specified by that atom's Generation acceptance.
-- **Verify all eight composition-level invariants over the record set.** Idempotent place_hold, idempotent state transitions, token-to-commitment one-to-one, token-action binding, Provisional Commitment invariants preserved, Duplicate Prevention invariants preserved, token expiry releases binding, exactly-once effect.
+- **Verify all eight composition-level invariants over the record set.** Idempotent [Place Hold], idempotent state transitions, token-to-commitment one-to-one, token-action binding, Provisional Commitment invariants preserved, Duplicate Prevention invariants preserved, token expiry releases binding, exactly-once effect.
 - **Trace every commitment to its originating idempotency token** (within the window), and verify no two distinct commitments share a token (Invariant 3).
 - **Verify the cache-the-failure rule.** Every recorded `token_results` entry contains the original outcome, success or rejection; retries within the window do not invoke the underlying Provisional Commitment.
 
@@ -222,7 +316,10 @@ This is the generator's contract: any code generated from this composition must 
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 This application survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first iteration.
 
@@ -262,3 +359,7 @@ Pass 2 was clean: no new over-absorptions surfaced. All five fixes are in-patter
 **Formal model — 2026-06-03: TLA+ authored and verified; pattern promoted to `grounded`.** Derived model [`idempotent-reservation.tla`](./idempotent-reservation.tla) + config [`idempotent-reservation.cfg`](./idempotent-reservation.cfg), checked by `tla-checker` via `tools/harness/check.mjs`. *What it checks:* one token, advancing bounded `clock`, `Window = 2`, `MaxClock = 3`. The load-bearing **Invariant 8** (exactly-once effect within the window) is checked as `InWindow ⇒ effectsThisWindow ≤ 1`, where `InWindow` is the *true* window (time since the episode's first effect) and `effectsThisWindow` counts delegations to the underlying Provisional Commitment. `cacheHas` is the implementation's seen-flag (replay vs delegate); `ExpireCache` models safe automatic eviction once the window elapses. Exhaustive: 17 states, holds. *Buggy twin* [`idempotent-reservation-buggy.tla`](./idempotent-reservation-buggy.tla) adds `EvictEarly` — a cache eviction with no window guard (the **unsafe eviction ordering** Invariant 7 names) — so a replay re-delegates mid-window; rejected at 14 states (effect → evict-early → re-delegate → `effectsThisWindow = 2`, a double-spend). *Out of model scope:* parameters_digest / token-collision (Invariant 4), the constituent commitment state machine (Invariant 5 — see `atoms/provisional-commitment.tla`). *Conflict-protocol outcome:* none — the model **corroborates** the English; canonical English unchanged.
 
 **AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This composition grounded 2026-05-20 under the early process — foundation plus refinement, no fresh-reader AI adversarial round — and carried the legacy grandfathered token; its constituent atoms were re-grounded at Final Critique 4 on 2026-06-18. This round is that missing AI-conducted adversarial round (fresh-reader Opus, Happy-Torvalds-X2); it is the composition's Final Critique 4 (Rounds 1–3 the foundation/refinement baseline, per pressure-testing.md §Round structure). Two foundational findings closed: F1 — `token_results` is now classified **extraction-pending** under the Execution Contract's Composition-state rule, naming the proposed **Idempotency Result Memo** atom (the contract's own worked example), and the subsection renamed from 'Composition state' to 'Composition state'; F2 — Logic Confinement: `parameters_digest` is now computed by a pure function / configured digest mechanism at the composition's I/O seam and injected, not crypto improvised inside core logic. Refining: the Invariant 7 eviction-ordering owner named; per-token serialization and atomic durability made explicit conditionals on Invariants 7/8; a Generation-acceptance heading note.. Caller signatures unchanged and the invariant set held at 8 (read the actual count from the spec and confirm no change), so the fixes are additive with no constituent-change cascade. Formal-layer vote stands YES (model present and verifying); `parameters_digest`/`token-collision` and `token_results` are out of model scope, so the fixes do not reopen it. Confirming fresh-reader Opus clearance gate (2026-06-18): CLEAR, 0 foundational, no new surface. Reserve from Pool inherits `token_results` and the digest mechanic; it needs the same fold as a follow-on touch (confirming-check, flagged separately). Grounds at Final Critique 4.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at eight). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases (9 terms): 4 Operations — the retry-safe composed action-wirings ([Place Hold], [Confirm], [Release], [Expire]); 1 Parameter — the [Idempotency Token] the composition introduces on every call (consumed input, though it also keys the recorded outcome and the Duplicate Prevention identity); 3 Fields — the recorded-outcome payloads carded against the plain-noun recorded outcome ([Action Type], [Parameters Digest], [Result]); and 1 Member — the composition's own [Token Collision] rejection. **No Type card:** the composition's own state store `token_results` (classified extraction-pending, the proposed *Idempotency Result Memo* atom) is left as a backticked store token, and its Fields are carded against the plain-noun recorded outcome. Survivors left backticked: the one labeled projected-contract signature per composed Operation; the qualified constituent calls (`ProvisionalCommitment.place_hold`/`confirm`/`release`/`expire`, `DuplicatePrevention.check`/`record`) and their outcomes (`ok`, `seen`/`not-seen`); the inherited constituent rejection tokens (`resource-unavailable`, `not-held`, `window-elapsed`, `invalid-request`); the `action_type` enum wire values (`place_hold`/`confirm`/`release`/`expire` as recorded values); the `token_results` store token; the deployment configuration knobs (`idempotency_window`, `token_max_length`, `digest_function`); and concrete example calls, ids, and tokens. Constituent atom names remain the existing full links to `../atoms/*`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), the descriptive top blockquote folded out after confirming each claim (safe retryability, the two-atom composition, exactly-once-within-window, same-token-same-result, terminal-state independence) is carried by Summary / Intent / Composes / the walkthrough; no *also-known-as* line existed, so none was invented. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #1** — the single-paragraph Summary split into one-idea-per-sentence paragraphs, lossless. (e) **prose cut #5 — skipped (with reason):** the composition owns no emergent state machine — the only lifecycle states are Provisional Commitment's Held→Confirmed|Released|Expired (a constituent's), and the composition's own wiring is a uniform validate-token → check → replay-or-delegate → cache shape already stated crisply in Action wiring and the cache-the-failure rule. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-06-18`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (9 terms); eight composition-level invariants preserved; the `.tla` models untouched — harness re-run green: `idempotent-reservation.tla` PASS + `idempotent-reservation-buggy.tla --buggy` rejected.
+
+</details>
