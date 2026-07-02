@@ -16,7 +16,17 @@ toc: true
 </details>
 
 
-> A regulated composition: every action of consequence is recorded, attributed to a verifiable actor, retained for its regulatory lifetime, and protected against after-the-fact rewriting. Composes Event Log, Actor Identity, Retention Window, and Tamper Evidence into the canonical audit primitive that SOX (Sarbanes-Oxley Act — US corporate financial-reporting law), HIPAA (Health Insurance Portability and Accountability Act — US healthcare-data privacy law), PCI DSS (Payment Card Industry Data Security Standard — card-industry security rules), 21 CFR Part 11 (the US Code of Federal Regulations rule on electronic records), SEC Rule 17a-4 (the US Securities and Exchange Commission broker-dealer records rule), and every other industrial audit regime requires but none name as a single composable concept. With this composition, four freestanding atoms become the one structure the regulator actually asks about.
+## Summary
+
+Audit Trail answers, all at once, the four questions a regulator or investigator asks about any consequential action: what happened, who authorized it, has the record been altered, and was it kept long enough?
+
+It does this by combining four simpler patterns into one queryable record: an add-only event log (what happened), cryptographic attribution tying each event to the actor who performed it (who), tamper-evident sealing that makes any after-the-fact change detectable (has it been altered), and a retention policy that fixes how long records must be kept (kept long enough).
+
+None of the four answers the full question alone — the event log does not name the actor, the attribution does not protect integrity, the retention does not detect rewriting, the sealing does not name the actor — but stacked together they produce a record that is observable, attributable, tamper-evident, and lifetime-bounded.
+
+Combining them also produces guarantees none has alone: every event is simultaneously logged, attributed, retention-tracked, and sealed; when retention expires, all four are purged together so no dangling references remain; and a query on any kept event returns a definite, verifiable answer that distinguishes a lawfully destroyed record from a missing one.
+
+This is the canonical audit primitive behind financial-controls, healthcare-access, cardholder-data, and broker-dealer audit requirements, and it is reused as a building block by other compositions.
 
 ---
 
@@ -24,15 +34,9 @@ toc: true
 
 Every regulated system carries the same obligation: when the auditor arrives, the system must be able to answer four questions about any action of consequence — *what happened, who authorized it, has the record been altered, and was the retention obligation honored?* Each question maps cleanly onto one of the four constituent atoms; the auditor's actual ask is all four at once, for any record, on demand, over the regulatory horizon.
 
-The composition addresses what the four atoms cannot answer alone. Event Log records the fact but does not bind it to an actor. Actor Identity binds the actor but does not commit to the records' integrity. Retention Window bounds the lifetime but does not detect rewriting. Tamper Evidence detects rewriting but does not name the actor. Stacked correctly, the four answer the regulator's question in one structure: a record that is observable, attributable, integrity-protected, and lifetime-bounded.
+The composition addresses what the four atoms cannot answer alone. Event Log records the fact but does not bind it to an actor. Actor Identity binds the actor but does not commit to the records' integrity. Retention Window bounds the lifetime but does not detect rewriting. Tamper Evidence detects rewriting but does not name the actor. Stacked correctly, the four answer the regulator's question in one structure: an [Audit Record] that is observable, attributable, integrity-protected, and lifetime-bounded.
 
 This is a composition, not a new primitive. The four atoms are unchanged; the composition is the wiring that makes them coherent — one consolidated audit surface rather than four parallel record stores the auditor has to correlate by hand. The construction is the same one that runs in every audit-grade system in production today: signed events appended to an immutable (unchangeable once written) log, sealed periodically against a tamper-evident structure, governed by a retention policy with a structural no-early-purge guarantee. Different vocabularies; identical mechanic.
-
----
-
-## Summary
-
-Audit Trail answers, all at once, the four questions a regulator or investigator asks about any consequential action: what happened, who authorized it, has the record been altered, and was it kept long enough? It does this by combining four simpler patterns into one queryable record: an add-only event log (what happened), cryptographic attribution tying each event to the actor who performed it (who), tamper-evident sealing that makes any after-the-fact change detectable (has it been altered), and a retention policy that fixes how long records must be kept (kept long enough). None of the four answers the full question alone — the event log does not name the actor, the attribution does not protect integrity, the retention does not detect rewriting, the sealing does not name the actor — but stacked together they produce a record that is observable, attributable, tamper-evident, and lifetime-bounded. Combining them also produces guarantees none has alone: every event is simultaneously logged, attributed, retention-tracked, and sealed; when retention expires, all four are purged together so no dangling references remain; and a query on any kept event returns a definite, verifiable answer that distinguishes a lawfully destroyed record from a missing one. This is the canonical audit primitive behind financial-controls, healthcare-access, cardholder-data, and broker-dealer audit requirements, and it is reused as a building block by other compositions.
 
 ---
 
@@ -66,17 +70,17 @@ The composition owns emergent state that wires the four constituent atoms into o
 
 The composition exposes one *record* action that wraps all four constituents, plus *verify* and *purge* actions over the composed surface. Read-only queries (list events, fetch an event by id, walk attestations) pass through to the appropriate constituent without orchestration.
 
-- **`record_action(action_ref, actor_ref, credential, data) → event_id | rejected(invalid-credential | invalid-request | recording-failure)`**
+- **[Record Action]** — (Projected contract: `record_action(action_ref, actor_ref, credential, data) → event_id | rejected(invalid-credential | invalid-request | recording-failure)`)
   1. `ActorIdentity.attest(action_ref, actor_ref, credential)` → `attestation_id` (or `rejected(invalid-credential | invalid-request)` — surfaced to the caller; nothing further is recorded).
-  2. `EventLog.append({action_ref, actor_ref, attestation_id, data})` → `event_id`. The composition does not supply `recorded_at`; Event Log stamps it at its own seam from the host-injected clock (per Event Log's Identity model / Inputs and the Logic Confinement Principle). Where the audit event's timestamp is read back later, it is Event Log's stamped `recorded_at`. If a business event-time is needed it lives inside the opaque `data`, distinct from Event Log's `recorded_at`. `EventLog.append`'s `storage-failure` maps to the composition's `recording-failure`; `invalid-payload` is unreachable because the composition constructs a well-formed payload.
+  2. `EventLog.append({action_ref, actor_ref, attestation_id, data})` → `event_id`. The composition does not supply `recorded_at`; Event Log stamps it at its own seam from the host-injected clock (per Event Log's Identity model / Inputs and the Logic Confinement Principle). Where the audit event's timestamp is read back later, it is Event Log's stamped `recorded_at`. If a business event-time is needed it lives inside the opaque `data`, distinct from Event Log's `recorded_at`. `EventLog.append`'s `storage-failure` maps to the composition's [Recording Failure]; `invalid-payload` is unreachable because the composition constructs a well-formed payload.
   3. `RetentionWindow.place_under_retention(event_id, retention_policy)` → `retention_id`.
   4. Record `event_to_attestation[event_id] = attestation_id` and `event_to_retention[event_id] = retention_id`.
   5. Under per-event cadence, immediately seal the singleton range; under interval cadence, defer to the next batch.
   6. Return `event_id`. If any of steps 2–4 fail after step 1 has succeeded, the composition returns `rejected(recording-failure)` (step 2's `storage-failure` surfaces here; `invalid-payload` is unreachable) and the implementation must address the orphan attestation per the *Partial attestation on step failure* edge case.
 
-- **`seal_now() → evidence_id | rejected(nothing-to-seal | mechanism-failure)`** — under interval or on-demand cadence, seals the current unsealed tail. Returns `rejected(nothing-to-seal)` if the unsealed tail is empty (no events since `sealed_through`); `rejected(mechanism-failure)` if the underlying seal mechanism is unavailable (hardware failure, TSA unreachable under anchored mode). The presented record set is the slice `[sealed_through + 1 .. tail]`; the call delegates to `TamperEvidence.seal(slice_ref, mechanism_credential)`, records `seal_coverage[evidence_id]` and advances `sealed_through`.
+- **[Seal Now]** — (Projected contract: `seal_now() → evidence_id | rejected(nothing-to-seal | mechanism-failure)`) — under interval or on-demand cadence, seals the current unsealed tail. Returns [Nothing To Seal] if the unsealed tail is empty (no events since `sealed_through`); [Mechanism Failure] if the underlying seal mechanism is unavailable (hardware failure, TSA unreachable under anchored mode). The presented record set is the slice `[sealed_through + 1 .. tail]`; the call delegates to `TamperEvidence.seal(slice_ref, mechanism_credential)`, records `seal_coverage[evidence_id]` and advances `sealed_through`.
 
-- **`verify_record(event_id, original_event_payload) → verified | failed-verification(reason) | not-known`**
+- **[Verify Record]** — (Projected contract: `verify_record(event_id, original_event_payload) → verified | failed-verification(reason) | not-known`)
   1. If `event_id` not present in the event log → `not-known`.
   2. `ActorIdentity.verify(event_to_attestation[event_id])` — propagates any `failed-verification(reason)` with the reason prefixed `attestation-` (e.g., `attestation-proof-invalid`).
   3. Locate the `evidence_id` whose `seal_coverage` includes `event_id`; if none, the event is in the unsealed tail — return `failed-verification(unsealed)` per the deployment's policy, or `verified` if unsealed events are acceptable for the verifier (configurable; the composition names the choice).
@@ -84,7 +88,7 @@ The composition exposes one *record* action that wraps all four constituents, pl
   5. If retention is in *Purged* for the event, return `failed-verification(purged)` — the record is structurally gone and no integrity claim is possible. This is the expected outcome for events past their `purge_deadline`; the audit query distinguishes *lawfully destroyed* from *missing*.
   6. All checks pass → `verified`.
 
-- **`purge_eligible() → list of event_ids`** and **`purge_event(event_id) → ok | rejected(not-known | not-eligible)`** — for any event whose retention has elapsed (`now ≥ retention_until`), the composition cascades (triggers a secondary effect automatically from a primary event). Returns `rejected(not-known)` if the `event_id` is not in the log; `rejected(not-eligible)` if `now < retention_until` for the event. Deployments composing a Legal Hold (a legally mandated preservation order suspending normal deletion) pattern may additionally surface `rejected(under-legal-hold)` when a hold intercepts the cascade:
+- **[Purge Eligible]** — (Projected contract: `purge_eligible() → list of event_ids`) and **[Purge Event]** — (Projected contract: `purge_event(event_id) → ok | rejected(not-known | not-eligible)`) — for any event whose retention has elapsed (`now ≥ retention_until`), the composition cascades (triggers a secondary effect automatically from a primary event). Returns `rejected(not-known)` if the `event_id` is not in the log; [Not Eligible] if `now < retention_until` for the event. Deployments composing a Legal Hold (a legally mandated preservation order suspending normal deletion) pattern may additionally surface `rejected(under-legal-hold)` when a hold intercepts the cascade:
   1. `RetentionWindow.purge(retention_id)` — moves the retention Retained → Purged with `purged_at`.
   2. Destroy or tombstone the event in the Event Log per the deployment's chosen purge mechanism (direct deletion, tombstone, cryptographic shredding — see Edge cases).
   3. Mark the corresponding `seal_coverage` entry as *records-purged*. The seal record itself is retained as audit evidence of the destruction (a seal for a destroyed record set is structurally meaningless for content verification but remains useful for purge-record verification); when the seal's own retention elapses under a meta-retention policy, it too is purged.
@@ -163,18 +167,112 @@ What this composition does not cover:
 - **Pre-attestation legacy events.** Events imported from a legacy system without verifiable attribution have no usable Actor Identity binding. The composition accepts these only under an explicit legacy-import path that records a *system-asserted* attestation marker (no actor binding); the auditor reads such events as *attribution-deferred* rather than *attributed*. Subsequent legal review establishes whether the gap is acceptable for the audit horizon.
 - **Seal cadence vs. write rate.** Tighter cadence (per-event) narrows the forensic window but increases the seal-store growth rate and verify-time cost; coarser cadence is cheaper but widens the window. Selection is handled at the deployment layer. The composition surfaces the trade-off; the deployment owns the choice.
 - **Compromised credential mid-window.** If an actor's credential is compromised and the discovery is later than the compromise, attestations made during the compromise window verify but should be reinterpreted. The composition does *not* retroactively invalidate (inheriting Actor Identity's contract); a Compromise Disclosure composing pattern produces *new* records that reframe the previously-verified attestations as untrustworthy. Required reading for breach response runbooks.
-- **Policy disagreement across overlapping rules.** When multiple regulations apply to one event (HIPAA + state law + GDPR (EU General Data Protection Regulation) + GLBA — the US Gramm-Leach-Bliley Act, governing financial-data privacy), the *retention_policy* must reconcile to the longest applicable retention, the strictest data-minimization posture, and any conflicting destruction rules. A Policy Reconciliation composing pattern owns this; the composition takes the reconciled `policy_ref` as input.
+- **Policy disagreement across overlapping rules.** When multiple regulations apply to one event (HIPAA + state law + GDPR (EU General Data Protection Regulation) + GLBA — the US Gramm-Leach-Bliley Act, governing financial-data privacy), the `retention_policy` must reconcile to the longest applicable retention, the strictest data-minimization posture, and any conflicting destruction rules. A Policy Reconciliation composing pattern owns this; the composition takes the reconciled `policy_ref` as input.
 - **Right-to-be-forgotten vs. retention obligation.** A GDPR Article 17 erasure request can collide with a regulatory retention obligation (HIPAA, SOX). The composition does not adjudicate; an Erasure Coordination composing pattern (with legal counsel in the loop) decides whether to honor the request, cryptographically shred the personal-data fields while preserving the structural audit record, or document the retention override.
 - **Legal hold suspension of purge.** Pending litigation or investigation must suspend `purge_eligible` for the affected scope. A Legal Hold composing pattern intercepts purges and rejects them while the hold is active; the composition's cascade defers until the hold is released.
 - **Storage tier (active vs. cold).** SEC Rule 17a-4's *first two years immediately accessible* is orthogonal to retention obligation and to integrity. A Storage Tier composing pattern owns the active-to-cold transition; the composition's `verify_record` accepts records retrieved from either tier identically.
 - **Durability across crashes.** The composition's emergent state (`event_to_attestation`, `event_to_retention`, `seal_coverage`, `sealed_through`) must persist atomically with each successful `record_action`. A crash that records the event in Event Log but not in the composition's maps leaves a dangling event without attribution linkage — a defect. The implementor owns the transactional boundary; the spec assumes it.
-- **Cross-store consistency under failure.** If `EventLog.append` succeeds but `RetentionWindow.place_under_retention` fails, the composition is in an invariant-violating state (an event in the log without retention). The implementation must order operations so that either all four constituent calls succeed atomically or the composition records the failure as a *recording-failure* event that itself attests to the partial state. Two-phase commit, saga compensation, or single-transaction storage all satisfy; the spec names the requirement, the implementation chooses the mechanism.
+- **Cross-store consistency under failure.** If `EventLog.append` succeeds but `RetentionWindow.place_under_retention` fails, the composition is in an invariant-violating state (an event in the log without retention). The implementation must order operations so that either all four constituent calls succeed atomically or the composition records the failure as a `recording-failure` event that itself attests to the partial state. Two-phase commit, saga compensation, or single-transaction storage all satisfy; the spec names the requirement, the implementation chooses the mechanism.
 - **Verification of the unsealed tail.** Events in the tail (between `sealed_through` and the current append point) are not yet covered by a seal. The composition's `verify_record` returns `failed-verification(unsealed)` for these under strict mode, or `verified` under lenient mode (where the deployment accepts the per-event Event Log immutability as sufficient until the next seal cadence). The choice is deployment policy; the spec surfaces it.
 - **Failed attribution attempts.** A `record_action` call rejected at step 1 (Actor Identity rejects the credential) leaves no trace in the audit log — the attempt is not recorded. For high-assurance deployments where failed attribution attempts are themselves auditable events (an insider retrying with forged credentials, for example), a Failed-Attempt Log composing pattern records the rejected attempt as its own event. This composition does not absorb that concept: its audit surface is committed actions, not attempted actions.
 - **Partial attestation on step failure.** If step 1 (Actor Identity.attest) succeeds but step 2 (EventLog.append) fails, an attestation record exists in the Actor Identity store with no corresponding event in the audit log — an orphan attestation. Actor Identity's records are immutable once committed (by design), so synchronous rollback is not available. The implementation must flag the orphan, return `rejected(recording-failure)` to the caller, and treat the orphan as an anomaly requiring resolution — either a compensating tombstone record or manual investigation. High-assurance deployments should treat any unresolved orphan attestation as a gap in the audit surface and alert accordingly.
 - **Clock source for cadence and purge.** The composition uses `now` in two places it directly owns: the `seal_cadence` timer and `purge_eligible`'s `now ≥ retention_until` comparison. The composition's `now` for both purposes is a host-injected input read at the composition's I/O seam before the action's transition runs (per `execution-contract.md` §Logic Confinement), so the orchestration transition is a pure function of injected `now`; a single injected `now` per `purge_eligible`/`purge_event` invocation is shared with any downstream `RetentionWindow.purge`, matching Retention Window's Invariant 8. The authoritative source of `now` for both is deployment-shaped: the deployer configures the clock (system clock, GPS-disciplined clock, NTP-synchronized cluster clock) and must ensure it is monotonically non-decreasing. Clock skew across nodes in a distributed deployment can cause non-deterministic `purge_eligible` results and inconsistent cadence firing; the deployer owns the monotonicity guarantee. For deployments composing a Trusted Timestamping pattern, the TSA's anchored time may serve as the authoritative source; that composing pattern owns the clock-authority contract.
 
 Where the composition breaks down: when the four constituent stores share an adversary with write access to all of them and external anchoring is absent; when the host environment cannot supply a stable, reproducibly-addressable record set at verify time (mutable event payloads under non-versioned references); when the retention policy and the integrity-coverage cadence are mismatched (events purged before their covering seal is verified against them); when the actor registry's historical public material is not retained and old attestations begin failing verification under a new key.
+
+---
+
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are the composed action-wirings it exposes ([Record Action], [Seal Now], [Verify Record], [Purge Event]) and the derived read over eligible events ([Purge Eligible]), the consolidated [Audit Record] the four atoms together present, and its own rejections ([Recording Failure], [Nothing To Seal], [Mechanism Failure], [Not Eligible]). Its emergent state is entirely a **derived index** wiring the four constituent stores (`event_to_attestation`, `event_to_retention`, `seal_coverage`, `sealed_through`) — it stores no truth the constituents do not, so those linkage maps are left as backticked derived-index tokens rather than carded. References to the constituent atoms and their operations — Event Log's `append` / `read`, Actor Identity's `attest` / `verify`, Retention Window's `place_under_retention` / `purge`, Tamper Evidence's `seal` / `verify` — the inherited outcome and rejection tokens (`invalid-credential`, `invalid-request`, `not-known`, `verified`, and `failed-verification(...)` with its `attestation-*` / `seal-*` / `unsealed` / `purged` reasons), the constituent id tokens (`event_id`, `attestation_id`, `retention_id`, `evidence_id`), and the deployment configuration knobs (`retention_policy`, `seal_cadence`, `seal_mechanism`) all remain qualified/backticked, not carded here. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Record Action
+
+The composition's core action: it attests the actor via Actor Identity, appends the event to the Event Log, places the event under Retention Window, links the two in the composition's maps, and (under per-event cadence) seals the singleton range. Returns the new `event_id`, or [Recording Failure] when a store fails after attestation (Event Log's `storage-failure` maps here), or Actor Identity's `invalid-credential` / `invalid-request` before anything is recorded.
+
+Kind: Operation
+
+#### Seal Now
+
+The composition action that seals the current unsealed tail under interval or on-demand cadence — it delegates to Tamper Evidence's `seal` over the slice `[sealed_through + 1 .. tail]`, records the coverage, and advances `sealed_through`. Returns the `evidence_id`, [Nothing To Seal] when the tail is empty, or [Mechanism Failure] when the seal mechanism is unavailable.
+
+Kind: Operation
+
+#### Verify Record
+
+The composition's four-way verification query: given an `event_id` and the re-presented original payload, it checks the attestation (Actor Identity), the covering seal (Tamper Evidence), and the retention state, returning `verified`, a prefixed `failed-verification(reason)` (including `purged` for a lawfully destroyed record), or `not-known` for a fabricated id. The payload must be re-presented (Invariant 7).
+
+Kind: Operation
+
+#### Purge Eligible
+
+The derived read query returning the list of `event_id`s whose retention has elapsed (`now ≥ retention_until`) and are therefore eligible for the cascade.
+
+Kind: Operation
+
+#### Purge Event
+
+The composition action that cascades destruction for a retention-elapsed event: it purges the retention record, destroys or tombstones the event, marks the `seal_coverage` records-purged (the seal itself outlives as destruction evidence), and purges the attestation per meta-retention. Returns `ok`, `not-known`, or [Not Eligible] when retention has not elapsed; a composed Legal Hold may additionally surface `under-legal-hold`.
+
+Kind: Operation
+
+#### Audit Record
+
+The composition's emergent output: the single consolidated structure the four atoms together present for one event — the event bound to its attestation (who), its retention (how long), and its seal coverage (integrity) — observable, attributable, tamper-evident, and lifetime-bounded. The one structure the regulator actually queries; no constituent presents it alone.
+
+Kind: Type
+
+#### Recording Failure
+
+The composition's own rejection from [Record Action] — returned when a store fails after the actor has been attested (Event Log's `storage-failure` maps here); the caller must resolve the resulting orphan attestation (Edge cases).
+
+Kind:      Member
+Member of: the record-action rejection
+Role:      Rejection
+Projects:  recording-failure
+
+#### Nothing To Seal
+
+The composition's own rejection from [Seal Now] — returned when the unsealed tail is empty (no events since `sealed_through`).
+
+Kind:      Member
+Member of: the seal rejection
+Role:      Rejection
+Projects:  nothing-to-seal
+
+#### Mechanism Failure
+
+The composition's own rejection from [Seal Now] — returned when the underlying Tamper Evidence seal mechanism is unavailable (hardware failure, TSA unreachable under anchored mode).
+
+Kind:      Member
+Member of: the seal rejection
+Role:      Rejection
+Projects:  mechanism-failure
+
+#### Not Eligible
+
+The composition's own rejection from [Purge Event] — returned when the event's retention has not elapsed (`now < retention_until`), so the no-early-purge gate refuses the cascade.
+
+Kind:      Member
+Member of: the purge rejection
+Role:      Rejection
+Projects:  not-eligible
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Record Action]: #record-action
+[Seal Now]: #seal-now
+[Verify Record]: #verify-record
+[Purge Eligible]: #purge-eligible
+[Purge Event]: #purge-event
+[Audit Record]: #audit-record
+[Recording Failure]: #recording-failure
+[Nothing To Seal]: #nothing-to-seal
+[Mechanism Failure]: #mechanism-failure
+[Not Eligible]: #not-eligible
 
 ---
 
@@ -225,11 +323,14 @@ This is the generator's contract: any code generated from this composition must 
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 This application survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first iteration. The two regulated-pattern conventions canonicalized in [`contributing.md`](../contributing.md) and [`pressure-testing.md`](../pressure-testing.md) — *Regulated adversarial scenarios* and *Generation acceptance* — were baked in from the first draft. The composition pattern (wrap each constituent's action behind one application-level action, name emergent state, preserve each constituent's invariants, surface cross-atom invariants explicitly) follows the structural template Idempotent Reservation established and extends it to four constituents.
 
-**Structural milestone.** This application is the destination the library has been building toward since the first regulated atom landed. With Event Log, Actor Identity, Retention Window, and Tamper Evidence all grounded as freestanding atoms, the four-constituent composition becomes available — what SOX §404, HIPAA §164.312(b), PCI DSS Requirement 10, 21 CFR Part 11, SEC Rule 17a-4, and ISO/IEC 27001 §A.12.4 all require but none name as a single composable concept. The forthcoming-link references each constituent carried (*"the canonical regulated-audit stack composes [the four] as four freestanding atoms; the Audit Trail application is the wiring"*) are now resolved.
+**Structural milestone.** This application is the destination the library has been building toward since the first regulated atom landed. With Event Log, Actor Identity, Retention Window, and Tamper Evidence all grounded as freestanding atoms, the four-constituent composition becomes available — what SOX §404, HIPAA §164.312(b), PCI DSS Requirement 10, 21 CFR Part 11, SEC Rule 17a-4, and ISO/IEC 27001 §A.12.4 all require but none name as a single composable concept. The forthcoming-link references each constituent carried (*"the canonical regulated-audit stack composes (the four) as four freestanding atoms; the Audit Trail application is the wiring"*) are now resolved.
 
 **Pass 1 — Structural completeness (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** Clean. All nine GRID nodes resolved with their references intact. As with Idempotent Reservation, the user-level Flow is captured in the Walkthrough example rather than as a dedicated Flow subsection — the per-action wiring under Composition logic carries the substantive structure. Composition state (`event_to_attestation`, `event_to_retention`, `seal_coverage`, `sealed_through`) is named explicitly, with cascade-on-purge governing its lifecycle — no orphan state.
 
@@ -279,3 +380,7 @@ No constituent atom API changes (from today's rescans) require further update to
 *Conflict-protocol outcome.* None triggered. The model **corroborates** the English — the atomic cascade keeps all four stores coherent under every interleaving, and the spec already requires "single transaction or compensating record," which is exactly the distinction the correct/buggy pair makes mechanical. No counterexample flowed back; the canonical English is unchanged. Reproduce with `cd tools/harness && bash bootstrap.sh && node check.mjs ../../compositions/audit-trail.tla` (and `… audit-trail-buggy.tla --buggy`).
 
 **AI adversarial round — Final Critique 4 (first real AI round) — 2026-06-18.** This composition grounded 2026-05-20 under the early process — foundation plus refinement, no fresh-reader AI adversarial round — and carried the legacy grandfathered token; its constituent atoms were re-grounded at Final Critique 4 on 2026-06-18. This round is that missing AI-conducted adversarial round (fresh-reader Opus, Happy-Torvalds-X2); it is the composition's Final Critique 4 (Rounds 1–3 the foundation/refinement baseline, per pressure-testing.md §Round structure). One foundational finding closed: F-1 — `record_action` no longer passes `recorded_at` into `EventLog.append` (Event Log's Final Critique 4 made `recorded_at` host-stamped at its own seam, not caller-supplied); Event Log stamps it and the composition reads it back, so `record_action`'s caller signature is unchanged. Refining: the composition's own `now` for seal cadence and purge-eligibility stated as host-injected at the seam; `verify_record` routes an absent/wrong payload to `failed-verification(seal-record-set-mismatch)` (distinct from `not-known`); `EventLog.append`'s `storage-failure` mapped to `recording-failure`.. Caller signatures unchanged and the invariant set held at 8 (read the actual count from the spec and confirm no change), so the fixes are additive with no constituent-change cascade. Formal-layer vote stands YES (model present); `recorded_at` and orchestration are out of model scope, so the fix does not reopen it. Confirming fresh-reader Opus clearance gate (2026-06-18): CLEAR, 0 foundational, no new surface. Compositions affected — confirming check only, NOT a re-pass (record_action/verify_record signatures, invariant numbering 1–8, and the six-check Generation-acceptance bar are all unchanged): Customer Onboarding, Chain of Custody, Forensic Recovery, Immutable Transaction Ledger, Defensible Retention, Resolve a Person's Data Rights, Multi-Party Approval, Privileged Access Provisioning, and the other substrate consumers. Grounds at Final Critique 4.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at eight). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases (10 terms): 5 Operations — the four composed action-wirings ([Record Action], [Seal Now], [Verify Record], [Purge Event]) plus the derived read ([Purge Eligible]); 1 Type — the composition's emergent consolidated [Audit Record] (the one structure the four atoms together present); and 4 Members — the composition's own rejections ([Recording Failure], [Nothing To Seal], [Mechanism Failure], [Not Eligible]). **No emergent record store carded:** the composition's own state is entirely a derived index wiring the four constituent stores (`event_to_attestation`, `event_to_retention`, `seal_coverage`, `sealed_through`), left as backticked derived-index tokens. Survivors left backticked: the one labeled projected-contract signature per composed Operation; the qualified constituent calls (Event Log's `append` / `read`, Actor Identity's `attest` / `verify`, Retention Window's `place_under_retention` / `purge`, Tamper Evidence's `seal` / `verify`); the inherited outcome and rejection tokens (`invalid-credential`, `invalid-request`, `not-known`, `verified`, `failed-verification(...)` and its `attestation-*` / `seal-*` / `unsealed` / `purged` reasons — deliberately left as the prefix-delegated vocabulary per the Refinement-round R4 finding); the constituent id tokens (`event_id`, `attestation_id`, `retention_id`, `evidence_id`); the deployment configuration knobs (`retention_policy`, `seal_cadence`, `seal_mechanism`); and concrete example ids, policies, and payloads. Constituent atom names remain the existing full links to `../atoms/*`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), the descriptive top blockquote folded out after confirming each claim (recorded/attributed/retained/tamper-protected, the four-atom composition, the canonical-audit-primitive framing, four freestanding atoms as one structure) is carried by Summary / Intent / Composes / Standards references; no *also-known-as* line existed, so none was invented. *Note:* the folded blockquote also carried inline glossary expansions of SOX / HIPAA / PCI DSS / 21 CFR Part 11 / SEC Rule 17a-4; these acronyms remain in self-describing regulatory context (§404, §164.312(b), Requirement 10, Part 11, Rule 17a-4) and are described in Standards references, so no claim was lost. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #1** — the single-paragraph Summary split into one-idea-per-paragraph units, lossless. (e) **prose cut #5 — skipped (with reason):** the composition owns no emergent state machine of its own — the only lifecycle states are the constituents' (Retention Window's Retained→Purged, etc.); the composition's own logic is a uniform wrap-the-four-and-cascade shape already stated crisply in Action wiring and the cascade-on-purge rule. One representational fix outside the Terms work: a single bare `retention_policy` in an Edge case (previously italicized) was backticked to match the survivor convention (anchor-neutral, invariant-diff-safe). Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-06-18`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (10 terms); eight composition-level invariants preserved; the `.tla` models untouched — harness re-run green: `audit-trail.tla` PASS + `audit-trail-buggy.tla --buggy` rejected.
+
+</details>
