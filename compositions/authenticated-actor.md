@@ -15,7 +15,15 @@ toc: true
 {:toc}
 </details>
 
-> A regulated composition that wires **Credential** (the authentication surface — "does this presented material belong to this principal?") and **Actor Identity** (the attestation surface — "who authorized this action, and can you prove it?") under a single principal, owning the three concepts neither atom specifies because each is freestanding: (1) **revocation cascade** — revoking the principal's authentication credential closes the attestation surface, so a revoked login can no longer produce new signed attestations; (2) **secret-surface separation** — the authentication verifier (a login key) and the attestation key (a signing key) are distinct key surfaces the composition never cross-routes; and (3) **namespace binding** — the Credential `principal_ref` and the Actor Identity `actor_ref` are bound bijectively to one principal, so every attestation an actor produces resolves back to the authenticated principal. The load-bearing emergent guarantee is the revocation cascade: the composition gates `attest_as_actor` on the bound credential's live `Active` status, read atomically with the attestation write, so authority to sign flows from a currently-valid login rather than from a one-time binding. This composition does **not** revoke credentials, register actors in the actor registry, or evaluate authorization — each is named, not absorbed.
+## Summary
+
+Authenticated Actor is a composition — a specification that wires two freestanding patterns together — that ties a principal's *login* to their *signature*. One pattern, Credential, checks that a presented secret belongs to a principal (the login). The other, Actor Identity, produces an attestation: a permanent, checkable record that a specific actor authorized a specific action (the signature). On their own, neither pattern knows about the other, which leaves three questions unanswered when the same person has both — and this composition answers all three.
+
+First and most important: if you revoke someone's login, can they still produce new signatures? Here the answer is no. The composition checks, every time an actor goes to sign, that their login credential is still active, and it makes that check at the same instant it records the signature, so a revocation can't slip through a gap. Crucially, signatures made *before* the revocation stay valid — they were properly authorized at the time, and erasing them would be wrong — so the cascade only closes the door going forward; it never rewrites the past.
+
+Second: the login secret and the signing key are kept as two separate things; the composition never uses one as the other (a password hash is not a signing key). Third: the login identity and the signing identity are locked together as one principal, so any signature can always be traced back to the person who logged in.
+
+The composition's defining emergent guarantee — a property that appears only when the two patterns are combined, belonging to neither alone — is that revocation cascade: a revoked login closes the signing surface. Its most common uses are regulated systems where the same person both logs in and signs actions of consequence: a clinician authenticating and then electronically signing a controlled-substance prescription, a bank officer logging in and attesting a wire approval, a developer authenticating and signing a release commit at a regulated software vendor. Any system where revoking someone's access must also stop them from producing new signed authorizations — and where an auditor must be able to trace each signature to the authenticated identity behind it — is a candidate for this composition.
 
 ---
 
@@ -30,15 +38,6 @@ The second concept is **secret-surface separation**. The authentication credenti
 The third concept is **namespace binding**. Attestations are attributed to `actor_ref`; sessions and credentials are keyed on `principal_ref`. If the two namespaces are allowed to diverge, an audit record attributed to one identity surface cannot be reconciled to the session or credential record on the other — a forensic reconstruction problem. The composition binds the two namespaces bijectively: each authenticated actor is one `(principal_ref, actor_ref)` pair, recorded at registration and immutable thereafter, so an attestation's `actor_ref` always resolves to exactly one authenticated `principal_ref` and vice versa.
 
 This is a composition, not a new primitive. Credential and Actor Identity are unchanged; Authenticated Actor is the wiring that makes them coherent for a single principal. It introduces emergent actions — `register_authenticated_actor`, `attest_as_actor`, and the read-only `verify_actor_attestation` — that belong to no single constituent and exist only because the two atoms are wired together. What it is *not*: it is not the credential-revocation surface (the identity-management surface calls `Credential.revoke`; this composition provides the downstream gate, exactly as Login provides the downstream session cascade without initiating the revocation); it is not the actor registry that provisions the attestation key's public material (an Actor Registry / Identity Provisioning concept Actor Identity already defers to); it is not an authorization surface deciding what the authenticated actor may *do* (Permissions); and it is not a session manager (Login). Each is named in Edge cases.
-
----
-
-## Summary
-
-Authenticated Actor is a composition — a specification that wires two freestanding patterns together — that ties a principal's *login* to their *signature*. One pattern, Credential, checks that a presented secret belongs to a principal (the login). The other, Actor Identity, produces an attestation: a permanent, checkable record that a specific actor authorized a specific action (the signature). On their own, neither pattern knows about the other, which leaves three questions unanswered when the same person has both — and this composition answers all three. First and most important: if you revoke someone's login, can they still produce new signatures? Here the answer is no. The composition checks, every time an actor goes to sign, that their login credential is still active, and it makes that check at the same instant it records the signature, so a revocation can't slip through a gap. Crucially, signatures made *before* the revocation stay valid — they were properly authorized at the time, and erasing them would be wrong — so the cascade only closes the door going forward; it never rewrites the past. Second: the login secret and the signing key are kept as two separate things; the composition never uses one as the other (a password hash is not a signing key). Third: the login identity and the signing identity are locked together as one principal, so any signature can always be traced back to the person who logged in.
-
-The composition's defining emergent guarantee — a property that appears only when the two patterns are combined, belonging to neither alone — is that revocation cascade: a revoked login closes the signing surface. Its most common uses are regulated systems where the same person both logs in and signs actions of consequence: a clinician authenticating and then electronically signing a controlled-substance prescription, a bank officer logging in and attesting a wire approval, a developer authenticating and signing a release commit at a regulated software vendor. Any system where revoking someone's access must also stop them from producing new signed authorizations — and where an auditor must be able to trace each signature to the authenticated identity behind it — is a candidate for this composition.
-
 
 ---
 
@@ -62,7 +61,7 @@ The composition owns emergent state that wires the two constituents into one aut
 
 - **`principal_to_actor`** — map from `principal_ref` to `{actor_ref, credential_type, credential_id, bound_at}`. Populated atomically by `register_authenticated_actor` after `Credential.register` succeeds; immutable thereafter (no action rebinds an existing principal). `credential_type` is the **gating type** — the credential type whose `Active` status the attest gate consults — and `credential_id` is the *initial* credential record for traceability; the gate keys on the `(principal_ref, credential_type)` pair (not the fixed `credential_id`) so that a rotation successor keeps the surface open. This is the namespace-binding index: it records *that* a principal was bound to an actor, under which gating credential type, and when.
 - **`actor_to_principal`** — reverse map from `actor_ref` to `principal_ref`, maintained as the strict inverse of `principal_to_actor` and written in the same atomic step. Used by `verify_actor_attestation` to resolve a verified attestation's `actor_ref` back to its authenticated `principal_ref` without a full scan. Immutable once written.
-- **`attest_log`** — append-only record of every `attest_as_actor` call, whether it produced an attestation or was refused. Each entry carries: `entry_id` (opaque, system-generated), `principal_ref`, `actor_ref` (null when the call failed before the binding resolved), `action_ref`, `outcome` (one of: `success` | `not-bound` | `credential-not-active(observed_status)` | `invalid-attest-credential` | `attest-failed` | `invalid-request`) — where `observed_status` is the status of the most-recent credential record for the `(principal_ref, credential_type)` pair (`Revoked` | `Expired` | `Rotated`), the absence of any `Active` credential being what closed the gate, `attestation_id` (present only on `success`; null otherwise), `attempted_at`. This log is the composition's own composition-layer query surface; the **attestation store is the non-repudiable record of record** for the successful signatures it references. The two are redundant by design, exactly as Login pairs its `login_event_log` with the Audit Trail — but here the tamper-evident external-auditor surface is the attestation store itself, not a separate Audit Trail.
+- **`attest_log`** — append-only record of every `attest_as_actor` call, whether it produced an attestation or was refused. Each entry carries: `entry_id` (opaque, system-generated), `principal_ref`, `actor_ref` (null when the call failed before the binding resolved), `action_ref`, [Outcome] (one of: `success` | `not-bound` | `credential-not-active(observed_status)` | `invalid-attest-credential` | `attest-failed` | `invalid-request`) — where [Observed Status] is the status of the most-recent credential record for the `(principal_ref, credential_type)` pair (`Revoked` | `Expired` | `Rotated`), the absence of any `Active` credential being what closed the gate, `attestation_id` (present only on `success`; null otherwise), `attempted_at`. This log is the composition's own composition-layer query surface; the **attestation store is the non-repudiable record of record** for the successful signatures it references. The two are redundant by design, exactly as Login pairs its `login_event_log` with the Audit Trail — but here the tamper-evident external-auditor surface is the attestation store itself, not a separate Audit Trail.
 
 The credential store and the attestation store are owned by their constituent instances; the composition duplicates neither.
 
@@ -87,7 +86,7 @@ No primitive is case-sensitivity-normalized at the composition layer; deployment
 
 ### Action wiring
 
-The composition exposes three actions: one intake (`register_authenticated_actor`), one emergent gated-attest (`attest_as_actor`), and one read-only query (`verify_actor_attestation`).
+The composition exposes three actions: one intake ([Register Authenticated Actor]), one emergent gated-attest ([Attest As Actor]), and one read-only query ([Verify Actor Attestation]).
 
 **Uniform constituent-rejection mapping.** Every constituent call below maps its rejection taxonomy to a composition-boundary code as named in each step. Where a constituent rejection arrives *before* any irreversible effect, it surfaces as a clean pre-state rejection that leaves no emergent state populated; the composition writes its `attest_log` entry (for `attest_as_actor`) or no map (for `register_authenticated_actor`) accordingly.
 
@@ -109,7 +108,7 @@ register_authenticated_actor(principal_ref, actor_ref, credential_material, cred
 Binds an `actor_ref` to a `principal_ref` and registers the principal's authentication credential, establishing the namespace binding and the gating credential together. Steps:
 
 1. Validate: `principal_ref`, `actor_ref`, `credential_material` each non-empty; `credential_type` (or `gating_credential_type_default`) non-empty; `expires_at`, if supplied, a future timestamp. Any violation → `rejected(invalid-request)`. Stop.
-2. **Namespace-conflict guard (the bijection precondition).** If `principal_ref` is already a key of `principal_to_actor`, **or** `actor_ref` is already a key of `actor_to_principal`, → `rejected(namespace-conflict)`; nothing is written. This enforces the bijection at the boundary: neither namespace may be double-bound (Invariant 3).
+2. **Namespace-conflict guard (the bijection precondition).** If `principal_ref` is already a key of `principal_to_actor`, **or** `actor_ref` is already a key of `actor_to_principal`, → [Namespace Conflict]; nothing is written. This enforces the bijection at the boundary: neither namespace may be double-bound (Invariant 3).
 3. Call `Credential.register(principal_ref, credential_material, credential_type, expires_at?)`. Map `duplicate-active-credential` → `rejected(duplicate-active-credential)` (the principal already holds an `Active` credential of this type — the caller rotates rather than re-registers, per Credential's own contract), `invalid-request` → `rejected(invalid-request)`, `storage-failure` → `rejected(storage-failure)`. On any rejection, **no binding is written**. On success, obtain `credential_id`.
 4. **Atomically** write `principal_to_actor[principal_ref] = {actor_ref, credential_type, credential_id, bound_at = now}` and the strict inverse `actor_to_principal[actor_ref] = principal_ref`. (The two writes share one transaction; a discrepancy between them is evidence of a failed atomic write — Invariant 3.) If this write fails after the credential was registered → `rejected(storage-failure)`, with the orphaned credential (registered, unbound) surfaced as a finding per the *Cross-store consistency under partial failure* edge case.
 5. Return `{credential_id, actor_ref, bound_at}`. The principal is now an **authenticated actor**: it can authenticate (via the credential) and attest (via the bound actor surface, gated on the credential's `Active` status).
@@ -133,9 +132,9 @@ attest_as_actor(principal_ref, action_ref, attest_credential) →
 Produces a non-repudiable attestation for the bound actor, **only if the principal's authentication credential is currently `Active`** — the revocation cascade, enforced as a forward gate. This action is the composition's load-bearing surface. Steps:
 
 1. Validate: `principal_ref`, `action_ref`, `attest_credential` each non-empty. Any violation → append `attest_log` entry `{outcome: invalid-request, actor_ref: null, attestation_id: null}`; return `rejected(invalid-request)`. Stop.
-2. Resolve the binding: `principal_to_actor[principal_ref] → {actor_ref, credential_type}`. Absent → append `attest_log` `{outcome: not-bound, actor_ref: null}`; return `rejected(not-bound)`. Stop. (`not-bound` is structurally distinct from `credential-not-active`: the principal was never an authenticated actor, versus the principal was bound but its credential is no longer `Active`.)
-3. **The cascade gate (read the credential status and attest atomically).** Read the credential store for an `Active` credential for `(principal_ref, credential_type)`. If none exists — because the credential was revoked (Credential Invariant 4), expired (Invariant 11), or rotated without a current `Active` successor — append `attest_log` `{outcome: credential-not-active(observed_status), actor_ref}`; return `rejected(credential-not-active)`. Stop. **The status read and the `Actor Identity.attest` call in step 4 are one serialized critical section keyed on `principal_ref`** (implementations serialize on `principal_ref`, exactly as Login serializes its cascade on `credential_id` and Defensible Retention serializes hold-check-and-purge on `record_ref`) — and because `Credential.revoke` is issued *outside* this composition (on the credential record, not through a composition action), the serialization point that makes it contend is the gating `(principal_ref, credential_type)` credential record itself: the gate reads that record's status under, and the attestation commits while holding, the same record lock an externally-issued `Credential.revoke` must acquire to transition it (the per-pair lock Credential's active-uniqueness constraint already imposes — Credential Invariant 2), so a revoke is ordered strictly before or after the section, never inside it. Equivalently, an implementation may re-validate the credential's `Active` status under that lock at attest-commit; a composition-local `principal_ref` mutex that the external `revoke` does not contend on is **not** sufficient. No concurrent `Credential.revoke` may interleave between the status read and the attestation write such that an attestation is produced while the credential is non-`Active`. This atomicity is the load-bearing concurrency claim (Invariant 1) and the formal-model subject; a non-atomic check-then-attest is the time-of-check-to-time-of-use (TOCTOU) hazard the buggy twin demonstrates.
-4. Call `Actor Identity.attest(action_ref, actor_ref, attest_credential)` — passing the **bound `actor_ref`** (never a caller-supplied actor reference) and the **caller-supplied attestation credential** (never the authentication `credential_material` or the Credential verifier — Invariant 2). Map `invalid-credential` → `rejected(invalid-attest-credential)` (the signing material did not validate against the actor registry's public material for `actor_ref`), `invalid-request` → `rejected(invalid-request)`, `storage-failure` → `rejected(attest-failed)`. On any rejection, append the corresponding `attest_log` entry with `attestation_id: null`; return the mapped rejection. On success, obtain `attestation_id`.
+2. Resolve the binding: `principal_to_actor[principal_ref] → {actor_ref, credential_type}`. Absent → append `attest_log` `{outcome: not-bound, actor_ref: null}`; return [Not Bound]. Stop. (`not-bound` is structurally distinct from `credential-not-active`: the principal was never an authenticated actor, versus the principal was bound but its credential is no longer `Active`.)
+3. **The cascade gate (read the credential status and attest atomically).** Read the credential store for an `Active` credential for `(principal_ref, credential_type)`. If none exists — because the credential was revoked (Credential Invariant 4), expired (Invariant 11), or rotated without a current `Active` successor — append `attest_log` `{outcome: credential-not-active(observed_status), actor_ref}`; return [Credential Not Active]. Stop. **The status read and the `Actor Identity.attest` call in step 4 are one serialized critical section keyed on `principal_ref`** (implementations serialize on `principal_ref`, exactly as Login serializes its cascade on `credential_id` and Defensible Retention serializes hold-check-and-purge on `record_ref`) — and because `Credential.revoke` is issued *outside* this composition (on the credential record, not through a composition action), the serialization point that makes it contend is the gating `(principal_ref, credential_type)` credential record itself: the gate reads that record's status under, and the attestation commits while holding, the same record lock an externally-issued `Credential.revoke` must acquire to transition it (the per-pair lock Credential's active-uniqueness constraint already imposes — Credential Invariant 2), so a revoke is ordered strictly before or after the section, never inside it. Equivalently, an implementation may re-validate the credential's `Active` status under that lock at attest-commit; a composition-local `principal_ref` mutex that the external `revoke` does not contend on is **not** sufficient. No concurrent `Credential.revoke` may interleave between the status read and the attestation write such that an attestation is produced while the credential is non-`Active`. This atomicity is the load-bearing concurrency claim (Invariant 1) and the formal-model subject; a non-atomic check-then-attest is the time-of-check-to-time-of-use (TOCTOU) hazard the buggy twin demonstrates.
+4. Call `Actor Identity.attest(action_ref, actor_ref, attest_credential)` — passing the **bound `actor_ref`** (never a caller-supplied actor reference) and the **caller-supplied attestation credential** (never the authentication `credential_material` or the Credential verifier — Invariant 2). Map `invalid-credential` → [Invalid Attest Credential] (the signing material did not validate against the actor registry's public material for `actor_ref`), `invalid-request` → `rejected(invalid-request)`, `storage-failure` → [Attest Failed]. On any rejection, append the corresponding `attest_log` entry with `attestation_id: null`; return the mapped rejection. On success, obtain `attestation_id`.
 5. Append `attest_log` `{outcome: success, principal_ref, actor_ref, action_ref, attestation_id, attempted_at: now}`. Return `attestation_id`. The attestation is recorded in the Actor Identity store under the bound actor, immutably (Actor Identity Invariant 1), and remains valid independent of any *later* credential revocation (Actor Identity Invariant 8 — non-repudiation conditional on credential integrity at attestation time).
 
 ---
@@ -257,6 +256,109 @@ These questions arise around the composition but cannot be answered from its rec
 
 ---
 
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are the three emergent actions it exposes ([Register Authenticated Actor], [Attest As Actor], [Verify Actor Attestation]) — none belonging to a single constituent — the attest-log fields those actions record ([Outcome], [Observed Status]), and its own rejections ([Namespace Conflict], [Not Bound], [Credential Not Active], [Invalid Attest Credential], [Attest Failed]). Its emergent state — the namespace-binding maps (`principal_to_actor`, `actor_to_principal`) and the `attest_log` — is a composition-introduced surface no constituent provides, left as backticked store tokens rather than carded. References to the constituent atoms and their operations — Credential's `register` / `rotate` / `revoke`, Actor Identity's `attest` / `verify` — the relayed tokens (`principal_ref`, `actor_ref`, `action_ref`, `credential_material`, `attest_credential`, `credential_type`, `credential_id`, `attestation_id`), the credential states (`Active` / `Revoked` / `Expired` / `Rotated`), and the inherited rejections (`invalid-request`, `duplicate-active-credential`, `storage-failure`) remain qualified/backticked, not carded here. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Register Authenticated Actor
+
+The composition's intake action: it binds an `actor_ref` to a `principal_ref` (behind the namespace-conflict guard) and registers the principal's authentication credential through `Credential.register` in one step, writing the strict-inverse binding maps atomically. Returns `{credential_id, actor_ref, bound_at}`, or [Namespace Conflict] / an inherited Credential rejection (`duplicate-active-credential`, `invalid-request`, `storage-failure`).
+
+Kind: Operation
+
+#### Attest As Actor
+
+The composition's load-bearing emergent action: it produces a non-repudiable attestation for the bound actor **only if** the principal's gating credential is currently `Active` — the revocation cascade, enforced as a forward gate read atomically with the attestation write (Invariant 1). Returns the `attestation_id`, or [Not Bound] (principal never bound), [Credential Not Active] (the gate is closed), [Invalid Attest Credential] (signing key invalid), or [Attest Failed]. Every call appends exactly one [Outcome] to the `attest_log`.
+
+Kind: Operation
+
+#### Verify Actor Attestation
+
+The composition's read-only query: a pass-through to `Actor Identity.verify` that additionally resolves the verified attestation's `actor_ref` back to its bound `principal_ref`. Returns `{result, actor_ref?, principal_ref?}`; changes no state.
+
+Kind: Operation
+
+#### Namespace Conflict
+
+The composition's own rejection from [Register Authenticated Actor] — returned when the `principal_ref` or the `actor_ref` is already bound, enforcing the principal ⇔ actor bijection at the boundary (Invariant 3). Nothing is written.
+
+Kind:      Member
+Member of: the register rejection
+Role:      Rejection
+Projects:  namespace-conflict
+
+#### Not Bound
+
+The composition's own rejection from [Attest As Actor] — returned when the `principal_ref` was never bound through the composition. Structurally distinct from [Credential Not Active]: *never an authenticated actor*, versus *bound but no longer authenticated*.
+
+Kind:      Member
+Member of: the attest rejection
+Role:      Rejection
+Projects:  not-bound
+
+#### Credential Not Active
+
+The composition's load-bearing rejection from [Attest As Actor] — the revocation cascade's observable form: returned when no `Active` credential exists for the bound `(principal_ref, credential_type)` pair (revoked, expired, or rotated without a current successor). Carries the [Observed Status] of the most-recent credential record.
+
+Kind:      Member
+Member of: the attest rejection
+Role:      Rejection
+Projects:  credential-not-active
+
+#### Invalid Attest Credential
+
+The composition's own rejection from [Attest As Actor] — the mapping of `Actor Identity.attest`'s `invalid-credential`: the presented signing material did not validate against the actor registry's public material for the bound `actor_ref`. Independent of the authentication gate (secret-surface separation, Invariant 2).
+
+Kind:      Member
+Member of: the attest rejection
+Role:      Rejection
+Projects:  invalid-attest-credential
+
+#### Attest Failed
+
+The composition's own rejection from [Attest As Actor] — the mapping of `Actor Identity.attest`'s `storage-failure`: the attestation could not be recorded.
+
+Kind:      Member
+Member of: the attest rejection
+Role:      Rejection
+Projects:  attest-failed
+
+#### Outcome
+
+The attest-log entry's classification of an [Attest As Actor] call: `success`, or one of the named rejection reasons ([Not Bound], [Credential Not Active], [Invalid Attest Credential], [Attest Failed], `invalid-request`). Every call appends exactly one entry, giving the composition a records-alone audit surface (Invariant 4).
+
+Kind:      Field
+Field of:  the attest-log entry
+Role:      the attempt classification
+Projects:  outcome
+
+#### Observed Status
+
+The credential status the attest gate observed when it refused a call — the most-recent credential record's status for the `(principal_ref, credential_type)` pair (`Revoked` | `Expired` | `Rotated`), the absence of any `Active` credential being what closed the gate. Carried inside the [Credential Not Active] outcome for post-hoc forensics.
+
+Kind:      Field
+Field of:  the attest-log entry
+Role:      the gate-closing credential status
+Projects:  observed_status
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Register Authenticated Actor]: #register-authenticated-actor
+[Attest As Actor]: #attest-as-actor
+[Verify Actor Attestation]: #verify-actor-attestation
+[Namespace Conflict]: #namespace-conflict
+[Not Bound]: #not-bound
+[Credential Not Active]: #credential-not-active
+[Invalid Attest Credential]: #invalid-attest-credential
+[Attest Failed]: #attest-failed
+[Outcome]: #outcome
+[Observed Status]: #observed-status
+
+---
+
 ## Standards references
 
 Authenticated Actor is the structural form of the requirement that authentication and non-repudiable attestation be bound under one principal, with revocation of the former closing the latter. Its primary anchors:
@@ -279,7 +381,10 @@ Authenticated Actor inherits the broader standards compliance of its constituent
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 Regulated composition (composes two regulated atoms — Credential and Actor Identity — both carrying the security overlay). The two regulated-overlay conventions — *Regulated adversarial scenarios* and *Generation acceptance* (with the records-clearable / externally-clearable split) — are **inherited from the methodology directly** ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft, not re-derived from predecessor patterns. The primary structural references are [Login](./login.md) for the revocation-cascade shape (Authenticated Actor is Login's outbound-attestation counterpart — Login revokes the derived *session* set; this composition forward-closes the *attest* surface) and the TLA+ TOCTOU buggy-twin discipline, [Attributed Permissions Admin](./attributed-permissions-admin.md) for the two-atom compliance-pairing shape and the attestation-attribution surface, and [Immutable Transaction Ledger](./immutable-transaction-ledger.md) for the compact single-load-bearing-invariant TLA+ model + buggy-twin structure. The motivating gap is `demos/attributed-permissions-admin/CORNERS.md` §Cross-atom identity surface aliasing, whose three questions (revocation cascade, secret interchangeability, audit identity unification) become this composition's three emergent invariants.
 
@@ -315,3 +420,7 @@ Regulated composition (composes two regulated atoms — Credential and Actor Ide
 - *Final Critique 4 — `observed_status` value set not pinned — refining (Pass 3, primitive-policy completeness).* The `attest_log` `credential-not-active(observed_status)` outcome did not state what `observed_status` reports when several terminal credential records exist for the pair. The load-bearing behavior (gate closed) is unaffected, but the records-clearable surface is sharper with it pinned. → Defined `observed_status` as the most-recent credential record's status for the pair (`Revoked` | `Expired` | `Rotated`), the absence of any `Active` credential being what closed the gate.
 
 **Foundational findings: zero. Grounds on Final Critique 4.** The two structural-milestone forthcoming-references to this composition were already live links at drafting; their `*(partially resolved)*` status markers in `atoms/credential.md` and `atoms/actor-identity.md` are retired in this same change.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at five). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases (10 terms): 3 Operations — the emergent actions ([Register Authenticated Actor], [Attest As Actor], [Verify Actor Attestation]); 5 Members — the composition's own rejections ([Namespace Conflict] on register; [Not Bound], [Credential Not Active], [Invalid Attest Credential], [Attest Failed] on attest); and 2 Fields — the attest-log payloads ([Outcome], [Observed Status]). **No Type card:** the natural concept name "authenticated actor" collides with the page H1, and the composition's emergent state — the namespace-binding maps (`principal_to_actor`, `actor_to_principal`) and the `attest_log` — is a composition-introduced surface left as backticked store tokens. **No Parameter:** every action input (`principal_ref`, `actor_ref`, `credential_material`, `attest_credential`, `credential_type`, `action_ref`, `attestation_id`) is a relayed constituent concept, kept backticked. Survivors left backticked: the fenced projected-contract signatures (the action-wiring `#### \`name\`` headings and their code blocks); the qualified constituent calls (Credential's `register` / `rotate` / `revoke`, Actor Identity's `attest` / `verify`) and outcomes (`verified`, `failed-verification(...)`, `success`); the credential states (`Active` / `Revoked` / `Expired` / `Rotated`); the inherited rejections (`invalid-request`, `duplicate-active-credential`, `storage-failure`, `invalid-credential`); the emergent-state store tokens; and concrete example ids. Constituent atom names remain the existing full links to `../atoms/*`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), its first run-on paragraph split one-idea-per-paragraph (cut #1, lossless) with the "emergent guarantee / common uses" paragraph kept intact; the dense descriptive top blockquote folded out after confirming each claim (the two-atom wiring; the three owned concepts — revocation cascade, secret-surface separation, namespace binding; the atomic-gate load-bearing cascade; the does-not-revoke/register/authorize boundary) is carried by Summary / Intent / Composes / the load-bearing wiring decision; no *also-known-as* line existed, so none was invented. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #5 — skipped (with reason):** the composition owns no state machine — the attest gate is a status check against Credential's own `Active`-vs-terminal states (the constituent's state machine), and the cascade is forward-closure, not a composition-owned lifecycle to tabulate. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-06-10`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (10 terms); five composition-level invariants preserved; the `.tla` models untouched — harness re-run green: `authenticated-actor.tla` PASS (16 states) + `authenticated-actor-buggy.tla --buggy` rejected on `Inv1_NoSignAfterRevoke`.
+
+</details>
