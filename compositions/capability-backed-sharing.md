@@ -15,7 +15,15 @@ toc: true
 {:toc}
 </details>
 
-> A regulated composition that reconciles two things that look incompatible: **bearer-token sharing** (possession of a token is sufficient authorization — the redeemer's identity is never checked or recorded) and **regulated disclosure audit** (every disclosure of subject data must be accountable to a named, non-repudiable authorizing party). It composes **Capability** (the bearer token whose scope authorizes a specific disclosure), **Selective Disclosure** (the durable, append-only record that the disclosure occurred — to whom it was authorized, what scope, under what authority), and **Audit Trail** as a substrate (reaching Event Log + Actor Identity + Tamper Evidence + Retention Window transitively). The load-bearing emergent invariant is **audit-subject asymmetry**: every capability-backed disclosure record names the **allocator** — the actor who authorized the share, attested under their own credential at allocation time and carried immutably in the capability's allocation provenance — and, *by construction*, names **no redeemer**, because the bearer presents only the token and Capability performs no identity check at redemption. The composition's second load-bearing claim is the **disclosure-accountability binding bijection** (mirroring Immutable Transaction Ledger): each redemption-that-discloses commits the Selective Disclosure record and the sealed `sharing.disclosed` Audit Trail event together or not at all. Bearer semantics and regulated audit, neither broken. Regulated overlay required. Anchors GDPR (EU General Data Protection Regulation) Article 32, HIPAA (US Health Insurance Portability and Accountability Act) §164.514, and the object-capability (OCAP) model.
+## Summary
+
+Capability-Backed Sharing is a regulated composition — a specification that wires several freestanding patterns together — that solves a problem that looks impossible at first: how to share data using a "bearer token" (a link or token where simply holding it grants access, no login required) while still keeping the strict disclosure records that privacy laws demand. The apparent contradiction is that bearer tokens deliberately don't check who's using them, but regulators want to know who's accountable for every disclosure.
+
+This composition's insight is that the accountable party isn't the person who *used* the token — it's the person who *issued* it. So it records, permanently and with a cryptographic signature, who authorized the share (the allocator), to whom they authorized it, what data, under what legal authority, and for how long — captured at the moment of issuance when that person is present to sign for it. When the token is later redeemed, the disclosure is logged against that authorizer, and the person who actually presented the token is — by design — never named, because the bearer model never asked.
+
+The composition's defining emergent guarantee is exactly this audit-subject asymmetry: the record always answers "who authorized this disclosure?" and never answers "who redeemed it?". Its second guarantee, borrowed from the immutable-ledger pattern it mirrors, is that the disclosure record and its sealed audit event are written together or not at all, so there is never a disclosure without its tamper-evident proof.
+
+Its common uses are exactly the places bearer sharing and regulated audit collide: a hospital sharing a scoped slice of a patient record with a referred specialist via a time-limited link (the minimum-necessary fields, logged against the authorizing clinician), a bank issuing a pre-signed link to disclose a customer's transaction subset to an auditor, or a controller sharing specific personal-data fields with a processor under a consent record. Any system that must share data by token *and* prove from the records who authorized each disclosure — without being able to (or wanting to) name who consumed it — is a candidate for this composition.
 
 ---
 
@@ -33,22 +41,13 @@ This is a composition, not a new primitive. Capability, Selective Disclosure, an
 
 ---
 
-## Summary
-
-Capability-Backed Sharing is a regulated composition — a specification that wires several freestanding patterns together — that solves a problem that looks impossible at first: how to share data using a "bearer token" (a link or token where simply holding it grants access, no login required) while still keeping the strict disclosure records that privacy laws demand. The apparent contradiction is that bearer tokens deliberately don't check who's using them, but regulators want to know who's accountable for every disclosure. This composition's insight is that the accountable party isn't the person who *used* the token — it's the person who *issued* it. So it records, permanently and with a cryptographic signature, who authorized the share (the allocator), to whom they authorized it, what data, under what legal authority, and for how long — captured at the moment of issuance when that person is present to sign for it. When the token is later redeemed, the disclosure is logged against that authorizer, and the person who actually presented the token is — by design — never named, because the bearer model never asked. The composition's defining emergent guarantee is exactly this audit-subject asymmetry: the record always answers "who authorized this disclosure?" and never answers "who redeemed it?". Its second guarantee, borrowed from the immutable-ledger pattern it mirrors, is that the disclosure record and its sealed audit event are written together or not at all, so there is never a disclosure without its tamper-evident proof.
-
-Its common uses are exactly the places bearer sharing and regulated audit collide: a hospital sharing a scoped slice of a patient record with a referred specialist via a time-limited link (the minimum-necessary fields, logged against the authorizing clinician), a bank issuing a pre-signed link to disclose a customer's transaction subset to an auditor, or a controller sharing specific personal-data fields with a processor under a consent record. Any system that must share data by token *and* prove from the records who authorized each disclosure — without being able to (or wanting to) name who consumed it — is a candidate for this composition.
-
-
----
-
 ## Composes
 
 - **[Capability](../atoms/capability.md)** — the bearer-token primitive and the source of the audit asymmetry. `authorize_sharing` calls `Capability.allocate(allocator_ref, scope, max_redemptions, ttl) → capability_token | rejected(invalid-request | storage-failure)`, encoding the sharing descriptor (subject, intended recipient, disclosed scope, authority) as the opaque `scope` value — Capability treats `scope` as a black box and this composition is the pattern that defines and interprets it (Capability's Composition notes name this composition as that pattern). `redeem_and_disclose` calls `Capability.redeem(capability_token) → redeemed(scope, allocator_ref) | invalid(exhausted | expired | revoked | not-known)` — **note `redeem` takes no identity argument and returns the `allocator_ref`**, which is exactly the asymmetry this composition turns into accountability: the redemption surfaces who *authorized* the capability (the allocator, immutable per Capability Invariant 1) and structurally cannot surface who *redeemed* it (Capability Invariant 3 — bearer redemption; Invariant 5 — audit asymmetry). `revoke_sharing` calls `Capability.revoke(capability_token, revoked_by_ref, reason)`. The capability's redemption envelope (`max_redemptions`, `expires_at`) bounds how many disclosures and for how long — a surface Selective Disclosure does not carry.
 
 - **[Selective Disclosure](../atoms/selective-disclosure.md)** — the disclosure-accounting record. `redeem_and_disclose` calls `SelectiveDisclosure.record(subject_ref, recipient, scope, authority, disclosed_at?) → recorded(disclosure_id) | rejected(invalid-request | unknown-authority-type | storage-failure)` with `recipient` = the **allocator-declared intended recipient** (not the unknowable bearer — see Intent and the *Recipient is the allocator-declared intended recipient* edge case), `scope` = the disclosed field subset, and `authority` = the `{type, reference}` the allocator embedded in the capability scope (`type ∈ {consent, legal-hold, regulatory}`). This composition structurally closes Selective Disclosure's **Invariant 5 (no-disclosure-unrecorded)** for capability-backed disclosures by making `redeem_and_disclose` the only disclosure surface and having it always record — exactly as Immutable Transaction Ledger closes Invariant 5 by making `disclose_subset` the sole disclosure surface. The composition also calls `SelectiveDisclosure.read` for the read-only sharing-history queries.
 
-- **[Audit Trail](./audit-trail.md)** — the regulated-audit **substrate**: this composition names it the way an atom is named and reaches **Event Log, Actor Identity, Tamper Evidence, and Retention Window transitively through it** (per the *Compositions of compositions* convention — see [`spec-format.md`](../spec-format.md)), maintaining one Audit Trail instance for all sharing events. This composition records its events by calling **`AuditTrail.record_action(action_ref, actor_ref, credential, data) → event_id | rejected(invalid-credential | invalid-request | recording-failure)` directly on the one Audit Trail instance the substrate carries** — the established substrate-composition pattern (Multi-Party Approval, Immutable Transaction Ledger, and Resolve a Person's Data Rights record their own events on the Audit Trail their substrate carries). The capability is Audit Trail's own declared `record_action` and its Invariant 1 (attribution coverage), reached through the named substrate — not an ambient reach-through. Two event kinds carry the asymmetry: **`sharing.authorized`**, recorded at `authorize_sharing` and **attested under the allocator's own credential** (the allocator is present and accountable), names the allocator non-repudiably; **`sharing.disclosed`**, recorded at each `redeem_and_disclose`, is attested under the **composition's service identity** (the allocator is not present at redemption; the bearer has no credential) and carries the `allocator_ref` and `capability_token` in its `data` while carrying **no redeemer identity**. The substrate seals both (Tamper Evidence) and governs their retention (Retention Window) so the accountability outlives the disclosure.
+- **[Audit Trail](./audit-trail.md)** — the regulated-audit **substrate**: this composition names it the way an atom is named and reaches **Event Log, Actor Identity, Tamper Evidence, and Retention Window transitively through it** (per the *Compositions of compositions* convention — see [`spec-format.md`](../spec-format.md)), maintaining one Audit Trail instance for all sharing events. This composition records its events by calling **`AuditTrail.record_action(action_ref, actor_ref, credential, data) → event_id | rejected(invalid-credential | invalid-request | recording-failure)` directly on the one Audit Trail instance the substrate carries** — the established substrate-composition pattern (Multi-Party Approval, Immutable Transaction Ledger, and Resolve a Person's Data Rights record their own events on the Audit Trail their substrate carries). The capability is Audit Trail's own declared `record_action` and its Invariant 1 (attribution coverage), reached through the named substrate — not an ambient reach-through. Two event kinds carry the asymmetry: **[Sharing Authorized]**, recorded at `authorize_sharing` and **attested under the allocator's own credential** (the allocator is present and accountable), names the allocator non-repudiably; **[Sharing Disclosed]**, recorded at each `redeem_and_disclose`, is attested under the **composition's service identity** (the allocator is not present at redemption; the bearer has no credential) and carries the `allocator_ref` and `capability_token` in its `data` while carrying **no redeemer identity**. The substrate seals both (Tamper Evidence) and governs their retention (Retention Window) so the accountability outlives the disclosure.
 
 The Capability store, the Selective Disclosure store, and the substrate's stores (Event Log, Actor Identity, Tamper Evidence, Retention Window) are owned by their respective constituent instances. This composition owns no constituent state — it indexes across them with its own emergent maps (`capability_to_sharing`, `disclosure_to_redemption`, below) and binds each disclosure to its sealed event.
 
@@ -80,14 +79,14 @@ The Capability store (capability records, including the immutable `allocator_ref
 - **`capability_token`** — opaque, cryptographically random bearer credential and the key of `capability_to_sharing`; produced by `Capability.allocate`, presented to `redeem_and_disclose` and `revoke_sharing`. Byte-identity equality; never normalized. It is the bearer credential — the *only* thing required to redeem, and the composition records no identity alongside its presentation (Invariant 1).
 - **`allocator_ref`** — opaque reference to the authorizing actor; non-empty (`invalid-request`). Flows to `Capability.allocate` (recorded immutably), to the `sharing.authorized` `record_action` as `actor_ref` (attested under the allocator's credential), and into every disclosure's `data` and the `capability_to_sharing` index. The one identity the composition records for a share.
 - **`credential`** — the allocator's opaque credential at `authorize_sharing` (consumed by the `sharing.authorized` attestation, never persisted), and the revoker's credential at `revoke_sharing`. The composition never accepts, requests, or records a *redeemer* credential — `redeem_and_disclose` takes only the `capability_token` (Invariant 1).
-- **`subject_ref`** / **`recipient`** / **`disclosed_scope`** / **`authority`** — the sharing descriptor fields parsed from the capability scope per `sharing_scope_grammar`; passed to `SelectiveDisclosure.record`, which applies its own non-empty / authority-type validation. `recipient` is the **allocator-declared intended recipient**, not the bearer (see Intent).
+- **`subject_ref`** / **`recipient`** / **`disclosed_scope`** / **`authority`** — the sharing descriptor fields parsed from the capability scope per `sharing_scope_grammar`; passed to `SelectiveDisclosure.record`, which applies its own non-empty / authority-type validation. [Recipient] is the **allocator-declared intended recipient**, not the bearer (see Intent).
 - **`disclosed_at`** — optional; defaults to the substrate clock at record time (logic-confinement, inherited from the substrate). Best-effort wall-time; the Event Log `sequence_number` is the authoritative order source.
 
 No primitive is case-sensitivity-normalized at the composition layer; deployments wanting normalization wire it at the calling layer before invoking composition actions.
 
 ### Action wiring
 
-The composition exposes four actions: one allocation-with-attestation (`authorize_sharing`), one emergent redeem-and-disclose (`redeem_and_disclose`, the load-bearing surface), one revocation (`revoke_sharing`), and read-only queries.
+The composition exposes four actions: one allocation-with-attestation ([Authorize Sharing]), one emergent redeem-and-disclose ([Redeem And Disclose], the load-bearing surface), one revocation ([Revoke Sharing]), and read-only queries.
 
 **Uniform `record_action` rejection-mapping.** For every `AuditTrail.record_action` call below, the substrate's taxonomy (`invalid-credential | invalid-request | recording-failure`) maps as named per step. Where the audit write is part of an atomic binding (the disclosure path), a substrate failure aborts the whole binding (no partial state) under the host transaction boundary; the cross-store-consistency edge case governs deployments whose stores cannot co-transact.
 
@@ -110,7 +109,7 @@ authorize_sharing(allocator_ref, credential, sharing_descriptor, max_redemptions
 Allocates a bearer capability whose scope *is* an authorized disclosure, and records the allocator's non-repudiable authorization. Steps:
 
 1. Validate: `allocator_ref`, `credential` non-empty; `max_redemptions` (if supplied) a positive integer; `ttl` (if supplied) positive. Any violation → `rejected(invalid-request)`. Stop.
-2. Parse `sharing_descriptor` against `sharing_scope_grammar` into `{subject_ref, recipient, disclosed_scope, authority}`. A descriptor that does not parse, or with empty `subject_ref`/`recipient`/`disclosed_scope`/`authority.reference` → `rejected(invalid-sharing-descriptor)`. If `authority.type ∉ {consent, legal-hold, regulatory}` → `rejected(unknown-authority-type)` (the same authority bound Selective Disclosure enforces, checked at the composition boundary so a malformed share is refused before a capability is allocated). Stop.
+2. Parse `sharing_descriptor` against `sharing_scope_grammar` into `{subject_ref, recipient, disclosed_scope, authority}`. A descriptor that does not parse, or with empty `subject_ref`/`recipient`/`disclosed_scope`/`authority.reference` → [Invalid Sharing Descriptor]. If `authority.type ∉ {consent, legal-hold, regulatory}` → `rejected(unknown-authority-type)` (the same authority bound Selective Disclosure enforces, checked at the composition boundary so a malformed share is refused before a capability is allocated). Stop.
 3. `Capability.allocate(allocator_ref, scope = <descriptor encoded per grammar>, max_redemptions ?? default_max_redemptions, ttl ?? default_capability_ttl)` → `capability_token`. Map `invalid-request` → `rejected(invalid-request)`, `storage-failure` → `rejected(storage-failure)`. On rejection, **nothing further is recorded**.
 4. `AuditTrail.record_action(action_ref = sharing.authorized, actor_ref = allocator_ref, credential, data = {capability_token, subject_ref, recipient, disclosed_scope, authority, max_redemptions, expires_at, authorized_at = now}, retention_policy = audit_trail_retention_policy)` → `authorization_event_id` — **attested under the allocator's own credential**, the allocator's non-repudiable commitment that they authorized this share (Invariant 3). Map `invalid-credential` / `invalid-request` → `rejected(invalid-request)` (a clean pre-disclosure rejection — the capability is allocated but unattached; surfaced as a finding per the *Cross-store consistency* edge case, mirroring an orphaned allocation), `recording-failure` → `rejected(recording-failure)`.
 5. Populate `capability_to_sharing[capability_token] = {allocator_ref, subject_ref, recipient, disclosed_scope, authority, authorization_event_id, allocated_at = now}`. Steps 3–5 commit **together or not at all** under the host transaction boundary (Invariant 3); where the Capability and Audit Trail stores cannot co-transact, the unattached-capability orphan is surfaced and recovered per the *Cross-store consistency under partial failure* edge case. Return `{capability_token, authorization_event_id}`. The allocator delivers the `capability_token` to the intended recipient out-of-band (email, link, API response) — the delivery channel is outside this composition's scope, exactly as Capability's token delivery is.
@@ -129,9 +128,9 @@ redeem_and_disclose(capability_token) →
 Redeems the capability **by possession alone** — no identity argument — then records the disclosure accountably to the allocator while naming no redeemer, sealing the disclosure and its audit event together. This is the composition's load-bearing surface. Steps:
 
 1. `Capability.redeem(capability_token)`. On `invalid(exhausted | expired | revoked | not-known)` → return the same `invalid(...)` (first-class outcomes, not rejections — the bearer presented a token that is spent, lapsed, cancelled, or unknown; **nothing is disclosed or recorded**). On `redeemed(scope, allocator_ref)` → proceed. **No identity is accepted, requested, or recorded at this step** — `redeem_and_disclose` takes exactly one argument, the `capability_token` (Invariant 1, inheriting Capability Invariant 3).
-2. Resolve `capability_to_sharing[capability_token]` for the parsed `{subject_ref, recipient, disclosed_scope, authority}`. Absent → `rejected(not-authorized-sharing)` (the token is a valid Capability but was not allocated through this composition's `authorize_sharing`, so it carries no this composition sharing descriptor — a token from another Capability composition redeemed here; nothing is disclosed). The `allocator_ref` from step 1's `redeemed(...)` must equal the indexed `allocator_ref` (a consistency check; a mismatch is a finding).
+2. Resolve `capability_to_sharing[capability_token]` for the parsed `{subject_ref, recipient, disclosed_scope, authority}`. Absent → [Not Authorized Sharing] (the token is a valid Capability but was not allocated through this composition's `authorize_sharing`, so it carries no this composition sharing descriptor — a token from another Capability composition redeemed here; nothing is disclosed). The `allocator_ref` from step 1's `redeemed(...)` must equal the indexed `allocator_ref` (a consistency check; a mismatch is a finding).
 3. **Commit atomically** — the binding (Invariant 2), under the host transaction boundary: `SelectiveDisclosure.record(subject_ref, recipient, scope = disclosed_scope, authority, disclosed_at = now)` → `disclosure_id`; then `AuditTrail.record_action(action_ref = sharing.disclosed, actor_ref = application_actor_ref, credential = application_credential, data = {disclosure_id, capability_token, allocator_ref, subject_ref, recipient, disclosed_scope, authority, authorization_event_id, disclosed_at = now}, retention_policy = audit_trail_retention_policy)` → `event_id` — **attested under the composition's service identity; the `data` names the `allocator_ref` (the authorizing party) and carries no redeemer identity** (Invariant 1); then populate `disclosure_to_redemption[disclosure_id] = {capability_token, allocator_ref, sharing_disclosed_event_id = event_id, disclosed_at}`. The redemption-decrement (step 1's `Capability.redeem`), the Selective Disclosure record, and the `sharing.disclosed` event commit **together or not at all** under the host transaction boundary — a substrate `recording-failure` or a Selective Disclosure `storage-failure` aborts the binding and the redemption-decrement rolls back with it (unlike Resolve a Person's Data Rights' irreversible purge, a redemption-decrement is a recoverable store write under the transaction, so the binding is atomic in the conforming case — closer to Immutable Transaction Ledger than Resolve a Person's Data Rights). Map a failed disclosure or audit write → `rejected(recording-failure)`; the orphan, where the stores cannot co-transact, is handled per the *Cross-store consistency under partial failure* edge case.
-4. Return `{disclosure_id, event_id, disclosed_scope, allocator_ref}`. The host now assembles and transmits the actual data for `disclosed_scope` to the intended recipient — the disclosure *delivery* is the host's obligation, signalled by the disclosure record; this composition recorded *what was disclosed, to whom it was authorized, under what authority, and by whose authorization* — never *who consumed it*.
+4. Return `{disclosure_id, event_id, disclosed_scope, allocator_ref}`. The host now assembles and transmits the actual data for the [Disclosed Scope] to the intended recipient — the disclosure *delivery* is the host's obligation, signalled by the disclosure record; this composition recorded *what was disclosed, to whom it was authorized, under what authority, and by whose authorization* — never *who consumed it*.
 
 ---
 
@@ -150,11 +149,11 @@ Cancels a sharing capability before its redemptions or time are exhausted (the s
 #### Read-only queries
 
 ```
-sharing_disclosures(subject_ref) → [disclosure records with their authorizing allocator]
+sharing_disclosures(subject_ref) → list of disclosure records, each with its authorizing allocator
 authorization_provenance(capability_token) → {allocator_ref, subject_ref, recipient, disclosed_scope, authority, authorization_event_id} | not-known
 ```
 
-`sharing_disclosures` passes through to `SelectiveDisclosure.read({subject_ref})` and joins each disclosure to its `disclosure_to_redemption` entry, returning, per disclosure, the recorded recipient/scope/authority **and the authorizing `allocator_ref`** — never a redeemer (there is none to return). `authorization_provenance` reads `capability_to_sharing` for who authorized a given share. Both are pure reads producing **no Audit Trail event** (logging *who read the sharing history* is handled as a composing access-log concept, named rather than absorbed, mirroring Immutable Transaction Ledger/Resolve a Person's Data Rights).
+[Sharing Disclosures] passes through to `SelectiveDisclosure.read({subject_ref})` and joins each disclosure to its `disclosure_to_redemption` entry, returning, per disclosure, the recorded recipient/scope/authority **and the authorizing `allocator_ref`** — never a redeemer (there is none to return). [Authorization Provenance] reads `capability_to_sharing` for who authorized a given share. Both are pure reads producing **no Audit Trail event** (logging *who read the sharing history* is handled as a composing access-log concept, named rather than absorbed, mirroring Immutable Transaction Ledger/Resolve a Person's Data Rights).
 
 ---
 
@@ -264,6 +263,113 @@ These questions arise around this composition but cannot be answered from its re
 
 ---
 
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are the emergent actions it exposes ([Authorize Sharing], [Redeem And Disclose], [Revoke Sharing]) and the two read-only queries ([Sharing Disclosures], [Authorization Provenance]); the two Audit Trail event kinds that realize the audit-subject asymmetry ([Sharing Authorized], attested under the allocator's credential; [Sharing Disclosed], attested under the service identity, naming no redeemer); the sharing-descriptor fields it interprets from the capability scope ([Recipient] — the allocator-declared intended recipient, not the bearer; [Disclosed Scope]); and its own rejections ([Invalid Sharing Descriptor], [Not Authorized Sharing]). The audit-subject asymmetry itself is a structural guarantee (Invariant 1), not a cardable datum — there is no redeemer field to card. Its emergent state — the `capability_to_sharing` and `disclosure_to_redemption` indices — is a composition-introduced surface no constituent provides, left as backticked store tokens. References to the constituent atoms and their operations — Capability's `allocate` / `redeem` / `revoke`, Selective Disclosure's `record` / `read`, Audit Trail's `record_action` / `verify_record` — the relayed tokens (`capability_token`, `allocator_ref`, `subject_ref`, `authority`, `disclosure_id`), the constituent redeem outcomes (`redeemed`, `invalid(exhausted | expired | revoked | not-known)`) and rejections (`invalid-request`, `unknown-authority-type`, `recording-failure`, `storage-failure`), and the deployment configuration knobs (`sharing_scope_grammar`, `default_capability_ttl`, `default_max_redemptions`) remain qualified/backticked, not carded here. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Authorize Sharing
+
+The composition's allocation-with-attestation action: it parses the sharing descriptor against `sharing_scope_grammar`, allocates a bearer capability whose scope *is* the authorized disclosure (`Capability.allocate`), and records the allocator's non-repudiable authorization as a [Sharing Authorized] event under the allocator's own credential — committing the allocation, attestation, and binding together (Invariant 3). Returns `{capability_token, authorization_event_id}`, or [Invalid Sharing Descriptor] / an inherited rejection.
+
+Kind: Operation
+
+#### Redeem And Disclose
+
+The composition's load-bearing emergent action: it redeems the capability **by possession alone** (no identity argument), then — atomically — records a Selective Disclosure record and a sealed [Sharing Disclosed] event and binds them (Invariant 2). Returns `{disclosure_id, event_id, disclosed_scope, allocator_ref}`, a first-class `invalid(...)` outcome for a spent / lapsed / cancelled / unknown token, or [Not Authorized Sharing] for a foreign capability. Records the allocator, never the redeemer (Invariant 1).
+
+Kind: Operation
+
+#### Revoke Sharing
+
+The composition's revocation action: it closes a sharing capability early (`Capability.revoke`) and records a `sharing.revoked` event under the revoker's credential. Subsequent [Redeem And Disclose] calls for the token return `invalid(revoked)` and disclose nothing.
+
+Kind: Operation
+
+#### Sharing Disclosures
+
+The read-only query returning a subject's disclosure records joined to their authorizing allocator (never a redeemer) — a passthrough to `SelectiveDisclosure.read` plus the `disclosure_to_redemption` binding. Produces no Audit Trail event.
+
+Kind: Operation
+
+#### Authorization Provenance
+
+The read-only query returning who authorized a given share — reads `capability_to_sharing[capability_token]` for the allocator, subject, recipient, disclosed scope, authority, and authorization event. Produces no Audit Trail event.
+
+Kind: Operation
+
+#### Sharing Authorized
+
+The Audit Trail event recorded at [Authorize Sharing], **attested under the allocator's own credential** — the allocator's non-repudiable commitment that they authorized this share (Invariant 3). The authorization half of the audit-subject asymmetry.
+
+Kind:      Member
+Member of: the sharing event kinds
+Role:      Audit event kind (allocator-attested)
+Projects:  sharing.authorized
+
+#### Sharing Disclosed
+
+The Audit Trail event recorded at each [Redeem And Disclose], **attested under the composition's service identity** (the allocator is absent, the bearer has no credential); its `data` names the `allocator_ref` and carries **no redeemer identity** (Invariant 1). The disclosure half of the audit-subject asymmetry.
+
+Kind:      Member
+Member of: the sharing event kinds
+Role:      Audit event kind (service-attested)
+Projects:  sharing.disclosed
+
+#### Recipient
+
+The sharing descriptor's **allocator-declared intended recipient** — the party the allocator named at allocation time as authorized to receive the share, recorded in every disclosure. Deliberately *not* the bearer who presented the token (unknowable by bearer design); whether the actual bearer was this recipient is the externally-unanswerable disputed-disclosure question.
+
+Kind:      Field
+Field of:  the sharing descriptor
+Role:      the allocator-declared intended recipient
+Projects:  recipient
+
+#### Disclosed Scope
+
+The field subset the capability authorizes for disclosure (the minimum-necessary set), parsed from the capability's immutable scope per `sharing_scope_grammar`. Every disclosure's scope equals it exactly — no widening, no divergence (Invariant 4, scope-bounded disclosure).
+
+Kind:      Field
+Field of:  the sharing descriptor
+Role:      the authorized field subset
+Projects:  disclosed_scope
+
+#### Invalid Sharing Descriptor
+
+The composition's own rejection from [Authorize Sharing] — returned when the supplied descriptor does not parse under `sharing_scope_grammar` or leaves a required field (subject, recipient, disclosed scope, authority reference) empty. The share is refused before a capability is allocated.
+
+Kind:      Member
+Member of: the authorize-sharing rejection
+Role:      Rejection
+Projects:  invalid-sharing-descriptor
+
+#### Not Authorized Sharing
+
+The composition's own rejection from [Redeem And Disclose] — returned when a valid Capability token has no `capability_to_sharing` entry: a foreign capability allocated by some other composition, carrying no sharing descriptor. Nothing is disclosed; this composition discloses only shares it authorized.
+
+Kind:      Member
+Member of: the redeem rejection
+Role:      Rejection
+Projects:  not-authorized-sharing
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Authorize Sharing]: #authorize-sharing
+[Redeem And Disclose]: #redeem-and-disclose
+[Revoke Sharing]: #revoke-sharing
+[Sharing Disclosures]: #sharing-disclosures
+[Authorization Provenance]: #authorization-provenance
+[Sharing Authorized]: #sharing-authorized
+[Sharing Disclosed]: #sharing-disclosed
+[Recipient]: #recipient
+[Disclosed Scope]: #disclosed-scope
+[Invalid Sharing Descriptor]: #invalid-sharing-descriptor
+[Not Authorized Sharing]: #not-authorized-sharing
+
+---
+
 ## Standards references
 
 this composition is the structural form of accountable bearer-token data sharing: share by possession, prove who authorized each disclosure. Its primary anchors:
@@ -286,7 +392,10 @@ this composition inherits the broader standards compliance of its constituents:
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 Regulated composition (composes two regulated atoms — Capability and Selective Disclosure — and records regulated events on the Audit Trail substrate). The two regulated-overlay conventions — *Regulated adversarial scenarios* and *Generation acceptance* (with the Audit-Trail-traversal-clearable / externally-clearable split) — are **inherited from the methodology directly** ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft, not re-derived from predecessor patterns. The primary structural reference is [Immutable Transaction Ledger with Selective Disclosure](./immutable-transaction-ledger.md): this composition mirrors Immutable Transaction Ledger's substrate-plus-Selective-Disclosure shape, its disclosure-accountability binding-bijection (the atomic SD-record-plus-`*.disclosed`-event commit), and its TLA+ binding-bijection model + buggy-twin structure. The substrate-composition recording pattern (recording on the Audit Trail the substrate carries) follows [Audit Trail](./audit-trail.md), [Multi-Party Approval](./multi-party-approval.md), and [Resolve a Person's Data Rights](./resolve-a-persons-data-rights.md); the service-identity discipline for system-originated events follows [Login](./login.md). The novel contribution over Immutable Transaction Ledger is the **audit-subject asymmetry**: where Immutable Transaction Ledger's disclosures are attributed to a present, credentialed actor, this composition's redemptions have no present redeemer, so accountability attaches to the allocator (attested at allocation) while the redeemer is structurally unnamed — Capability's bearer semantics (Invariants 3 and 5) carried intact into a regulated-audit composition.
 
@@ -325,3 +434,7 @@ Per-finding (*F-id — short name — class → fix*):
 - *Final Critique 4 — Invariant 1 said `capability.als` "checks" Capability Invariants 3 and 5 — rhetorical.* The Alloy model enforces the asymmetry by construction (its capability record carries no redeemer field; `redeem` takes no identity argument), not via a named assertion, so "checks" overstated the mechanism. → Rephrased to "enforced by construction" in Invariant 1 and aligned the `.tla` header comment; the underlying claim — the asymmetry is formally grounded on Capability's surface — is unchanged and sound.
 
 The four findings sharpen content the spec already carried; none added previously-absent methodology-required content, so the gate is clean for grounding. **Foundational findings: zero. This composition grounds on Final Critique 4.**
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at five). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases (11 terms): 5 Operations — the emergent actions ([Authorize Sharing], [Redeem And Disclose], [Revoke Sharing]) and the two read-only queries ([Sharing Disclosures], [Authorization Provenance]); 4 Members — the two asymmetry-carrying Audit Trail event kinds ([Sharing Authorized] under the allocator's credential; [Sharing Disclosed] under the service identity, naming no redeemer) and the composition's own rejections ([Invalid Sharing Descriptor], [Not Authorized Sharing]); and 2 Fields — the sharing-descriptor fields the composition interprets from the capability scope ([Recipient] — the allocator-declared intended recipient, not the bearer; [Disclosed Scope]). **The audit-subject asymmetry itself is left uncarded** — it is a structural guarantee (Invariant 1), not a datum: there is deliberately no redeemer field anywhere to card. **No Type card** (the emergent state maps `capability_to_sharing` / `disclosure_to_redemption` are backticked store tokens) and **no Parameter** (all action inputs are relayed constituent tokens or the descriptor fields above). Survivors left backticked: the fenced projected-contract signatures (the `#### \`name\`` action headings and their code blocks); every qualified constituent call (Capability's `allocate` / `redeem` / `revoke`, Selective Disclosure's `record` / `read`, Audit Trail's `record_action` / `verify_record`); the constituent redeem outcomes (`redeemed`, `invalid(exhausted | expired | revoked | not-known)`) and inherited rejections (`invalid-request`, `unknown-authority-type`, `recording-failure`, `storage-failure`); the relayed tokens (`capability_token`, `allocator_ref`, `subject_ref`, `authority`, `disclosure_id`), the `sharing.revoked` event kind, the deployment configuration knobs; and concrete example ids. Constituent atom names remain the existing full links to `../atoms/*`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), its first run-on paragraph split one-idea-per-paragraph (cut #1, lossless) with the common-uses paragraph kept intact; the dense descriptive top blockquote folded out after confirming each claim (the bearer-sharing / regulated-audit reconciliation; the three-atom composition; the audit-subject asymmetry; the disclosure-accountability binding bijection; the OCAP anchor) is carried by Summary / Intent / Composes / the load-bearing wiring decision; no *also-known-as* line existed, so none was invented. *Note:* the folded blockquote also carried the first inline glosses of GDPR / HIPAA; these acronyms remain glossed in the adversarial-scenario and Standards sections, so no claim was lost. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #5 — skipped (with reason):** the composition owns no state machine — the capability lifecycle (Active / Redeemed / Expired / Revoked) is Capability's, and the composition's own logic is a uniform authorize → redeem-and-disclose → revoke wiring already stated crisply. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-06-10`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (11 terms); five composition-level invariants preserved; the `.tla` models untouched — harness re-run green: `capability-backed-sharing.tla` PASS (4 states) + `capability-backed-sharing-buggy.tla --buggy` rejected on `Inv2_BindingBijection`.
+
+</details>
