@@ -95,7 +95,7 @@ The decision the composition exists to enforce: **identity preservation across d
 
 *Principle.* When a user undoes a `delete`, the deleted unit must be restored at its original `id`, with its original `added_at`, `last_edited_at` (if any), and state intact — not as a fresh unit with a new id and reset timestamps. This identity preservation is the property users expect from undo and the property that makes the composition useful as a building block for audit-trail-adjacent uses.
 
-*Likely objection.* "Couldn't the `delete` action save a snapshot and `undo` restore from it?" Per-action snapshots (the Memento pattern) restore state but produce a new copy of the unit — a fresh `add` against Personal Todo would issue a new id, resetting timestamps and losing the unit's historical identity.
+*Likely objection.* "Couldn't the `delete` action save a snapshot and [Undo] restore from it?" Per-action snapshots (the Memento pattern) restore state but produce a new copy of the unit — a fresh `add` against Personal Todo would issue a new id, resetting timestamps and losing the unit's historical identity.
 
 *Mechanism.* The composition makes Personal Todo event-sourced: it never calls Personal Todo's native `delete` directly on state and stores no separate state. The Event Log is the source of truth; the derived state is a projection. Undoing a delete appends a compensating event and rereplays the log skipping that event — the original `add` event is still in the log, so the unit is reconstructed at its original `id` with its original timestamps. Personal Todo's own `delete` is terminal and irreversible; the composition circumvents this by operating at the log level rather than the state level.
 
@@ -113,7 +113,7 @@ These invariants emerge from the composition. None of them belong to a single co
 - **Invariant 4 — Personal Todo's invariants are preserved.** All invariants from Personal Todo hold over the derived state at every moment. Replay never produces an invalid Personal Todo state, because every recorded forward event was a successful action against a then-valid state.
 - **Invariant 5 — Event Log's invariants are preserved.** All invariants from Event Log hold. The composition never deletes or rewrites events; undo is implemented via compensating appends (new events that logically cancel a prior event, leaving the original record intact), not via mutation.
 - **Invariant 6 — Identity preservation across delete/undo.** Undoing a `delete` restores the unit at its original `id` with its original `added_at`, `last_edited_at` (if any), and prior state (Pending or Done). The original `add` event remains in the log; replay skipping the `delete` reconstructs the unit faithfully. Personal Todo on its own cannot do this — its `delete` is terminal and a fresh `add` produces a new id. The composition with Event Log buys back identity preservation as an emergent property.
-- **Invariant 7 — Reachability of prior states.** From any point in the user's history, the user can return to any prior composition-visible state via a finite sequence of `undo` calls — provided no further forward actions intervene. After any forward action following undos, the previously-undone events remain in the log but cannot be reached via `undo` (that would require a separate Redo pattern).
+- **Invariant 7 — Reachability of prior states.** From any point in the user's history, the user can return to any prior composition-visible state via a finite sequence of [Undo] calls — provided no further forward actions intervene. After any forward action following undos, the previously-undone events remain in the log but cannot be reached via [Undo] (that would require a separate Redo pattern).
 
 ---
 
@@ -129,7 +129,7 @@ A user opens a fresh Personal Todo with Undo History:
 4. `undo()` → returns `"complete"`. Log appends `undo(complete(t1))`. Replay skips `complete(t1)`. State: `t1` Pending, `t2` Pending.
 5. `delete(t1)` → `ok`. Log appends `delete(t1, snapshot)`. State: `t2` Pending.
 6. `undo()` → returns `"delete"`. Log appends `undo(delete(t1))`. Replay skips `delete(t1)`. State: `t1` Pending, `t2` Pending — `t1` is back with its original id, original `added_at`, and Pending state.
-7. `add("walk dog")` → returns `t3`. State: `t1`, `t2`, `t3` Pending. The previously-undone events (`complete(t1)`, `delete(t1)`) remain in the log but are unreachable via further `undo` (that would require Redo).
+7. `add("walk dog")` → returns `t3`. State: `t1`, `t2`, `t3` Pending. The previously-undone events (`complete(t1)`, `delete(t1)`) remain in the log but are unreachable via further [Undo] (that would require Redo).
 
 ### Identity preservation across delete/undo
 
@@ -147,7 +147,7 @@ A user starts fresh:
 2. `undo()` → returns `"add"`. Log appends `undo(add(t1))`. State: empty.
 3. `undo()` → `rejected(nothing-to-undo)`. The log has one forward event (`add(t1)`) and one undo event referencing it. Every forward event is already in the undone set; there is nothing left to undo. Log and state are unchanged.
 
-Storage failure path: the user calls `add("walk dog")` and Event Log's `append` returns `rejected(storage-failure)`. The composition returns `storage-failure` to the caller; the derived state is not updated. No partial state is visible; the action did not happen. The same pattern applies for `undo`: if the compensating-event append fails, `undo` returns `storage-failure` and the derived state is not recomputed.
+Storage failure path: the user calls `add("walk dog")` and Event Log's `append` returns `rejected(storage-failure)`. The composition returns `storage-failure` to the caller; the derived state is not updated. No partial state is visible; the action did not happen. The same pattern applies for [Undo]: if the compensating-event append fails, [Undo] returns `storage-failure` and the derived state is not recomputed.
 
 ---
 
@@ -155,9 +155,9 @@ Storage failure path: the user calls `add("walk dog")` and Event Log's `append` 
 
 What this composition does not cover:
 
-- **Redo.** Once an action is undone and a new forward action is taken, the undone action cannot be re-applied via this composition. Redo requires a Redo Stack pattern that interprets a different class of compensating events. The current composition's `undo` is one-directional.
+- **Redo.** Once an action is undone and a new forward action is taken, the undone action cannot be re-applied via this composition. Redo requires a Redo Stack pattern that interprets a different class of compensating events. The current composition's [Undo] is one-directional.
 - **Branching history.** No support for "go back in time and take a different action." The log is linear; alternate timelines are out of scope.
-- **Selective undo.** `undo` always targets the most recent non-undone forward event. Undoing a specific earlier action while preserving more recent actions ("undo my edit from twenty minutes ago, keep everything since") is not supported — it would require event-dependency analysis and is a separate pattern.
+- **Selective undo.** [Undo] always targets the most recent non-undone forward event. Undoing a specific earlier action while preserving more recent actions ("undo my edit from twenty minutes ago, keep everything since") is not supported — it would require event-dependency analysis and is a separate pattern.
 - **Undo of undo.** Forward events can be undone; undo events cannot. Reversing an undo is the redo operation, out of scope.
 - **Persistence across restarts.** The composition assumes the Event Log is durable across composition restarts (a deployment property of the Event Log instance). If the log is volatile, the undo history resets at restart, which most users will not expect.
 - **Initialization from an existing log.** The composition assumes its Event Log instance is either fresh (no events) at start, or an existing log whose events represent the prior history of the same Personal Todo. Inheriting an Event Log from a different system or substrate, or merging logs across substrates, is out of scope — that is an Import or Migration pattern.
@@ -325,7 +325,7 @@ The application is `grounded — 2026-05-13` after one round.
 **Refinement round 1.** Three findings, all closed in-pattern. Conventions inherited from the methodology directly.
 
 - *Action signatures used `rejected(reason)` placeholders; `storage-failure` absent from all five.* All five actions had placeholder rejection forms. Resolved: forward action signatures expanded with named reason taxonomies sourced from Personal Todo's precondition rejections (`not-known`, `not-pending`, `invalid-request`, `duplicate-active`) plus `storage-failure` from Event Log's `append`; `undo` signature expanded to `rejected(nothing-to-undo | storage-failure)`. The full Personal Todo rejection taxonomy will be confirmed against Personal Todo's own refinement round.
-- *`read_history` omitted its rejection form.* The signature showed only the success path. `read_history` is a passthrough to Event Log's `read`, which carries `rejected(invalid-query)`. Resolved: signature updated to `read_history(query) → ordered_sequence_of_events | rejected(invalid-query)`.
+- *[Read History] omitted its rejection form.* The signature showed only the success path. [Read History] is a passthrough to Event Log's `read`, which carries `rejected(invalid-query)`. Resolved: signature updated to `read_history(query) → ordered_sequence_of_events | rejected(invalid-query)`.
 - *Action wiring missing the `append` storage-failure path.* Every action appends to the Event Log; none of the wiring descriptions specified what happens if `append` returns `rejected(storage-failure)`. This is load-bearing for Invariant 1 (Log faithfulness): the converse of "every successful action appends an event" is "if the append fails, the action is not successful." Without the failure path, an implementation might update the derived state even when the event didn't land, violating State equivalence (Invariant 2). Resolved: each action's wiring extended — if the `append` returns `rejected(storage-failure)`, the caller receives `storage-failure` and the derived state is not updated.
 
 **Scheduled rescan: 2026-05-20.** Pass 1 GRID clean — constituent API spot-check confirmed: Personal Todo retains eight invariants and the `not-editable` rejection in `edit`; Event Log retains seven invariants. Pass 2 EOS clean. Pass 3 Linus (fresh-reader) — two refining findings, both closed in-pattern.
