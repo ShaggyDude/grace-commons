@@ -15,7 +15,15 @@ toc: true
 {:toc}
 </details>
 
-> A regulated composition: when an actor must be deactivated — a departing employee, a compromised account, a contractor whose engagement ended — every surface through which that actor can still act must be closed in one operation, and the closure must be provable from the records. This composition is Login's outbound-side counterpart: where Login wires credential-verification to session-issuance on the way *in*, this composition wires actor-suspension to the revocation of every active **Permissions** grant and every active **Session** on the way *out*, attests the whole act through one tamper-evident **Audit Trail** event, and (optionally) revokes the actor's **Credential** so it cannot re-authenticate. It composes Actor Identity (the actor whose Active→Suspended lifecycle the composition introduces), Permissions, Session, and Audit Trail as a substrate (reaching Event Log + Actor Identity + Tamper Evidence + Retention Window transitively); Credential is an optional fifth constituent. Three emergent invariants: **atomicity of multi-surface revocation** — after `suspend_actor` succeeds, the actor has zero active grants and zero active sessions, committed as one transaction with no partial state (the load-bearing claim); **audit completeness** — the `actor.suspended` event enumerates every `grant_id` and `session_token` revoked; and **suspension cascade ordering** — the Active→Suspended transition gates the cascade, and a second `suspend_actor` against an already-Suspended actor is a no-op. The default posture is all-or-nothing under one transaction.
+## Summary
+
+Actor Suspension is a regulated composition — a specification that wires several freestanding patterns together — that does one job thoroughly: when you need to cut off an actor (a departing employee, a hacked account, a contractor who's done), it closes *every* door at once and leaves proof.
+
+The problem it solves is the classic security gap where someone's access is pulled in one place but not another — their login is disabled but a permission grant still works, or their role is removed but an open session keeps going. This composition makes that impossible by treating suspension as a single all-or-nothing action: it finds every active permission grant the actor holds and every active login session they have, revokes all of them together, marks the actor as suspended, and writes one tamper-proof audit record that lists every grant and session it revoked.
+
+If any part of that can't complete, the whole thing rolls back and nothing changes — because a half-suspended actor (some access cut, some not) is worse than one who wasn't touched, since everyone would wrongly believe they were locked out. Optionally, it also revokes the actor's login credential so they can't sign back in.
+
+It is the exact mirror of the Login pattern: Login wires up "check the credential, then start a session" on the way in; this wires up "suspend the actor, then revoke every grant and every session" on the way out. The composition's defining emergent guarantee — a property that exists only when the patterns are combined — is that single multi-surface revocation: after a successful suspension, the actor provably holds zero active grants and zero active sessions, and the audit record names every one that was revoked. Its common uses are exactly the moments compliance regimes care about most: offboarding a terminated employee (the access must be removed promptly and provably), responding to a compromised account, and ending a third-party's access. Any system that must deactivate an actor across multiple access surfaces at once — and prove from the records that nothing was missed — is a candidate for this composition.
 
 ---
 
@@ -30,15 +38,6 @@ this composition is Login's mirror image, and the symmetry is load-bearing. Logi
 This is a composition, not a new primitive. Actor Identity, Permissions, Session, and Audit Trail are unchanged; this composition is the wiring that makes them coherent as one suspension surface. It introduces emergent actions — `suspend_actor`, the read-only `suspension_report`, and the thin `reinstate_actor` — and an emergent state machine the constituents do not carry: the actor's **Active → Suspended** lifecycle. Actor Identity is the attestation atom, with a single `Attested` state and *no* actor lifecycle (it explicitly defers actor registration, deactivation, and suspension to a forthcoming Actor Registry / Identity Provisioning pattern); the Active/Suspended state is therefore a **composition-introduced surface** This composition owns, not a state read from any constituent.
 
 What the composition is *not*: it is not the issuance surface — it revokes grants and sessions but never issues them (`Permissions.grant` and `Session.issue` are called elsewhere), so it cannot, by itself, prevent a *new* grant or session being created for a suspended actor after the cascade snapshot (a named composing-layer obligation, exactly as Login's cascade is snapshot-scoped); it is not the actor registry that provisions actor identities; it is not an authorization-policy engine deciding *whether* an actor should be suspended (that is wired ahead of `suspend_actor` at the administrative / Multi-Party Approval layer); and it does not restore access on reinstatement — `reinstate_actor` lifts the suspension state but never un-revokes a terminal grant or session (re-provisioning is the issuance layer's job). Each is named explicitly in Edge cases.
-
----
-
-## Summary
-
-Actor Suspension is a regulated composition — a specification that wires several freestanding patterns together — that does one job thoroughly: when you need to cut off an actor (a departing employee, a hacked account, a contractor who's done), it closes *every* door at once and leaves proof. The problem it solves is the classic security gap where someone's access is pulled in one place but not another — their login is disabled but a permission grant still works, or their role is removed but an open session keeps going. This composition makes that impossible by treating suspension as a single all-or-nothing action: it finds every active permission grant the actor holds and every active login session they have, revokes all of them together, marks the actor as suspended, and writes one tamper-proof audit record that lists every grant and session it revoked. If any part of that can't complete, the whole thing rolls back and nothing changes — because a half-suspended actor (some access cut, some not) is worse than one who wasn't touched, since everyone would wrongly believe they were locked out. Optionally, it also revokes the actor's login credential so they can't sign back in.
-
-It is the exact mirror of the Login pattern: Login wires up "check the credential, then start a session" on the way in; this wires up "suspend the actor, then revoke every grant and every session" on the way out. The composition's defining emergent guarantee — a property that exists only when the patterns are combined — is that single multi-surface revocation: after a successful suspension, the actor provably holds zero active grants and zero active sessions, and the audit record names every one that was revoked. Its common uses are exactly the moments compliance regimes care about most: offboarding a terminated employee (the access must be removed promptly and provably), responding to a compromised account, and ending a third-party's access. Any system that must deactivate an actor across multiple access surfaces at once — and prove from the records that nothing was missed — is a candidate for this composition.
-
 
 ---
 
@@ -68,7 +67,7 @@ The composition owns emergent state that wires the constituents into one suspens
 
 - **`actor_suspension_state`** — map from `actor_ref` to `{state, suspended_at?, suspended_by_ref?, reason?, suspension_event_id?}` where `state ∈ {Active, Suspended}`. An `actor_ref` absent from the map is treated as **Active** (the default — no suspension has been recorded). Populated/transitioned by `suspend_actor` (Active → Suspended) and `reinstate_actor` (Suspended → Active). This is the composition-introduced actor lifecycle the constituents do not carry. The `suspension_event_id` binds the Suspended state to the sealed `actor.suspended` Audit Trail event that enumerates what was revoked.
 
-- **`suspension_log`** — append-only record of every `suspend_actor` and `reinstate_actor` call, whether it transitioned, was a no-op, or failed. Each entry: `entry_id` (opaque, system-generated), `actor_ref`, `operation` (`suspend` | `reinstate`), `outcome` (`suspended` | `reinstated` | `already-suspended` | `already-active` | `revocation-failure(surface)` | `recording-failure` | `invalid-request`), `revoked_grants` (the `grant_id` set, on success), `revoked_sessions` (the `session_token` set, on success), `suspension_event_id?`, `attempted_at`. This is the composition's composition-layer query surface; the **Audit Trail substrate is the tamper-evident external-auditor record** of the same suspension events. The two are redundant by design, exactly as Login pairs its `login_event_log` with the Audit Trail.
+- **`suspension_log`** — append-only record of every `suspend_actor` and `reinstate_actor` call, whether it transitioned, was a no-op, or failed. Each entry: `entry_id` (opaque, system-generated), `actor_ref`, `operation` (`suspend` | `reinstate`), [Outcome] (`suspended` | `reinstated` | `already-suspended` | `already-active` | `revocation-failure(surface)` | `recording-failure` | `invalid-request`), [Revoked Grants] (the `grant_id` set, on success), [Revoked Sessions] (the `session_token` set, on success), `suspension_event_id?`, `attempted_at`. This is the composition's composition-layer query surface; the **Audit Trail substrate is the tamper-evident external-auditor record** of the same suspension events. The two are redundant by design, exactly as Login pairs its `login_event_log` with the Audit Trail.
 
 The actor's grants live in the Permissions store, its sessions in the Session store, its (optional) credential in the Credential store, and the suspension events in the Audit Trail substrate. This composition duplicates none of them; it transitions the suspension state and binds each suspension to the sealed event that records the revoked set.
 
@@ -93,7 +92,7 @@ No primitive is case-sensitivity-normalized at the composition layer; deployment
 
 ### Action wiring
 
-The composition exposes three actions: one emergent multi-surface suspension (`suspend_actor`), one read-only query (`suspension_report`), and one thin lifecycle-reversal (`reinstate_actor`).
+The composition exposes three actions: one emergent multi-surface suspension ([Suspend Actor]), one read-only query ([Suspension Report]), and one thin lifecycle-reversal ([Reinstate Actor]).
 
 **Uniform constituent-rejection mapping.** Each constituent `revoke` maps its rejection taxonomy as named per step. Under the `all-or-nothing` posture, any non-benign revoke failure aborts the transaction and rolls back (no partial state); under `best-effort`, it is recorded and the cascade continues. A `Permissions.revoke → not-active` or `Session.revoke → already-terminal` is **benign** in both postures — the target is already terminal, which is the cascade's goal (the TOCTOU already-terminal case), counted as skipped, never an abort.
 
@@ -115,7 +114,7 @@ suspend_actor(actor_ref, suspended_by_ref, credential, reason) →
 Suspends an actor by atomically revoking every active Permissions grant and every active Session (and, optionally, the actor's Credential), transitioning the actor to Suspended, and sealing the complete revoked set into one attributed Audit Trail event. Steps:
 
 1. Validate: `actor_ref`, `suspended_by_ref`, `credential`, `reason` each non-empty. Any violation → append `suspension_log` `{operation: suspend, outcome: invalid-request}`; return `rejected(invalid-request)`. Stop.
-2. **Suspension-state gate (Active → Suspended; the cascade ordering, Invariant 3).** Read `actor_suspension_state[actor_ref]`. If `state = Suspended` → append `suspension_log` `{outcome: already-suspended}`; return `rejected(already-suspended)` and change no state — the cascade does **not** re-run (no-op on already-Suspended; the second suspension is idempotent). An `actor_ref` absent from the map is **Active** and proceeds.
+2. **Suspension-state gate (Active → Suspended; the cascade ordering, Invariant 3).** Read `actor_suspension_state[actor_ref]`. If `state = Suspended` → append `suspension_log` `{outcome: already-suspended}`; return [Already Suspended] and change no state — the cascade does **not** re-run (no-op on already-Suspended; the second suspension is idempotent). An `actor_ref` absent from the map is **Active** and proceeds.
 3. **Snapshot the active set (read-only, atomic with the cascade).** Enumerate the actor's active grants `G = {grant_id : subject_ref = actor_ref ∧ status = Active}` from the Permissions store and active sessions `S = {session_token : principal_ref = actor_ref ∧ status = Active}` from the Session store. The snapshot read and the cascade writes in steps 4–6 are **one serialized transaction keyed on `actor_ref`** (the host transaction boundary, exactly as Login's cascade and Audit Trail's cascade-on-purge commit in one transactional boundary), so no concurrently-issued grant or session is half-covered: a grant/session created *after* the snapshot is not in `G`/`S` and is not covered by this suspension (snapshot-scoped — Invariant 1's stated bound, and the *Suspension is snapshot-scoped* edge case). An empty `G` and `S` is a valid suspension (an actor with no active access is still recorded as Suspended) — distinct from any failure.
 4. **Cascade — revoke every member of both surfaces (and optionally the credential).** Within the transaction:
   - For each `grant_id ∈ G`: `Permissions.revoke(grant_id)`. `ok` → add to `revoked_grants`. `not-active` (a concurrent revocation already terminalized it) → benign, add to `revoked_grants` (the goal is met). `not-known` → an enumeration/store inconsistency (a grant the query returned but the store no longer knows — structurally near-impossible, since Permissions never deletes grants, Invariant 10): treated as a **non-benign** failure, handled exactly as `storage-failure` — **abort** and return `rejected(revocation-failure)` under `all-or-nothing`, or record `revocation-failure(permissions)` and continue under `best-effort` — and additionally surfaced as a high-priority store-inconsistency finding in `suspension_log`. `storage-failure` → **abort** under `all-or-nothing` (roll back; the grant stays whatever it was), or record `revocation-failure(permissions)` and continue under `best-effort`.
@@ -147,7 +146,7 @@ reinstate_actor(actor_ref, reinstated_by_ref, credential, reason) →
  | rejected(invalid-request | already-active | recording-failure)
 ```
 
-Lifts an actor's suspension by transitioning Suspended → Active and recording an attributed `actor.reinstated` event. **It does not restore any revoked grant or session** — those are terminal in their constituents (Permissions Invariant 3, Session Invariant 4) and cannot be un-revoked; re-authorizing the actor means issuing *fresh* grants and sessions through the issuance layer, which is not this composition's surface. Steps: validate inputs (`invalid-request`); if `state ≠ Suspended` → `rejected(already-active)` (no-op); else record `AuditTrail.record_action(action_ref = actor.reinstated, actor_ref = reinstated_by_ref, credential, data = {reinstated_actor: actor_ref, reason, reinstated_at = now})` → `event_id`, then set `actor_suspension_state[actor_ref] = {state: Active}` (atomic with the event); append `suspension_log`; return `{reinstated, event_id}`. Reinstatement is the state-machine's reverse edge only — re-provisioning access is the composing layer's job (Edge cases — *Reinstatement does not restore access*).
+Lifts an actor's suspension by transitioning Suspended → Active and recording an attributed `actor.reinstated` event. **It does not restore any revoked grant or session** — those are terminal in their constituents (Permissions Invariant 3, Session Invariant 4) and cannot be un-revoked; re-authorizing the actor means issuing *fresh* grants and sessions through the issuance layer, which is not this composition's surface. Steps: validate inputs (`invalid-request`); if `state ≠ Suspended` → [Already Active] (no-op); else record `AuditTrail.record_action(action_ref = actor.reinstated, actor_ref = reinstated_by_ref, credential, data = {reinstated_actor: actor_ref, reason, reinstated_at = now})` → `event_id`, then set `actor_suspension_state[actor_ref] = {state: Active}` (atomic with the event); append `suspension_log`; return `{reinstated, event_id}`. Reinstatement is the state-machine's reverse edge only — re-provisioning access is the composing layer's job (Edge cases — *Reinstatement does not restore access*).
 
 ---
 
@@ -196,7 +195,7 @@ A bank deploys this composition over its access surfaces with `unified_actor_nam
 
 ### Domain example — compromised account, all-or-nothing abort and retry
 
-A security team suspends a compromised account: `suspend_actor("svc_8830", "soc_analyst_k", <cred>, "credential-in-paste-dump")`. The snapshot finds five grants and one long-lived session. Mid-cascade, `Session.revoke(tok_svc)` returns `storage-failure` (the session store is briefly unreachable). Under `all-or-nothing`, the whole transaction **rolls back**: the five grant revocations are undone, the suspension state is *not* set, and `suspension_log` records `{outcome: revocation-failure(session)}`. `suspend_actor` returns `rejected(revocation-failure)`. The account is left exactly as it was — not half-suspended — and the SOC (Security Operations Center) retries once the session store recovers, at which point the suspension completes atomically. The crisp post-condition (fully suspended *or* unchanged) is the `all-or-nothing` posture's entire point.
+A security team suspends a compromised account: `suspend_actor("svc_8830", "soc_analyst_k", <cred>, "credential-in-paste-dump")`. The snapshot finds five grants and one long-lived session. Mid-cascade, `Session.revoke(tok_svc)` returns `storage-failure` (the session store is briefly unreachable). Under `all-or-nothing`, the whole transaction **rolls back**: the five grant revocations are undone, the suspension state is *not* set, and `suspension_log` records `{outcome: revocation-failure(session)}`. `suspend_actor` returns [Revocation Failure]. The account is left exactly as it was — not half-suspended — and the SOC (Security Operations Center) retries once the session store recovers, at which point the suspension completes atomically. The crisp post-condition (fully suspended *or* unchanged) is the `all-or-nothing` posture's entire point.
 
 ### Rejection path — already-suspended no-op, and the benign TOCTOU race
 
@@ -257,6 +256,99 @@ These questions arise around this composition but cannot be answered from its re
 
 ---
 
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are the three emergent actions it exposes ([Suspend Actor], [Suspension Report], [Reinstate Actor]) — none belonging to a single constituent — the audit-completeness enumeration the suspend event carries ([Revoked Grants], [Revoked Sessions]), the `suspension_log` classification it records ([Outcome]), and its own rejections ([Already Suspended], [Revocation Failure], [Already Active]). The composition also introduces an **Active → Suspended actor lifecycle** the constituents do not carry (a two-state machine held in `actor_suspension_state`); its states are left uncarded because `Active` is pervasively overloaded with the constituents' own grant/session statuses. Its emergent state — `actor_suspension_state` and the `suspension_log` — is a composition-introduced surface no constituent provides, left as backticked store tokens. References to the constituent atoms and their operations — Permissions' `revoke` / `grant`, Session's `revoke` / `issue` / `validate`, Audit Trail's `record_action` / `verify_record`, Credential's `revoke` — the relayed tokens (`actor_ref`, `subject_ref`, `principal_ref`, `grant_id`, `session_token`, `credential_id`, `suspended_by_ref`), the constituent states (`Active` / `Revoked`), the substrate's inherited rejections (`recording-failure`, `invalid-credential`, `invalid-request`), and the deployment configuration knobs (`unified_actor_namespace`, `revoke_credential_on_suspend`, `partial_failure_posture`) remain qualified/backticked, not carded here. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Suspend Actor
+
+The composition's load-bearing emergent action: within one transaction keyed on `actor_ref`, it snapshots the actor's active grants and sessions, revokes every one (and, optionally, the actor's Credential), transitions the actor Active → Suspended, and seals the complete revoked set into one attributed Audit Trail event. Returns `{suspended, revoked_grants, revoked_sessions, revoked_credential?, event_id}`, or [Already Suspended] (idempotent no-op), [Revocation Failure] (a non-benign constituent revoke failed — rolls back under `all-or-nothing`), or `recording-failure`. Neither constituent carries this multi-surface cascade.
+
+Kind: Operation
+
+#### Suspension Report
+
+The composition's read-only query: resolves `actor_suspension_state[actor_ref]`, returning `{state: Active}` for an unsuspended actor or the full Suspended record — `suspended_at`, `suspended_by_ref`, `reason`, and the enumerated [Revoked Grants] / [Revoked Sessions] read from the sealed event. Changes no state; the queryable surface the issuance layer gates new access on.
+
+Kind: Operation
+
+#### Reinstate Actor
+
+The composition's thin lifecycle-reversal: transitions Suspended → Active and records an attributed `actor.reinstated` event. It does **not** restore any revoked grant or session (those are terminal in their constituents) — re-provisioning is the issuance layer's job. Returns `{reinstated, event_id}`, or [Already Active] (no-op) / `recording-failure`.
+
+Kind: Operation
+
+#### Revoked Grants
+
+The set of `grant_id`s the suspension cascade revoked, carried in the sealed `actor.suspended` event's `data` (Invariant 2 — audit completeness). Its completeness — every active grant for the actor, no surface omitted — is what makes the suspension provable from one tamper-evident record.
+
+Kind:      Field
+Field of:  the suspension event
+Role:      the revoked grant enumeration
+Projects:  revoked_grants
+
+#### Revoked Sessions
+
+The set of `session_token`s the suspension cascade revoked, carried in the sealed `actor.suspended` event's `data` (Invariant 2). Together with [Revoked Grants] it is the complete, sealed record of everything the suspension closed.
+
+Kind:      Field
+Field of:  the suspension event
+Role:      the revoked session enumeration
+Projects:  revoked_sessions
+
+#### Outcome
+
+The `suspension_log` entry's classification of a `suspend_actor` / `reinstate_actor` call: `suspended`, `reinstated`, [Already Suspended], [Already Active], `revocation-failure(surface)`, `recording-failure`, or `invalid-request`. The composition's own records-alone query surface alongside the tamper-evident Audit Trail.
+
+Kind:      Field
+Field of:  the suspension-log entry
+Role:      the call classification
+Projects:  outcome
+
+#### Already Suspended
+
+The composition's own idempotence rejection from [Suspend Actor] — returned when the actor is already Suspended: the cascade does not re-run (no second revoke, no second event; Invariant 3). The state gate that fires the cascade exactly once, on the Active → Suspended edge.
+
+Kind:      Member
+Member of: the suspend rejection
+Role:      Rejection
+Projects:  already-suspended
+
+#### Revocation Failure
+
+The composition's own rejection from [Suspend Actor] — returned when a non-benign constituent revoke (or store inconsistency) fails: under the `all-or-nothing` default the whole cascade rolls back and the actor is left unchanged (Invariant 1). A benign already-terminal target (a concurrent revocation) is *not* this — it is counted toward completion.
+
+Kind:      Member
+Member of: the suspend rejection
+Role:      Rejection
+Projects:  revocation-failure
+
+#### Already Active
+
+The composition's own no-op rejection from [Reinstate Actor] — returned when the actor is not Suspended, so there is nothing to reinstate.
+
+Kind:      Member
+Member of: the reinstate rejection
+Role:      Rejection
+Projects:  already-active
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Suspend Actor]: #suspend-actor
+[Suspension Report]: #suspension-report
+[Reinstate Actor]: #reinstate-actor
+[Revoked Grants]: #revoked-grants
+[Revoked Sessions]: #revoked-sessions
+[Outcome]: #outcome
+[Already Suspended]: #already-suspended
+[Revocation Failure]: #revocation-failure
+[Already Active]: #already-active
+
+---
+
 ## Standards references
 
 this composition is the structural form of the prompt-and-provable-removal-of-access requirement that every access-control regime imposes at offboarding, deprovisioning, and incident response. Its primary anchors:
@@ -282,7 +374,10 @@ this composition inherits the broader standards compliance of its constituents:
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 Regulated composition (composes regulated atoms and records regulated events on the Audit Trail substrate). The two regulated-overlay conventions — *Regulated adversarial scenarios* and *Generation acceptance* (with the Audit-Trail-traversal-clearable / externally-clearable split) — are **inherited from the methodology directly** ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft, not re-derived from predecessor patterns. The primary structural reference is [Login](./login.md): this composition is Login's outbound-side counterpart, and it mirrors Login's cascade structure (snapshot-scoped revocation), atomic-commit discipline (the cascade + audit write in one transaction), and TOCTOU handling (a concurrent terminal transition during the cascade is benign, the same already-terminal case Login's Final Critique 4 (finding Final Critique 1) resolved) — inverting only Login's best-effort posture to all-or-nothing because suspension's failure mode is more dangerous. The substrate-composition shape (recording on the Audit Trail the substrate carries) follows [Audit Trail](./audit-trail.md), [Multi-Party Approval](./multi-party-approval.md), and [Resolve a Person's Data Rights](./resolve-a-persons-data-rights.md); the TLA+ atomic-cascade + buggy-twin structure mirrors [`audit-trail.tla`](./audit-trail.tla) and [`login.tla`](./login.tla). The motivating gap is the deprovisioning cascade Permissions' *Mass revocation on subject deprovisioning* edge case and Actor Identity's *Actor lifecycle* / Actor Registry note both anticipate.
 
@@ -322,3 +417,7 @@ Per-finding (*F-id — short name — class → fix*):
 - *Final Critique 4 — `SOC` unglossed at first body use — refining (Pass 1 acronym)* → glossed "Security Operations Center (SOC)" at first use in the compromised-account domain example (the prior Lineage F7 claimed it closed, but it had not propagated).
 
 Foundational findings: **zero**. Five refining findings folded in-pattern. Pass 1 (GRID) and Pass 2 (EOS) clean — the regulated overlay is complete (Regulated adversarial scenarios' three classes: regulator audit / disputed action / breach investigation; Generation acceptance with the Audit-Trail-traversal-clearable / externally-clearable split), identity model and action signatures and rejection taxonomies are explicit, and examples cover the rejection and adversarial paths. At the 92%-good threshold (foundational density zero), **this composition grounds on Final Critique 4.**
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at four). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases (9 terms): 3 Operations — the emergent actions ([Suspend Actor], [Suspension Report], [Reinstate Actor]); 3 Fields — the audit-completeness enumeration the suspend event carries ([Revoked Grants], [Revoked Sessions]) and the `suspension_log` classification field ([Outcome]); and 3 Members — the composition's own rejections ([Already Suspended], [Revocation Failure] on suspend; [Already Active] on reinstate). **The Active → Suspended actor lifecycle** (a genuine composition-introduced two-state machine held in `actor_suspension_state`) is described in prose but its states are **left uncarded**, because `Active` is pervasively overloaded with the constituents' own grant/session `Active` status — carding it would be ambiguous. **No Type card** (the emergent state maps `actor_suspension_state` / `suspension_log` are backticked store tokens) and **no Parameter** (all action inputs are relayed constituent tokens). Survivors left backticked: the fenced projected-contract signatures (the `#### \`name\`` action headings and their code blocks); every qualified constituent call (Permissions' `revoke` / `grant`, Session's `revoke` / `issue` / `validate`, Audit Trail's `record_action` / `verify_record`, Credential's `revoke`) and outcome (`ok`, `revoked`, `denied`, `not-active`, `already-terminal`); the relayed tokens and constituent states; the substrate's inherited rejections (`recording-failure`, `invalid-credential`); the deployment configuration knobs (`unified_actor_namespace`, `revoke_credential_on_suspend`, `partial_failure_posture`); and concrete example ids. Constituent atom names remain the existing full links to `../atoms/*`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), its first run-on paragraph split one-idea-per-paragraph (cut #1, lossless) with the Login-mirror / common-uses paragraph kept intact; the dense descriptive top blockquote folded out after confirming each claim (multi-surface atomic de-authorization; the Login-outbound-counterpart framing; the four-atom-plus-optional-Credential composition; the three emergent invariants — atomicity, audit completeness, cascade ordering; the all-or-nothing default) is carried by Summary / Intent / Composes / the load-bearing wiring decision; no *also-known-as* line existed, so none was invented. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #5 — skipped (with reason):** the composition does own an emergent state machine (Active ⇄ Suspended), but it is a trivial two-state lifecycle already stated crisply (the step-2 Active→Suspended gate, the `reinstate_actor` reverse edge) — a transition table would add nothing. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-06-10`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (9 terms); four composition-level invariants preserved; the `.tla` models untouched — harness re-run green: `actor-suspension.tla` PASS (2 states) + `actor-suspension-buggy.tla --buggy` rejected on Invariant 1.
+
+</details>
