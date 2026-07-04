@@ -16,7 +16,17 @@ toc: true
 </details>
 
 
-> A regulated composition: a principal's request for elevated access to a protected resource is gated by a mandatory multi-party approval chain; only after all required approvals commit does the composition allocate a time-limited, scoped Capability token to the requesting principal. Session validity is checked before every access exercise. The full arc — request, approvals, provisioning, access exercise, expiry, and revocation — is auditable from records alone, with attribution at every decision point.
+## Summary
+
+Privileged Access Provisioning governs the full life of a request for elevated access — to financial controls, patient records, production credentials, and the like — where the access must be approved by more than one party and must be time-limited rather than standing.
+
+A request is submitted under a named requestor, must clear a mandatory multi-party approval chain, and only then results in a time-limited, scoped access token being issued; every time that access is actually used, the requestor's session is re-checked for validity first.
+
+It combines five patterns: the multi-party approval gate, credential authentication, time-limited sessions, the access token itself (a Capability — a bearer token good for a bounded time and scope), and the tamper-evident audit record spanning the whole arc.
+
+The central guarantees, which appear only when the patterns are combined, are that no access token can exist without an approved chain behind it (so an auditor can confirm every token traces back to real approvals), that access cannot be used under an expired or revoked session, and that the entire arc — request, approvals, provisioning, each use, expiry, and revocation — sits in one audit record with no gaps and nothing to cross-correlate. Modeling the access as a time-limited token rather than a standing permission is deliberate: privileged access is temporary authorization, not indefinite access.
+
+This is the worked example of approval-gated provisioning behind privileged access management, break-glass access, and time-boxed administrative escalation.
 
 ---
 
@@ -32,23 +42,17 @@ This composition is the library's worked example of approval-gated provisioning 
 
 ---
 
-## Summary
-
-Privileged Access Provisioning governs the full life of a request for elevated access — to financial controls, patient records, production credentials, and the like — where the access must be approved by more than one party and must be time-limited rather than standing. A request is submitted under a named requestor, must clear a mandatory multi-party approval chain, and only then results in a time-limited, scoped access token being issued; every time that access is actually used, the requestor's session is re-checked for validity first. It combines five patterns: the multi-party approval gate, credential authentication, time-limited sessions, the access token itself (a Capability — a bearer token good for a bounded time and scope), and the tamper-evident audit record spanning the whole arc. The central guarantees, which appear only when the patterns are combined, are that no access token can exist without an approved chain behind it (so an auditor can confirm every token traces back to real approvals), that access cannot be used under an expired or revoked session, and that the entire arc — request, approvals, provisioning, each use, expiry, and revocation — sits in one audit record with no gaps and nothing to cross-correlate. Modeling the access as a time-limited token rather than a standing permission is deliberate: privileged access is temporary authorization, not indefinite access. This is the worked example of approval-gated provisioning behind privileged access management, break-glass access, and time-boxed administrative escalation.
-
----
-
 ## Composes
 
-- **[Multi-Party Approval](./multi-party-approval.md)** — the approval-gate substrate. The composition maintains one Multi-Party Approval instance whose chain-store `subject_ref` is the `request_id` and whose `scope` is the `access_scope` of the request. Every privileged access request maps one-to-one to a Multi-Party Approval chain. Chain-level actions (`initiate_chain`, `approve_step`, `reject_step`, `withdraw_chain`) are exposed through this composition's surface, which adds session-validation and Audit Trail recording around the passthrough. Multi-Party Approval's own Audit Trail substrate is the same Audit Trail instance this composition uses for provisioning and access-exercise events — one Audit Trail instance for the full arc.
+- **[Multi-Party Approval](./multi-party-approval.md)** — the approval-gate substrate. The composition maintains one Multi-Party Approval instance whose chain-store `subject_ref` is the `request_id` and whose `scope` is the `access_scope` of the request. Every privileged access request maps one-to-one to a Multi-Party Approval chain. Chain-level actions (`initiate_chain`, [Approve Step], [Reject Step], `withdraw_chain`) are exposed through this composition's surface, which adds session-validation and Audit Trail recording around the passthrough. Multi-Party Approval's own Audit Trail substrate is the same Audit Trail instance this composition uses for provisioning and access-exercise events — one Audit Trail instance for the full arc.
 
 - **[Credential](../atoms/credential.md)** — the authentication surface for the requesting principal and for the approvers. The composition calls `Credential.verify` to confirm the requestor's credential is Active before a request is accepted, and again before each approver step is routed (ensuring the approver has not been revoked between chain initiation and decision). Credential is not independently managed by this composition — it is queried read-only. The composition does not call `register`, `rotate`, or `revoke` on any Credential; those belong to Login's or the identity-management surface.
 
-- **[Session](../atoms/session.md)** — the time-limited authenticated channel. The composition calls `Session.validate(session_token)` as the first step of `exercise_access`. If the session is not `valid` — expired, revoked, or not known — the exercise is rejected before the Capability is presented. Session is not independently managed by this composition; it is queried read-only. Sessions are issued by the Login composition. The cascade from Credential revocation through Session invalidation through blocked `exercise_access` calls is the composition's cascading-revocation emergent invariant.
+- **[Session](../atoms/session.md)** — the time-limited authenticated channel. The composition calls `Session.validate(session_token)` as the first step of [Exercise Access]. If the session is not `valid` — expired, revoked, or not known — the exercise is rejected before the Capability is presented. Session is not independently managed by this composition; it is queried read-only. Sessions are issued by the Login composition. The cascade from Credential revocation through Session invalidation through blocked [Exercise Access] calls is the composition's cascading-revocation emergent invariant.
 
-- **[Permissions](../atoms/permissions.md)** — the authorization gate for caller-initiated actions. The composition calls `Permissions.permitted` in `request_access` (scope: `requests:initiate`), in `withdraw_request` (scope: `requests:withdraw`, for actors other than the requestor), and in `revoke_access` (scope: `requests:revoke`). Permissions is queried read-only; the composition does not call `grant` or `revoke` on any permission. The authorization policy — which principals hold which request scopes — is owned by the deployment's Permissions store.
+- **[Permissions](../atoms/permissions.md)** — the authorization gate for caller-initiated actions. The composition calls `Permissions.permitted` in [Request Access] (scope: `requests:initiate`), in [Withdraw Request] (scope: `requests:withdraw`, for actors other than the requestor), and in [Revoke Access] (scope: `requests:revoke`). Permissions is queried read-only; the composition does not call `grant` or `revoke` on any permission. The authorization policy — which principals hold which request scopes — is owned by the deployment's Permissions store.
 
-- **[Capability](../atoms/capability.md)** — the provisioned access token. The composition calls `Capability.allocate` once, on the event that the Multi-Party Approval chain reaches `Approved`, producing the bearer token delivered to the requestor. `max_redemptions` is deployment-configurable (default 1 for single-exercise privileged access; higher for break-glass or time-boxed access with multiple permitted uses). `Capability.redeem` is called inside `exercise_access` after Session validation passes. `Capability.revoke` is called by `revoke_access`. The redeemer's identity is intentionally not recorded by the Capability atom; the session under which `exercise_access` was called is the closest the audit record comes to a redeemer identity.
+- **[Capability](../atoms/capability.md)** — the provisioned access token. The composition calls `Capability.allocate` once, on the event that the Multi-Party Approval chain reaches `Approved`, producing the bearer token delivered to the requestor. `max_redemptions` is deployment-configurable (default 1 for single-exercise privileged access; higher for break-glass or time-boxed access with multiple permitted uses). `Capability.redeem` is called inside [Exercise Access] after Session validation passes. `Capability.revoke` is called by [Revoke Access]. The redeemer's identity is intentionally not recorded by the Capability atom; the session under which [Exercise Access] was called is the closest the audit record comes to a redeemer identity.
 
 - **[Audit Trail](./audit-trail.md)** — the regulated-audit substrate. One Audit Trail instance is maintained across all five stages of the arc. Multi-Party Approval's approval-chain events, the provisioning event (`access_provisioned`), and each access-exercise event (`access_exercised`) and revocation event (`access_revoked`) are all recorded in this instance. The instance is configured with the host's regulatory retention policy at deployment. Event Log, Actor Identity, Retention Window, and Tamper Evidence are reached transitively through Audit Trail; the composition does not maintain separate instances of those atoms.
 
@@ -60,15 +64,15 @@ Privileged Access Provisioning governs the full life of a request for elevated a
 
 The composition owns emergent state that wires the constituent atoms into one queryable access-request surface:
 
-- **`request_store`** — the set of access request records. Each record carries `request_id`, `requestor_ref`, `resource_ref`, `access_scope`, `justification`, `requested_at`, `expires_at` (computed from `ttl` at request time), `state` (Pending | Approved | Provisioned | Denied | Withdrawn | Revoked | ProvisioningFailed), and `denial_reason` (nullable; set when state transitions to `Denied` or `ProvisioningFailed`). `request_id`, `requestor_ref`, `resource_ref`, `access_scope`, `justification`, `requested_at`, and `expires_at` are immutable once written. `state` is the only mutable field; it advances forward only. `ProvisioningFailed` is a terminal state: the approval chain cleared but the Capability allocation failed at provisioning time. A request in `ProvisioningFailed` requires a new `request_access` call to retry; there is no in-place re-provisioning action.
+- **`request_store`** — the set of access request records. Each record carries `request_id`, `requestor_ref`, `resource_ref`, `access_scope`, `justification`, `requested_at`, `expires_at` (computed from `ttl` at request time), `state` (Pending | Approved | Provisioned | Denied | Withdrawn | Revoked | ProvisioningFailed), and `denial_reason` (nullable; set when state transitions to `Denied` or `ProvisioningFailed`). `request_id`, `requestor_ref`, `resource_ref`, `access_scope`, `justification`, `requested_at`, and `expires_at` are immutable once written. `state` is the only mutable field; it advances forward only. `ProvisioningFailed` is a terminal state: the approval chain cleared but the Capability allocation failed at provisioning time. A request in `ProvisioningFailed` requires a new [Request Access] call to retry; there is no in-place re-provisioning action.
 
-- **`request_to_chain`** — map from `request_id` to the `chain_id` in Multi-Party Approval. Set at `request_access` time and immutable. Every request maps to exactly one chain.
+- **`request_to_chain`** — map from `request_id` to the `chain_id` in Multi-Party Approval. Set at [Request Access] time and immutable. Every request maps to exactly one chain.
 
 - **`request_to_capability`** — map from `request_id` to the `capability_token` in Capability. Set at provisioning time (the transition from `Approved` to `Provisioned`) and immutable. Only requests in `Provisioned`, `Revoked`, or (implicitly) `Expired` state have an entry in this map.
 
-- **`capability_to_request`** — reverse map from `capability_token` to `request_id`. Maintained as the strict inverse of `request_to_capability`; every atomic write to `request_to_capability` writes the corresponding entry to `capability_to_request` in the same transaction. Used by `exercise_access` step 2 to recover the `request_id` for a presented `capability_token` without a full scan. Like `request_to_capability`, entries are immutable once written and never deleted by the composition.
+- **`capability_to_request`** — reverse map from `capability_token` to `request_id`. Maintained as the strict inverse of `request_to_capability`; every atomic write to `request_to_capability` writes the corresponding entry to `capability_to_request` in the same transaction. Used by [Exercise Access] step 2 to recover the `request_id` for a presented `capability_token` without a full scan. Like `request_to_capability`, entries are immutable once written and never deleted by the composition.
 
-- **`session_access_log`** — append-only record of each `exercise_access` call that reached the Capability redeem step. Each entry carries `request_id`, `session_token`, `capability_token`, `exercised_at`, and `result` (`redeemed` | `capability-invalid(reason)`). Populated regardless of whether the Capability.redeem call succeeds or fails (if Session.validate succeeds and the call reaches the Capability step). Never modified after write.
+- **`session_access_log`** — append-only record of each [Exercise Access] call that reached the Capability redeem step. Each entry carries `request_id`, `session_token`, `capability_token`, `exercised_at`, and `result` (`redeemed` | `capability-invalid(reason)`). Populated regardless of whether the Capability.redeem call succeeds or fails (if Session.validate succeeds and the call reaches the Capability step). Never modified after write.
 
 ### Configuration
 
@@ -76,7 +80,7 @@ The composition owns emergent state that wires the constituent atoms into one qu
 
 - **`max_redemptions_default`** — the `max_redemptions` value passed to `Capability.allocate` when not overridden by the requestor. Defaults to 1 (single-exercise). Deployments permitting multi-use privileged access tokens configure higher values; the maximum permitted value is itself deployment-configurable.
 
-- **`credential_check_on_request`** — whether `Credential.verify` is called against the requestor's credential before accepting the request. Defaults to `true`. Deployments that manage requestor credential verification upstream may disable; disabling does not change the session-validation requirement at `exercise_access`.
+- **`credential_check_on_request`** — whether `Credential.verify` is called against the requestor's credential before accepting the request. Defaults to `true`. Deployments that manage requestor credential verification upstream may disable; disabling does not change the session-validation requirement at [Exercise Access].
 
 - **`approver_set_minimum`** — passed through to Multi-Party Approval's configuration. The composition enforces that privileged access requires genuine multi-party approval by defaulting this to 2. A deployment that wants single-approver privileged access explicitly sets this to 1; the audit record reflects the single-approver configuration.
 
@@ -89,8 +93,8 @@ The composition owns emergent state that wires the constituent atoms into one qu
 **`request_access(requestor_ref, resource_ref, access_scope, justification, approver_set, quorum_rule, ttl?, credential?) → request_id | rejected(invalid-request | permission-denied | credential-invalid | storage-failure)`**
 
 1. Validate: `requestor_ref`, `resource_ref`, `access_scope`, `justification` must be non-null and non-empty; `ttl` must be positive if supplied. Any violation: `invalid-request`.
-2. Call `Permissions.permitted(requestor_ref, requests:initiate)` → if `denied`, return `permission-denied`.
-3. If `credential_check_on_request` is enabled: call `Credential.verify(credential, requestor_ref)` → if not `verified`, return `credential-invalid`.
+2. Call `Permissions.permitted(requestor_ref, requests:initiate)` → if `denied`, return [Permission Denied].
+3. If `credential_check_on_request` is enabled: call `Credential.verify(credential, requestor_ref)` → if not `verified`, return [Credential Invalid].
 4. Allocate a fresh `request_id`. Record the request in `request_store` with `state = Pending`, `requested_at = now`, `expires_at = now + ttl` (or default).
 5. Call `MultiPartyApproval.initiate_chain(actor_ref=requestor_ref, subject_ref=request_id, scope=access_scope, approver_set, quorum_rule)` → `chain_id | rejected(...)`. On rejection, roll back the `request_store` write and surface `invalid-request` or `storage-failure` as appropriate.
 6. Record `request_to_chain[request_id] = chain_id`.
@@ -101,7 +105,7 @@ The composition owns emergent state that wires the constituent atoms into one qu
 **`approve_step(actor_ref, request_id, step_id, reason?, credential) → approved | rejected(invalid-request | not-known | not-pending | unauthorized | credential-invalid | recording-failure)`**
 
 1. Look up `chain_id = request_to_chain[request_id]`. If not found, `not-known`.
-2. Call `Credential.verify(credential, actor_ref)` → if not `verified`, return `credential-invalid`. The approver's credential must be Active at decision time.
+2. Call `Credential.verify(credential, actor_ref)` → if not `verified`, return [Credential Invalid]. The approver's credential must be Active at decision time.
 3. Call `MultiPartyApproval.approve_step(actor_ref, chain_id, step_id, reason?)` → propagates rejection taxonomy unchanged. On `recording-failure`, surface unchanged.
 4. Call `AuditTrail.record_action(action_ref=approval_step_decided, actor_ref, credential, data={request_id, step_id, decision=approved, reason})`.
 5. **Chain state evaluation**: query `MultiPartyApproval.read_chain(chain_id)`. If chain `state` is now `Approved` and `request_store[request_id].state` is `Pending` (provisioning has not yet started): set `request_store[request_id].state = Approved` (internal transient — this marks the cascade as in-progress; see Summary), then fire the **provisioning cascade** (see below). If `request_store[request_id].state` is already `Approved`, `Provisioned`, or `ProvisioningFailed`, the cascade is already in progress or has already run — skip it. This guard prevents re-fire under Multi-Party Approval's trailing-decision semantics, where a late approval on an already-`Approved` chain would otherwise trigger a second Capability allocation for the same request. If chain `state` is `Rejected` and `request_store[request_id].state` is `Pending` or `Approved` (i.e., not already terminal): transition `request_store[request_id].state` to `Denied`, set `denial_reason`, and call `AuditTrail.record_action(action_ref=access_denied, actor_ref=application_actor_ref, ...)`. If request is already `Denied`, skip — a prior call already recorded the denial.
@@ -109,14 +113,14 @@ The composition owns emergent state that wires the constituent atoms into one qu
 
 **`reject_step(actor_ref, request_id, step_id, reason, credential) → rejected_outcome | rejected(invalid-request | not-known | not-pending | unauthorized | credential-invalid | recording-failure)`**
 
-Mirrors `approve_step` steps 1–4 with `decision=rejected`. At step 5: if chain `state` is `Rejected`, transition request to `Denied`. `reason` is required (Approval Step Invariant 6 enforces it at the atom level).
+Mirrors [Approve Step] steps 1–4 with `decision=rejected`. At step 5: if chain `state` is `Rejected`, transition request to `Denied`. `reason` is required (Approval Step Invariant 6 enforces it at the atom level).
 
 **`withdraw_request(actor_ref, request_id, reason, credential) → withdrawn | rejected(invalid-request | not-known | not-pending | permission-denied | credential-invalid | recording-failure)`**
 
 1. Look up `request_id`. If not found, `not-known`. If `state` is not `Pending`, `not-pending`.
-2. Call `Credential.verify(credential, actor_ref)` → if not `verified`, return `credential-invalid`.
-3. If `actor_ref != request.requestor_ref`: call `Permissions.permitted(actor_ref, requests:withdraw)` → if `denied`, return `permission-denied`. The requestor is always permitted to withdraw their own request without an explicit `requests:withdraw` grant; any other actor requires one.
-4. Call `MultiPartyApproval.withdraw_chain(actor_ref, chain_id=request_to_chain[request_id], reason)` → `withdrawn | rejected(not-known | not-pending | unauthorized | recording-failure)`. If the chain is already terminal (`not-pending`) — a race between this call and a concurrent `approve_step` or `reject_step` resolving the chain — return `not-pending` to the caller; the request state remains `Pending` in `request_store` and will require a follow-up read to discover the chain's actual terminal state and reconcile. The composition does not attempt to auto-reconcile this race; the auditor can reconstruct the race from the Audit Trail event timestamps. If `withdraw_chain` returns `unauthorized`, the actor is not authorized to withdraw the chain at the Multi-Party Approval level (e.g., the chain requires the original requestor to withdraw and a different actor attempted it without a `requests:withdraw` grant that Multi-Party Approval also honors); surface as `permission-denied`. For any other rejection from `withdraw_chain`, surface as `recording-failure`.
+2. Call `Credential.verify(credential, actor_ref)` → if not `verified`, return [Credential Invalid].
+3. If `actor_ref != request.requestor_ref`: call `Permissions.permitted(actor_ref, requests:withdraw)` → if `denied`, return [Permission Denied]. The requestor is always permitted to withdraw their own request without an explicit `requests:withdraw` grant; any other actor requires one.
+4. Call `MultiPartyApproval.withdraw_chain(actor_ref, chain_id=request_to_chain[request_id], reason)` → `withdrawn | rejected(not-known | not-pending | unauthorized | recording-failure)`. If the chain is already terminal (`not-pending`) — a race between this call and a concurrent [Approve Step] or [Reject Step] resolving the chain — return `not-pending` to the caller; the request state remains `Pending` in `request_store` and will require a follow-up read to discover the chain's actual terminal state and reconcile. The composition does not attempt to auto-reconcile this race; the auditor can reconstruct the race from the Audit Trail event timestamps. If `withdraw_chain` returns `unauthorized`, the actor is not authorized to withdraw the chain at the Multi-Party Approval level (e.g., the chain requires the original requestor to withdraw and a different actor attempted it without a `requests:withdraw` grant that Multi-Party Approval also honors); surface as [Permission Denied]. For any other rejection from `withdraw_chain`, surface as `recording-failure`.
 5. Transition `request_store[request_id].state` to `Withdrawn`.
 6. Call `AuditTrail.record_action(action_ref=access_request_withdrawn, actor_ref, credential, data={request_id, reason})`.
 7. Return `withdrawn`.
@@ -126,7 +130,7 @@ Mirrors `approve_step` steps 1–4 with `decision=rejected`. At step 5: if chain
 1. Call `Session.validate(session_token)` → `valid | invalid(expired | revoked | not-known)`. If not `valid`, return `rejected(session-invalid(reason))`. The session check is the first operation; a non-`valid` result returns immediately without touching the Capability.
 2. Look up `request_id` via `capability_to_request[capability_token]`. If the token is not in the map, `not-known` — the token was never issued by this composition's provisioning cascade.
 3. Call `Capability.redeem(capability_token)` → `redeemed | invalid(exhausted | expired | revoked | not-known)`. If `Capability.redeem` returns `not-known` for a token that *is* in `capability_to_request`, this is a storage inconsistency (the composition's map has the token but the Capability atom does not). Append to `session_access_log`: `{request_id, session_token, capability_token, exercised_at=now, result=capability-invalid(not-known)}`. Then call `AuditTrail.record_action(action_ref=access_exercise_inconsistency, actor_ref=application_actor_ref, data={capability_token, request_id, detail="capability_to_request entry exists but Capability.redeem returned not-known"})` and surface `rejected(capability-invalid(not-known))` to the caller. Do not continue to step 4.
-4. Append to `session_access_log` (for all non-inconsistency outcomes of step 3): `{request_id, session_token, capability_token, exercised_at=now, result}` where `result` is `redeemed` on success or `capability-invalid(reason)` on any `invalid(...)` response other than the inconsistency case handled in step 3. The log records every `exercise_access` call that reached the Capability step — including failed attempts — because a presented-but-exhausted, presented-but-expired, or presented-but-revoked token is itself an auditable event.
+4. Append to `session_access_log` (for all non-inconsistency outcomes of step 3): `{request_id, session_token, capability_token, exercised_at=now, result}` where `result` is `redeemed` on success or `capability-invalid(reason)` on any `invalid(...)` response other than the inconsistency case handled in step 3. The log records every [Exercise Access] call that reached the Capability step — including failed attempts — because a presented-but-exhausted, presented-but-expired, or presented-but-revoked token is itself an auditable event.
 5. If step 3 returned `invalid(reason)`, call `AuditTrail.record_action(action_ref=access_exercise_failed, actor_ref=application_actor_ref, data={request_id, capability_token, session_token, reason})` and return `rejected(capability-invalid(reason))`.
 6. Call `AuditTrail.record_action(action_ref=access_exercised, actor_ref=application_actor_ref, data={request_id, capability_token, session_token, exercised_at})`.
 7. Return `exercised`.
@@ -135,9 +139,9 @@ Note: the Audit Trail entry records `session_token` but not the session's `princ
 
 **`revoke_access(actor_ref, request_id, reason, credential) → revoked | rejected(invalid-request | not-known | not-provisioned | credential-invalid | permission-denied | recording-failure)`**
 
-1. Look up `request_id`. If not found, `not-known`. If `state` is not `Provisioned`, `not-provisioned`.
-2. Call `Credential.verify(credential, actor_ref)` → if not `verified`, return `credential-invalid`.
-3. Call `Permissions.permitted(actor_ref, requests:revoke)` → if `denied`, return `permission-denied`.
+1. Look up `request_id`. If not found, `not-known`. If `state` is not `Provisioned`, [Not Provisioned].
+2. Call `Credential.verify(credential, actor_ref)` → if not `verified`, return [Credential Invalid].
+3. Call `Permissions.permitted(actor_ref, requests:revoke)` → if `denied`, return [Permission Denied].
 4. Call `Capability.revoke(capability_token=request_to_capability[request_id], revoked_by_ref=actor_ref, reason)` → `revoked | already-terminal(reason)`. If `already-terminal`, the Capability is already inaccessible (expired, exhausted, or previously revoked by another path); continue to step 5. The access is blocked regardless of the terminal mode, and the state transition to `Revoked` and the Audit Trail entry serve the audit record. If `Capability.revoke` returns any other rejection (e.g., `not-known`), surface as `recording-failure`.
 5. Transition `request_store[request_id].state` to `Revoked`.
 6. Call `AuditTrail.record_action(action_ref=access_revoked, actor_ref, credential, data={request_id, reason})`.
@@ -145,9 +149,9 @@ Note: the Audit Trail entry records `session_token` but not the session's `princ
 
 ### Provisioning cascade
 
-The provisioning cascade fires when `MultiPartyApproval.read_chain` returns `state = Approved` after an `approve_step` call. It is internal to the composition:
+The provisioning cascade fires when `MultiPartyApproval.read_chain` returns `state = Approved` after an [Approve Step] call. It is internal to the composition:
 
-1. Call `Capability.allocate(allocated_by_ref=application_actor_ref, scope=request.access_scope, resource_ref=request.resource_ref, max_redemptions=max_redemptions_default, ttl=request.expires_at - now)` → `capability_token | rejected(...)`. On rejection: transition `request_store[request_id].state` to `ProvisioningFailed`, set `denial_reason` to the rejection reason, call `AuditTrail.record_action(action_ref=access_provisioning_failed, actor_ref=application_actor_ref, data={request_id, reason})`, and surface `recording-failure` to the `approve_step` caller. `ProvisioningFailed` is a terminal state for the request; no in-place re-provisioning action exists. The requestor must call `request_access` again to open a new request and initiation chain.
+1. Call `Capability.allocate(allocated_by_ref=application_actor_ref, scope=request.access_scope, resource_ref=request.resource_ref, max_redemptions=max_redemptions_default, ttl=request.expires_at - now)` → `capability_token | rejected(...)`. On rejection: transition `request_store[request_id].state` to `ProvisioningFailed`, set `denial_reason` to the rejection reason, call `AuditTrail.record_action(action_ref=access_provisioning_failed, actor_ref=application_actor_ref, data={request_id, reason})`, and surface `recording-failure` to the [Approve Step] caller. `ProvisioningFailed` is a terminal state for the request; no in-place re-provisioning action exists. The requestor must call [Request Access] again to open a new request and initiation chain.
 2. Record `request_to_capability[request_id] = capability_token`.
 3. Transition `request_store[request_id].state` from `Approved` to `Provisioned`.
 4. Call `AuditTrail.record_action(action_ref=access_provisioned, actor_ref=application_actor_ref, data={request_id, capability_token, requestor_ref=request.requestor_ref, resource_ref, access_scope})`.
@@ -161,10 +165,10 @@ The composition defines these scopes for its Permissions instance:
 
 | Scope | Permits |
 |-------|---------|
-| `requests:initiate` | Call `request_access` |
-| `requests:withdraw` | Withdraw any access request (requestors may always withdraw their own) |
-| `requests:revoke` | Call `revoke_access` on any provisioned request |
-| `requests:read` | Query request records and their associated chain, capability, and audit events |
+| [Requests Initiate] | Call [Request Access] |
+| [Requests Withdraw] | Withdraw any access request (requestors may always withdraw their own) |
+| [Requests Revoke] | Call [Revoke Access] on any provisioned request |
+| [Requests Read] | Query request records and their associated chain, capability, and audit events |
 
 ---
 
@@ -172,15 +176,15 @@ The composition defines these scopes for its Permissions instance:
 
 - **Approval-gates-provisioning is structurally enforced, not advisory.** The action wiring makes it impossible to allocate a Capability for a request via the composition's surface without the Multi-Party Approval chain for that request reaching `Approved`. The provisioning cascade is the only path from chain-approval to capability-allocation; there is no `provision_access` action a caller can invoke directly. An implementation that provides a direct provisioning path outside the cascade violates Invariant 1.
 
-- **Session validity is the first check at access exercise, not an afterthought.** `exercise_access` calls `Session.validate` before touching the Capability. A revoked or expired session blocks the exercise regardless of whether the Capability is still valid. This is the composition's enforcement of the cascading-revocation invariant: Credential revocation → Session invalidation (via Login) → `exercise_access` returns `session-invalid` → privileged access blocked without any direct action on the Capability or the request record.
+- **Session validity is the first check at access exercise, not an afterthought.** [Exercise Access] calls `Session.validate` before touching the Capability. A revoked or expired session blocks the exercise regardless of whether the Capability is still valid. This is the composition's enforcement of the cascading-revocation invariant: Credential revocation → Session invalidation (via Login) → [Exercise Access] returns [Session Invalid] → privileged access blocked without any direct action on the Capability or the request record.
 
-- **The Capability's bearer-key property is preserved, not subverted.** The composition does not add an identity check at redemption time. `exercise_access` takes a `session_token` (to verify the authenticated channel) and a `capability_token` (to present to the Capability atom). It records both in the access log and the Audit Trail. The Audit Trail entry names the `session_token` — traceable to a principal by an auditor querying the Session store — but does not name the principal directly in the access-exercise record. The audit-subject asymmetry is intentional and documented: the approval chain names every approver; the access exercise names the authenticated channel, not the bearer's identity at the moment of presentation.
+- **The Capability's bearer-key property is preserved, not subverted.** The composition does not add an identity check at redemption time. [Exercise Access] takes a `session_token` (to verify the authenticated channel) and a `capability_token` (to present to the Capability atom). It records both in the access log and the Audit Trail. The Audit Trail entry names the `session_token` — traceable to a principal by an auditor querying the Session store — but does not name the principal directly in the access-exercise record. The audit-subject asymmetry is intentional and documented: the approval chain names every approver; the access exercise names the authenticated channel, not the bearer's identity at the moment of presentation.
 
 - **One Audit Trail covers the full arc.** Every event from `access_requested` through approval decisions through `access_provisioned` through each `access_exercised` through `access_revoked` is recorded in the same Audit Trail instance. The temporal sequence of these events in the Event Log is the structural form of the full arc. No second store is required to reconstruct the arc; no correlation step is needed.
 
-- **Approver authorization is enforced by the `approver_set`, not by a Permissions grant.** `approve_step` and `reject_step` do not call `Permissions.permitted` on the deciding actor. Approver authorization is encoded in the `approver_set` declared at chain initiation and enforced at the Multi-Party Approval level — the atom rejects any step decision from an actor not in the `approver_set` for that step. Adding a `Permissions.permitted(actor_ref, requests:approve)` check at this composition's layer would double-enforce an already-enforced rule via a different mechanism, creating two failure modes for the same condition. The composition's authorization for step decisions is limited to credential validity (`Credential.verify`) and approver-set membership (Multi-Party Approval's enforcement). This is the composition's deliberate design, not an oversight.
+- **Approver authorization is enforced by the `approver_set`, not by a Permissions grant.** [Approve Step] and [Reject Step] do not call `Permissions.permitted` on the deciding actor. Approver authorization is encoded in the `approver_set` declared at chain initiation and enforced at the Multi-Party Approval level — the atom rejects any step decision from an actor not in the `approver_set` for that step. Adding a `Permissions.permitted(actor_ref, requests:approve)` check at this composition's layer would double-enforce an already-enforced rule via a different mechanism, creating two failure modes for the same condition. The composition's authorization for step decisions is limited to credential validity (`Credential.verify`) and approver-set membership (Multi-Party Approval's enforcement). This is the composition's deliberate design, not an oversight.
 
-- **Credential revocation blocks both new requests and existing approvals.** If an approver's Credential is revoked between chain initiation and their decision, step 2 of `approve_step` (Credential.verify) returns `not-verified` and the step is rejected with `credential-invalid`. The approval chain remains in-flight; the revoked approver's step remains Pending. The chain can be withdrawn and re-initiated with a replacement approver. This is the correct behavior: a decision from a revoked actor is not valid evidence of approval.
+- **Credential revocation blocks both new requests and existing approvals.** If an approver's Credential is revoked between chain initiation and their decision, step 2 of [Approve Step] (Credential.verify) returns `not-verified` and the step is rejected with [Credential Invalid]. The approval chain remains in-flight; the revoked approver's step remains Pending. The chain can be withdrawn and re-initiated with a replacement approver. This is the correct behavior: a decision from a revoked actor is not valid evidence of approval.
 
 ---
 
@@ -190,21 +194,21 @@ The composition defines these scopes for its Permissions instance:
 
 **Invariant 2 — Request-capability bijection.** Each `request_id` maps to at most one `capability_token` across the lifetime of the system. A second Capability is never allocated for a request that has already been provisioned; re-access requires a new request with a new approval chain. This preserves the audit property that each access token traces back to exactly one documented approval decision.
 
-**Invariant 3 — Session-gated exercise.** Every `access_exercised` event in the Audit Trail was preceded in the same session by a `valid` result from `Session.validate`. No `capability_token` is redeemed through this composition's surface without a prior session-validity confirmation in the same `exercise_access` call.
+**Invariant 3 — Session-gated exercise.** Every `access_exercised` event in the Audit Trail was preceded in the same session by a `valid` result from `Session.validate`. No `capability_token` is redeemed through this composition's surface without a prior session-validity confirmation in the same [Exercise Access] call.
 
-**Invariant 4 — Cascading-revocation chain.** Revoking the requestor's Credential invalidates all Sessions derived from it (Login cascade). Any subsequent `exercise_access` call under an invalidated session returns `session-invalid` before the Capability is presented. The chain spans three composition layers (Credential → Session → exercise_access gate) and is not expressible at any single constituent atom layer.
+**Invariant 4 — Cascading-revocation chain.** Revoking the requestor's Credential invalidates all Sessions derived from it (Login cascade). Any subsequent [Exercise Access] call under an invalidated session returns [Session Invalid] before the Capability is presented. The chain spans three composition layers (Credential → Session → exercise_access gate) and is not expressible at any single constituent atom layer.
 
 **Invariant 5 — Audit-arc completeness.** Every access request record in `request_store` has at least one corresponding Audit Trail event with `action_ref = access_requested`. Every provisioned request has at least one `access_provisioned` event. Every access exercise recorded in `session_access_log` with `result = redeemed` has a corresponding `access_exercised` Audit Trail entry, and conversely, every `access_exercised` Audit Trail entry has a corresponding `session_access_log` entry. The bidirectional relationship holds because the action wiring writes the `session_access_log` entry (step 4) before the Audit Trail entry (step 6) in the success path — a Audit Trail entry without a log entry is evidence that step 4 was bypassed. An auditor can reconstruct the full arc — from first request to last access — from the Audit Trail alone.
 
-**Invariant 6 — Approver-credential completeness.** Every approval decision (`approve_step`, `reject_step`) has a `Credential.verify` check against the approving actor's credential immediately before the step is recorded. No approval decision is attributed to an actor whose Credential was not Active at the time of decision. A decision attributed to a revoked or expired credential is evidence of a verification bypass.
+**Invariant 6 — Approver-credential completeness.** Every approval decision ([Approve Step], [Reject Step]) has a `Credential.verify` check against the approving actor's credential immediately before the step is recorded. No approval decision is attributed to an actor whose Credential was not Active at the time of decision. A decision attributed to a revoked or expired credential is evidence of a verification bypass.
 
 **Invariant 7 — Denial completeness.** Every request that transitions to `Denied` has a corresponding `access_denied` Audit Trail event naming the chain's final state and the `denial_reason`. An auditor can determine from the records alone which requests were denied, by which quorum failure, and when.
 
 **Invariant 8 — Immutable request identity.** Once a request record is created, `request_id`, `requestor_ref`, `resource_ref`, `access_scope`, `justification`, `requested_at`, and `expires_at` never change. The `state` field advances forward only; no terminal state returns to `Pending`.
 
-**Invariant 9 — Single Audit Trail instance.** The same Audit Trail instance receives events from Multi-Party Approval (approval chain events), from the provisioning cascade (`access_provisioned`), and from `exercise_access` and `revoke_access`. A deployment that routes these event classes to separate Audit Trail instances violates this invariant and fragments the arc — an auditor reading one instance will see an incomplete record.
+**Invariant 9 — Single Audit Trail instance.** The same Audit Trail instance receives events from Multi-Party Approval (approval chain events), from the provisioning cascade (`access_provisioned`), and from [Exercise Access] and [Revoke Access]. A deployment that routes these event classes to separate Audit Trail instances violates this invariant and fragments the arc — an auditor reading one instance will see an incomplete record.
 
-**Invariant 10 — Session-access-log durability.** Once written, entries in `session_access_log` are never modified or deleted. The log records every `exercise_access` call that reached the Capability step — including calls where `Capability.redeem` returned `invalid` — and is the operational-audit surface for access-exercise frequency, failed-presentation detection, session correlation, and capability exhaustion analysis. A log entry with `result = capability-invalid(revoked)` is evidence that someone presented a revoked token under a valid session; that signal is auditable from the log alone.
+**Invariant 10 — Session-access-log durability.** Once written, entries in `session_access_log` are never modified or deleted. The log records every [Exercise Access] call that reached the Capability step — including calls where `Capability.redeem` returned `invalid` — and is the operational-audit surface for access-exercise frequency, failed-presentation detection, session correlation, and capability exhaustion analysis. A log entry with `result = capability-invalid(revoked)` is evidence that someone presented a revoked token under a valid session; that signal is auditable from the log alone.
 
 ---
 
@@ -238,7 +242,7 @@ A request under `all-of-2` quorum receives a rejection from the first approver:
 
 `reject_step(actor_ref: sec_u03, request_id: req_q5m8n1, step_id: step_s1, reason: "requestor does not have business need for this scope", credential: cred_s03)`
 
-Under `all-of-2`, one rejection makes quorum unachievable. Multi-Party Approval transitions the chain to `Rejected`. The composition detects this at step 5 of `reject_step` and transitions the request to `Denied`, recording `denial_reason`. The Audit Trail records `access_denied`. No Capability is ever allocated. Any subsequent `exercise_access` attempt returns `not-known` (the `capability_token` was never issued; the `request_to_capability` map has no entry for this `request_id`).
+Under `all-of-2`, one rejection makes quorum unachievable. Multi-Party Approval transitions the chain to `Rejected`. The composition detects this at step 5 of [Reject Step] and transitions the request to `Denied`, recording `denial_reason`. The Audit Trail records `access_denied`. No Capability is ever allocated. Any subsequent [Exercise Access] attempt returns `not-known` (the `capability_token` was never issued; the `request_to_capability` map has no entry for this `request_id`).
 
 ### Rejection path — session invalid at exercise time
 
@@ -272,13 +276,13 @@ Three scenarios the composition must survive in regulated contexts:
 
 - **Approval chain composition belongs to Multi-Party Approval.** This composition surfaces the chain-initiation and step-decision actions as pass-throughs. The quorum rules (`all-of-N`, `M-of-N`, `one-of-N`), the trailing-decision behavior, the partial-failure recovery paths, and the cascading withdrawal logic are all owned by Multi-Party Approval. See its specification for those details.
 
-- **Capability expiry is lazy.** When a `Provisioned` request's Capability TTL passes without exercise, the Capability transitions to `Expired` at the next `exercise_access` call or `Capability.revoke` call that detects the expiry (lazy-expiry path per the Capability atom). The request record's `state` remains `Provisioned` in the `request_store`; the Capability record carries `Expired`. An auditor reading both records sees the full picture. A background scheduler may eagerly call `Capability.expire` per the Capability atom's `expire` action; if it does, the request record remains `Provisioned` and the Capability record transitions to `Expired` before any `exercise_access` attempt. In either case, a subsequent `exercise_access` returns `rejected(capability-invalid(expired))`.
+- **Capability expiry is lazy.** When a `Provisioned` request's Capability TTL passes without exercise, the Capability transitions to `Expired` at the next [Exercise Access] call or `Capability.revoke` call that detects the expiry (lazy-expiry path per the Capability atom). The request record's `state` remains `Provisioned` in the `request_store`; the Capability record carries `Expired`. An auditor reading both records sees the full picture. A background scheduler may eagerly call `Capability.expire` per the Capability atom's `expire` action; if it does, the request record remains `Provisioned` and the Capability record transitions to `Expired` before any [Exercise Access] attempt. In either case, a subsequent [Exercise Access] returns `rejected(capability-invalid(expired))`.
 
-- **Re-access after expiry or revocation requires a new request.** There is no `renew` or `re-provision` action. If access is needed after the Capability expires or is revoked, the requestor calls `request_access` again with a fresh justification, which initiates a new approval chain. The old request record and its chain remain in the store as immutable history. Invariant 2 (request-capability bijection) guarantees no second Capability is issued against the old `request_id`.
+- **Re-access after expiry or revocation requires a new request.** There is no `renew` or `re-provision` action. If access is needed after the Capability expires or is revoked, the requestor calls [Request Access] again with a fresh justification, which initiates a new approval chain. The old request record and its chain remain in the store as immutable history. Invariant 2 (request-capability bijection) guarantees no second Capability is issued against the old `request_id`.
 
-- **`ProvisioningFailed` is a terminal state requiring a new request.** If the provisioning cascade fires but `Capability.allocate` returns a rejection (resource exhaustion, allocation service failure, TTL already elapsed), the request transitions to `ProvisioningFailed`. The approval chain record remains in `Approved` state — the approvers' decisions are valid and durable. However, the chain cannot be re-used: `ProvisioningFailed` is terminal for the request record. The requestor must call `request_access` again with a fresh justification, which initiates a new chain requiring the same (or a newly configured) approval set. The `ProvisioningFailed` record and the corresponding `access_provisioning_failed` Audit Trail event remain as permanent history. **Notifying the requestor of `ProvisioningFailed` is a deployment obligation** — the composition fires the cascade internally after an `approve_step` call; the requestor is not present at that call and receives no automatic notification. A deployment must wire the `access_provisioning_failed` Audit Trail event to a notification or inbox mechanism so the requestor knows their request failed to provision and can retry. Operational runbooks for deployments where `Capability.allocate` has meaningful failure rates should instrument on `access_provisioning_failed` events and alert; silent `ProvisioningFailed` accumulation indicates a capacity or configuration problem.
+- **`ProvisioningFailed` is a terminal state requiring a new request.** If the provisioning cascade fires but `Capability.allocate` returns a rejection (resource exhaustion, allocation service failure, TTL already elapsed), the request transitions to `ProvisioningFailed`. The approval chain record remains in `Approved` state — the approvers' decisions are valid and durable. However, the chain cannot be re-used: `ProvisioningFailed` is terminal for the request record. The requestor must call [Request Access] again with a fresh justification, which initiates a new chain requiring the same (or a newly configured) approval set. The `ProvisioningFailed` record and the corresponding `access_provisioning_failed` Audit Trail event remain as permanent history. **Notifying the requestor of `ProvisioningFailed` is a deployment obligation** — the composition fires the cascade internally after an [Approve Step] call; the requestor is not present at that call and receives no automatic notification. A deployment must wire the `access_provisioning_failed` Audit Trail event to a notification or inbox mechanism so the requestor knows their request failed to provision and can retry. Operational runbooks for deployments where `Capability.allocate` has meaningful failure rates should instrument on `access_provisioning_failed` events and alert; silent `ProvisioningFailed` accumulation indicates a capacity or configuration problem.
 
-- **Credential revocation of the requestor does not auto-revoke the Capability.** Revoking the requestor's Credential invalidates their Sessions, which blocks `exercise_access` via the session check. But the Capability token itself remains `Allocated` until its TTL expires or an administrator calls `revoke_access`. A deployment that requires immediate Capability revocation on Credential revocation must implement a listener that calls `revoke_access` when Credential revocation events appear in the Audit Trail. This composition does not implement that listener; it is a composing-system obligation. The composition provides the `revoke_access` action precisely to support this pattern.
+- **Credential revocation of the requestor does not auto-revoke the Capability.** Revoking the requestor's Credential invalidates their Sessions, which blocks [Exercise Access] via the session check. But the Capability token itself remains `Allocated` until its TTL expires or an administrator calls [Revoke Access]. A deployment that requires immediate Capability revocation on Credential revocation must implement a listener that calls [Revoke Access] when Credential revocation events appear in the Audit Trail. This composition does not implement that listener; it is a composing-system obligation. The composition provides the [Revoke Access] action precisely to support this pattern.
 
 - **Delivering the Capability token to the requestor is handled at the deployment layer.** The composition allocates the Capability token and records it in `request_to_capability`. Delivering it to the requestor — via notification, response payload, or a secure channel — is the deployment's responsibility. The Capability atom's `allocate` action returns the token to the composition; the composition records it and surfaces it in the provisioning cascade's step 5. The delivery mechanism (push notification, pull from a secure store, email link) is out of scope.
 
@@ -292,11 +296,11 @@ Three scenarios the composition must survive in regulated contexts:
 
 ## Composition notes
 
-- **[Login](./login.md)** — the upstream composition that issues Sessions. This composition depends on Sessions being issued by Login (Credential.verify → Session.issue → session_token returned to principal). Without Login or an equivalent session-issuance surface, `exercise_access` always returns `session-invalid(not-known)`. Login is a peer composition, not a constituent; the two share the same Session and Credential atoms but own distinct composition-level surfaces.
+- **[Login](./login.md)** — the upstream composition that issues Sessions. This composition depends on Sessions being issued by Login (Credential.verify → Session.issue → session_token returned to principal). Without Login or an equivalent session-issuance surface, [Exercise Access] always returns `session-invalid(not-known)`. Login is a peer composition, not a constituent; the two share the same Session and Credential atoms but own distinct composition-level surfaces.
 
 - **[Session-Gated Authorization](./session-gated-authorization.md)** — a peer composition that gates permission checks on session validity. Privileged Access Provisioning gates Capability redemption on session validity; Session-Gated Authorization gates Permissions.permitted checks. The two are structurally parallel: both call `Session.validate` before a downstream action, neither managing Session issuance. A deployment that wires both ensures that session validity is checked consistently at every protected surface — Capability redemption and Permissions evaluation alike.
 
-- **[External Onboarding](./external-onboarding.md)** — in regulated deployments where privileged users are external contractors or auditors rather than internal employees, External Onboarding (Invitation → Party Identity → Credential registration) is the upstream surface that establishes the requestor's Credential. A `request_access` call with an unregistered `requestor_ref` fails the Credential.verify check at step 2. External Onboarding establishes the Credential that this composition verifies.
+- **[External Onboarding](./external-onboarding.md)** — in regulated deployments where privileged users are external contractors or auditors rather than internal employees, External Onboarding (Invitation → Party Identity → Credential registration) is the upstream surface that establishes the requestor's Credential. A [Request Access] call with an unregistered `requestor_ref` fails the Credential.verify check at step 2. External Onboarding establishes the Credential that this composition verifies.
 
 - **[Capability-Backed Sharing](./capability-backed-sharing.md)** — a peer composition that uses Capability for resource disclosure rather than privileged access. The two compositions share the Capability atom but wire it to different upstream gates: Capability-Backed Sharing gates on Selective Disclosure policy; this composition gates on Multi-Party Approval. The structural similarity — approve first, allocate Capability second, record in Audit Trail third — is the pattern the library names as approval-gated capability provisioning.
 
@@ -338,13 +342,150 @@ A derived implementation of Privileged Access Provisioning is *acceptable* — i
 
 ---
 
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are: the six actions it exposes — the request intake ([Request Access]), the two chain-decision wrappers ([Approve Step], [Reject Step]), the withdrawal ([Withdraw Request]), the session-gated use ([Exercise Access]), and the revocation ([Revoke Access]); the four-scope authorization vocabulary it defines for its Permissions instance ([Requests Initiate], [Requests Withdraw], [Requests Revoke], [Requests Read]); and its own rejections — the exercise-gate [Session Invalid], the revoke-gate [Not Provisioned], and the [Permission Denied] / [Credential Invalid] it surfaces from its Permissions and Credential checks. Its load-bearing guarantees — approval-gates-provisioning (no Capability without an Approved chain), session-gated exercise, and single-Audit-Trail arc completeness (Invariants 1–10) — are structural properties, not data. Its emergent state (`request_store`, `request_to_chain`, `request_to_capability`, `capability_to_request`, `session_access_log`) is a set of indexes wiring the constituents, left as backticked tokens; there is no composition-introduced record store to card as a Type. The request-lifecycle states (Pending → Approved → Provisioned | Denied | Withdrawn | Revoked | ProvisioningFailed) are a composition-owned progression but are left uncarded — Pending / Approved / Denied / Withdrawn / Revoked overload the constituents' own states (Multi-Party Approval, Capability, Session), so carding them would be ambiguous. The audit event types it emits (`access_requested`, `approval_step_decided`, `access_provisioned`, `access_exercised`, `access_denied`, `access_revoked`) stay backticked as wire values, as do the constituent calls and their outcomes — Multi-Party Approval's `initiate_chain` / `approve_step` / `reject_step` / `withdraw_chain` / `read_chain`, Capability's `allocate` / `redeem` / `revoke`, Session's `validate`, Credential's `verify`, Permissions' `permitted`, Audit Trail's `record_action` — the relayed constituent tokens (`request_id`, `chain_id`, `capability_token`, `session_token`, `actor_ref`, `requestor_ref`, `credential`, `access_scope`, `resource_ref`), the parameterized `session-invalid(reason)` / `capability-invalid(reason)` and their reason values, the generic/relayed rejections (`invalid-request`, `not-known`, `not-pending`, `unauthorized`, `storage-failure`, `recording-failure`), the deployment configuration knobs (`default_ttl`, `max_redemptions_default`, `credential_check_on_request`, `approver_set_minimum`, `audit_trail_retention_policy`, `application_actor_ref`), and concrete example ids. Constituent atom and substrate names remain the existing full links to `../atoms/*` and `./multi-party-approval.md` / `./audit-trail.md`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Request Access
+
+The composition's intake action: submit a privileged-access request under a named requestor, gate it on the `requests:initiate` permission and (optionally) a credential check, open a mandatory Multi-Party Approval chain for it, and audit the request (`access_requested`). Returns the `request_id`; the request is now Pending.
+
+Kind: Operation
+
+#### Approve Step
+
+The composition's wrapper over Multi-Party Approval's step-approval: verify the approver's credential is Active, record the decision (`approval_step_decided`), and — when the wrapped chain reaches Approved — fire the provisioning cascade that allocates the Capability (the only path to a provisioned token).
+
+Kind: Operation
+
+#### Reject Step
+
+The composition's wrapper over Multi-Party Approval's step-rejection: verify the approver's credential, record the decision, and transition the request to Denied when the chain reaches Rejected. Mirrors [Approve Step] but requires a reason.
+
+Kind: Operation
+
+#### Withdraw Request
+
+The composition action that withdraws a still-Pending request and its underlying approval chain, gated by the `requests:withdraw` permission (the requestor may always withdraw their own) and audited (`access_request_withdrawn`).
+
+Kind: Operation
+
+#### Exercise Access
+
+The session-gated use of a provisioned Capability: validate the presented session *first* (a non-valid session is [Session Invalid] before the Capability is touched), then redeem the Capability, logging every attempt to `session_access_log` and auditing the outcome (`access_exercised` or `access_exercise_failed`). Enforces the cascading-revocation invariant (Invariants 3, 4).
+
+Kind: Operation
+
+#### Revoke Access
+
+The composition action that revokes a provisioned Capability and transitions the request to Revoked, gated by the `requests:revoke` permission and audited (`access_revoked`). Rejects [Not Provisioned] when the request is not in Provisioned state.
+
+Kind: Operation
+
+#### Requests Initiate
+
+The scope permitting [Request Access] — submit a privileged-access request.
+
+Kind:      Member
+Member of: the request scope vocabulary
+Role:      Scope
+Projects:  requests:initiate
+
+#### Requests Withdraw
+
+The scope permitting [Withdraw Request] on any request (requestors may always withdraw their own without it).
+
+Kind:      Member
+Member of: the request scope vocabulary
+Role:      Scope
+Projects:  requests:withdraw
+
+#### Requests Revoke
+
+The scope permitting [Revoke Access] on any provisioned request.
+
+Kind:      Member
+Member of: the request scope vocabulary
+Role:      Scope
+Projects:  requests:revoke
+
+#### Requests Read
+
+The scope permitting queries over request records and their associated chain, capability, and audit events.
+
+Kind:      Member
+Member of: the request scope vocabulary
+Role:      Scope
+Projects:  requests:read
+
+#### Not Provisioned
+
+The [Revoke Access] rejection when the target request is not in Provisioned state — there is no live Capability to revoke.
+
+Kind:      Member
+Member of: the revoke rejection
+Role:      Rejection
+Projects:  not-provisioned
+
+#### Session Invalid
+
+The [Exercise Access] gate rejection — parameterized by the Session's own reason (`expired`, `revoked`, `not-known`) — returned when `Session.validate` is not `valid`, *before* the Capability is presented. The structural form of the cascading-revocation invariant (Invariant 4).
+
+Kind:      Member
+Member of: the exercise rejection
+Role:      Rejection
+Projects:  session-invalid
+
+#### Permission Denied
+
+The composition's rejection when the acting actor lacks the required request scope at the Permissions check in [Request Access], [Withdraw Request], or [Revoke Access].
+
+Kind:      Member
+Member of: the request rejection
+Role:      Rejection
+Projects:  permission-denied
+
+#### Credential Invalid
+
+The composition's rejection when `Credential.verify` reports the requestor's or approver's credential is not Active at the moment it is checked — the enforcement behind approver-credential completeness (Invariant 6).
+
+Kind:      Member
+Member of: the request rejection
+Role:      Rejection
+Projects:  credential-invalid
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Request Access]: #request-access
+[Approve Step]: #approve-step
+[Reject Step]: #reject-step
+[Withdraw Request]: #withdraw-request
+[Exercise Access]: #exercise-access
+[Revoke Access]: #revoke-access
+[Requests Initiate]: #requests-initiate
+[Requests Withdraw]: #requests-withdraw
+[Requests Revoke]: #requests-revoke
+[Requests Read]: #requests-read
+[Not Provisioned]: #not-provisioned
+[Session Invalid]: #session-invalid
+[Permission Denied]: #permission-denied
+[Credential Invalid]: #credential-invalid
+
+---
+
 ## Status
 
 `grounded on Final Critique 4 — 2026-05-23` — three-pass baseline (Rounds 1–3) plus Final Critique (Round 4) complete. Thirteen findings across Rounds 1–4, all resolved. Round 5 (touch-triggered re-pass, 2026-05-23): one foundational finding (`request_to_chain` declared in `vars` but not initialized in `Init`, TLA+ model unrunnable via CLI), **resolved 2026-06-03** by removing the dead variable; the model now runs clean under the `tools/harness/` WASM checker (1682 states, all seven invariants hold). Round 5 closes clean. See Lineage notes for the full finding-and-resolution record.
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 **Final Critique (Round 4) — Super Torvalds adversarial.** Four findings, all resolved. Two foundational:
 
@@ -445,3 +586,7 @@ No spec findings from the formal pass.
 Round 5 surfaced one foundational finding, **now resolved 2026-06-03** (see above): the dead `request_to_chain` variable was removed and the `privileged-access-provisioning.tla` model now runs clean under the `tools/harness/` WASM `tla-checker` (1682 states, all seven invariants hold). With that finding closed, Round 5 closes clean.
 
 **Formal-layer vote — 2026-06-03: YES (model present).** Cascading-revocation chain (Inv 4, Credential→Session→exercise_access gate across three layers) and the cascade re-fire guard are interleaving claims; verified by the existing behavioral model. Verified by the sibling formal model (`privileged-access-provisioning.tla`); the pattern remains `grounded`. Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at ten). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added before Status (14 terms): 6 Operations — the request intake ([Request Access]), the two chain-decision wrappers ([Approve Step], [Reject Step]), the withdrawal ([Withdraw Request]), the session-gated use ([Exercise Access]), and the revocation ([Revoke Access]); 4 Members for the Permissions scope vocabulary it defines ([Requests Initiate], [Requests Withdraw], [Requests Revoke], [Requests Read]); and 4 Members for its own rejections — the exercise-gate [Session Invalid], the revoke-gate [Not Provisioned], and the [Permission Denied] / [Credential Invalid] it surfaces from its Permissions and Credential checks. Every own-action prose reference is linked; the `**\`op(args) → …\`**` bold-inline signatures and example calls stay backticked; the scope and rejection Members are enum values, so their concept references are linked at representative homes (the scope-vocabulary table and return-site prose) while wire forms stay backticked. **No Type card:** the composition owns no record store — its emergent state (`request_store`, `request_to_chain`, `request_to_capability`, `capability_to_request`, `session_access_log`) is a set of indexes wiring the constituents, left as backticked tokens. **The request-lifecycle states (Pending → Approved → Provisioned | Denied | Withdrawn | Revoked | ProvisioningFailed) are left uncarded** — Pending / Approved / Denied / Withdrawn / Revoked overload the constituents' own states (Multi-Party Approval, Capability, Session), so carding them would be ambiguous (the actor-suspension precedent). The parameterized `capability-invalid(reason)` is left backticked (it always carries the Capability atom's relayed reason). Survivors left backticked: the bold-inline signatures and example calls; the audit event types (`access_requested`, `approval_step_decided`, `access_provisioned`, `access_exercised`, `access_denied`, `access_revoked`); every qualified constituent call (Multi-Party Approval's `initiate_chain` / `approve_step` / `reject_step` / `withdraw_chain` / `read_chain`, Capability's `allocate` / `redeem` / `revoke`, Session's `validate`, Credential's `verify`, Permissions' `permitted`, Audit Trail's `record_action`) and their outcomes; the relayed constituent tokens; the configuration knobs; and concrete example ids. Constituent atom and substrate names remain the existing full links to `../atoms/*` and `./multi-party-approval.md` / `./audit-trail.md`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), its single run-on paragraph split one-idea-per-paragraph (cut #1, lossless); the descriptive top blockquote folded out after confirming each claim (the multi-party-approval-gate → time-limited scoped Capability arc; session validity checked before every exercise; records-alone auditability) is carried by Summary / Intent / Composes / Behavior / Invariants; no *also-known-as* line existed, so none was invented. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #5 — skipped (with reason):** the composition does own a request lifecycle (Pending → Approved → Provisioned | Denied | Withdrawn | Revoked | ProvisioningFailed), but it is a forward-only progression already stated crisply across Composition state (the `state`-field enumeration), the per-action transitions in Action wiring, and Invariant 8 (forward-only, immutable identity) — a transition table would duplicate the action wiring rather than condense a dense prose blob. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-05-23`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (14 terms); ten composition-level invariants preserved; the `.tla` model untouched — harness re-run green: `privileged-access-provisioning.tla` PASS (no buggy twin exists for this pattern).
+
+</details>
