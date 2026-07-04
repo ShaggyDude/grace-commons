@@ -16,7 +16,17 @@ toc: true
 </details>
 
 
-> A regulated composition: a multi-actor gated workflow made auditably complete. A State Machine instance governs the overall process lifecycle (declared states and transitions); specific declared transitions are gated by human Approval Steps bound at the composition layer; Permissions governs who may start a workflow and fire transitions; Assignment puts each open gate in the right approver's in-tray; and Audit Trail (as regulated-audit substrate) makes every transition and every gate decision attributed, retention-bounded, tamper-sealed, and reconstructible from the records alone. The headline emergent property: **guard evaluation re-converges here**. State Machine deliberately does not evaluate guards (it trusts a caller-asserted `guard_satisfied`); this composition evaluates approval-type guards by binding each guarded transition to an Approval Step and firing the transition only when that step is in Approved — closing the exact gap State Machine left open.
+## Summary
+
+Execute Gated Workflow freezes a declared process map (states, allowed transitions, and which transitions require human approval) and enforces permissions on who may start or advance it.
+
+A guarded transition is gated by an Approval Step that an authorized actor opens on demand and assigns to the named approver's in-tray; the transition cannot fire until that step is Approved.
+
+The Audit Trail substrate attributes every transition and gate decision to the acting actor's identity, governs retention, and seals the record tamper-evident — a records-alone forensic proof.
+
+Together these produce what no constituent provides alone: the process followed only its declared path, every gate was cleared by a real human decision (not a bare assertion), and the full history is attributed, sealed, and reconstructible.
+
+This composition is the structural form of FDA (US Food and Drug Administration) 21 CFR (Code of Federal Regulations) Part 11 electronic records workflows, SOX (Sarbanes-Oxley Act — US law on corporate financial reporting and records integrity) §404 process-control records, ISO (International Organization for Standardization) 9001 §8.5.1 production-process documentation, and any regulated domain that must prove compliant execution from records alone.
 
 ---
 
@@ -34,19 +44,13 @@ The composition addresses what State Machine's EOS (Essence of Software — Dani
 
 ---
 
-## Summary
-
-Execute Gated Workflow freezes a declared process map (states, allowed transitions, and which transitions require human approval) and enforces permissions on who may start or advance it. A guarded transition is gated by an Approval Step that an authorized actor opens on demand and assigns to the named approver's in-tray; the transition cannot fire until that step is Approved. The Audit Trail substrate attributes every transition and gate decision to the acting actor's identity, governs retention, and seals the record tamper-evident — a records-alone forensic proof. Together these produce what no constituent provides alone: the process followed only its declared path, every gate was cleared by a real human decision (not a bare assertion), and the full history is attributed, sealed, and reconstructible. This composition is the structural form of FDA (US Food and Drug Administration) 21 CFR (Code of Federal Regulations) Part 11 electronic records workflows, SOX (Sarbanes-Oxley Act — US law on corporate financial reporting and records integrity) §404 process-control records, ISO (International Organization for Standardization) 9001 §8.5.1 production-process documentation, and any regulated domain that must prove compliant execution from records alone.
-
----
-
 ## Composes
 
 - **[State Machine](../atoms/state-machine.md)** — the orchestrating spine. Provides the declared-state-machine enforcement: only declared transitions fire; exactly one current state at all times; the full transition history is append-only, total-ordered by sequence number, and replay-deterministic. The composition instantiates one State Machine instance per workflow run, supplies it the deployment-declared process declaration, and calls `fire` on it as the sole write path — the composition never bypasses `fire`.
 
 - **[Approval Step](../atoms/approval-step.md)** — the per-gate human-approval primitive. Provides the gate record: one Approval Step per guarded transition that becomes relevant, each carrying its own `step_id`, `subject_ref`, `approver_ref`, `submitter_ref`, `scope`, lifecycle (Pending → Approved | Rejected | Withdrawn), and Invariant 4 enforcement that only the named `approver_ref` may transition to Approved or Rejected. The composition submits one Approval Step when a gate is opened, reads its state when the corresponding transition is to be fired, and supplies `guard_satisfied = true` to `WorkflowStateMachine.fire` only when the step is in Approved.
 
-- **[Permissions](../atoms/permissions.md)** — the authorization surface for workflow-level actions. Provides `grant`, `revoke`, and `permitted`. Every workflow-level state-changing action (`start_workflow`, `fire_transition`) and every workflow-level read query (`read_workflow`) is gated by a `permitted` check before reaching any constituent store. Step-level gate decisions (`decide_gate`) are enforced by Approval Step's Invariant 4 (named-approver exclusivity) directly — no redundant chain-layer permission check, mirroring Multi-Party Approval's scope-vocabulary discipline.
+- **[Permissions](../atoms/permissions.md)** — the authorization surface for workflow-level actions. Provides `grant`, `revoke`, and `permitted`. Every workflow-level state-changing action ([Start Workflow], [Fire Transition]) and every workflow-level read query ([Read Workflow]) is gated by a `permitted` check before reaching any constituent store. Step-level gate decisions ([Decide Gate]) are enforced by Approval Step's Invariant 4 (named-approver exclusivity) directly — no redundant chain-layer permission check, mirroring Multi-Party Approval's scope-vocabulary discipline.
 
 - **[Assignment](../atoms/assignment.md)** — the in-tray binding for open gates. On gate opening, one Assignment record is created (`task_ref = step_id`, `assignee_ref = approver_ref` from the `gate_spec`) so the named approver can query *"which approval gates are currently in my in-tray?"* via Assignment's query surface. When the gate is decided (Approved, Rejected, or Withdrawn), the corresponding Assignment is recalled — the responsibility is discharged.
 
@@ -60,13 +64,13 @@ Execute Gated Workflow freezes a declared process map (states, allowed transitio
 
 The composition owns emergent state — the workflow store, the gate binding maps, and the cross-atom traversal maps — that wires the constituent atoms into one queryable regulated-workflow surface. None of these state elements belongs to any single constituent atom.
 
-- **`workflow_store`** — the set of workflow instance records. Each record carries: `instance_id` (the State Machine instance id, assigned by the constituent at `start_workflow`), `subject_ref` (an opaque reference to the entity whose lifecycle this workflow governs), `initiator_ref` (the actor who started the workflow), `declaration_ref` (an opaque reference identifying the deployment's declared process definition — the exact declaration supplied at `start_workflow`), `gate_spec` (the map from each guarded transition's guard label to `{approver_ref, scope}` naming the approval required for that gate; set at `start_workflow`, immutable), and `started_at`. The workflow record is immutable on every field from the moment `start_workflow` returns; the State Machine constituent owns `current_state` and the transition history.
+- **`workflow_store`** — the set of workflow instance records. Each record carries: `instance_id` (the State Machine instance id, assigned by the constituent at [Start Workflow]), `subject_ref` (an opaque reference to the entity whose lifecycle this workflow governs), `initiator_ref` (the actor who started the workflow), `declaration_ref` (an opaque reference identifying the deployment's declared process definition — the exact declaration supplied at [Start Workflow]), [Gate Spec] (the map from each guarded transition's guard label to `{approver_ref, scope}` naming the approval required for that gate; set at [Start Workflow], immutable), and `started_at`. The workflow record is immutable on every field from the moment [Start Workflow] returns; the State Machine constituent owns `current_state` and the transition history.
 
-- **`gate_binding`** — map from `(instance_id, guarded transition action name)` to the `step_id` of the Approval Step that gates it. Set when `open_gate` opens a gate for a given `(instance_id, action)` pair. This is the load-bearing traversal from a guarded transition to its approval record: at `fire_transition`, the composition reads `gate_binding[(instance_id, action)]` to find the step, then reads the step's state to determine whether `guard_satisfied` may be asserted. Keys are immutable from the moment `open_gate` returns for a given pair; no re-binding of a guarded transition to a different step under the same `(instance_id, action)` pair is permitted in the same workflow instance.
+- **`gate_binding`** — map from `(instance_id, guarded transition action name)` to the `step_id` of the Approval Step that gates it. Set when [Open Gate] opens a gate for a given `(instance_id, action)` pair. This is the load-bearing traversal from a guarded transition to its approval record: at [Fire Transition], the composition reads `gate_binding[(instance_id, action)]` to find the step, then reads the step's state to determine whether `guard_satisfied` may be asserted. Keys are immutable from the moment [Open Gate] returns for a given pair; no re-binding of a guarded transition to a different step under the same `(instance_id, action)` pair is permitted in the same workflow instance.
 
-- **`gate_to_assignment`** — map from `step_id` (a gate's Approval Step id) to the `assignment_id` of its in-tray binding. Set when `open_gate` creates the Assignment. Used at `decide_gate` to recall the in-tray binding when the gate is decided, and during moot-gate cascade when the workflow leaves a transition's `from_state` by firing a different transition out of it.
+- **`gate_to_assignment`** — map from `step_id` (a gate's Approval Step id) to the `assignment_id` of its in-tray binding. Set when [Open Gate] creates the Assignment. Used at [Decide Gate] to recall the in-tray binding when the gate is decided, and during moot-gate cascade when the workflow leaves a transition's `from_state` by firing a different transition out of it.
 
-- **`transition_to_event`** — map from a fired transition's `transition_id` (the State Machine history entry id) to the Audit Trail `event_id` that attributes and seals the firing. Set at `fire_transition` after `WorkflowStateMachine.fire` succeeds and `AuditTrail.record_action` returns an `event_id`. The traversal backbone for the forensic query: from a transition in the State Machine history to its Audit Trail attestation.
+- **`transition_to_event`** — map from a fired transition's `transition_id` (the State Machine history entry id) to the Audit Trail `event_id` that attributes and seals the firing. Set at [Fire Transition] after `WorkflowStateMachine.fire` succeeds and `AuditTrail.record_action` returns an `event_id`. The traversal backbone for the forensic query: from a transition in the State Machine history to its Audit Trail attestation.
 
 ### Configuration
 
@@ -80,12 +84,12 @@ Permissions treats action scopes as opaque. This composition defines the canonic
 
 | Scope | Permits |
 |-------|---------|
-| `workflows:start` | Call `start_workflow` to instantiate a new workflow run |
-| `workflows:open-gate` | Call `open_gate` to open an approval gate for a guarded transition |
-| `workflows:fire` | Call `fire_transition` to advance the workflow through a transition |
-| `workflows:read` | Read workflow records and their composed gate, assignment, and attestation surface |
+| [Workflows Start] | Call [Start Workflow] to instantiate a new workflow run |
+| [Workflows Open Gate] | Call [Open Gate] to open an approval gate for a guarded transition |
+| [Workflows Fire] | Call [Fire Transition] to advance the workflow through a transition |
+| [Workflows Read] | Read workflow records and their composed gate, assignment, and attestation surface |
 
-Gate decisions (`decide_gate`, which wraps Approval Step's `approve`/`reject`/`withdraw`) are *not* additionally permission-gated at the workflow layer: Approval Step's Invariant 4 (only the named `approver_ref` may transition Pending to Approved or Rejected) and Invariant 5 (only the named `submitter_ref` may transition Pending to Withdrawn) are the structural enforcement for who may decide each gate. Adding a second permission check at the workflow layer would be redundant and risks the two checks drifting out of sync. The workflow composition relies on Approval Step's enforcement and surfaces an `unauthorized` rejection from the underlying atom unchanged, mirroring Multi-Party Approval's scope-vocabulary discipline.
+Gate decisions ([Decide Gate], which wraps Approval Step's `approve`/`reject`/`withdraw`) are *not* additionally permission-gated at the workflow layer: Approval Step's Invariant 4 (only the named `approver_ref` may transition Pending to Approved or Rejected) and Invariant 5 (only the named `submitter_ref` may transition Pending to Withdrawn) are the structural enforcement for who may decide each gate. Adding a second permission check at the workflow layer would be redundant and risks the two checks drifting out of sync. The workflow composition relies on Approval Step's enforcement and surfaces an `unauthorized` rejection from the underlying atom unchanged, mirroring Multi-Party Approval's scope-vocabulary discipline.
 
 The vocabulary is deployment-configurable. A deployment that distinguishes initiator roles (e.g., `workflows:start:pharma-batch`, `workflows:start:financial-journal`) introduces finer-grained scopes and adjusts the wiring accordingly; the canonical vocabulary above is the minimum useful set.
 
@@ -95,10 +99,10 @@ These input-validation rules apply at the composition boundary before any consti
 
 - **`actor_ref`, `subject_ref`, `initiator_ref`, `approver_ref`, `submitter_ref`** — must each contain at least one non-whitespace character. Null, empty, or whitespace-only values are `invalid-request` at the composition boundary before any Permissions or constituent call.
 - **`credential`** — must be a parseable, non-null value of the deployment's declared credential type. Malformed credentials are `invalid-request` before any constituent call.
-- **`reason`** — optional on `start_workflow`, `open_gate`, `fire_transition`. Required as the `reason` argument passed into `decide_gate` for gate decisions of type Rejected or Withdrawn (propagated from Approval Step's `reject`/`withdraw` mandatory-reason rule). If supplied in any action, must contain at least one non-whitespace character.
-- **`gate_spec`** — at `start_workflow`, the composition validates that `gate_spec` covers exactly the set of guarded transitions in the supplied declaration: for every transition in the declaration carrying a `guard` label, `gate_spec` must contain an entry keyed by that guard label, and each entry must carry a non-whitespace `approver_ref` and a non-whitespace `scope`. A `gate_spec` with entries for guard labels not present in the declaration is `invalid-request` (the deployment named a gate that will never be used). A declaration with guarded transitions for which `gate_spec` has no entry is `invalid-request` (a guarded transition with no named approver cannot be governed). The `gate_spec` validation is part of `start_workflow` step 2; no `WorkflowStateMachine.instantiate` call is made until `gate_spec` passes.
+- **`reason`** — optional on [Start Workflow], [Open Gate], [Fire Transition]. Required as the `reason` argument passed into [Decide Gate] for gate decisions of type Rejected or Withdrawn (propagated from Approval Step's `reject`/`withdraw` mandatory-reason rule). If supplied in any action, must contain at least one non-whitespace character.
+- **`gate_spec`** — at [Start Workflow], the composition validates that `gate_spec` covers exactly the set of guarded transitions in the supplied declaration: for every transition in the declaration carrying a `guard` label, `gate_spec` must contain an entry keyed by that guard label, and each entry must carry a non-whitespace `approver_ref` and a non-whitespace `scope`. A `gate_spec` with entries for guard labels not present in the declaration is `invalid-request` (the deployment named a gate that will never be used). A declaration with guarded transitions for which `gate_spec` has no entry is `invalid-request` (a guarded transition with no named approver cannot be governed). The `gate_spec` validation is part of [Start Workflow] step 2; no `WorkflowStateMachine.instantiate` call is made until `gate_spec` passes.
 - **`instance_id`** — must contain at least one non-whitespace character for all actions that take it. Non-whitespace enforcement follows State Machine's own `instance_id` rule.
-- **`decision`** — at `decide_gate`, must be one of the string literals `"approve"`, `"reject"`, or `"withdraw"`; any other value is `invalid-request`.
+- **`decision`** — at [Decide Gate], must be one of the string literals `"approve"`, `"reject"`, or `"withdraw"`; any other value is `invalid-request`.
 
 ### Action wiring
 
@@ -112,10 +116,10 @@ Every workflow-level action follows the same three-step shape: Permissions check
 2. Validate `gate_spec` against `declaration` per Primitive policies: every guarded transition in the declaration has a matching entry in `gate_spec`; every `gate_spec` entry names a real guard label; every entry carries non-whitespace `approver_ref` and `scope`. Validate `subject_ref` per Primitive policies (non-whitespace). Any violation is `rejected(invalid-request)`. No State Machine call is made until this passes.
 3. Call `WorkflowStateMachine.instantiate(declaration, actor_ref, instance_metadata={subject_ref, gate_spec_labels}, instantiated_at=now)` → `instance_id | rejected(invalid-declaration)`. Propagate `invalid-declaration` unchanged. `storage-failure` from the constituent surfaces as `recording-failure`.
 4. Write the `workflow_store` record: `{instance_id, subject_ref, initiator_ref=actor_ref, gate_spec, started_at=now}`. `storage-failure` here is `recording-failure`.
-5. Call `AuditTrail.record_action(action_ref=workflow_started, actor_ref, credential, data={instance_id, subject_ref, gate_spec_labels, reason?}, retention_policy=audit_trail_retention_policy)` → `event_id | rejected(...)`. Any Audit Trail failure surfaces as `recording-failure`. (Note: gates are opened lazily — see `open_gate` — not at start. The `started_at` record and the Audit Trail event together prove the workflow began and under which actor's authority.)
+5. Call `AuditTrail.record_action(action_ref=workflow_started, actor_ref, credential, data={instance_id, subject_ref, gate_spec_labels, reason?}, retention_policy=audit_trail_retention_policy)` → `event_id | rejected(...)`. Any Audit Trail failure surfaces as `recording-failure`. (Note: gates are opened lazily — see [Open Gate] — not at start. The `started_at` record and the Audit Trail event together prove the workflow began and under which actor's authority.)
 6. Return `{instance_id}`.
 
-**Partial-failure recovery.** If step 3 succeeds but step 4 or step 5 fails, the State Machine instance exists in its constituent store but the composition's `workflow_store` has no record. The recovery path: the composition does not issue the `instance_id` to the caller and surfaces `recording-failure`; the orphaned State Machine instance is quarantined (it will never be referenced by this composition's `workflow_store`) and may be cleaned up by the deployment's store-maintenance process. The caller must retry `start_workflow` from scratch, producing a new `instance_id`.
+**Partial-failure recovery.** If step 3 succeeds but step 4 or step 5 fails, the State Machine instance exists in its constituent store but the composition's `workflow_store` has no record. The recovery path: the composition does not issue the `instance_id` to the caller and surfaces `recording-failure`; the orphaned State Machine instance is quarantined (it will never be referenced by this composition's `workflow_store`) and may be cleaned up by the deployment's store-maintenance process. The caller must retry [Start Workflow] from scratch, producing a new `instance_id`.
 
 ---
 
@@ -125,16 +129,16 @@ This action opens an approval gate for a guarded transition whose `from_state` e
 
 1. `Permissions.permitted(actor_ref, workflows:open-gate)` → if `denied`, return `rejected(permission-denied)`.
 2. Look up `workflow_store[instance_id]` → `not-known` if absent.
-3. Call `WorkflowStateMachine.read_declaration(instance_id)` to retrieve the immutable declaration. Identify the declared transition matching `(current_state, action)`: call `WorkflowStateMachine.current(instance_id)` → `current_state`. If no declared transition has `(from_state = current_state, action = action)`, return `invalid-transition`. If the matched transition has no `guard` label, return `not-guarded` (unguarded transitions are fired directly without opening a gate).
-4. Check `gate-not-available`: if `current_state` ≠ the matched transition's `from_state` the check is definitionally satisfied by step 3 (we derived `current_state` there); the secondary case is that the workflow is in a terminal state — `WorkflowStateMachine.fire` would return `terminal` — confirmed by checking whether `current_state ∈ terminal_states` in the declaration. If terminal, return `gate-not-available` (a terminal instance cannot have gates opened).
-5. Check `already-open`: if `gate_binding[(instance_id, action)]` already exists, return `already-open` (a gate is already bound for this `(instance_id, action)` pair; call `decide_gate` to resolve the existing gate before opening a replacement).
-6. Call `ApprovalStep.submit(subject_ref=workflow_store[instance_id].subject_ref + ":" + action, approver_ref=gate_spec[guard_label].approver_ref, submitter_ref=workflow_store[instance_id].initiator_ref, scope=gate_spec[guard_label].scope)` → `step_id | rejected(invalid-request | storage-failure)`. Propagate failures as `recording-failure`. **The gate's `submitter_ref` is the workflow's `initiator_ref`, not the `open_gate` caller** — so the withdrawal authority over the gate (Approval Step Invariant 5: only the submitter may withdraw) belongs to the workflow initiator, which is what makes both `decide_gate(withdraw)` and the composition's moot-gate cascade (which withdraw with `withdrawn_by = initiator_ref`) authorized. The `open_gate` caller is recorded as the actor on the `gate_opened` Audit Trail event (step 9), preserving the attribution of who opened the gate; the *withdrawal* authority is the initiator's, mirroring Multi-Party Approval's initiator-owns-withdrawal discipline.
+3. Call `WorkflowStateMachine.read_declaration(instance_id)` to retrieve the immutable declaration. Identify the declared transition matching `(current_state, action)`: call `WorkflowStateMachine.current(instance_id)` → `current_state`. If no declared transition has `(from_state = current_state, action = action)`, return `invalid-transition`. If the matched transition has no `guard` label, return [Not Guarded] (unguarded transitions are fired directly without opening a gate).
+4. Check `gate-not-available`: if `current_state` ≠ the matched transition's `from_state` the check is definitionally satisfied by step 3 (we derived `current_state` there); the secondary case is that the workflow is in a terminal state — `WorkflowStateMachine.fire` would return `terminal` — confirmed by checking whether `current_state ∈ terminal_states` in the declaration. If terminal, return [Gate Not Available] (a terminal instance cannot have gates opened).
+5. Check `already-open`: if `gate_binding[(instance_id, action)]` already exists, return [Already Open] (a gate is already bound for this `(instance_id, action)` pair; call [Decide Gate] to resolve the existing gate before opening a replacement).
+6. Call `ApprovalStep.submit(subject_ref=workflow_store[instance_id].subject_ref + ":" + action, approver_ref=gate_spec[guard_label].approver_ref, submitter_ref=workflow_store[instance_id].initiator_ref, scope=gate_spec[guard_label].scope)` → `step_id | rejected(invalid-request | storage-failure)`. Propagate failures as `recording-failure`. **The gate's `submitter_ref` is the workflow's `initiator_ref`, not the [Open Gate] caller** — so the withdrawal authority over the gate (Approval Step Invariant 5: only the submitter may withdraw) belongs to the workflow initiator, which is what makes both `decide_gate(withdraw)` and the composition's moot-gate cascade (which withdraw with `withdrawn_by = initiator_ref`) authorized. The [Open Gate] caller is recorded as the actor on the `gate_opened` Audit Trail event (step 9), preserving the attribution of who opened the gate; the *withdrawal* authority is the initiator's, mirroring Multi-Party Approval's initiator-owns-withdrawal discipline.
 7. Call `Assignment.assign(task_ref=step_id, assignee_ref=gate_spec[guard_label].approver_ref)` → `assignment_id | rejected(...)`. Propagate failures as `recording-failure`.
 8. Write: `gate_binding[(instance_id, action)] = step_id`; `gate_to_assignment[step_id] = assignment_id`. `storage-failure` is `recording-failure`.
 9. Call `AuditTrail.record_action(action_ref=gate_opened, actor_ref, credential, data={instance_id, action, step_id, assignment_id, approver_ref, scope}, retention_policy=audit_trail_retention_policy)`. Failure is `recording-failure`.
 10. Return `{step_id, assignment_id}`.
 
-**Partial-failure recovery.** If step 6 or 7 succeeds but subsequent writes fail: the composition surfaces `recording-failure`; the orphaned Approval Step or Assignment must be withdrawn/recalled by the deployment's store-maintenance process before retry. A partial `gate_binding` write (step 8 fails) leaves no binding in the composition's emergent state; the constituent records are present but un-traversable from the composition layer. Recovery: clean the orphan constituent records and retry `open_gate`.
+**Partial-failure recovery.** If step 6 or 7 succeeds but subsequent writes fail: the composition surfaces `recording-failure`; the orphaned Approval Step or Assignment must be withdrawn/recalled by the deployment's store-maintenance process before retry. A partial `gate_binding` write (step 8 fails) leaves no binding in the composition's emergent state; the constituent records are present but un-traversable from the composition layer. Recovery: clean the orphan constituent records and retry [Open Gate].
 
 ---
 
@@ -143,12 +147,12 @@ This action opens an approval gate for a guarded transition whose `from_state` e
 This action wraps the Approval Step's `approve`/`reject`/`withdraw` on the bound gate for `(instance_id, action)`. Structural authorization (only the named `approver_ref` may approve or reject; only `submitter_ref` may withdraw) is enforced by Approval Step's Invariant 4 and Invariant 5 directly; no redundant Permissions check is added.
 
 1. Look up `workflow_store[instance_id]` → `not-known` if absent.
-2. Look up `gate_binding[(instance_id, action)]` → `step_id`. If no binding exists, return `gate-not-open` (there is no Approval Step open for this transition; call `open_gate` first).
+2. Look up `gate_binding[(instance_id, action)]` → `step_id`. If no binding exists, return [Gate Not Open] (there is no Approval Step open for this transition; call [Open Gate] first).
 3. Validate `decision` is one of `{"approve", "reject", "withdraw"}` → `invalid-request` otherwise.
 4. Dispatch on `decision`:
    - `"approve"`: call `ApprovalStep.approve(step_id, decided_by=actor_ref, reason?, decided_at=now)` → `approved | rejected(invalid-request | not-known | not-pending | unauthorized | storage-failure)`. Propagate `not-pending` and `unauthorized` unchanged; map `storage-failure` to `recording-failure`.
    - `"reject"`: call `ApprovalStep.reject(step_id, decided_by=actor_ref, reason, decided_at=now)` → `rejected_outcome | rejected(...)`. `reason` is required; a null or whitespace-only `reason` is caught at the Primitive policies layer and returned as `invalid-request` before this call is made. Propagate rejections as above.
-   - `"withdraw"`: call `ApprovalStep.withdraw(step_id, withdrawn_by=actor_ref, reason, withdrawn_at=now)` → `withdrawn | rejected(...)`. `reason` is required. Gate withdrawal is the workflow initiator's act: because the gate's Approval Step carries `submitter_ref = initiator_ref` (set at `open_gate` step 6), Approval Step Invariant 5 admits a withdrawal only when `actor_ref` is the workflow initiator; a non-initiator withdrawal attempt surfaces `unauthorized` unchanged. Propagate rejections as above.
+   - `"withdraw"`: call `ApprovalStep.withdraw(step_id, withdrawn_by=actor_ref, reason, withdrawn_at=now)` → `withdrawn | rejected(...)`. `reason` is required. Gate withdrawal is the workflow initiator's act: because the gate's Approval Step carries `submitter_ref = initiator_ref` (set at [Open Gate] step 6), Approval Step Invariant 5 admits a withdrawal only when `actor_ref` is the workflow initiator; a non-initiator withdrawal attempt surfaces `unauthorized` unchanged. Propagate rejections as above.
 5. On atom-level success, recall the in-tray binding: `Assignment.recall(gate_to_assignment[step_id])`. If the assignment is already in Recalled state (idempotent recall — a moot-gate cascade has already discharged it), treat `not-active` as no-op success.
 6. Call `AuditTrail.record_action(action_ref=gate_decided, actor_ref, credential, data={instance_id, action, step_id, decision, reason?}, retention_policy=audit_trail_retention_policy)`. Failure is `recording-failure`. If this `record_action` fails after the Approval Step transition succeeded, the recovery path in Edge cases *Cross-store consistency under failure* applies.
 7. Return the outcome token from step 4 (`approved`, `rejected_outcome`, or `withdrawn`).
@@ -167,14 +171,14 @@ This is the composition's load-bearing wiring action. For unguarded transitions,
    b. On constituent success, write `transition_to_event` at step 4c below.
 
 5. **For a guarded transition** (the matched transition carries a `guard` label):
-   a. Look up `gate_binding[(instance_id, action)]` to find the bound `step_id`. If no binding exists, the gate has not been opened — the composition refuses to fire: return `gate-not-cleared` (the guarded transition cannot be asserted until its gate is opened and resolved).
+   a. Look up `gate_binding[(instance_id, action)]` to find the bound `step_id`. If no binding exists, the gate has not been opened — the composition refuses to fire: return [Gate Not Cleared] (the guarded transition cannot be asserted until its gate is opened and resolved).
    b. Read the Approval Step state for `step_id` via `ApprovalStep.read({step_id})`. If the step is not in Approved state, return `gate-not-cleared`. The composition evaluates the guard by reading the gate state; it does not delegate this check to the caller. A gate in Pending, Rejected, or Withdrawn state prevents the guarded transition from firing. The caller cannot override this: there is no surface by which the caller supplies `guard_satisfied` for a guarded transition in this composition.
    c. The step is in Approved. Call `WorkflowStateMachine.fire(instance_id, action, actor_ref, guard_satisfied=true, fired_at=now)` → `new_state | rejected(...)`. The composition asserts `guard_satisfied = true` here because it has just verified, from the bound Approval Step's actual state, that the named approver approved. Propagate constituent rejections as in step 4a.
    d. On constituent success, proceed to step 4b (writing `transition_to_event`).
 
 6. On constituent `fire` success (either path): call `AuditTrail.record_action(action_ref=transition_fired, actor_ref, credential, data={instance_id, action, from_state=prior current_state, new_state, transition_id, guarded=<bool>, step_id if guarded}, retention_policy=audit_trail_retention_policy)` → `event_id`. Write `transition_to_event[transition_id] = event_id`. Failure is `recording-failure`. If `record_action` fails after `WorkflowStateMachine.fire` succeeded, see *Cross-store consistency under failure* in Edge cases; the composition surfaces `recording-failure` but the State Machine transition has committed.
 
-7. **Moot-gate cascade**: after a successful `fire_transition`, check whether the workflow's new `current_state` is different from the `from_state` of any currently open gate (i.e., `gate_binding` entries for this `instance_id` whose associated Approval Step is still in Pending and whose declared transition's `from_state` ≠ `new_state`). Any such gate is now moot — the workflow has left the state from which that guarded transition departs, so the gate will not be evaluated unless the workflow returns to that state (which is only possible if the declaration includes a return path, per the State Machine's declared-transition model). For each moot gate identified:
+7. **Moot-gate cascade**: after a successful [Fire Transition], check whether the workflow's new `current_state` is different from the `from_state` of any currently open gate (i.e., `gate_binding` entries for this `instance_id` whose associated Approval Step is still in Pending and whose declared transition's `from_state` ≠ `new_state`). Any such gate is now moot — the workflow has left the state from which that guarded transition departs, so the gate will not be evaluated unless the workflow returns to that state (which is only possible if the declaration includes a return path, per the State Machine's declared-transition model). For each moot gate identified:
    - Call `ApprovalStep.withdraw(step_id, withdrawn_by=initiator_ref, reason="Gate moot: workflow left the gate's from_state by firing a different transition")` → if `not-pending`, the gate was already decided — no action needed.
    - Call `Assignment.recall(gate_to_assignment[step_id])` → treat `not-active` as idempotent success.
    - Call `AuditTrail.record_action(action_ref=moot_gate_recalled, actor_ref=application_actor_ref, credential=application_credential, data={instance_id, moot_action=action, step_id, reason="Gate moot: workflow advanced past from_state"}, retention_policy=audit_trail_retention_policy)`.
@@ -198,7 +202,7 @@ This is the composition's load-bearing wiring action. For unguarded transitions,
 
 **Likely objection.** "State Machine already has a guard-gating mechanism — it accepts `guard_satisfied = true` from the caller. Why not let the caller assert it, or let the composition simply trust the caller's word?"
 
-**Mechanism that resolves it.** State Machine deliberately extracted guard evaluation as an EOS boundary (its Edge cases explicitly name this composition as the re-convergence point): guards recur across many forms — approval records, threshold evaluations, quorum counts, external conditions — and each has its own state machine. The atom correctly does not absorb any of them. For approval-type guards, this composition is the designated evaluation layer. The mechanism: the composition binds each guarded transition to an Approval Step (`gate_binding`) at gate-opening time, and at `fire_transition` reads the bound step's actual state. `guard_satisfied = true` is asserted to `WorkflowStateMachine.fire` if and only if the bound step is in Approved. The caller of this composition supplies no `guard_satisfied` argument; the composition's own read of the Approval Step state is the evaluation. The gate is structurally closed: an actor with `workflows:fire` and a guarded transition they want to advance cannot assert the guard themselves — the approval record must exist.
+**Mechanism that resolves it.** State Machine deliberately extracted guard evaluation as an EOS boundary (its Edge cases explicitly name this composition as the re-convergence point): guards recur across many forms — approval records, threshold evaluations, quorum counts, external conditions — and each has its own state machine. The atom correctly does not absorb any of them. For approval-type guards, this composition is the designated evaluation layer. The mechanism: the composition binds each guarded transition to an Approval Step (`gate_binding`) at gate-opening time, and at [Fire Transition] reads the bound step's actual state. `guard_satisfied = true` is asserted to `WorkflowStateMachine.fire` if and only if the bound step is in Approved. The caller of this composition supplies no `guard_satisfied` argument; the composition's own read of the Approval Step state is the evaluation. The gate is structurally closed: an actor with `workflows:fire` and a guarded transition they want to advance cannot assert the guard themselves — the approval record must exist.
 
 **Result.** A records-alone-provable gated workflow: the process moved only through declared transitions (State Machine Invariants 3 and 8, preserved by the composition); each guarded transition cleared its named approval by the authorized actor (Approval Step Invariant 4, enforced at gate-decision time, verified by the composition at fire time); all transition firings and all gate decisions are attributed, sealed, and retention-governed (Audit Trail substrate). An auditor reconstructing the process from the records alone sees: every transition is declared; every guarded transition's history entry corresponds to a bound Approval Step in Approved state; every action is attributed to a real registered actor under Actor Identity attestation. No transition fired on a bare caller assertion.
 
@@ -208,17 +212,17 @@ This is the composition's load-bearing wiring action. For unguarded transitions,
 
 These invariants (conditions that must always hold) emerge from the composition. None belongs to a single constituent atom; each requires two or more constituents working together to hold. Each invariant names the constituent invariants it depends on and the action wiring step that establishes it.
 
-- **Invariant 1 — Approval-gated transition (load-bearing).** A guarded transition's history entry exists in the State Machine instance only if its bound Approval Step (via `gate_binding[(instance_id, action)]`) is in Approved state at the moment `fire_transition` called `WorkflowStateMachine.fire` with `guard_satisfied = true`. The composition evaluates the gate (reads the Approval Step state at `fire_transition` step 5b) and asserts `guard_satisfied = true` only on a confirmed Approved step; a guarded transition never fires on a bare caller assertion. Rests on State Machine Invariants 3 (only-declared-transitions) and 8 (guard-gating without evaluation) plus Approval Step Invariant 4 (approver exclusivity). This invariant is the composition's foundational record-alone-provable claim: a history entry with `guard_satisfied = true` means the composition verified an Approved gate, not merely trusted a caller.
+- **Invariant 1 — Approval-gated transition (load-bearing).** A guarded transition's history entry exists in the State Machine instance only if its bound Approval Step (via `gate_binding[(instance_id, action)]`) is in Approved state at the moment [Fire Transition] called `WorkflowStateMachine.fire` with `guard_satisfied = true`. The composition evaluates the gate (reads the Approval Step state at [Fire Transition] step 5b) and asserts `guard_satisfied = true` only on a confirmed Approved step; a guarded transition never fires on a bare caller assertion. Rests on State Machine Invariants 3 (only-declared-transitions) and 8 (guard-gating without evaluation) plus Approval Step Invariant 4 (approver exclusivity). This invariant is the composition's foundational record-alone-provable claim: a history entry with `guard_satisfied = true` means the composition verified an Approved gate, not merely trusted a caller.
 
-- **Invariant 2 — Permission-gated process advancement.** No transition fires by an actor lacking `workflows:fire`; no workflow is started by an actor lacking `workflows:start`; no gate is opened by an actor lacking `workflows:open-gate`. Gate decisions are enforced by Approval Step Invariants 4 and 5 (named-approver exclusivity and submitter exclusivity) directly — no redundant chain-layer Permissions check for gate decisions. Rests on `fire_transition` step 1, `start_workflow` step 1, and `open_gate` step 1 Permissions checks, plus Approval Step Invariants 4 and 5.
+- **Invariant 2 — Permission-gated process advancement.** No transition fires by an actor lacking `workflows:fire`; no workflow is started by an actor lacking `workflows:start`; no gate is opened by an actor lacking `workflows:open-gate`. Gate decisions are enforced by Approval Step Invariants 4 and 5 (named-approver exclusivity and submitter exclusivity) directly — no redundant chain-layer Permissions check for gate decisions. Rests on [Fire Transition] step 1, [Start Workflow] step 1, and [Open Gate] step 1 Permissions checks, plus Approval Step Invariants 4 and 5.
 
-- **Invariant 3 — Attributed and sealed history.** Every fired transition (both guarded and unguarded) and every gate decision (opened, decided) and every workflow start produces exactly one `AuditTrail.record_action` call, each returning an `event_id`. The full workflow and gate lifecycle is reconstructible forward via Audit Trail (ordered by the Audit Trail's sequence) and reverse via the workflow records (via `transition_to_event` and `gate_binding`). Inherits Audit Trail's atomicity surface: `record_action` is treated as atomic from this composition's perspective, modulo Audit Trail's own *Partial attestation on step failure* edge case (Actor Identity.attest succeeds but EventLog.append fails), whose recovery is inherited from the substrate and not re-derived here. Rests on `start_workflow` step 5, `open_gate` step 9, `decide_gate` step 6, `fire_transition` step 6, and the Audit Trail substrate's composition-level invariants.
+- **Invariant 3 — Attributed and sealed history.** Every fired transition (both guarded and unguarded) and every gate decision (opened, decided) and every workflow start produces exactly one `AuditTrail.record_action` call, each returning an `event_id`. The full workflow and gate lifecycle is reconstructible forward via Audit Trail (ordered by the Audit Trail's sequence) and reverse via the workflow records (via `transition_to_event` and `gate_binding`). Inherits Audit Trail's atomicity surface: `record_action` is treated as atomic from this composition's perspective, modulo Audit Trail's own *Partial attestation on step failure* edge case (Actor Identity.attest succeeds but EventLog.append fails), whose recovery is inherited from the substrate and not re-derived here. Rests on [Start Workflow] step 5, [Open Gate] step 9, [Decide Gate] step 6, [Fire Transition] step 6, and the Audit Trail substrate's composition-level invariants.
 
-- **Invariant 4 — Gate assignment coverage and moot-gate cascade.** Every open gate (a submitted, undecided Approval Step bound via `gate_binding` to a transition reachable from the current state) has exactly one Active Assignment with `task_ref = step_id` and `assignee_ref = approver_ref` from the `gate_spec`. Assignments are recalled in two cases: (a) when the gate is decided (`decide_gate` step 5), the Assignment is recalled in the same composition-level action; (b) when the workflow fires a transition that leaves the gate's `from_state` by an alternate path (moot-gate cascade in `fire_transition` step 7), every still-Active Assignment for moot gates is recalled and the bound Approval Steps are withdrawn. After either case, no gate has a lingering Active Assignment. An `ApprovalStep.withdraw` that returns `not-pending` (the gate was already decided) and an `Assignment.recall` that returns `not-active` (the binding was already discharged) are treated as idempotent no-op successes. Rests on `open_gate` steps 7–8, `decide_gate` step 5, and `fire_transition` step 7.
+- **Invariant 4 — Gate assignment coverage and moot-gate cascade.** Every open gate (a submitted, undecided Approval Step bound via `gate_binding` to a transition reachable from the current state) has exactly one Active Assignment with `task_ref = step_id` and `assignee_ref = approver_ref` from the `gate_spec`. Assignments are recalled in two cases: (a) when the gate is decided ([Decide Gate] step 5), the Assignment is recalled in the same composition-level action; (b) when the workflow fires a transition that leaves the gate's `from_state` by an alternate path (moot-gate cascade in [Fire Transition] step 7), every still-Active Assignment for moot gates is recalled and the bound Approval Steps are withdrawn. After either case, no gate has a lingering Active Assignment. An `ApprovalStep.withdraw` that returns `not-pending` (the gate was already decided) and an `Assignment.recall` that returns `not-active` (the binding was already discharged) are treated as idempotent no-op successes. Rests on [Open Gate] steps 7–8, [Decide Gate] step 5, and [Fire Transition] step 7.
 
 - **Invariant 5 — Only-declared-transitions and replay determinism preserved.** The composition never bypasses `WorkflowStateMachine.fire`; every transition in the State Machine history is a declared transition; `current_state` replays deterministically from the history. This is the constituent invariant of State Machine (Invariants 3, 7) preserved and surfaced at the composition level because it is load-bearing for the audit proof. The composition adds no alternate write path to the State Machine's transition history. Guarded transitions fire through the same `fire` surface as unguarded transitions; the only difference is whether `guard_satisfied` is asserted (and if so, the composition asserts it, not the caller).
 
-- **Invariant 6 — Records-alone process proof (forensic completability).** `read_workflow` (combined with `AuditTrail.verify_record` on the `event_id`s from `transition_to_event`) lets an auditor prove from the records alone: (a) the process moved only through declared transitions; (b) each guarded transition's history entry corresponds to a bound Approval Step in Approved state (via `gate_binding`); (c) the approving actor on the Approval Step matched `approver_ref` from the `gate_spec` (Approval Step Invariant 4); (d) the `workflows:fire` grant was held by the actor who fired each transition (Audit Trail Actor Identity attestation); (e) the complete history is attributed and sealed. This is the emergent guarantee no single constituent provides: State Machine provides (a); Approval Step provides (b) and (c); Permissions provides (d); Audit Trail provides attribution and sealing for the combined record. The composition provides all five in one queryable surface.
+- **Invariant 6 — Records-alone process proof (forensic completability).** [Read Workflow] (combined with `AuditTrail.verify_record` on the `event_id`s from `transition_to_event`) lets an auditor prove from the records alone: (a) the process moved only through declared transitions; (b) each guarded transition's history entry corresponds to a bound Approval Step in Approved state (via `gate_binding`); (c) the approving actor on the Approval Step matched `approver_ref` from the `gate_spec` (Approval Step Invariant 4); (d) the `workflows:fire` grant was held by the actor who fired each transition (Audit Trail Actor Identity attestation); (e) the complete history is attributed and sealed. This is the emergent guarantee no single constituent provides: State Machine provides (a); Approval Step provides (b) and (c); Permissions provides (d); Audit Trail provides attribution and sealing for the combined record. The composition provides all five in one queryable surface.
 
 - **Invariant 7 — Constituent invariants preserved.** All invariants of every constituent atom hold over its respective instance. State Machine's invariants (declaration immutability, exactly one current state, only-declared-transitions, terminal absorption, history append-only and complete, history total order, replay determinism, guard-gating without evaluation, transition attribution completeness, instance store durability) hold per workflow instance. Approval Step's invariants hold per gate step. Permissions' invariants hold over the workflow-store-scoped Permissions instance. Assignment's invariants hold over the composition's Assignment instance. Audit Trail's composition-level invariants hold over its instance.
 
@@ -269,25 +273,25 @@ The `gate_spec` maps `"QP-sign-off"` to `{approver_ref: "qp_director_santos", sc
 
 A financial system governs posting of journal entries above the $5M materiality threshold. The declaration has states `{draft, submitted, posted, rejected}` with an unguarded `submit` transition (draft → submitted), a guarded `post` transition (submitted → posted, guard `"controller-sign-off"`), and an unguarded `reject` transition (submitted → rejected). The `gate_spec` binds `"controller-sign-off"` to `{approver_ref: "controller_morgan", scope: "financial:journal-entry:post:materiality-tier-3"}`.
 
-JE-2026-0441: the preparer calls `start_workflow`; fires `submit`; calls `open_gate(action="post")`; the controller calls `decide_gate(decision="approve")`; the preparer calls `fire_transition(action="post")`. The composition verifies the controller's Approval Step is in Approved, asserts `guard_satisfied=true`, and fires. Audit Trail records each action under `sox_7_year` retention. Seven years later, a SOX §404 audit queries the workflow and confirms Invariants 1, 2, and 6.
+JE-2026-0441: the preparer calls [Start Workflow]; fires `submit`; calls `open_gate(action="post")`; the controller calls `decide_gate(decision="approve")`; the preparer calls `fire_transition(action="post")`. The composition verifies the controller's Approval Step is in Approved, asserts `guard_satisfied=true`, and fires. Audit Trail records each action under `sox_7_year` retention. Seven years later, a SOX §404 audit queries the workflow and confirms Invariants 1, 2, and 6.
 
 ---
 
 ### Rejection path — guarded transition attempted without open gate
 
-The QA manager in the pharmaceutical scenario, after `current_state = "qp-review"`, calls `fire_transition(action="release")` without having called `open_gate` first. At step 5a of `fire_transition`: `gate_binding[(instance_id, "release")]` does not exist; the composition returns `gate-not-cleared`. The State Machine records no transition. No history entry is written. The QA manager must call `open_gate` first, then wait for the QP's decision, then retry `fire_transition`.
+The QA manager in the pharmaceutical scenario, after `current_state = "qp-review"`, calls `fire_transition(action="release")` without having called [Open Gate] first. At step 5a of [Fire Transition]: `gate_binding[(instance_id, "release")]` does not exist; the composition returns `gate-not-cleared`. The State Machine records no transition. No history entry is written. The QA manager must call [Open Gate] first, then wait for the QP's decision, then retry [Fire Transition].
 
 ---
 
 ### Rejection path — guarded transition attempted with gate in Pending
 
-The QA manager has opened the release gate (`gate_binding` set) but the QP has not yet decided. The QA manager calls `fire_transition(action="release")`. At `fire_transition` step 5b: `ApprovalStep.read({step_id})` → state is Pending; the composition returns `gate-not-cleared`. No `WorkflowStateMachine.fire` call is made. The gate must reach Approved before the transition can fire.
+The QA manager has opened the release gate (`gate_binding` set) but the QP has not yet decided. The QA manager calls `fire_transition(action="release")`. At [Fire Transition] step 5b: `ApprovalStep.read({step_id})` → state is Pending; the composition returns `gate-not-cleared`. No `WorkflowStateMachine.fire` call is made. The gate must reach Approved before the transition can fire.
 
 ---
 
 ### Rejection path — unauthorized transition attempt
 
-An actor lacking `workflows:fire` calls `fire_transition`. At step 1, `Permissions.permitted(actor_ref, workflows:fire)` → `denied`; returns `permission-denied` immediately. No State Machine call is made. No Audit Trail entry is produced for the unauthorized attempt (see Edge cases — *Audit Trail records of failed authorization attempts*).
+An actor lacking `workflows:fire` calls [Fire Transition]. At step 1, `Permissions.permitted(actor_ref, workflows:fire)` → `denied`; returns [Permission Denied] immediately. No State Machine call is made. No Audit Trail entry is produced for the unauthorized attempt (see Edge cases — *Audit Trail records of failed authorization attempts*).
 
 ---
 
@@ -309,7 +313,7 @@ An FDA inspector or SOX auditor demands evidence that process instance `wf-batch
 
 An external party (an auditor, a counterparty, an investigator) claims that the `"release"` transition fired in instance `wf-batch-br-2026-0412` without QP approval, or that an unauthorized actor advanced the process. The structural rebuttal:
 
-For the "no approval" claim: the State Machine history entry for the release transition carries `guard_satisfied: true` (Invariant 8 of the constituent — the atom records whether the caller asserted the guard). The composition's `gate_binding[(instance_id, "release")]` maps to `step_id="step-qp-0412-release"`. `ApprovalStep.read({step_id})` returns `state: Approved`. Invariant 1 of this composition states that `guard_satisfied = true` was asserted by the composition only because the bound step was in Approved at the time of `fire_transition` step 5b. A forgery would require either (a) fabricating an Approved Approval Step record for a step whose `approver_ref` is `qp_director_santos` — foreclosed by Approval Step Invariant 4 (only the named approver may decide) and by the Audit Trail's tamper-evident sealing — or (b) fabricating a State Machine history entry with `guard_satisfied: true` — foreclosed by the State Machine's Invariant 5 (history append-only; `storage-failure` is the only non-success path for `fire`) and by Tamper Evidence sealing. Invariants 1, 3, and 5 together constitute the structural rebuttal.
+For the "no approval" claim: the State Machine history entry for the release transition carries `guard_satisfied: true` (Invariant 8 of the constituent — the atom records whether the caller asserted the guard). The composition's `gate_binding[(instance_id, "release")]` maps to `step_id="step-qp-0412-release"`. `ApprovalStep.read({step_id})` returns `state: Approved`. Invariant 1 of this composition states that `guard_satisfied = true` was asserted by the composition only because the bound step was in Approved at the time of [Fire Transition] step 5b. A forgery would require either (a) fabricating an Approved Approval Step record for a step whose `approver_ref` is `qp_director_santos` — foreclosed by Approval Step Invariant 4 (only the named approver may decide) and by the Audit Trail's tamper-evident sealing — or (b) fabricating a State Machine history entry with `guard_satisfied: true` — foreclosed by the State Machine's Invariant 5 (history append-only; `storage-failure` is the only non-success path for `fire`) and by Tamper Evidence sealing. Invariants 1, 3, and 5 together constitute the structural rebuttal.
 
 For the "unauthorized actor advanced the process" claim: `AuditTrail.verify_record` for the `transition_fired` event returns the Actor Identity attestation, binding the actor reference to the action at the attested timestamp. Invariant 2 (Permission-gated process advancement) guarantees the firing actor held `workflows:fire` at the time of the Permissions check. An auditor confirms both.
 
@@ -327,51 +331,218 @@ A derived implementation of this composition is *acceptable* — in the regulato
 
 1. **Verify the approval-gated-transition claim.** For every State Machine history entry whose matched declared transition carries a `guard` label (i.e., history entries with `guard_satisfied: true`): follow `transition_to_event[transition_id]` to the Audit Trail `event_id` and confirm it carries `step_id` in its data; follow `gate_binding[(instance_id, action)]` to find the bound `step_id`; confirm `ApprovalStep.read({step_id})` returns `state: Approved`; confirm `decided_by` matches the `gate_spec`'s `approver_ref` for that guard label (Approval Step Invariant 4). A guarded history entry whose bound step is not in Approved, or whose `decided_by` does not match `approver_ref`, is a conformance failure under Invariant 1.
 
-2. **Verify only-declared-transitions and replay determinism.** For every workflow instance: call `WorkflowStateMachine.read_declaration(instance_id)` and `WorkflowStateMachine.history(instance_id)`. Confirm every `{from_state, action, to_state}` triple in the history corresponds to a declared transition. Replay the history in `sequence_number` order from `initial_state` and confirm it arrives at `current_state`. A history entry with a triple not in the declaration, or a replay that does not converge to `current_state`, is a conformance failure under Invariant 5 (constituent State Machine Invariants 3 and 7). Confirm the declaration has not changed since `start_workflow` (State Machine Invariant 1 — declaration immutability).
+2. **Verify only-declared-transitions and replay determinism.** For every workflow instance: call `WorkflowStateMachine.read_declaration(instance_id)` and `WorkflowStateMachine.history(instance_id)`. Confirm every `{from_state, action, to_state}` triple in the history corresponds to a declared transition. Replay the history in `sequence_number` order from `initial_state` and confirm it arrives at `current_state`. A history entry with a triple not in the declaration, or a replay that does not converge to `current_state`, is a conformance failure under Invariant 5 (constituent State Machine Invariants 3 and 7). Confirm the declaration has not changed since [Start Workflow] (State Machine Invariant 1 — declaration immutability).
 
 3. **Verify audit completeness.** For every workflow start, gate opening, gate decision, and transition firing recorded in the workflow store and Approval Step store: exactly one corresponding `record_action` event exists in the Audit Trail (`action_ref ∈ {workflow_started, gate_opened, gate_decided, transition_fired, moot_gate_recalled}`). The reverse direction also holds: every workflow-related Audit Trail entry corresponds to a record in the workflow store, `gate_binding`, or Approval Step store. No workflow action is invisible to the Audit Trail; no Audit Trail entry refers to an instance or gate that does not exist. Invariant 3 is the contract. Inherits Audit Trail's atomicity surface (modulo the substrate's *Partial attestation on step failure* edge case; the auditor alerts on orphan attestations referencing this composition's `action_ref` values).
 
 4. **Verify gate assignment coverage.** For every `gate_binding` entry whose bound Approval Step is in Pending state: confirm exactly one Active Assignment exists with `task_ref = step_id` and `assignee_ref = approver_ref`. For every `gate_binding` entry whose bound step is in a terminal state: confirm no Active Assignment exists for that step. Confirm moot gates (where the workflow's current state is not the gate's `from_state`) have been withdrawn and their Assignments recalled (or the gate was already decided before the workflow left the state). Invariant 4 is the contract.
 
-5. **Verify permission enforcement.** For every `workflow_started`, `gate_opened`, `fire_transition` Audit Trail entry: confirm the `actor_ref` held the corresponding scope (`workflows:start`, `workflows:open-gate`, `workflows:fire`) in the Permissions instance at the time of the action, via the Audit Trail's Actor Identity attestation and the Permissions store's grant records. Invariant 2 is the contract.
+5. **Verify permission enforcement.** For every `workflow_started`, `gate_opened`, [Fire Transition] Audit Trail entry: confirm the `actor_ref` held the corresponding scope (`workflows:start`, `workflows:open-gate`, `workflows:fire`) in the Permissions instance at the time of the action, via the Audit Trail's Actor Identity attestation and the Permissions store's grant records. Invariant 2 is the contract.
 
 ### Externally-clearable checks
 
-6. **Whether the `gate_spec` correctly maps to the regulatory requirements.** The composition records the `gate_spec` declared at `start_workflow` and validates it structurally (every guarded transition named; every entry non-whitespace). It does not verify that the declared `approver_ref` for each guard label was the *correct authority* under the deployment's regulatory policy. *"Was `qp_director_santos` the required qualified person for batch `BR-2026-0412` under 21 CFR Part 211?"* is a calling-system policy question; the composition records the answer the calling system declared. Verification of the policy mapping (transition guard → required approver identity) requires the deployment's role-authorization registry — typically a Permissions instance scoped to scope-approval grants, cross-referenced at the `started_at` timestamp. This parallels Multi-Party Approval's *Audit gaps* for approver-set policy.
+6. **Whether the `gate_spec` correctly maps to the regulatory requirements.** The composition records the `gate_spec` declared at [Start Workflow] and validates it structurally (every guarded transition named; every entry non-whitespace). It does not verify that the declared `approver_ref` for each guard label was the *correct authority* under the deployment's regulatory policy. *"Was `qp_director_santos` the required qualified person for batch `BR-2026-0412` under 21 CFR Part 211?"* is a calling-system policy question; the composition records the answer the calling system declared. Verification of the policy mapping (transition guard → required approver identity) requires the deployment's role-authorization registry — typically a Permissions instance scoped to scope-approval grants, cross-referenced at the `started_at` timestamp. This parallels Multi-Party Approval's *Audit gaps* for approver-set policy.
 
 7. **Whether the declared state machine itself matches the regulation's required process.** The composition records the declaration as supplied and enforces declared-transition discipline. It does not verify that the declared states and transitions are the correct process under the applicable regulation. *"Does this declaration correctly represent the five-step batch-release process required by Part 211?"* is a regulatory-process-design question answered by the deployment's process documentation. Auditors verify this by reading the declaration alongside the relevant regulatory standard.
 
-8. **Whether the named approver was authorized to hold the approver role.** The composition enforces that `decided_by` matched `approver_ref` (Approval Step Invariant 4) and that `approver_ref` was named in the `gate_spec` (checked at `start_workflow`). It does not verify that the named approver was the *correct authority* for the scope at the time of the gate decision. Cross-referencing `approver_ref` and `scope` against the deployment's standing-authorization registry at `started_at` is an external audit check.
+8. **Whether the named approver was authorized to hold the approver role.** The composition enforces that `decided_by` matched `approver_ref` (Approval Step Invariant 4) and that `approver_ref` was named in the `gate_spec` (checked at [Start Workflow]). It does not verify that the named approver was the *correct authority* for the scope at the time of the gate decision. Cross-referencing `approver_ref` and `scope` against the deployment's standing-authorization registry at `started_at` is an external audit check.
 
 ---
 
 ## Edge cases and explicit non-goals
 
-- **Multi-approver gates.** A guarded transition requiring N approvers (all-of-N, M-of-N, one-of-N quorum) uses a [Multi-Party Approval](./multi-party-approval.md) chain in place of a single Approval Step as the gate. The composition reads the chain's terminal Approved state the same way it reads a single step's Approved state — via the `gate_binding` pointing to the chain id rather than a `step_id`. The `gate_spec` entry for such a guard label names the chain's `chain_id` (or a stable chain reference) rather than a single `approver_ref`; the `open_gate` action initiates a Multi-Party Approval chain rather than a single Approval Step. This multi-approver-gate variant is a composing enrichment of this composition, not part of the core single-approver-gate model. Deployments requiring multi-approver gates on any guarded transition should layer [Multi-Party Approval](./multi-party-approval.md) for those gates.
+- **Multi-approver gates.** A guarded transition requiring N approvers (all-of-N, M-of-N, one-of-N quorum) uses a [Multi-Party Approval](./multi-party-approval.md) chain in place of a single Approval Step as the gate. The composition reads the chain's terminal Approved state the same way it reads a single step's Approved state — via the `gate_binding` pointing to the chain id rather than a `step_id`. The `gate_spec` entry for such a guard label names the chain's `chain_id` (or a stable chain reference) rather than a single `approver_ref`; the [Open Gate] action initiates a Multi-Party Approval chain rather than a single Approval Step. This multi-approver-gate variant is a composing enrichment of this composition, not part of the core single-approver-gate model. Deployments requiring multi-approver gates on any guarded transition should layer [Multi-Party Approval](./multi-party-approval.md) for those gates.
 
 - **Non-approval guard evaluation.** This composition evaluates only approval-type guards — guards whose evaluation consists of checking whether a named actor has approved a specific subject under a specific scope. Guards whose evaluation requires a threshold check (an account balance exceeds a limit), a quorum count (N of M sensors reported above threshold), an external condition (an external service returned a green status), or a rules-engine decision are still the caller's responsibility per State Machine's guard-evaluation edge case. The composition does not provide a generic guard-evaluation surface; it evaluates exactly one class: approval-step-based guards. A deployment that declares a guarded transition with a non-approval guard must supply `guard_satisfied = true` to `WorkflowStateMachine.fire` via a separate orchestration layer that is not this composition. Mixing approval and non-approval guards in the same declaration is a deployment-design choice; the composition owns only the approval-type ones.
 
 - **Parallel / concurrent active states and fork-join.** This composition has exactly one current state at all times, inherited from State Machine's Invariant 2 (exactly one current state). Parallel workflows — where an instance is in multiple active states simultaneously, with fork and join transitions — are out of scope. A Parallel Workflow fork-join composition (not yet in the library) handles that concept; this composition is the single-active-state declared-machine primitive.
 
-- **Declaration versioning and sharing declarations across instances.** The composition takes the declaration as a value at `start_workflow` and fixes it immutably per instance via State Machine's Invariant 1 (declaration immutability). Sharing one canonical declaration template across many instances — updating the template for new instances without re-supplying it at each `instantiate` — is handled by a Definition Registry (named in State Machine's edge cases). The calling system retrieves the current template from a registry and supplies it at `start_workflow`; this composition receives a value declaration.
+- **Declaration versioning and sharing declarations across instances.** The composition takes the declaration as a value at [Start Workflow] and fixes it immutably per instance via State Machine's Invariant 1 (declaration immutability). Sharing one canonical declaration template across many instances — updating the template for new instances without re-supplying it at each `instantiate` — is handled by a Definition Registry (named in State Machine's edge cases). The calling system retrieves the current template from a registry and supplies it at [Start Workflow]; this composition receives a value declaration.
 
-- **Moot-gate cascade and return paths.** The moot-gate cascade (step 7 of `fire_transition`) withdraws open gates for transitions whose `from_state` the workflow has left. If the declaration includes a return path to that `from_state` (e.g., a transition from `released` back to `qp-review` for a re-review), a gate that was moot when the workflow left may become relevant again. In this case, `open_gate` must be called again for the re-relevant transition; the prior gate has been withdrawn and cannot be re-used. This is consistent with Approval Step's Invariant 3 (terminal absorption — a withdrawn step cannot be re-opened). The deployment must design its process declaration and gate-opening logic accordingly.
+- **Moot-gate cascade and return paths.** The moot-gate cascade (step 7 of [Fire Transition]) withdraws open gates for transitions whose `from_state` the workflow has left. If the declaration includes a return path to that `from_state` (e.g., a transition from `released` back to `qp-review` for a re-review), a gate that was moot when the workflow left may become relevant again. In this case, [Open Gate] must be called again for the re-relevant transition; the prior gate has been withdrawn and cannot be re-used. This is consistent with Approval Step's Invariant 3 (terminal absorption — a withdrawn step cannot be re-opened). The deployment must design its process declaration and gate-opening logic accordingly.
 
-- **Cross-store consistency under partial failure.** `start_workflow` writes to three stores in sequence (State Machine constituent, `workflow_store`, Audit Trail). `open_gate` writes to three stores (Approval Step, Assignment, composition maps + Audit Trail). `decide_gate` writes to two (Approval Step, Audit Trail). `fire_transition` writes to two or three (State Machine constituent, Audit Trail, optionally `gate_binding` cleanup on moot cascade). A failure mid-sequence leaves partial state. The recovery rules are stated per action under each action's *Partial-failure recovery* note. The general principle: the load-bearing write (the constituent atom transition for `fire_transition`; the Approval Step submit for `open_gate`) is the write that determines whether the action semantically committed. Subsequent Audit Trail and map writes are recovery-amenable. An Audit Trail `record_action` failure after a load-bearing write surfaces as `recording-failure` to the caller and requires retry; the Audit Trail entry will be missing until retry succeeds, a gap in Invariant 3 the implementation must resolve.
+- **Cross-store consistency under partial failure.** [Start Workflow] writes to three stores in sequence (State Machine constituent, `workflow_store`, Audit Trail). [Open Gate] writes to three stores (Approval Step, Assignment, composition maps + Audit Trail). [Decide Gate] writes to two (Approval Step, Audit Trail). [Fire Transition] writes to two or three (State Machine constituent, Audit Trail, optionally `gate_binding` cleanup on moot cascade). A failure mid-sequence leaves partial state. The recovery rules are stated per action under each action's *Partial-failure recovery* note. The general principle: the load-bearing write (the constituent atom transition for [Fire Transition]; the Approval Step submit for [Open Gate]) is the write that determines whether the action semantically committed. Subsequent Audit Trail and map writes are recovery-amenable. An Audit Trail `record_action` failure after a load-bearing write surfaces as [Recording Failure] to the caller and requires retry; the Audit Trail entry will be missing until retry succeeds, a gap in Invariant 3 the implementation must resolve.
 
-- **`fire_transition` non-idempotency.** `WorkflowStateMachine.fire` is not idempotent (two `fire` calls with the same `(instance_id, action)` both succeed if the transition is still available from the resulting state). Callers requiring at-most-once semantics under retry conditions must supply their own idempotency key at the orchestration layer; this composition does not provide one.
+- **[Fire Transition] non-idempotency.** `WorkflowStateMachine.fire` is not idempotent (two `fire` calls with the same `(instance_id, action)` both succeed if the transition is still available from the resulting state). Callers requiring at-most-once semantics under retry conditions must supply their own idempotency key at the orchestration layer; this composition does not provide one.
 
-- **Audit Trail records of failed authorization attempts.** A `fire_transition`, `start_workflow`, or `open_gate` call rejected at the Permissions check (`permission-denied`) leaves no Audit Trail entry by default. High-assurance deployments where failed authorization attempts are themselves auditable compose a Failed-Attempt Log pattern; the canonical composition's audit surface is committed workflow actions, not attempted actions. This parallels Multi-Party Approval's equivalent edge case.
+- **Audit Trail records of failed authorization attempts.** A [Fire Transition], [Start Workflow], or [Open Gate] call rejected at the Permissions check (`permission-denied`) leaves no Audit Trail entry by default. High-assurance deployments where failed authorization attempts are themselves auditable compose a Failed-Attempt Log pattern; the canonical composition's audit surface is committed workflow actions, not attempted actions. This parallels Multi-Party Approval's equivalent edge case.
 
 - **Guard evaluation for non-approval guards is still the caller's / Rules Engine's obligation.** Named explicitly in *Non-approval guard evaluation* above and in State Machine's edge cases. The composition evaluates only approval-type guards; all other guard evaluation paths remain the calling system's or a composing Rules Engine's responsibility.
 
 - **Clock source for `fired_at` and `decided_at`.** The composition sets timestamps at the receiving node's wall clock when constituent atoms do not carry their own timestamp. Clock skew across distributed nodes can produce `fired_at` values that are not strictly monotonic across history entries; this is inherited from State Machine's clock-semantics edge case (sequence_number is the authoritative order source; `fired_at` is best-effort). For deployments requiring adversarially defensible timestamps on each transition, the Trusted Timestamping composing pattern is the resolution.
 
-- **Concurrent `fire_transition` calls on the same instance.** Two callers concurrently calling `fire_transition` on the same `instance_id` must be serialized; the implementation must hold a per-instance mutex at the composition layer as well as at the State Machine constituent layer. A concurrent `fire_transition` and `decide_gate` on the same instance must also be serialized to prevent the composition from reading an Approval Step state that changes between the state read and the `WorkflowStateMachine.fire` call.
+- **Concurrent [Fire Transition] calls on the same instance.** Two callers concurrently calling [Fire Transition] on the same `instance_id` must be serialized; the implementation must hold a per-instance mutex at the composition layer as well as at the State Machine constituent layer. A concurrent [Fire Transition] and [Decide Gate] on the same instance must also be serialized to prevent the composition from reading an Approval Step state that changes between the state read and the `WorkflowStateMachine.fire` call.
 
 - **Non-repudiation, tamper-evidence, and retention.** These properties are inherited via the Audit Trail substrate. Non-repudiable attribution is provided by Actor Identity; tamper-evidence of the event log is provided by Tamper Evidence; retention governance is provided by Retention Window. This composition does not re-derive any of these properties; it names them as substrate obligations and inherits the substrate's composition-level invariants.
 
 - **"Which approvals a transition should require" is the deployment's business-rule layer.** The `gate_spec` correctness — whether the declared approver for a guard label is the correct authority under the deployment's regulatory policy — is not this composition's contract to enforce. The composition enforces that `gate_spec` is structurally complete (every guarded transition named; every entry non-whitespace) and that the gate decision is made by the named approver (Approval Step Invariant 4). The policy question — whether the named approver was the right person — is an external audit check (Generation acceptance check 6).
+
+---
+
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are: the five workflow-level actions it exposes ([Start Workflow], [Open Gate], [Decide Gate], [Fire Transition], and the read-only [Read Workflow]); the [Gate Spec] it freezes at start (the map from each guarded transition's guard label to its required approver and scope); the four-scope authorization vocabulary it defines for its Permissions instance ([Workflows Start], [Workflows Open Gate], [Workflows Fire], [Workflows Read]); and its own rejection taxonomy ([Permission Denied], [Recording Failure], and the gate-lifecycle rejections [Not Guarded], [Gate Not Available], [Already Open], [Gate Not Open], and the load-bearing [Gate Not Cleared]). Its load-bearing guarantee — a guarded transition fires only after its bound Approval Step is Approved (Invariant 1) — is a structural property, not a datum. Its emergent state (`workflow_store`, `gate_binding`, `gate_to_assignment`, `transition_to_event`) is a composition-introduced set of maps wiring the five constituent stores, left as backticked store tokens; there is no composition-introduced record store to card as a Type. The audit event types it emits (`workflow_started`, `gate_opened`, `gate_decided`, `transition_fired`, `moot_gate_recalled`) stay backticked as wire values, as do the constituent calls and their outcomes — State Machine's `instantiate` / `fire` / `current` / `history` / `read_declaration`, Approval Step's `submit` / `approve` / `reject` / `withdraw` / `read`, Permissions' `permitted` / `grant` / `revoke`, Assignment's `assign` / `recall`, Audit Trail's `record_action` / `verify_record` — the relayed constituent tokens (`instance_id`, `step_id`, `assignment_id`, `transition_id`, `event_id`, `approver_ref`, `submitter_ref`, `subject_ref`, `guard_satisfied`), the constituent states (`Pending` / `Approved` / `Rejected` / `Withdrawn` and the declared workflow states), the inherited/relayed rejections (`invalid-request`, `invalid-declaration`, `invalid-transition`, `terminal`, `not-known`, `not-pending`, `unauthorized`, `invalid-query`), the deployment configuration knobs (`audit_trail_retention_policy`, `application_actor_ref`, `application_credential`), and concrete example ids. Constituent atom names remain the existing full links to `../atoms/*` and `./audit-trail.md`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Start Workflow
+
+The composition's instantiating action: freeze a declared process map and its [Gate Spec] into one new workflow run under an authorized initiator. Validates the [Gate Spec] against the declaration (every guarded transition named), instantiates the State Machine instance, writes the workflow record, and records the `workflow_started` audit event. Returns `{instance_id}` or a rejection.
+
+Kind: Operation
+
+#### Open Gate
+
+Opens an approval gate for a guarded transition whose `from_state` is the instance's current state — lazily, on demand, by an actor holding [Workflows Open Gate]. Submits one Approval Step (with the workflow initiator as submitter), assigns it to the named approver's in-tray, binds it via `gate_binding`, and records `gate_opened`. Returns `{step_id, assignment_id}` or a rejection.
+
+Kind: Operation
+
+#### Decide Gate
+
+Wraps the bound gate's Approval Step `approve` / `reject` / `withdraw` for an `(instance_id, action)` pair. Structural authorization is Approval Step's own (only the named approver may approve or reject; only the submitter — the initiator — may withdraw), so no redundant workflow-layer permission check is added. Recalls the in-tray assignment and records `gate_decided`.
+
+Kind: Operation
+
+#### Fire Transition
+
+The composition's load-bearing action: advance the workflow through a transition. For an unguarded transition it calls `WorkflowStateMachine.fire` directly; for a guarded one it reads the bound Approval Step's state and asserts `guard_satisfied = true` only when that step is Approved — the caller never supplies the guard. On success it records `transition_fired` and runs the moot-gate cascade.
+
+Kind: Operation
+
+#### Read Workflow
+
+The read-only query returning a composed view over the workflow record, the State Machine current state and transition history (each entry enriched with its Audit Trail `event_id`), and each gate's Approval Step and Assignment status. Gated by [Workflows Read]. The records-alone forensic surface (Invariant 6).
+
+Kind: Operation
+
+#### Gate Spec
+
+The map, frozen at [Start Workflow] and immutable thereafter, from each guarded transition's guard label to the `{approver_ref, scope}` naming the approval that gate requires. Structurally validated at start (every guarded transition has an entry; every entry names a real guard label and carries a non-whitespace approver and scope); whether the named approver is the *correct* authority is a deployment policy question the composition records but does not adjudicate.
+
+Kind:      Field
+Field of:  the workflow record
+Role:      the per-gate approval specification
+Projects:  gate_spec
+
+#### Workflows Start
+
+The scope permitting [Start Workflow] — instantiate a new workflow run.
+
+Kind:      Member
+Member of: the workflow scope vocabulary
+Role:      Scope
+Projects:  workflows:start
+
+#### Workflows Open Gate
+
+The scope permitting [Open Gate] — open an approval gate for a guarded transition.
+
+Kind:      Member
+Member of: the workflow scope vocabulary
+Role:      Scope
+Projects:  workflows:open-gate
+
+#### Workflows Fire
+
+The scope permitting [Fire Transition] — advance the workflow through a transition.
+
+Kind:      Member
+Member of: the workflow scope vocabulary
+Role:      Scope
+Projects:  workflows:fire
+
+#### Workflows Read
+
+The scope permitting [Read Workflow] — read workflow records and their composed gate, assignment, and attestation surface.
+
+Kind:      Member
+Member of: the workflow scope vocabulary
+Role:      Scope
+Projects:  workflows:read
+
+#### Permission Denied
+
+The composition's rejection when the acting actor lacks the required workflow scope at the Permissions check that opens [Start Workflow], [Open Gate], [Fire Transition], or [Read Workflow]. (Gate decisions are not permission-gated here — Approval Step's own approver and submitter exclusivity is the enforcement.)
+
+Kind:      Member
+Member of: the workflow rejection
+Role:      Rejection
+Projects:  permission-denied
+
+#### Recording Failure
+
+The composition's uniform rejection for a constituent `storage-failure` or an Audit Trail `record_action` failure surfaced at the composition boundary. After a load-bearing write has committed, a later Audit Trail failure surfaces as this and requires retry (a bounded gap in Invariant 3).
+
+Kind:      Member
+Member of: the workflow rejection
+Role:      Rejection
+Projects:  recording-failure
+
+#### Not Guarded
+
+The [Open Gate] rejection when the matched transition carries no `guard` label — unguarded transitions are fired directly through [Fire Transition] without opening a gate.
+
+Kind:      Member
+Member of: the open-gate rejection
+Role:      Rejection
+Projects:  not-guarded
+
+#### Gate Not Available
+
+The [Open Gate] rejection when the instance is in a terminal state, so no gate can be opened.
+
+Kind:      Member
+Member of: the open-gate rejection
+Role:      Rejection
+Projects:  gate-not-available
+
+#### Already Open
+
+The [Open Gate] rejection when a gate is already bound for the `(instance_id, action)` pair — resolve the existing gate via [Decide Gate] before opening a replacement.
+
+Kind:      Member
+Member of: the open-gate rejection
+Role:      Rejection
+Projects:  already-open
+
+#### Gate Not Open
+
+The [Decide Gate] rejection when no Approval Step is bound for the `(instance_id, action)` pair — call [Open Gate] first.
+
+Kind:      Member
+Member of: the decide-gate rejection
+Role:      Rejection
+Projects:  gate-not-open
+
+#### Gate Not Cleared
+
+The load-bearing [Fire Transition] rejection: a guarded transition whose gate has not been opened, or whose bound Approval Step is not in Approved (Pending, Rejected, or Withdrawn), cannot fire. The structural refusal that makes the gate unbypassable — there is no surface by which the caller can assert the guard themselves.
+
+Kind:      Member
+Member of: the fire-transition rejection
+Role:      Rejection
+Projects:  gate-not-cleared
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Start Workflow]: #start-workflow
+[Open Gate]: #open-gate
+[Decide Gate]: #decide-gate
+[Fire Transition]: #fire-transition
+[Read Workflow]: #read-workflow
+[Gate Spec]: #gate-spec
+[Workflows Start]: #workflows-start
+[Workflows Open Gate]: #workflows-open-gate
+[Workflows Fire]: #workflows-fire
+[Workflows Read]: #workflows-read
+[Permission Denied]: #permission-denied
+[Recording Failure]: #recording-failure
+[Not Guarded]: #not-guarded
+[Gate Not Available]: #gate-not-available
+[Already Open]: #already-open
+[Gate Not Open]: #gate-not-open
+[Gate Not Cleared]: #gate-not-cleared
 
 ---
 
@@ -406,7 +577,10 @@ It inherits from:
 
 ---
 
-## Lineage notes
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+</summary>
 
 Regulated composition. Conventions — *Regulated adversarial scenarios* and *Generation acceptance* (with the two-subsection split: Audit-Trail-traversal-clearable and Externally-clearable) — inherited from the methodology directly ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft. [Multi-Party Approval](./multi-party-approval.md) is the primary structural twin: it composes Approval Step + Permissions + Assignment + Audit Trail (as substrate), the same constituent set as this composition minus the State Machine spine. Its substrate convention, three-step chain-action shape, application-state and cross-atom map model, `application_actor_ref`/`application_credential` discipline, load-bearing-wiring-decision subsection style, cascade discipline, GA two-subsection split, and Lineage Structural-milestone paragraph are all mirrored here. [State Machine](../atoms/state-machine.md) is the constituent whose guard-evaluation boundary this composition closes; its EOS Pass-2 boundary argument explicitly deferred guard *evaluation* to this composition as the designated re-convergence point.
 
@@ -422,3 +596,7 @@ Regulated composition. Conventions — *Regulated adversarial scenarios* and *Ge
 - *F2 — `workflows:open-gate` scope — refining (Pass 3, design clarification).* The draft introduced a dedicated `workflows:open-gate` Permissions scope rather than folding gate-opening into `workflows:fire`. Accepted as the right call and recorded as deliberate: gates open lazily throughout the workflow's life (so binding to `workflows:start` would be wrong), and opening an approval gate is a distinct authority from advancing the process.
 
 Pass 1 GRID clean (all composition sections present; reference graph intact — Workflow/State Machine, Approval Step, Permissions, Assignment, Audit Trail, Multi-Party Approval all exist). Pass 2 EOS clean: the substrate convention keeps Event Log / Actor Identity / Retention Window / Tamper Evidence transitive; non-approval guard evaluation stays the caller's / a Rules Engine's obligation (the composition evaluates only approval-type guards — the precise re-convergence of Workflow/State Machine's deliberate extraction); multi-approver gates are a Multi-Party Approval composing variant, not re-derived quorum. The English clears the 92%-good threshold (foundational findings at zero); the TLA+ approval-gated-transition model is the remaining grounding prerequisite per the YES vote.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at seven). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases (17 terms): 5 Operations — the four workflow-level actions ([Start Workflow], [Open Gate], [Decide Gate], [Fire Transition]) plus the read-only [Read Workflow]; 1 Field — the [Gate Spec] the composition freezes at start (guard label → required approver and scope); 4 Members for the Permissions scope vocabulary it defines ([Workflows Start], [Workflows Open Gate], [Workflows Fire], [Workflows Read]); and 7 Members for its own rejection taxonomy ([Permission Denied], [Recording Failure] and the gate-lifecycle rejections [Not Guarded], [Gate Not Available], [Already Open], [Gate Not Open], and the load-bearing [Gate Not Cleared]). Every own-action prose reference is linked; the `#### \`op(args) → …\`` signature headings and example calls, which carry parentheses, stay backticked. The scope and rejection Members are enum values, so their concept references are linked at representative homes (the scope-vocabulary table and the return-site prose) while wire forms stay backticked. **No Type card:** the composition owns no record store — its emergent state (`workflow_store`, `gate_binding`, `gate_to_assignment`, `transition_to_event`) is a set of maps wiring the five constituent stores, left as backticked tokens. Survivors left backticked: the signature headings and example calls; the audit event types (`workflow_started`, `gate_opened`, `gate_decided`, `transition_fired`, `moot_gate_recalled`); every qualified constituent call (State Machine's `instantiate` / `fire` / `current` / `history` / `read_declaration`, Approval Step's `submit` / `approve` / `reject` / `withdraw` / `read`, Permissions' `permitted` / `grant` / `revoke`, Assignment's `assign` / `recall`, Audit Trail's `record_action` / `verify_record`) and their outcomes; the constituent states (`Pending` / `Approved` / `Rejected` / `Withdrawn`); the relayed constituent tokens and inherited rejections (`invalid-request`, `invalid-declaration`, `invalid-transition`, `terminal`, `not-known`, `not-pending`, `unauthorized`, `invalid-query`); the configuration knobs; and concrete example ids. Constituent atom names remain the existing full links to `../atoms/*` and `./audit-trail.md`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). (b) **Summary/blockquote merge** — `## Summary` moved to the top (after TOC, before Intent), its single run-on paragraph split one-idea-per-paragraph (cut #1, lossless) with the regulatory-standards list kept intact; the descriptive top blockquote folded out after confirming each claim (the State-Machine spine + Approval-Step gates + Permissions + Assignment + Audit-Trail substrate wiring; the guard-evaluation re-convergence headline) is carried by Summary / Intent / Composes / the load-bearing wiring decision; no *also-known-as* line existed, so none was invented. (c) **Lineage collapsed** into a `<details markdown="block">` block. (d) **prose cut #5 — skipped (with reason):** the composition owns no emergent state machine of its own — the workflow lifecycle states are the State Machine constituent's (declared per deployment), the gate lifecycle (Pending → Approved | Rejected | Withdrawn) is Approval Step's, and the composition's own logic is the uniform permission-check → constituent-call → audit-record wiring already stated crisply in Action wiring. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 4 — 2026-06-04`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (17 terms); seven composition-level invariants preserved; the `.tla` models untouched — harness re-run green: `execute-gated-workflow.tla` PASS + both buggy twins (`execute-gated-workflow-buggy.tla`, `execute-gated-workflow-buggy-unaudited.tla`) rejected under `--buggy`.
+
+</details>
