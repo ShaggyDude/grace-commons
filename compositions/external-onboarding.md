@@ -16,7 +16,13 @@ toc: true
 </details>
 
 
-> A regulated composition: the full arc of admitting an external entity to a system — invitation issued by an authorized actor, accepted by the invitee (establishing the single identity binding), Party Identity enrolled in Unverified state, credential registered, every step attested in the Audit Trail. The load-bearing emergent invariant is invitation-gates-enrollment: no Party Identity is created via this composition unless an Invitation's Accepted transition precedes it, and the Audit Trail completion record names the specific invitation, the accepting identity, the party record, and the credential in one tamper-evident entry. Without the composition, any of these steps can occur independently, in any order, without a documented chain; the composition is what makes the chain mandatory and auditable.
+## Summary
+
+External Onboarding is the full arc of admitting an external entity to a system — invitation issued by an authorized actor, accepted by the invitee (establishing the single identity binding), Party Identity enrolled in Unverified state, credential registered, every step attested in the Audit Trail.
+
+The load-bearing emergent invariant is invitation-gates-enrollment: no Party Identity is created via this composition unless an Invitation's Accepted transition precedes it, and the Audit Trail completion record names the specific invitation, the accepting identity, the party record, and the credential in one tamper-evident entry.
+
+Without the composition, any of these steps can occur independently, in any order, without a documented chain; the composition is what makes the chain mandatory and auditable.
 
 **Composes:** [Invitation](../atoms/invitation.md) · [Credential](../atoms/credential.md) · [Party Identity](../atoms/party-identity.md) · [Audit Trail](./audit-trail.md)
 
@@ -26,9 +32,9 @@ toc: true
 
 Every system that admits external parties — customers, collaborators, patients, counterparties — faces the same structural challenge: the invitation must be issued before the invitee exists in the system, yet the moment of acceptance is the moment at which the system must durably record who joined, establish their identity record, and register the credential they will use to authenticate. Those three obligations — serializing concurrent acceptance attempts, creating the party record, registering the credential — belong to different atoms. The question of what must happen when they meet, in what order, with what audit record binding the whole arc together, belongs to no single atom. It belongs to the composition.
 
-External Onboarding wires the four constituent atoms into a single enforced onboarding boundary. The `invite` action establishes the documented intent: an authorized actor initiates an invitation, creating an audit-anchored record of who invited whom and to what context. The `onboard` action is the composition's load-bearing center: it calls `Invitation.accept` first — establishing the single-resolution serialization point — then `Party Identity.enroll`, then `Credential.register`, recording the full arc in the Audit Trail as a single named event that links invitation token, accepting identity reference, party record, and credential. The `decline` and `revoke` actions close the invitation on the other terminal paths, each attested in the Audit Trail.
+External Onboarding wires the four constituent atoms into a single enforced onboarding boundary. The [Invite] action establishes the documented intent: an authorized actor initiates an invitation, creating an audit-anchored record of who invited whom and to what context. The [Onboard] action is the composition's load-bearing center: it calls `Invitation.accept` first — establishing the single-resolution serialization point — then `Party Identity.enroll`, then `Credential.register`, recording the full arc in the Audit Trail as a single named event that links invitation token, accepting identity reference, party record, and credential. The [Decline] and [Revoke] actions close the invitation on the other terminal paths, each attested in the Audit Trail.
 
-The emergent invariant is invitation-gates-enrollment: no Party Identity is enrolled and no Credential registered via this composition unless an Invitation's `Accepted` transition precedes them in the same onboarding call. The Invitation atom's single-resolution invariant (exactly one of four terminal states per invitation, the transition atomic under concurrent attempts) is the mechanism that makes the gate hold under concurrent onboarding attempts for the same invitation — exactly one `onboard` call succeeds; all others receive `already-resolved(Accepted)` and create no permanent records.
+The emergent invariant is invitation-gates-enrollment: no Party Identity is enrolled and no Credential registered via this composition unless an Invitation's `Accepted` transition precedes them in the same onboarding call. The Invitation atom's single-resolution invariant (exactly one of four terminal states per invitation, the transition atomic under concurrent attempts) is the mechanism that makes the gate hold under concurrent onboarding attempts for the same invitation — exactly one [Onboard] call succeeds; all others receive `already-resolved(Accepted)` and create no permanent records.
 
 The second emergent property is the identity binding at accept, not at initiate. The `accepting_identity_ref` passed to `Invitation.accept` — a caller-supplied external reference identifying who is accepting, such as an email address or an external identity handle — is recorded permanently in the Invitation record at the moment of acceptance. The `party_id` produced by the downstream `Party Identity.enroll` call is then linked to that `accepting_identity_ref` in the Audit Trail completion record. The tracing path — from any enrolled Party Identity back to the specific Invitation that authorized its creation — runs through the Audit Trail: the completion event carries both the `invitation_token` and the `party_id`, making the chain reconstructable from records alone.
 
@@ -47,20 +53,20 @@ The second emergent property is the identity binding at accept, not at initiate.
 
 Four actions form the onboarding boundary. Each wraps one or more constituent atom calls and produces an Audit Trail record.
 
-**`invite` wiring.** The inviter calls the composition with their actor credentials. The composition calls `Invitation.initiate` and, on success, records `invitation.initiated` in the Audit Trail naming the inviter, the invitee reference, and the invitation token. The invitation token is returned so the inviter can deliver it to the invitee out-of-band (email link, QR code, direct message).
+**[Invite] wiring.** The inviter calls the composition with their actor credentials. The composition calls `Invitation.initiate` and, on success, records `invitation.initiated` in the Audit Trail naming the inviter, the invitee reference, and the invitation token. The invitation token is returned so the inviter can deliver it to the invitee out-of-band (email link, QR code, direct message).
 
-**`onboard` wiring — the load-bearing center.** The step order is fixed and non-negotiable:
+**[Onboard] wiring — the load-bearing center.** The step order is fixed and non-negotiable:
 
 1. `Invitation.accept(invitation_token, accepting_identity_ref)` — the serialization gate fires first. If the invitation is not `Pending` (already accepted, declined, revoked, or expired), the entire call fails before any enrollment record is created. No Party Identity is enrolled; no Credential is registered; no identity is bound. The call returns `invitation-invalid(reason)`.
-2. Audit Trail record: `onboarding.invitation-accepted` — records the gate clearing: `{invitation_token, accepting_identity_ref}`.
+2. Audit Trail record: [Onboarding Invitation Accepted] — records the gate clearing: `{invitation_token, accepting_identity_ref}`.
 3. `Party Identity.enroll(name, date_of_birth, document_type, document_ref, enrolling_actor_ref)` → `party_id`. The party is created in `Unverified` state. If this fails (storage-failure), the composition writes `onboarding.interrupted` to the Audit Trail and returns `storage-failure`. The invitation is permanently Accepted; recovery requires admin intervention (see Edge cases).
-4. `Credential.register(principal_ref: party_id, credential_material, credential_type, expires_at?)` → `credential_id`. The credential is bound to `party_id`. If this fails, the composition writes `onboarding.interrupted` to the Audit Trail (naming the enrolled `party_id`) and returns `storage-failure`. The invitation is Accepted and the party is enrolled; recovery requires admin intervention.
-5. Audit Trail record: `onboarding.completed` — records the full arc: `{invitation_token, accepting_identity_ref, party_id, credential_id}`. If this record fails to write, the composition returns `storage-failure`. The enrollment and credential exist; the completion record does not. The GA check for unrecorded completions detects this gap (see Generation acceptance, check 5).
+4. `Credential.register(principal_ref: party_id, credential_material, credential_type, expires_at?)` → `credential_id`. The credential is bound to `party_id`. If this fails, the composition writes [Onboarding Interrupted] to the Audit Trail (naming the enrolled `party_id`) and returns `storage-failure`. The invitation is Accepted and the party is enrolled; recovery requires admin intervention.
+5. Audit Trail record: [Onboarding Completed] — records the full arc: `{invitation_token, accepting_identity_ref, party_id, credential_id}`. If this record fails to write, the composition returns `storage-failure`. The enrollment and credential exist; the completion record does not. The GA check for unrecorded completions detects this gap (see Generation acceptance, check 5).
 6. Return `{party_id, credential_id}`.
 
-**`decline` wiring.** The invitee (or the system on their behalf) presents the invitation token. The composition calls `Invitation.decline`, then records `invitation.declined` in the Audit Trail using the system service actor. `Invitation.decline` does not record the decliner's identity (Invitation atom design); the Audit Trail records the timestamp and that the decline occurred, not who declined. If a deployment requires recording the decliner's identity, that is done in the `data` payload of the Audit Trail event and enforced above the atom layer.
+**[Decline] wiring.** The invitee (or the system on their behalf) presents the invitation token. The composition calls `Invitation.decline`, then records `invitation.declined` in the Audit Trail using the system service actor. `Invitation.decline` does not record the decliner's identity (Invitation atom design); the Audit Trail records the timestamp and that the decline occurred, not who declined. If a deployment requires recording the decliner's identity, that is done in the `data` payload of the Audit Trail event and enforced above the atom layer.
 
-**`revoke` wiring.** The inviter or an administrator calls `revoke` with their actor credentials. The composition calls `Invitation.revoke`, then records `invitation.revoked` in the Audit Trail, attributing the revocation to the revoking actor.
+**[Revoke] wiring.** The inviter or an administrator calls [Revoke] with their actor credentials. The composition calls `Invitation.revoke`, then records `invitation.revoked` in the Audit Trail, attributing the revocation to the revoking actor.
 
 **The step-order constraint is the composition's central contribution.** Neither `Party Identity.enroll` nor `Credential.register` is called unless `Invitation.accept` returns `accepted`. The Audit Trail substrate records both the moment the gate cleared and the subsequent enrollment and credential steps, so the full arc is traceable from records alone.
 
@@ -236,13 +242,13 @@ revoke(
 
 ## Composition-level invariants
 
-**Invariant 1 — Invitation gates enrollment.** No `Party Identity.enroll` call is made via the `onboard` action unless `Invitation.accept` returns `accepted` for the same `invitation_token` in the same call. No Party Identity is enrolled and no Credential registered via this composition without a preceding successful invitation acceptance.
+**Invariant 1 — Invitation gates enrollment.** No `Party Identity.enroll` call is made via the [Onboard] action unless `Invitation.accept` returns `accepted` for the same `invitation_token` in the same call. No Party Identity is enrolled and no Credential registered via this composition without a preceding successful invitation acceptance.
 
 **Invariant 2 — Identity binding at accept, not at initiate.** The `accepting_identity_ref` that permanently identifies who accepted the invitation is supplied at `Invitation.accept` call time, not at `Invitation.initiate` time. The inviting actor makes no binding commitment about the invitee's identity at initiation; the identity binding is the invitee's act at acceptance time.
 
-**Invariant 3 — Credential-follows-party.** `Credential.register` is called only after `Party Identity.enroll` succeeds, and `principal_ref` in the credential is always the `party_id` produced by the enrollment in the same `onboard` call. A credential registered via this composition always has a corresponding Party Identity record as its subject.
+**Invariant 3 — Credential-follows-party.** `Credential.register` is called only after `Party Identity.enroll` succeeds, and `principal_ref` in the credential is always the `party_id` produced by the enrollment in the same [Onboard] call. A credential registered via this composition always has a corresponding Party Identity record as its subject.
 
-**Invariant 4 — Full Audit Trail coverage.** Every terminal state change in the Invitation lifecycle that passes through this composition — `Accepted`, `Declined`, `Revoked` — produces a corresponding Audit Trail event. The `onboard` action produces at minimum an `onboarding.invitation-accepted` record (step 4) and, on success, an `onboarding.completed` record (step 7). On partial failure, an `onboarding.interrupted` record names the stage at which the sequence stopped. No terminal Invitation transition via this composition is structurally invisible in the Audit Trail.
+**Invariant 4 — Full Audit Trail coverage.** Every terminal state change in the Invitation lifecycle that passes through this composition — `Accepted`, `Declined`, `Revoked` — produces a corresponding Audit Trail event. The [Onboard] action produces at minimum an `onboarding.invitation-accepted` record (step 4) and, on success, an `onboarding.completed` record (step 7). On partial failure, an `onboarding.interrupted` record names the stage at which the sequence stopped. No terminal Invitation transition via this composition is structurally invisible in the Audit Trail.
 
 **Invariant 5 — Completion record names the full arc.** The `onboarding.completed` Audit Trail event carries `{invitation_token, accepting_identity_ref, party_id, credential_id}` as its data payload. From this single record, an investigator can traverse the full arc: the Invitation record (by `invitation_token`), the Party Identity record (by `party_id`), and the Credential record (by `credential_id`). No join across stores is required beyond the event data payload.
 
@@ -252,11 +258,11 @@ revoke(
 
 *Anchors: GDPR (EU General Data Protection Regulation — the European Union's data-privacy law) Articles 6–7 (lawful basis for processing at invitation and acceptance time); HIPAA (US Health Insurance Portability and Accountability Act) §164.312(a)(1) (access control — invitation-based provisioning as a covered access-granting event) + §164.312(d) (person or entity authentication — credential registration at onboarding); SOC 2 (Service Organization Control 2 — an audit standard for service-provider security controls) CC6.2 (prior to issuing system credentials, new internal and external users are registered and authorized); NIST (National Institute of Standards and Technology) SP 800-63A (identity enrollment and identity proofing — the enrollment arc); SCIM 2.0 RFC 7644 (System for Cross-domain Identity Management — the invite-then-provision flow); FATF (Financial Action Task Force — the international anti-money-laundering standard-setter) Recommendations 10–12 (customer due diligence at onboarding — Party Identity in Unverified state is the enrollment record the regulator requires; verification belongs to Customer Onboarding).*
 
-**GDPR Articles 6–7** require a lawful basis for processing personal data. The `invite` action creates the first processing record: the system holds `invitee_ref` and processes data about the invitee from that moment. The `onboard` action creates the `accepting_identity_ref` binding and the Party Identity enrollment — the data subject's active engagement with the system. The Audit Trail records both as the GDPR Article 5(2) accountability records.
+**GDPR Articles 6–7** require a lawful basis for processing personal data. The [Invite] action creates the first processing record: the system holds `invitee_ref` and processes data about the invitee from that moment. The [Onboard] action creates the `accepting_identity_ref` binding and the Party Identity enrollment — the data subject's active engagement with the system. The Audit Trail records both as the GDPR Article 5(2) accountability records.
 
 **SOC 2 CC6.2** requires that prior to issuing system credentials, new users are registered and authorized. The composition satisfies this literally: `Party Identity.enroll` (registration) precedes `Credential.register` (credential issuance), and both are preceded by `Invitation.accept` (authorization by the inviting actor documented in the Audit Trail).
 
-**NIST SP 800-63A** defines the enrollment event at which an applicant registers with an identity system. The `onboard` action is that enrollment event. The composition does not perform identity proofing (the transition from Unverified to Verified in Party Identity) — that belongs to Customer Onboarding. The composition records the enrollment inputs (`name`, `date_of_birth`, `document_type`, `document_ref`) and the enrolling actor, satisfying 800-63A's enrollment record requirements.
+**NIST SP 800-63A** defines the enrollment event at which an applicant registers with an identity system. The [Onboard] action is that enrollment event. The composition does not perform identity proofing (the transition from Unverified to Verified in Party Identity) — that belongs to Customer Onboarding. The composition records the enrollment inputs (`name`, `date_of_birth`, `document_type`, `document_ref`) and the enrolling actor, satisfying 800-63A's enrollment record requirements.
 
 ---
 
@@ -327,7 +333,7 @@ revoke(
 ) → revoked
 ```
 
-Any subsequent `onboard` attempt with `tok_inv_c2d8e3` returns `rejected(invitation-invalid(already-resolved(Revoked)))`.
+Any subsequent [Onboard] attempt with `tok_inv_c2d8e3` returns `rejected(invitation-invalid(already-resolved(Revoked)))`.
 
 ### Invitation declined
 
@@ -347,17 +353,17 @@ decline(
 
 **Disputed onboarding.** A former employee claims: *"My account was created without my knowledge — I never accepted an invitation."* The investigator queries the Audit Trail for `onboarding.completed` events whose `party_id` matches the former employee's record. The event is found. The Invitation record for the `invitation_token` in that event shows `inviter_ref` (who sent it), `accepting_identity_ref` (the external reference supplied at acceptance time), and `accepted_at` (when the acceptance was committed). Invariant 2 (identity binding at accept) is the structural guarantee: the `accepting_identity_ref` was supplied by the caller at `Invitation.accept` time, not pre-populated by the inviting actor. Whether the former employee personally presented the token or whether someone else held the token and supplied the reference is outside the composition's scope — the composition records that a bearer of `tok_inv_g7h2k1` presented the invitation and supplied `accepting_identity_ref: "newhire@acme.com"`. Further investigation of who actually controlled that email address at that moment belongs to Party Identity's identity proofing concept (Customer Onboarding) or a breach forensics investigation.
 
-**Breach forensics.** An investigator determines that an onboarding service account's credential was compromised during a window. The question is: were any fraudulent onboardings performed using the compromised credential? The investigator queries the Audit Trail for `onboarding.completed` events whose `actor_ref` matches the compromised service account, within the compromise window. Each event names `{invitation_token, accepting_identity_ref, party_id, credential_id}`. The investigator cross-references: do the `invitation_token` values correspond to invitations issued by authorized inviting actors? The `invite` Audit Trail record names the `inviter_ref` and the `actor_credential` attestation is independently verifiable. Any `onboarding.completed` event for an invitation that was never `initiate`d through the composition, or whose inviter's attestation fails, is a candidate fraudulent onboarding. Invariant 4 (full Audit Trail coverage) and Invariant 5 (completion record names the full arc) together make this forensic reconstruction possible from records alone.
+**Breach forensics.** An investigator determines that an onboarding service account's credential was compromised during a window. The question is: were any fraudulent onboardings performed using the compromised credential? The investigator queries the Audit Trail for `onboarding.completed` events whose `actor_ref` matches the compromised service account, within the compromise window. Each event names `{invitation_token, accepting_identity_ref, party_id, credential_id}`. The investigator cross-references: do the `invitation_token` values correspond to invitations issued by authorized inviting actors? The [Invite] Audit Trail record names the `inviter_ref` and the `actor_credential` attestation is independently verifiable. Any `onboarding.completed` event for an invitation that was never `initiate`d through the composition, or whose inviter's attestation fails, is a candidate fraudulent onboarding. Invariant 4 (full Audit Trail coverage) and Invariant 5 (completion record names the full arc) together make this forensic reconstruction possible from records alone.
 
 ---
 
 ## Edge cases
 
-**Partial failure after `Invitation.accept`.** If `Invitation.accept` succeeds but a downstream step fails (Audit Trail step 4 fails, `Party Identity.enroll` fails, `Credential.register` fails, or Audit Trail step 7 fails), the invitation is permanently in `Accepted` state. A subsequent `onboard` call with the same `invitation_token` will receive `rejected(invitation-invalid(already-resolved(Accepted)))` — the gate cannot be re-entered. Recovery requires an administrator to: (a) identify the interruption from the `onboarding.interrupted` Audit Trail record (if one was written), (b) manually complete the missing steps (enroll the party and/or register the credential), and (c) issue a new invitation if the invitation token cannot be correlated to the incomplete records. The GA check for unresolved interruptions (check 5) surfaces these cases for admin review.
+**Partial failure after `Invitation.accept`.** If `Invitation.accept` succeeds but a downstream step fails (Audit Trail step 4 fails, `Party Identity.enroll` fails, `Credential.register` fails, or Audit Trail step 7 fails), the invitation is permanently in `Accepted` state. A subsequent [Onboard] call with the same `invitation_token` will receive `rejected(invitation-invalid(already-resolved(Accepted)))` — the gate cannot be re-entered. Recovery requires an administrator to: (a) identify the interruption from the `onboarding.interrupted` Audit Trail record (if one was written), (b) manually complete the missing steps (enroll the party and/or register the credential), and (c) issue a new invitation if the invitation token cannot be correlated to the incomplete records. The GA check for unresolved interruptions (check 5) surfaces these cases for admin review.
 
-**Concurrent `onboard` calls — the race.** Two callers present the same `invitation_token` simultaneously. `Invitation.accept` is atomic under concurrent attempts; exactly one succeeds. The winning call proceeds to enrollment and credential registration. The losing call receives `rejected(invitation-invalid(already-resolved(Accepted)))` at step 3, before any enrollment occurs. No orphaned Party Identity records are created by the losing call. This is Invitation's single-resolution invariant working as the composition's concurrency control.
+**Concurrent [Onboard] calls — the race.** Two callers present the same `invitation_token` simultaneously. `Invitation.accept` is atomic under concurrent attempts; exactly one succeeds. The winning call proceeds to enrollment and credential registration. The losing call receives `rejected(invitation-invalid(already-resolved(Accepted)))` at step 3, before any enrollment occurs. No orphaned Party Identity records are created by the losing call. This is Invitation's single-resolution invariant working as the composition's concurrency control.
 
-**Invitation expired between `invite` and `onboard`.** The invitee delays acting on the invitation until after `expires_at`. `Invitation.accept` returns `already-resolved(Expired)` (lazy expiry) → `rejected(invitation-invalid(expired))`. No enrollment occurs. The inviting actor must issue a new invitation.
+**Invitation expired between [Invite] and [Onboard].** The invitee delays acting on the invitation until after `expires_at`. `Invitation.accept` returns `already-resolved(Expired)` (lazy expiry) → `rejected(invitation-invalid(expired))`. No enrollment occurs. The inviting actor must issue a new invitation.
 
 **`duplicate-active-credential` at step 6.** If `Credential.register` returns `rejected(duplicate-active-credential)`, the `party_id` has already been enrolled (Party Identity.enroll succeeded at step 5) but the credential was not registered. The composition writes `onboarding.interrupted` (stage: "credential-registration", reason: "duplicate-active-credential") to the Audit Trail and returns `rejected(storage-failure)`. The enrolled party exists in `Unverified` state without a credential. Administrator review is required to determine how the `party_id` already has an active credential of that type — it may indicate a data integrity issue or a retry after a partial failure from a prior run.
 
@@ -365,9 +371,9 @@ decline(
 
 **Credential rotation after onboarding.** Once onboarded, the principal may rotate their credential using `Credential.rotate` directly (outside this composition's surface). The composition does not expose a rotate action. Rotation belongs to the principal's ongoing credential management, separate from the one-time onboarding arc.
 
-**Invitee identity not matching `invitee_ref`.** If the inviting actor supplied an `invitee_ref` at `invite` time (e.g., a known email address), and the `accepting_identity_ref` supplied at `onboard` time does not match that `invitee_ref`, the composition does not detect or block this mismatch — the Invitation atom does not validate the relationship between `invitee_ref` and `accepting_identity_ref`. A deployment that requires the accepting identity to prove control of the `invitee_ref` (e.g., by verifying ownership of the email address before calling `onboard`) must enforce this constraint above the composition layer, before calling `onboard`. The composition records whatever `accepting_identity_ref` is supplied; the mismatch is a policy matter for the calling layer.
+**Invitee identity not matching `invitee_ref`.** If the inviting actor supplied an `invitee_ref` at [Invite] time (e.g., a known email address), and the `accepting_identity_ref` supplied at [Onboard] time does not match that `invitee_ref`, the composition does not detect or block this mismatch — the Invitation atom does not validate the relationship between `invitee_ref` and `accepting_identity_ref`. A deployment that requires the accepting identity to prove control of the `invitee_ref` (e.g., by verifying ownership of the email address before calling [Onboard]) must enforce this constraint above the composition layer, before calling [Onboard]. The composition records whatever `accepting_identity_ref` is supplied; the mismatch is a policy matter for the calling layer.
 
-**Decliner identity not recorded.** `Invitation.decline` does not accept an identity argument; the Invitation atom records only that a decline occurred, not who declined. The `decline` action in this composition uses the system service account as the Audit Trail attestation actor. A deployment that needs to record who declined should capture the decliner's external reference in the Audit Trail event data payload before calling the composition's `decline` action.
+**Decliner identity not recorded.** `Invitation.decline` does not accept an identity argument; the Invitation atom records only that a decline occurred, not who declined. The [Decline] action in this composition uses the system service account as the Audit Trail attestation actor. A deployment that needs to record who declined should capture the decliner's external reference in the Audit Trail event data payload before calling the composition's [Decline] action.
 
 ---
 
@@ -385,7 +391,7 @@ An implementation of External Onboarding is accepted if an external auditor can 
 
 5. **Unresolved interruptions are detectable.** An `onboarding.interrupted` Audit Trail event for a given `invitation_token` that does not have a subsequent `onboarding.completed` event for the same token is an unresolved onboarding interruption requiring admin review. The auditor can enumerate all unresolved interruptions by querying the Audit Trail for `onboarding.interrupted` events without a matching `onboarding.completed` event.
 
-6. **Every terminal invitation transition via this composition is attested.** Every Invitation record in `Declined` or `Revoked` state that was processed via this composition has a corresponding `invitation.declined` or `invitation.revoked` Audit Trail event. Every `invite` action has a corresponding `invitation.initiate` Audit Trail event. Unattested terminal transitions (Invitation records in Declined/Revoked state with no Audit Trail record) are flagged for review.
+6. **Every terminal invitation transition via this composition is attested.** Every Invitation record in `Declined` or `Revoked` state that was processed via this composition has a corresponding `invitation.declined` or `invitation.revoked` Audit Trail event. Every [Invite] action has a corresponding `invitation.initiate` Audit Trail event. Unattested terminal transitions (Invitation records in Declined/Revoked state with no Audit Trail record) are flagged for review.
 
 ---
 
@@ -393,7 +399,7 @@ An implementation of External Onboarding is accepted if an external auditor can 
 
 **Relationship to Customer Onboarding.** External Onboarding admits a party to the system in `Unverified` state. Customer Onboarding drives the identity verification workflow that transitions the party to `Verified`. The two compositions address adjacent points in the regulated identity lifecycle: External Onboarding is the admission gate; Customer Onboarding is the verification gate. A deployment requiring `Verified` status before granting access to regulated functionality places Customer Onboarding downstream of this composition in the onboarding pipeline.
 
-**Relationship to Login.** External Onboarding registers the credential. Login uses that credential: `login(principal_ref, credential_type, presented_material, ...)` calls `Credential.verify`, and on success issues a Session. After a successful `onboard`, the principal can immediately call `login` using the registered `credential_type` and their credential material. The two compositions are adjacent lifecycle boundaries: External Onboarding creates the credential record; Login produces the authenticated session.
+**Relationship to Login.** External Onboarding registers the credential. Login uses that credential: `login(principal_ref, credential_type, presented_material, ...)` calls `Credential.verify`, and on success issues a Session. After a successful [Onboard], the principal can immediately call `login` using the registered `credential_type` and their credential material. The two compositions are adjacent lifecycle boundaries: External Onboarding creates the credential record; Login produces the authenticated session.
 
 **Relationship to Session-Gated Authorization.** Once the onboarded principal has an active session (from Login), runtime authorization queries flow through Session-Gated Authorization: `check_permitted(session_token, action_scope)` gates every permission check on session validity. External Onboarding is the entry point; Session-Gated Authorization is the access-time gate.
 
@@ -403,13 +409,86 @@ An implementation of External Onboarding is accepted if an external auditor can 
 
 ---
 
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a composition, so its own concepts are: the four onboarding actions it exposes ([Invite], [Onboard], [Decline], [Revoke]) and the three composition-introduced Audit Trail event types that record the arc ([Onboarding Invitation Accepted] — the gate clearing; [Onboarding Completed] — the full-arc completion naming invitation, identity, party, and credential in one entry; [Onboarding Interrupted] — the partial-failure record). Its load-bearing guarantee — invitation-gates-enrollment: no Party Identity is enrolled through this composition unless an Invitation's Accepted transition precedes it (Invariant 1) — is a structural property, not a datum. The composition owns no cross-atom state (the Audit Trail *is* the map — Composition state), so there is no store to card as a Type. The `invitation.*` audit event types (`invitation.initiate`, `invitation.declined`, `invitation.revoked`) and the composition's parameterized invitation-state rejection (`invitation-invalid(already-resolved(state) | not-known | expired)`) stay backticked as wire values, as do the constituent calls and their outcomes — Invitation's `initiate` / `accept` / `decline` / `revoke` (and its `Pending` / `Accepted` / `Declined` / `Revoked` / `Expired` states), Credential's `register`, Party Identity's `enroll` (and its `Unverified` / `Verified` states), Audit Trail's `record_action` — the relayed constituent tokens (`invitation_token`, `accepting_identity_ref`, `party_id`, `credential_id`, `inviter_ref`, `invitee_ref`, `enrolling_actor_ref`, `actor_credential`), the generic/relayed rejections (`invalid-request`, `invalid-credential`, `storage-failure`, `recording-failure`, `not-known`), and concrete example ids. Constituent atom and substrate names remain the existing full links to `../atoms/*` and `./audit-trail.md`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Invite
+
+The composition action that initiates an invitation from an authorized actor to an external party — audit-first (`invitation.initiate` recorded before the Invitation is created), returning the `invitation_token` the inviter delivers out-of-band.
+
+Kind: Operation
+
+#### Onboard
+
+The composition's load-bearing action: accept an invitation and, in one fixed sequence gated by `Invitation.accept`, enroll the invitee as a Party Identity (Unverified) and register their Credential — recording [Onboarding Invitation Accepted], then [Onboarding Completed] (or [Onboarding Interrupted] on a mid-sequence failure). No enrollment occurs unless the acceptance gate clears (Invariant 1).
+
+Kind: Operation
+
+#### Decline
+
+The composition action that records an invitee's deliberate refusal of an invitation (`Invitation.decline`) and attests it (`invitation.declined`) under the system service actor.
+
+Kind: Operation
+
+#### Revoke
+
+The composition action that withdraws a pending invitation before the invitee acts (`Invitation.revoke`), attributing the revocation to the revoking actor (`invitation.revoked`).
+
+Kind: Operation
+
+#### Onboarding Invitation Accepted
+
+The Audit Trail event [Onboard] records the moment the `Invitation.accept` gate clears — carrying the `invitation_token` and `accepting_identity_ref`. An Invitation in Accepted state with no such event is an unresolved interruption (Generation acceptance check 5).
+
+Kind:      Member
+Member of: the onboarding event
+Role:      Audit event
+Projects:  onboarding.invitation-accepted
+
+#### Onboarding Completed
+
+The Audit Trail event [Onboard] records on a successful full arc — naming the invitation, the accepting identity, the party record, and the credential in one tamper-evident entry (`{invitation_token, accepting_identity_ref, party_id, credential_id}`). The records-alone answer to *what invitation authorized this party's creation?*
+
+Kind:      Member
+Member of: the onboarding event
+Role:      Audit event
+Projects:  onboarding.completed
+
+#### Onboarding Interrupted
+
+The Audit Trail event [Onboard] writes when a step after the acceptance gate fails (Party Identity enrollment or Credential registration) — naming the stage and reason, so a partially-completed onboarding is detectable and recoverable rather than silent.
+
+Kind:      Member
+Member of: the onboarding event
+Role:      Audit event
+Projects:  onboarding.interrupted
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Invite]: #invite
+[Onboard]: #onboard
+[Decline]: #decline
+[Revoke]: #revoke
+[Onboarding Invitation Accepted]: #onboarding-invitation-accepted
+[Onboarding Completed]: #onboarding-completed
+[Onboarding Interrupted]: #onboarding-interrupted
+
+---
+
 ## Status
 
 `grounded on Final Critique 5 — 2026-05-23`
 
 ---
 
-## Lineage
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage</h2>
+</summary>
 
 ### Round 1
 
@@ -470,3 +549,7 @@ Round 5 closed clean. Foundational findings: zero. Refining findings: zero. Exte
 **Formal-layer vote — 2026-06-03: YES (model present).** Invitation-gates-enrollment (Inv 1) and credential-follows-party (Inv 3) define a strict accept→enroll→register ordering under concurrent onboarding; verified by the TLA+ model. Verified by the sibling formal model (`external-onboarding.tla`); the pattern remains `grounded`. Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
 
 **Formal model — bound correction, 2026-06-03 (harness audit finding).** The 2026-06-03 `tools/harness/` sweep ran `external-onboarding.tla` and flagged that it explored only **44 states** — a low count worth checking. Diagnosis: the model's `clock` advances on every action and is capped by `MaxClock`, so `MaxClock = 3` truncated traces at 3 actions deep, well before the 2-invitation system exhausts its reachable transitions. The reachable space **saturates at 172 states by `MaxClock = 4`** and is stable thereafter (5 and 6 give the same 172). `MaxClock` was raised 3 → 6 in `external-onboarding.cfg` (headroom over the saturation point); the model now explores the complete reachable space and **Safety holds across all 172 states**. The original 44-state run was not wrong — every state it explored satisfied Safety — but the bound was too low to claim full coverage; the corrected bound discharges the invariant over the whole reachable space. This is a conflict-protocol case-2 correction (a derivation/bound defect in the model config, not a spec defect); the canonical English spec was untouched. Widening the id scope as an independent check (3 invitations/parties/credentials) also keeps Safety holding (179 states), confirming the model is not over-constrained.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at five). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added before Status (7 terms): 4 Operations — the four onboarding actions ([Invite], [Onboard], [Decline], [Revoke]); and 3 Members — the composition-introduced Audit Trail event types that record the arc ([Onboarding Invitation Accepted], [Onboarding Completed], [Onboarding Interrupted]). Every own-action prose reference is linked; the action names are also `### name` section headings, so a marker resolves to the action's own section (the anchors collide by construction — the login / reserve-from-pool precedent — and the linter does not check anchor targets). **`decline` / `revoke` disambiguation:** these names are *also* Invitation's constituent methods; the Composes *"Surface used"* list keeps `initiate` / `accept` / `decline` / `revoke` backticked as the constituent surface, while the composition's own action refs are linked. **No Type card:** the composition owns no cross-atom state — the Audit Trail *is* the map (Composition state). The `invitation.*` event types and the parameterized `invitation-invalid(...)` rejection stay backticked as wire values. Survivors left backticked: the fenced signatures and example ids; the `invitation.initiate` / `invitation.declined` / `invitation.revoked` event types; every qualified constituent call (Invitation's `initiate` / `accept` / `decline` / `revoke`, Credential's `register`, Party Identity's `enroll`, Audit Trail's `record_action`) and the constituent states (`Pending` / `Accepted` / `Declined` / `Revoked` / `Expired`, `Unverified` / `Verified`); the relayed constituent tokens; and the generic/relayed rejections (`invalid-request`, `invalid-credential`, `storage-failure`, `recording-failure`, `not-known`). Constituent atom and substrate names remain the existing full links to `../atoms/*` and `./audit-trail.md`; constituent operations stay backticked qualified calls, not cross-page links (the decided convention). (b) **Summary promoted from the top blockquote** — the file carried no `## Summary`, only the descriptive top blockquote; it was promoted to a `## Summary` at the top (subject named, split one-idea-per-paragraph, lossless), leaving the existing `**Composes:**` teaser line intact. (c) **Lineage collapsed** into a `<details markdown="block">` block (the `### Round 1`–`### Final Critique 4` subsections collapse inside). (d) **prose cut #5 — skipped (with reason):** the composition owns no emergent state machine — the invitation lifecycle (Pending → Accepted | Declined | Revoked | Expired) is the Invitation constituent's, and the composition's own logic is the fixed accept-gate → enroll → register → audit sequence already stated crisply in Composition logic and Invariant 1. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 5 — 2026-05-23`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (7 terms); five composition-level invariants preserved; the `.tla` model untouched — harness re-run green: `external-onboarding.tla` PASS (no buggy twin exists for this pattern).
+
+</details>
