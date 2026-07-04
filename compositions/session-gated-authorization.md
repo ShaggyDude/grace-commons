@@ -18,7 +18,11 @@ toc: true
 
 **Composes:** [Session](../atoms/session.md) · [Permissions](../atoms/permissions.md)
 
-> A regulated composition: every authorization query is gated by a mandatory session validation before the Permissions atom is consulted. An expired, revoked, or unrecognized session terminates the call before Permissions is reached. The principal presented to Permissions is always the principal the session was issued for — never a value the caller supplies. The gate and the principal binding together constitute the composition's load-bearing emergent invariant; neither belongs to Session or Permissions alone.
+## Summary
+
+Session-Gated Authorization is a regulated composition: every authorization query is gated by a mandatory session validation before the Permissions atom is consulted. An expired, revoked, or unrecognized session terminates the call before Permissions is reached.
+
+The principal presented to Permissions is always the principal the session was issued for — never a value the caller supplies. The gate and the principal binding together constitute the composition's load-bearing emergent invariant; neither belongs to Session or Permissions alone.
 
 ---
 
@@ -41,9 +45,9 @@ The emergent invariant is principal binding: the subject passed to `Permissions.
 
 ## Composition logic
 
-The composition exposes one action, `check_permitted`, that executes in two mandatory steps:
+The composition exposes one action, [Check Permitted], that executes in two mandatory steps:
 
-**Step 1 — Gate.** `Session.validate(session_token)` must return `valid(principal_ref, expires_at)`. Any other result — `invalid(expired)`, `invalid(revoked)`, `invalid(not-known)` — terminates the call with a `session-invalid` rejection before Permissions is consulted.
+**Step 1 — Gate.** `Session.validate(session_token)` must return `valid(principal_ref, expires_at)`. Any other result — `invalid(expired)`, `invalid(revoked)`, `invalid(not-known)` — terminates the call with a [Session Invalid] rejection before Permissions is consulted.
 
 **Step 2 — Query.** `Permissions.permitted(principal_ref, action_scope)` is called using the `principal_ref` the session carries. The result (`permitted` or `denied`) is returned unmodified.
 
@@ -59,13 +63,13 @@ The constituent atoms are unaware of each other. Session does not know that a pe
 
 This composition introduces no cross-atom persistent state. There is no index, map, or log at the composition boundary. The gate is a sequencing constraint over the constituent atoms' own state, not a new data structure.
 
-Implementations requiring a durable record of individual authorization decisions — who queried what scope, when, and with what result — should compose Session-Gated Authorization with [Audit Trail](./audit-trail.md) as a substrate. Without Audit Trail, individual `check_permitted` call records do not exist at the composition boundary; the constituent atoms' own state remains the record of session validity and grant existence. See *Composition notes*.
+Implementations requiring a durable record of individual authorization decisions — who queried what scope, when, and with what result — should compose Session-Gated Authorization with [Audit Trail](./audit-trail.md) as a substrate. Without Audit Trail, individual [Check Permitted] call records do not exist at the composition boundary; the constituent atoms' own state remains the record of session validity and grant existence. See *Composition notes*.
 
 ---
 
 ## Actions
 
-### check_permitted
+### `check_permitted`
 
 Validates a session and, if valid, evaluates whether the session's principal holds the requested permission.
 
@@ -97,7 +101,7 @@ check_permitted(session_token, action_scope) →
 
 - `denied` is a first-class result, not a rejection. A denial means the gate cleared and the permission was evaluated; the answer is no. A `rejected(session-invalid(...))` means the gate did not clear and Permissions was never consulted. These two outcomes have different security meanings and must not be collapsed by callers.
 - `expires_at` returned by `Session.validate` is available at the composition boundary but is not forwarded to the caller. The gate is binary: the session is valid or it is not.
-- There is no storage-failure path in `check_permitted`. `Session.validate` and `Permissions.permitted` both return first-class results for all cases; neither exposes its own rejection path. The only rejection surface is `invalid-request` (bad caller inputs) and `session-invalid(...)` (gate did not clear). If Permissions cannot read its grant store and returns `denied` as its internal fail-safe result, the composition correctly passes `denied` through — a false denial is the fail-safe failure mode. The composition makes no stronger guarantee than the Permissions atom's own internal fail-safe behavior.
+- There is no storage-failure path in [Check Permitted]. `Session.validate` and `Permissions.permitted` both return first-class results for all cases; neither exposes its own rejection path. The only rejection surface is `invalid-request` (bad caller inputs) and `session-invalid(...)` (gate did not clear). If Permissions cannot read its grant store and returns `denied` as its internal fail-safe result, the composition correctly passes `denied` through — a false denial is the fail-safe failure mode. The composition makes no stronger guarantee than the Permissions atom's own internal fail-safe behavior.
 
 ---
 
@@ -119,9 +123,9 @@ check_permitted(session_token, action_scope) →
 
 **NIST SP 800-53 AC-3** requires that the information system enforces approved authorizations for logical access. The gate ensures no authorization is evaluated under a session the system no longer considers valid.
 
-**AC-12** requires that the information system terminates sessions after defined conditions. The gate enforces this at access time: a session the system has terminated — whether by expiry, logout, or cascade from [Login](./login.md)'s `revoke_sessions_for_credential` — is refused at the composition boundary on every subsequent `check_permitted` call.
+**AC-12** requires that the information system terminates sessions after defined conditions. The gate enforces this at access time: a session the system has terminated — whether by expiry, logout, or cascade from [Login](./login.md)'s `revoke_sessions_for_credential` — is refused at the composition boundary on every subsequent [Check Permitted] call.
 
-**OWASP ASVS V3.3** specifically requires that session expiry is enforced at the *resource* level, not only by the session management layer. The composition satisfies this by re-validating the session token on every `check_permitted` call rather than relying on an earlier validation result cached in the request context.
+**OWASP ASVS V3.3** specifically requires that session expiry is enforced at the *resource* level, not only by the session management layer. The composition satisfies this by re-validating the session token on every [Check Permitted] call rather than relying on an earlier validation result cached in the request context.
 
 ---
 
@@ -196,31 +200,60 @@ Internally: `Session.validate("tok_abc123") → valid(principal_ref: "usr_42", .
 
 ### Regulated adversarial scenarios
 
-**Regulator audit.** An auditor queries whether the system enforces access control at session-expiry boundaries — specifically, whether an expired session is permitted to evaluate any authorization query. By Invariant 1, any `check_permitted` call with an expired session token returns `rejected(session-invalid(expired))` before Permissions is consulted. The session expiry state is verifiable from Session's own records; the composition's invariant is derivable from the action wiring alone, without inspecting runtime logs. If Audit Trail is composed in as a substrate, the individual `check_permitted` records confirm the rejected outcome directly.
+**Regulator audit.** An auditor queries whether the system enforces access control at session-expiry boundaries — specifically, whether an expired session is permitted to evaluate any authorization query. By Invariant 1, any [Check Permitted] call with an expired session token returns `rejected(session-invalid(expired))` before Permissions is consulted. The session expiry state is verifiable from Session's own records; the composition's invariant is derivable from the action wiring alone, without inspecting runtime logs. If Audit Trail is composed in as a substrate, the individual [Check Permitted] records confirm the rejected outcome directly.
 
-**Disputed access.** A data subject asserts that their account was accessed after they logged out — which revoked their session. The dispute requires establishing: (a) the session was revoked at time T; (b) any `check_permitted` call after T with that session token returned `rejected(session-invalid(revoked))`, not `permitted` or `denied`. Session's state records the revocation timestamp. The composition's Invariant 1 establishes that Permissions was never reached after revocation. If Audit Trail is composed in, the dispute is answerable from records alone. If not, the argument is structural: the session was terminal as of T, and the composition guarantees that a terminal session cannot produce a `permitted` or `denied` result.
+**Disputed access.** A data subject asserts that their account was accessed after they logged out — which revoked their session. The dispute requires establishing: (a) the session was revoked at time T; (b) any [Check Permitted] call after T with that session token returned `rejected(session-invalid(revoked))`, not `permitted` or `denied`. Session's state records the revocation timestamp. The composition's Invariant 1 establishes that Permissions was never reached after revocation. If Audit Trail is composed in, the dispute is answerable from records alone. If not, the argument is structural: the session was terminal as of T, and the composition guarantees that a terminal session cannot produce a `permitted` or `denied` result.
 
-**Breach forensics.** An investigator determines that a session token was stolen and seeks to establish what permissions were exercised under it before revocation. This composition does not maintain an authorization event log; forensic coverage of individual `check_permitted` calls requires [Audit Trail](./audit-trail.md) composed in as a substrate (see *Composition notes*). Without Audit Trail, the investigator can establish from Session's state that the session was active for a given window and was eventually revoked, and from Permissions' state what grants the principal held during that window — but cannot enumerate individual `check_permitted` calls or their outcomes from the composition's own state. This is a known scope limitation that composition with Audit Trail resolves.
+**Breach forensics.** An investigator determines that a session token was stolen and seeks to establish what permissions were exercised under it before revocation. This composition does not maintain an authorization event log; forensic coverage of individual [Check Permitted] calls requires [Audit Trail](./audit-trail.md) composed in as a substrate (see *Composition notes*). Without Audit Trail, the investigator can establish from Session's state that the session was active for a given window and was eventually revoked, and from Permissions' state what grants the principal held during that window — but cannot enumerate individual [Check Permitted] calls or their outcomes from the composition's own state. This is a known scope limitation that composition with Audit Trail resolves.
 
 ---
 
 ## Edge cases
 
-**Session expires between issuance and first use.** A session issued with a short `session_duration` may expire before the first `check_permitted` call. The gate returns `rejected(session-invalid(expired))`. The composition does not distinguish between a session that expired due to elapsed time versus one that was never exercised.
+**Session expires between issuance and first use.** A session issued with a short `session_duration` may expire before the first [Check Permitted] call. The gate returns `rejected(session-invalid(expired))`. The composition does not distinguish between a session that expired due to elapsed time versus one that was never exercised.
 
-**Session revoked concurrent with a `check_permitted` call.** If a session is revoked — directly via `Session.revoke` or via cascade from [Login](./login.md)'s `revoke_sessions_for_credential` — concurrently with a `check_permitted` call in flight, the outcome depends on sequencing. If `Session.validate` completes before the revocation: the call proceeds to `Permissions.permitted` and may return `permitted` or `denied`. If the revocation completes before `Session.validate`: the call returns `rejected(session-invalid(revoked))`. The composition provides point-in-time session validity at the moment `Session.validate` is called; it does not guarantee detection of concurrent revocations that race the validate step.
+**Session revoked concurrent with a [Check Permitted] call.** If a session is revoked — directly via `Session.revoke` or via cascade from [Login](./login.md)'s `revoke_sessions_for_credential` — concurrently with a [Check Permitted] call in flight, the outcome depends on sequencing. If `Session.validate` completes before the revocation: the call proceeds to `Permissions.permitted` and may return `permitted` or `denied`. If the revocation completes before `Session.validate`: the call returns `rejected(session-invalid(revoked))`. The composition provides point-in-time session validity at the moment `Session.validate` is called; it does not guarantee detection of concurrent revocations that race the validate step.
 
-**Caller supplies a `principal_ref` argument.** The `check_permitted` action does not accept a caller-supplied `principal_ref`. The principal is always extracted from the session by `Session.validate`. An implementation that accepts a `principal_ref` argument and passes it directly to `Permissions.permitted` — bypassing or replacing the session-extracted value — violates Invariant 2 and is non-conforming.
+**Caller supplies a `principal_ref` argument.** The [Check Permitted] action does not accept a caller-supplied `principal_ref`. The principal is always extracted from the session by `Session.validate`. An implementation that accepts a `principal_ref` argument and passes it directly to `Permissions.permitted` — bypassing or replacing the session-extracted value — violates Invariant 2 and is non-conforming.
 
-**Principal with no grants.** A principal whose session is valid but who holds no active grants in the Permissions store receives `denied` for every `check_permitted` call, regardless of scope. This is correct default-deny behavior (Invariant 4) and requires no special handling.
+**Principal with no grants.** A principal whose session is valid but who holds no active grants in the Permissions store receives `denied` for every [Check Permitted] call, regardless of scope. This is correct default-deny behavior (Invariant 4) and requires no special handling.
 
-**Multiple active sessions for the same principal.** A principal may hold multiple active sessions, each issued under the same or different credential types. `check_permitted` operates on the presented session token alone; it does not aggregate across all of the principal's active sessions. Each call independently validates the presented token.
+**Multiple active sessions for the same principal.** A principal may hold multiple active sessions, each issued under the same or different credential types. [Check Permitted] operates on the presented session token alone; it does not aggregate across all of the principal's active sessions. Each call independently validates the presented token.
 
-**Scope granularity.** The `action_scope` passed to `check_permitted` is forwarded unmodified to `Permissions.permitted`. Scope matching is exact: `"invoice:read"` does not match `"invoice:*"` or `"invoice"` unless those exact strings appear in active grants. The composition adds no scope-expansion, wildcard, or hierarchical matching semantics. Scope hierarchy, if needed, is handled outside both constituent atoms.
+**Scope granularity.** The `action_scope` passed to [Check Permitted] is forwarded unmodified to `Permissions.permitted`. Scope matching is exact: `"invoice:read"` does not match `"invoice:*"` or `"invoice"` unless those exact strings appear in active grants. The composition adds no scope-expansion, wildcard, or hierarchical matching semantics. Scope hierarchy, if needed, is handled outside both constituent atoms.
 
-**Caching session validation within a request.** Some implementations cache the result of `Session.validate` across multiple `check_permitted` calls within a single request to avoid round-trip cost. That optimization trades the per-call point-in-time guarantee for performance: a revocation issued between the first and second `check_permitted` calls in the request will not be caught until the cache is invalidated or the next uncached call. Implementations that cache must document the cache window and accept that revocations within that window are not reflected until the window expires.
+**Caching session validation within a request.** Some implementations cache the result of `Session.validate` across multiple [Check Permitted] calls within a single request to avoid round-trip cost. That optimization trades the per-call point-in-time guarantee for performance: a revocation issued between the first and second [Check Permitted] calls in the request will not be caught until the cache is invalidated or the next uncached call. Implementations that cache must document the cache window and accept that revocations within that window are not reflected until the window expires.
 
-**Direct access to constituent-atom surfaces.** The gate is enforced by making `check_permitted` the sole authorization surface at the composition boundary. If an implementation also exposes `Session.validate` or `Permissions.permitted` as independent callable surfaces alongside `check_permitted`, a caller can reach `Permissions.permitted` without passing through the gate — bypassing Invariant 1 and Invariant 2. Implementations must either not expose the constituent atoms' permission surface directly, or must document the bypass as an explicit, intentional policy exception. Exposing both surfaces without documentation is non-conforming.
+**Direct access to constituent-atom surfaces.** The gate is enforced by making [Check Permitted] the sole authorization surface at the composition boundary. If an implementation also exposes `Session.validate` or `Permissions.permitted` as independent callable surfaces alongside [Check Permitted], a caller can reach `Permissions.permitted` without passing through the gate — bypassing Invariant 1 and Invariant 2. Implementations must either not expose the constituent atoms' permission surface directly, or must document the bypass as an explicit, intentional policy exception. Exposing both surfaces without documentation is non-conforming.
+
+---
+
+## Terms
+
+The canonical concepts this spec refers to. Each `[Term]` marker in the prose above links to its card here. A card states what the concept *is*, in plain English, plus its **Kind** — one of four: **Type** (a thing or category), **Operation** (a behavior), **Member** (a value of an enumerated Type), or, for a named datum, **Field** (a datum a Type carries — *what does it carry?*) or **Parameter** (a value an Operation needs — *what does it need?*). A card also names the Type it is a **Member of** / **Field of**, the Operation it is a **Parameter of**, and its **Role** where the domain assigns one. A card carries one **Projects** line — the concept's single canonical lowering token, the one place the concrete name stays visible on the page — for every Field, Parameter, and pinned/wire Member. Everything else about casing (each target's snake / camel / pascal / const / wire form) is **derived** from that one token by [`tools/harness/term-adapter.mjs`](../tools/harness/term-adapter.mjs), never hand-written. This is a minimal, stateless composition — a gate — so its own concepts are just the single action it exposes ([Check Permitted]) and its own gate rejection ([Session Invalid]). It introduces **no cross-atom state** and no new data, so there is nothing else to card: the emergent guarantees it owns — the session-gates-authorization ordering (Invariant 1) and the principal binding (Invariant 2) — are structural properties, not data. References to the constituent atoms and their operations — Session's `validate` / `revoke`, Permissions' `permitted` — the relayed outcomes (`permitted`, `denied`) and the `invalid(...)` reasons (`expired` / `revoked` / `not-known`) Session returns, and the generic `invalid-request` rejection, remain qualified/backticked, not carded here. *(annotation.md Terms registry; representational only — it changes no guarantee, invariant, or behavior of the composition above.)*
+
+#### Check Permitted
+
+The composition's single action: it validates the presented session and, only if valid, evaluates whether the session's own principal holds the requested permission — `Session.validate` before `Permissions.permitted`, always with the session-extracted `principal_ref` (Invariants 1–2). Returns `permitted` or `denied` (Permissions' result, passed through unmodified), or [Session Invalid] when the gate does not clear, or `invalid-request` for bad inputs.
+
+Kind: Operation
+
+#### Session Invalid
+
+The composition's own gate rejection from [Check Permitted] — returned when `Session.validate` does not return `valid`: the session is `expired`, `revoked`, or `not-known`. It terminates the call **before Permissions is consulted** (Invariant 1), and is structurally distinct from a `denied` result (which means the gate cleared and the permission was evaluated — Invariant 3). Carries the reason.
+
+Kind:      Member
+Member of: the check-permitted rejection
+Role:      Rejection
+Projects:  session-invalid
+
+<!-- Term registry — shortcut-reference definitions. These produce no visible
+     output; each resolves a [Term] marker to its card heading above (kramdown
+     auto-generates the heading anchors on GitHub Pages). Standard CommonMark /
+     kramdown; no plugin required. -->
+
+[Check Permitted]: #check-permitted
+[Session Invalid]: #session-invalid
 
 ---
 
@@ -234,21 +267,21 @@ This composition introduces no per-call event log. The acceptance bar therefore 
 
 2. **Grant existence at time of access.** For any disputed `permitted` result at time T: Session's state confirms the session was active at T and identifies the `principal_ref`; Permissions' state confirms an active grant for `(principal_ref, action_scope)` existed at T. Both must hold for `permitted` to be the correct result.
 
-3. **Gate sequence.** Code inspection or a formal model confirms that `check_permitted` calls `Session.validate` before `Permissions.permitted`, and that `Permissions.permitted` is called only when `Session.validate` returned `valid(principal_ref, ...)`. This check cannot be cleared from records alone without Audit Trail; it requires code inspection.
+3. **Gate sequence.** Code inspection or a formal model confirms that [Check Permitted] calls `Session.validate` before `Permissions.permitted`, and that `Permissions.permitted` is called only when `Session.validate` returned `valid(principal_ref, ...)`. This check cannot be cleared from records alone without Audit Trail; it requires code inspection.
 
 4. **Principal binding.** Code inspection confirms that the `subject_ref` passed to `Permissions.permitted` is the `principal_ref` extracted from `Session.validate` — not a value supplied by the caller. This check also requires code inspection without Audit Trail.
 
 **With Audit Trail composed in — record-verifiable checks:**
 
-5. **Per-call gate and outcome records.** Every `check_permitted` call is a recorded event carrying: session token, action scope, `principal_ref` (when gate cleared), and outcome (`permitted | denied | session-invalid(reason)`). Checks 3 and 4 above are then verifiable from records alone, without code inspection. The auditor can enumerate every authorization attempt, every gate rejection, and every permission denial within any audit window.
+5. **Per-call gate and outcome records.** Every [Check Permitted] call is a recorded event carrying: session token, action scope, `principal_ref` (when gate cleared), and outcome (`permitted | denied | session-invalid(reason)`). Checks 3 and 4 above are then verifiable from records alone, without code inspection. The auditor can enumerate every authorization attempt, every gate rejection, and every permission denial within any audit window.
 
 ---
 
 ## Composition notes
 
-**Adding authorization audit coverage.** This composition introduces no event log and no cross-atom state. Implementations in regulated environments that require a durable, attribution-stamped, tamper-evident record of every authorization decision should compose Session-Gated Authorization with [Audit Trail](./audit-trail.md) as a substrate. Without Audit Trail, the regulated adversarial scenarios above (see *Breach forensics*) are answerable only structurally — from invariants and constituent-atom state — not from per-call event records. With Audit Trail, each `check_permitted` call is a recorded event with outcome, scope, session token, and extracted principal.
+**Adding authorization audit coverage.** This composition introduces no event log and no cross-atom state. Implementations in regulated environments that require a durable, attribution-stamped, tamper-evident record of every authorization decision should compose Session-Gated Authorization with [Audit Trail](./audit-trail.md) as a substrate. Without Audit Trail, the regulated adversarial scenarios above (see *Breach forensics*) are answerable only structurally — from invariants and constituent-atom state — not from per-call event records. With Audit Trail, each [Check Permitted] call is a recorded event with outcome, scope, session token, and extracted principal.
 
-**Relationship to Login.** [Login](./login.md) governs the issuance and termination of sessions: `login` wires `Credential.verify → Session.issue`; `revoke_sessions_for_credential` cascades credential revocation across all derived sessions. Session-Gated Authorization governs the access-time use of sessions: `check_permitted` wires `Session.validate → Permissions.permitted`. The two compositions are complementary access-lifecycle boundaries. A revocation issued via Login's `revoke_sessions_for_credential` is reflected immediately in the next `check_permitted` call for that session token — `Session.validate` will return `invalid(revoked)` and the gate will block. The cascade from [Login](./login.md) is how expired-by-revocation sessions reach Session-Gated Authorization's gate without any coordination between the two compositions.
+**Relationship to Login.** [Login](./login.md) governs the issuance and termination of sessions: `login` wires `Credential.verify → Session.issue`; `revoke_sessions_for_credential` cascades credential revocation across all derived sessions. Session-Gated Authorization governs the access-time use of sessions: [Check Permitted] wires `Session.validate → Permissions.permitted`. The two compositions are complementary access-lifecycle boundaries. A revocation issued via Login's `revoke_sessions_for_credential` is reflected immediately in the next [Check Permitted] call for that session token — `Session.validate` will return `invalid(revoked)` and the gate will block. The cascade from [Login](./login.md) is how expired-by-revocation sessions reach Session-Gated Authorization's gate without any coordination between the two compositions.
 
 **Relationship to Privileged Access Provisioning.** [Privileged Access Provisioning](./privileged-access-provisioning.md) gates elevated-access provisioning behind a multi-party approval chain before issuing a time-limited Capability token. PAP's `exercise_access` action independently validates session state before permitting exercise — it is not a use of Session-Gated Authorization, but it enforces the same gate invariant at the exercise boundary. System designers building a full privileged-access surface should consider whether to share the session-gate logic via this composition or enforce it independently inside PAP; the current library treats them as independent implementations of the same principle applied at different lifecycle points.
 
@@ -262,17 +295,20 @@ This composition introduces no per-call event log. The acceptance bar therefore 
 
 ---
 
-## Lineage
+<details markdown="block">
+<summary>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage</h2>
+</summary>
 
 ### Round 1
 
-**Pass 1 — GRID structural (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** All nine MUSE (the v1.1 completeness framework GRID's nodes are drawn from) nodes resolved. Intent (the ordering problem; principal-binding as emergent property), System boundary (two atoms, one action, no cross-atom state), Friction (expired / revoked / not-known gate cases), Flow (`check_permitted` two-step sequence), Decision (gate clears → query; gate fails → reject), Feedback (result tags are first-class; `denied` vs. `rejected` are structurally distinct), State (no cross-atom state; constituent atom state is ground truth — named as deliberate architectural choice), Behavior (four invariants), Proof (generation acceptance). Clean.
+**Pass 1 — GRID structural (GRID — the nine-node completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof).** All nine MUSE (the v1.1 completeness framework GRID's nodes are drawn from) nodes resolved. Intent (the ordering problem; principal-binding as emergent property), System boundary (two atoms, one action, no cross-atom state), Friction (expired / revoked / not-known gate cases), Flow ([Check Permitted] two-step sequence), Decision (gate clears → query; gate fails → reject), Feedback (result tags are first-class; `denied` vs. `rejected` are structurally distinct), State (no cross-atom state; constituent atom state is ground truth — named as deliberate architectural choice), Behavior (four invariants), Proof (generation acceptance). Clean.
 
 **Pass 2 — EOS (the Essence of Software, Daniel Jackson's concept framework) conceptual independence.** Session and Permissions are freestanding atoms; neither is absorbed into the composition. The composition's own concept — the gate constraint and the principal-binding invariant — does not belong to either constituent and recurs across every system that issues session tokens and enforces grants. No extraction needed. The absence of cross-atom state was confirmed correct: there is no persistent concern at the composition boundary that is not already captured by the constituent atoms' own state. The event-log question was deliberated: authorization event logging is Audit Trail's obligation when composed in, not this composition's obligation at its base configuration.
 
 **Pass 3 — Linus adversarial.**
 
-*Finding R1F1 — GA overclaims without per-call records.* The Generation acceptance section stated five checks framed as verifiable "from the system's records alone" — but this composition maintains no per-call event log. Without Audit Trail, there are no records of individual `check_permitted` calls. Checks referencing "every `check_permitted` call that returned X" are unverifiable from records; they require code inspection at best. Fixed: GA restructured into two explicit tiers — state-verifiable checks (1–4) and record-verifiable checks requiring Audit Trail (check 5). The forensic scope limitation was already named in Regulated adversarial scenarios and Composition notes; the GA revision brings the acceptance bar into alignment.
+*Finding R1F1 — GA overclaims without per-call records.* The Generation acceptance section stated five checks framed as verifiable "from the system's records alone" — but this composition maintains no per-call event log. Without Audit Trail, there are no records of individual [Check Permitted] calls. Checks referencing "every [Check Permitted] call that returned X" are unverifiable from records; they require code inspection at best. Fixed: GA restructured into two explicit tiers — state-verifiable checks (1–4) and record-verifiable checks requiring Audit Trail (check 5). The forensic scope limitation was already named in Regulated adversarial scenarios and Composition notes; the GA revision brings the acceptance bar into alignment.
 
 ### Round 2
 
@@ -282,7 +318,7 @@ This composition introduces no per-call event log. The acceptance bar therefore 
 
 **Pass 3 — Linus adversarial.**
 
-*Finding R2F1 — Implementation boundary bypass unnamed.* Invariants 1 and 2 assert gate enforcement, but neither named the bypass route: if an implementation also exposes `Permissions.permitted` directly alongside `check_permitted`, callers can reach Permissions without the gate. This is not a defect in the spec's internal logic, but it is a defect in the composition's coverage — a spec that names the invariant without naming how implementations can break it leaves a real implementation hole unlit. Fixed: added Edge case "Direct access to constituent-atom surfaces" naming the bypass mechanism and requiring conforming implementations to either not expose the Permissions surface directly or to document the exception explicitly.
+*Finding R2F1 — Implementation boundary bypass unnamed.* Invariants 1 and 2 assert gate enforcement, but neither named the bypass route: if an implementation also exposes `Permissions.permitted` directly alongside [Check Permitted], callers can reach Permissions without the gate. This is not a defect in the spec's internal logic, but it is a defect in the composition's coverage — a spec that names the invariant without naming how implementations can break it leaves a real implementation hole unlit. Fixed: added Edge case "Direct access to constituent-atom surfaces" naming the bypass mechanism and requiring conforming implementations to either not expose the Permissions surface directly or to document the exception explicitly.
 
 ### Round 3
 
@@ -292,7 +328,7 @@ This composition introduces no per-call event log. The acceptance bar therefore 
 
 **Pass 3 — Linus adversarial.**
 
-*Finding R3F1 — Fail-safe behavior of Permissions.permitted on internal storage failure.* The action notes claimed "there is no storage-failure path in `check_permitted`" without stating the assumption that underlies it: the claim relies on Permissions' own fail-safe behavior. If Permissions cannot read its grant store and returns `denied` as its internal fail-safe, the composition correctly passes `denied` through — a false denial. The composition makes no stronger guarantee than Permissions' own internal behavior. Without naming this assumption, the "no storage failure" claim is an implicit contract on Permissions that the composition does not own. Fixed: action Notes extended to name the assumption and the acceptable failure mode (false denial, not false grant).
+*Finding R3F1 — Fail-safe behavior of Permissions.permitted on internal storage failure.* The action notes claimed "there is no storage-failure path in [Check Permitted]" without stating the assumption that underlies it: the claim relies on Permissions' own fail-safe behavior. If Permissions cannot read its grant store and returns `denied` as its internal fail-safe, the composition correctly passes `denied` through — a false denial. The composition makes no stronger guarantee than Permissions' own internal behavior. Without naming this assumption, the "no storage failure" claim is an implicit contract on Permissions that the composition does not own. Fixed: action Notes extended to name the assumption and the acceptable failure mode (false denial, not false grant).
 
 ### Final Critique 4
 
@@ -342,3 +378,7 @@ Round 6 closed clean. Foundational findings: zero. Refining findings closed in t
 The Round 6 verification is reproducible from a fresh checkout: open `compositions/session-gated-authorization.als` in Alloy Analyzer 6, set Options → "Allow warnings" to true (the model still carries one type-system warning on `Denial_Is_Not_Rejection` where the SAT solver's intersection is provably empty at the type level — the warning is informational, not a soundness defect), then Execute → Execute All. All 13 commands return their expected result.
 
 **Formal-layer vote — 2026-06-03: YES (model present).** Session-gates-authorization (Inv 1) and principal binding (Inv 2) are gate-before-action ordering/exclusivity claims targeted by the Alloy model. Verified by the sibling formal model (`session-gated-authorization.als`); the pattern remains `grounded`. Vote per [`pressure-testing.md`](../pressure-testing.md) §Formal models — The formal-layer vote.
+
+**Showcase pass — 2026-06-29.** Representational-only annotation/legibility pass; no guarantee, invariant, number, formula, signature, or rejection taxonomy changed (the invariant count held at four). (a) **Four-kind `[Term]` annotation** applied across the body and a `## Terms` registry added after Edge cases. Because this is a **minimal, stateless gate composition** (one action, no cross-atom state), the registry is honestly small — 2 terms: 1 Operation, the single [Check Permitted] action; and 1 Member, the composition's own [Session Invalid] gate rejection. Nothing else is the composition's own: the emergent guarantees it owns (session-gates-authorization, principal binding) are structural Invariants, not data, and everything else is relayed from Session and Permissions. Every own-concept prose reference is linked. Survivors left backticked: the fenced projected-contract signature and the example blocks; the qualified constituent calls (`Session.validate` / `Session.revoke`, `Permissions.permitted`); the relayed outcomes (`permitted`, `denied`) and Session's `invalid(...)` reasons (`expired` / `revoked` / `not-known`); the reason-parameterized `rejected(session-invalid(...))` wire forms; and the generic `invalid-request`. Constituent atom names remain the existing full links to `../atoms/*`. One representational tidy: the `### check_permitted` action heading was backticked to `### \`check_permitted\`` (removing a bare snake-case heading and giving the card a distinct anchor). (b) **Summary** — this file carried no `## Summary`, only a descriptive top blockquote; the blockquote was **promoted to a `## Summary` section** (moved above Intent, split one-idea-per-paragraph, lossless) so the file matches the standard, and its subject was named. (c) **Lineage collapsed** into a `<details markdown="block">` block (the `### Round 1`–`### Round 6` subsections collapse inside). (d) **prose cut #5 — skipped (with reason):** the composition owns no state machine — it is a stateless sequencing gate over Session's and Permissions' own state; the session lifecycle (Valid / Expired / Revoked) is Session's. Re-verified, not re-grounded: Status stays at `grounded on Final Critique 6 — 2026-05-23`. Gates: lint clean (O-term resolver — every marker resolves and every card is used); term-adapter derives cleanly (2 terms); four composition-level invariants preserved; the `.als` model untouched — harness re-run green (Alloy `session-gated-authorization.als`).
+
+</details>
