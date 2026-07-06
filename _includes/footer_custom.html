@@ -38,7 +38,8 @@
   .to-top:hover,
   .to-top:focus-visible {
     background: #444;
-    box-shadow: 0 .5rem 1rem rgb(0 0 0 / .5);
+    box-shadow: 0 .5rem 1rem rgb(0 0 0 / .8);
+    opacity: .8;
   }
 
   @keyframes to-top-show {
@@ -50,7 +51,7 @@
      otherwise the button would stay hidden forever. */
   @supports not (animation-timeline: scroll()) {
     .to-top {
-      opacity: 1;
+      opacity: .8;
       visibility: visible;
       animation: none;
     }
