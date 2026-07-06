@@ -375,32 +375,15 @@ The nineteen C-numbered grounded compositions are catalogued below (C1–C18, pl
 
 ## Formal model coverage
 
-Per `pressure-testing.md §Formal models`, whether a formal model is a prerequisite for `grounded` is decided per pattern by the **formal-layer vote**: a vote-*yes* pattern (one carrying load-bearing temporal, ordering, concurrency, or safety claims) requires a verifying model before unqualified `grounded`; a vote-*no* pattern grounds English-only under the minimum-formalism principle. The inventory below records which grounded patterns currently ship formal-model siblings, and which have explicit deferred-formal-models entries in their Lineage notes.
+Per `pressure-testing.md §Formal models`, whether a formal model is a prerequisite for `grounded` is decided per pattern by the **formal-layer vote**: a vote-*yes* pattern (one carrying load-bearing temporal, ordering, concurrency, or safety claims) requires a verifying model before unqualified `grounded`; a vote-*no* pattern grounds English-only under the minimum-formalism principle.
 
-### Shipped
+**The inventory is mechanical, not mirrored.** Since the 2026-06-03 backlog landing (18 TLA+ and 4 Alloy models, every one shipping a checker-rejected buggy twin — see §Current state above), the shipped set is enumerated by the artifacts themselves: a pattern's formal models are its sibling `.tla` / `.als` files, verified on command by [`tools/harness/`](./tools/harness/README.md) (`node audit.mjs` runs every model in the corpus; correct models must hold, buggy twins must be rejected). The per-pattern record lives in each spec's Lineage notes — the formal-layer vote entry and, where a model shipped, the *Formal model* entry.
 
-| Pattern | Type | Alloy | TLA+ | Files |
-|---|---|---|---|---|
-| Capability | Atom | ✓ | — | `atoms/capability.als` + `capability_check.py` |
-| Attributed Permissions Admin | Composition | ✓ | ✓ | `compositions/attributed-permissions-admin.als`, `attributed-permissions-admin.tla` + `.cfg` |
-| Privileged Access Provisioning | Composition | — | ✓ | `compositions/privileged-access-provisioning.tla` + `.cfg` + `privileged_access_provisioning_check.py` |
-| Login | Composition | — | ✓ | `compositions/login.tla` + `.cfg` |
-| External Onboarding | Composition | — | ✓ | `compositions/external-onboarding.tla` + `.cfg` |
-| Session-Gated Authorization | Composition | ✓ | — | `compositions/session-gated-authorization.als` |
-
-### Deferred — recorded in Lineage notes
-
-| Pattern | Type | Candidate artifacts | Recorded |
-|---|---|---|---|
-| Preference / Personalization | Atom | TLA+ on supersession atomicity (Invariant 4) + linearizable-per-`principal_ref` requirement + check-4 indistinguishability; Alloy on the records relation (preference + configuration records, Invariants 5 and 10, bootstrap-ordering) | `atoms/message-preference.md` Lineage notes, Phase 4 round, *Deferred work — formal models* item |
-
-### All other grounded patterns
-
-No formal-model siblings shipped and no deferred-formal-models Lineage entry. Per the methodology this is a respectable state — `grounded` is the bar, formal models are the complement. New deferred candidates should land as a *Deferred work — formal models* item in the relevant pattern's Lineage notes (mirroring the Preference pattern), and graduate to this table's *Shipped* section when the artifact lands.
+*Dated removal note (2026-07-06).* A hand-maintained Shipped / Deferred registry previously lived in this section and drifted: it still listed only the six pre-backlog models — and filed Preference / Personalization as *Deferred* after `message-preference.tla` and its buggy twin landed (2026-06-03) — weeks after the backlog closed, while the section's own file recorded the landing under §Current state. Removed under the derive-don't-mirror discipline (the same rot class as the Summary status mirrors in the 2026-06-12 discoveries entry): the harness and the Lineage entries are the source of truth; this section states the rule, never the roster.
 
 ### Convention
 
-A pattern moves from *Deferred* to *Shipped* when (a) the artifact exists at the path named here, (b) a *Formal model* entry is recorded in the pattern's Lineage notes per `pressure-testing.md` (what the artifact is, what it checks, bounds/scope, deliberate exclusions, result), and (c) the row in this table is updated. Findings from formal-model runs route through the standard review channel — a contradiction inside the spec becomes a Pass-3-shaped finding in Lineage notes, not an in-flight spec rewrite.
+A vote-yes pattern's formal layer is discharged when (a) the sibling artifact(s) exist alongside the spec, (b) they clear the model-present bar mechanically via `tools/harness/` — correct model green, buggy twin rejected, checks non-vacuous (see `pressure-testing.md` §The formal-layer vote), and (c) a *Formal model* entry is recorded in the pattern's Lineage notes per `pressure-testing.md` (what the artifact checks, bounds/scope, deliberate exclusions, result). Deferred formal-model candidates land as a *Deferred work — formal models* item in the pattern's Lineage notes; they graduate by shipping the artifact, never by editing a registry row here. Findings from formal-model runs route through the standard review channel — a contradiction inside the spec becomes a Pass-3-shaped finding in Lineage notes, not an in-flight spec rewrite.
 
 ---
 
