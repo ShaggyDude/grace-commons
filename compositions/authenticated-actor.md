@@ -1,6 +1,6 @@
 ---
 title: Authenticated Actor
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 21
 has_toc: true
 toc: true

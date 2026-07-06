@@ -1,6 +1,6 @@
 ---
 title: Undo History
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 1
 has_toc: true
 toc: true

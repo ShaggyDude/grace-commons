@@ -1,6 +1,6 @@
 ---
 title: Audit Trail
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 3
 has_toc: true
 toc: true

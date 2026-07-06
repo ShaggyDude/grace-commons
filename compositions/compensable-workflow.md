@@ -1,6 +1,6 @@
 ---
 title: Compensable Workflow
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 12
 has_toc: true
 toc: true

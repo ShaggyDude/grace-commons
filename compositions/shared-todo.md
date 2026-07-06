@@ -1,6 +1,6 @@
 ---
 title: Shared Todo
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 4
 has_toc: true
 toc: true

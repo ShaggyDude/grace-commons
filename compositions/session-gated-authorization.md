@@ -1,6 +1,6 @@
 ---
 title: Session-Gated Authorization
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 14
 has_toc: true
 toc: true

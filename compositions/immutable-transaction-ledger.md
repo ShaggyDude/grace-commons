@@ -1,6 +1,6 @@
 ---
 title: Immutable Transaction Ledger with Selective Disclosure
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 19
 has_toc: true
 toc: true

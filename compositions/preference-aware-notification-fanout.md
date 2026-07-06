@@ -1,6 +1,6 @@
 ---
 title: Preference-Aware Notification Fanout
-parent: Compositions
+parent: Conceptual Compositions
 has_toc: true
 toc: true
 ---

@@ -1,6 +1,6 @@
 ---
 title: Attributed Permissions Admin
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 8
 has_toc: true
 toc: true

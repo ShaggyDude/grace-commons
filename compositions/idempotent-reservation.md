@@ -1,6 +1,6 @@
 ---
 title: Idempotent Reservation
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 2
 has_toc: true
 toc: true

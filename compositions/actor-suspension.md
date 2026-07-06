@@ -1,6 +1,6 @@
 ---
 title: Actor Suspension
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 22
 has_toc: true
 toc: true

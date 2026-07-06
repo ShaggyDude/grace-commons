@@ -1,6 +1,6 @@
 ---
 title: Forensic Recovery
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 18
 has_toc: true
 toc: true

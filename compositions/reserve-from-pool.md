@@ -1,6 +1,6 @@
 ---
 title: Reserve from Pool
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 18
 has_toc: true
 toc: true

@@ -1,6 +1,6 @@
 ---
 title: Resolve a Person's Data Rights
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 20
 has_toc: true
 toc: true

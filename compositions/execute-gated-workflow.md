@@ -1,6 +1,6 @@
 ---
 title: Execute Gated Workflow
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 10
 has_toc: true
 toc: true

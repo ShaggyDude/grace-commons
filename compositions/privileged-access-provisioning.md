@@ -1,6 +1,6 @@
 ---
 title: Privileged Access Provisioning
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 9
 has_toc: true
 toc: true

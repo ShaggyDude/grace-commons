@@ -1,6 +1,6 @@
 ---
 title: External Onboarding
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 15
 has_toc: true
 toc: true

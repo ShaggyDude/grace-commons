@@ -1,6 +1,6 @@
 ---
 title: Defensible Retention
-parent: Compositions
+parent: Conceptual Compositions
 nav_order: 7
 has_toc: true
 toc: true
