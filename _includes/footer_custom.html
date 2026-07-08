@@ -12,25 +12,27 @@
     aspect-ratio: 1;
     display: grid;
     place-items: center;
-    border-radius: 999px;
-    background: #222;
+    border-radius: 50%;
+    background: #2229;
     color: #fff;
     text-decoration: none;
     line-height: 1;
-    box-shadow: 0 .5rem 1rem rgb(0 0 0 / .25);
+    box-shadow: 0 0 1rem rgb(0 0 0 / .25);
     transition: background .6s ease-out, box-shadow .8s ease-out;
     opacity: 0;
     visibility: hidden;
-    animation: to-top-show linear both;
+    animation: to-top-show ease-out both;
     animation-timeline: scroll(root);
     animation-range: 200px 400px;
+    backdrop-filter: blur(4px);
+    corner-shape: squircle;
+    border: 1px solid #fff1;
   }
 
   .to-top:hover,
   .to-top:focus-visible {
-    background: #444;
-    box-shadow: 0 .5rem 1rem rgb(0 0 0 / 1);
-    opacity: .8;
+    background: #1114;
+    box-shadow: 0 0 1rem rgb(0 0 0 / .5);
   }
 
   @keyframes to-top-show {
