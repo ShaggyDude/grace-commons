@@ -14,6 +14,8 @@ _Working staging, not canonical. Ranked by payoff per effort from an external re
 
 **Effort.** Hours. Zero new tooling; the commands exist and are documented in [`tools/conformance/README.md`](../tools/conformance/README.md) and [`tools/harness/README.md`](../tools/harness/README.md) — this page is curation, not construction. Keep counts deferred to the tools' own output per the no-snapshot discipline (state the *commands*, let the run state the numbers).
 
+*Progress 2026-07-06 — drafted.* [`verify.md`](../verify.md) landed at the repo root (nav slot between Demos and Roadmap): the four claims, the four steps with expected-output blocks labeled as dated observed runs (authority deferred to live output), the optional deeper cuts (twin isolation, coverage matrices, the Mongo render, live demos), the what-each-number-means closers, an explicit *what this does not prove* boundary section, and a red-run-is-a-finding routing note. Every command verified against the 2026-07-06 cold-sandbox session before publication.
+
 ## 2. Generated pattern cards + the composition-graph visual
 
 **What.** (a) A derived header card at the top of every pattern page: status token, invariant count, verification badge ("TLA+ · states clean · twin rejected"), composed-by fan-in, standards anchors. (b) A generated Mermaid rendering of the composition graph on the atoms/compositions index pages — atoms → compositions → substrates, fan-in as visual weight, derived overlays as color.
