@@ -1,12 +1,7 @@
 <!-- _includes/footer_custom.html — Custom footer
      Rendered at the bottom of every page's main content (Just the Docs).
      Docs: https://just-the-docs.com/docs/customization/#custom-footer
-
-     Content: a pure-CSS "back to top" button. It is position:fixed, so it
-     floats bottom-right on every page rather than sitting in the footer flow.
-     Reveal is driven by a scroll-timeline animation (no JavaScript).
-     `href="#top"` scrolls to the top of the page (browsers treat the "#top"
-     fragment specially, so no explicit top anchor is required). -->
+ -->
 
 <style>
   .to-top {
@@ -40,7 +35,7 @@
 
   @keyframes to-top-show {
     from { opacity: 0; visibility: hidden; }
-    to   { opacity: .8; visibility: visible; }
+    to   { opacity: .5; visibility: visible; }
   }
 
   /* Fallback: browsers without scroll-driven animations show it always,
