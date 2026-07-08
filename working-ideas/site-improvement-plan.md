@@ -40,6 +40,8 @@ _Working staging, not canonical. Ranked by payoff per effort from an external re
 
 **Effort.** An hour of writing. The hardest part is resisting the urge to add a fifth stop.
 
+*Progress 2026-07-06 — drafted.* [`start-here.md`](../start-here.md) landed at the repo root (nav slot directly after Home): four stops with per-stop times and what-to-notice pointers (Event Log → Audit Trail → Verify It Yourself → The Spec Layer), plus a by-reader-type fan-out epilogue (compliance / engineer / formal methods / contributor / state-of-things). The fifth stop was successfully resisted; the fan-out is an epilogue, not a stop.
+
 ## 5. The positioning page, made public
 
 **What.** A public page carrying the argument currently staged in [`prior-art-and-positioning.md`](./prior-art-and-positioning.md): the 2024–26 spec-driven wave *declares* the spec the source of truth; this library carries the machinery that *earns* the word (grounded review, formal twins, measured conformance, the earning-SSOT three conditions). Include the drift-direction contrast (their specs chase code; here code chases spec) and the verification-floor contrast (schema lint vs records-alone conformance).
