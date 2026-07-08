@@ -37,14 +37,14 @@
 
   @keyframes to-top-show {
     from { opacity: 0; visibility: hidden; }
-    to   { opacity: .5; visibility: visible; }
+    to   { opacity: 1; visibility: visible; }
   }
 
   /* Fallback: browsers without scroll-driven animations show it always,
      otherwise the button would stay hidden forever. */
   @supports not (animation-timeline: scroll()) {
     .to-top {
-      opacity: .8;
+      opacity: 1;
       visibility: visible;
       animation: none;
     }
