@@ -1,6 +1,7 @@
 ---
 title: Start Here
-nav_order: 1.5
+nav_order: 1
+permalink: /
 ---
 
 # Start Here
@@ -49,3 +50,4 @@ Now the manifesto will read as a description of things you have touched rather t
 - **Formal methods background:** [Pressure Testing](./pressure-testing.html) §Formal models — the vote, the model-present bar, the buggy-twin vacuity guard, the coverage cross-check — then `tools/harness/` for the reproducible checker.
 - **Thinking about contributing:** [Contributing](./contributing.html). The cheapest real contribution is reporting an ambiguity you found while reading — a finding routed through review is exactly how this library improves, and its first external issue produced a canonicalized methodology section.
 - **Just want the state of things:** the [Roadmap](./roadmap.html) is the single source of truth for what exists, and [Risks & Mitigations](./risks.html) is the library grading itself honestly — including the parts that are not done.
+- **The big picture:** [Home](./home/) — the vision page: what this is, what it is not, and where it is going. (Also behind the site logo, and paired with [Earning Source of Truth](./positioning.html) for where this sits in the lineage.)

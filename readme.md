@@ -1,10 +1,13 @@
 ---
 title: Home
-nav_order: 1
-permalink: /
+nav_exclude: true
+permalink: /home/
 has_toc: true
 toc: true
 ---
+<!-- Left the nav menu 2026-07-06: Start Here is the landing (permalink /);
+     this vision page stays one click away behind the site logo (retargeted
+     in _includes/head_custom.html) and the Start Here fan-out. -->
 
 # Grace Commons
 
