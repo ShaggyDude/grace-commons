@@ -6,8 +6,9 @@ name: Lint spec corpus
 # exits 1 on any finding.
 #
 # Follow-ups that ride this same gate when they land: the status-mirror and
-# table-duplicate checks (open-questions.md "Status-line grammar"), and a
-# scheduled tools/harness/ run once its JRE bootstrap is CI-shaped.
+# table-duplicate checks (open-questions.md "Status-line grammar"). The
+# tools/harness/ and tools/conformance/ gates landed 2026-07-06 as their own
+# workflow — see verify.yml; status.md publishes both gates' live state.
 
 on:
   workflow_dispatch:
@@ -24,22 +25,8 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Run linter
-        # Vocabulary sweep, stage 2 in progress (2026-06-11): J/K findings inside
-        # atoms/ and compositions/ are known debt, draining as each pattern's
-        # scheduled rescan applies the convention retroactively. The gate still
-        # fails hard on every other finding class, and on J/K anywhere else.
-        # REMOVE this filtering — restore the plain `python3 tools/linter/lint.py .`
-        # — when the reported debt count reaches 0.
-        run: |
-          python3 tools/linter/lint.py . > lint.out || true
-          if grep -vE 'J-banned-token|K-output-noun' lint.out | grep -q .; then
-            echo "::error::lint findings (non-vocabulary):"
-            grep -vE 'J-banned-token|K-output-noun' lint.out
-            exit 1
-          fi
-          if grep -E 'J-banned-token|K-output-noun' lint.out | grep -vE '^(atoms|compositions)/' | grep -q .; then
-            echo "::error::vocabulary findings outside the pattern dirs (not stage-2 debt):"
-            grep -E 'J-banned-token|K-output-noun' lint.out | grep -vE '^(atoms|compositions)/'
-            exit 1
-          fi
-          echo "stage-2 vocabulary debt (pattern dirs, draining on the rescan cadence): $(grep -cE 'J-banned-token|K-output-noun' lint.out) finding(s)"
+        # Stage-2 vocabulary filtering removed 2026-07-06 per the instruction
+        # that stood here: the J/K debt reached 0 (vocabulary sweeps completed
+        # 2026-06-18 — see changelog), so the gate is the plain linter again,
+        # failing hard on every finding class.
+        run: python3 tools/linter/lint.py .

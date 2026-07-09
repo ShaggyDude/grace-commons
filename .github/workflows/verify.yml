@@ -1,0 +1,114 @@
+name: Verify corpus claims
+
+# The measured-claims gate — closes the enforcement gap risks.md names ("the
+# model harness and conformance validator still have no gate"). Two jobs:
+#
+#   conformance    build 5 independent renders from a cold checkout, validate,
+#                  require 100% cross-render agreement (agree.mjs exits non-zero
+#                  on any disagreement), then run the NEGATIVE CONTROL: inject
+#                  the historical genesis-hash defect and require the harness to
+#                  catch it and localize it to check C1-2b — a gate that cannot
+#                  fail is not a gate.
+#
+#   formal-models  bootstrap the checkers (npm-only; JRE 17 to /tmp) and audit
+#                  every .tla/.als model in the corpus: correct models must
+#                  hold, buggy twins must be rejected (audit.mjs exits non-zero
+#                  otherwise).
+#
+# status.md publishes these runs' live state via the GitHub API — the page
+# renders GitHub's record of the actual runs, never a hand-written mirror.
+# The weekly cron echoes the scheduled-rescan cadence: claims are re-verified
+# on a rhythm independent of anyone's attention.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'atoms/**'
+      - 'compositions/**'
+      - 'tools/**'
+      - '.github/workflows/verify.yml'
+  schedule:
+    - cron: '0 6 * * 6'   # Saturdays 06:00 UTC — the weekend rescan window
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conformance:
+    name: Conformance — renders agree
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: tools/conformance
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build the five renders
+        run: |
+          npm install --no-audit --no-fund
+          node fixtures/build-clinical-trial-portal.mjs
+          node render2/build.mjs
+          node render3/build.mjs
+          node render4/build.mjs
+          node render5/build.mjs
+
+      - name: Validate render 1
+        run: node validate.mjs clinical-trial-portal
+
+      - name: Multi-render agreement
+        run: |
+          T=$(node -e 'console.log(require("os").tmpdir())')/grace-commons-conformance
+          node agree.mjs clinical-trial-portal \
+            clinical-trial-portal clinical-trial-portal-next \
+            "clinical-trial-portal-pg=$T/clinical-trial-portal-pg" \
+            "clinical-trial-portal-r4=$T/clinical-trial-portal-r4.jsonl" \
+            "clinical-trial-portal-nextjs=$T/clinical-trial-portal-nextjs"
+
+      - name: Negative control — injected defect must be caught and localized
+        run: |
+          T=$(node -e 'console.log(require("os").tmpdir())')/grace-commons-conformance
+          node fixtures/build-clinical-trial-portal.mjs --defect genesis-hash --out "$T/r1-bug.db"
+          if node agree.mjs clinical-trial-portal \
+            "clinical-trial-portal=$T/r1-bug.db" clinical-trial-portal-next \
+            "clinical-trial-portal-pg=$T/clinical-trial-portal-pg" \
+            "clinical-trial-portal-r4=$T/clinical-trial-portal-r4.jsonl" > bug.out 2>&1; then
+            echo "::error::sabotaged render was NOT caught — the instrument itself is broken"
+            cat bug.out
+            exit 1
+          fi
+          if ! grep -q "C1-2b" bug.out; then
+            echo "::error::defect caught but not localized to C1-2b"
+            cat bug.out
+            exit 1
+          fi
+          echo "negative control passed: defect caught and localized to C1-2b"
+          cat bug.out
+
+  formal-models:
+    name: Formal models — hold; twins rejected
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: tools/harness
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Bootstrap checkers (npm-only; JRE 17 to /tmp)
+        run: bash bootstrap.sh
+
+      - name: Audit every model — correct hold, buggy twins rejected
+        run: node audit.mjs

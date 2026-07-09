@@ -34,6 +34,8 @@ _Working staging, not canonical. Ranked by payoff per effort from an external re
 
 **Effort.** A day-ish: two workflow jobs (the harness needs its JRE bootstrap step; the conformance fixtures build in-sandbox by design) plus a small render-to-page step.
 
+*Progress 2026-07-06 — built (first green run pending).* [`.github/workflows/verify.yml`](../.github/workflows/verify.yml): two jobs — conformance (five renders from cold checkout → validate → agreement → **the negative control as a CI step**: the injected genesis-hash defect must be caught and localized to its check, so a gate that cannot fail fails the build) and formal-models (bootstrap → `audit.mjs`, exits non-zero on any model not holding or twin not rejected). Push-on-corpus-paths + weekly Saturday cron (the rescan cadence). [`status.md`](../status.md) publishes both gates: live shields badges + a page-load fetch of the latest runs from the GitHub API — the page renders GitHub's record, never a hand-written mirror, with graceful fallback to the Actions page on rate-limit. `lint.yml`'s stage-2 vocabulary filter removed per its own standing instruction (J/K debt at 0 since 2026-06-18). **Follow-ups on first green run:** update [`risks.md`](../risks.md) §Enforcement debt (the harness/conformance no-gate gap closes) on its owner's dated re-assessment cadence, and eyeball the status page's API fetch + badge rendering.
+
 ## 4. A human reading trail
 
 **What.** A short "Start here" page: **Event Log** (see what an atom is, 10 minutes) → **Audit Trail** (see composition and emergent invariants) → **the verify page** (see that it's real) → **The Spec Layer** (the why, if hooked). One trail, four stops, ~30 minutes.
