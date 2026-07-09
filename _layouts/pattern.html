@@ -1,0 +1,20 @@
+---
+layout: default
+---
+{% comment %}
+  pattern.html — layout applied to atoms/ and compositions/ pages via front-matter
+  defaults in _config.yml (the canonical files carry no layout key and are never
+  edited). Injects the derived pattern card directly after the page's H1; pages
+  without a card entry (index, TAXONOMY, README) render unchanged.
+{% endcomment %}
+{% capture pc_card %}{% include pattern-card.html %}{% endcapture %}
+{% if pc_card contains 'pattern-card' %}
+  {% if content contains '</h1>' %}
+    {% assign pc_rep = '</h1>' | append: pc_card %}
+    {{ content | replace_first: '</h1>', pc_rep }}
+  {% else %}
+    {{ pc_card }}{{ content }}
+  {% endif %}
+{% else %}
+  {{ content }}
+{% endif %}

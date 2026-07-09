@@ -25,6 +25,25 @@ footer_content: 'Grace Commons — open foundation for business logic patterns.'
 
 markdown: kramdown
 
+# Mermaid rendering for generated graph views (graph.md). Just the Docs loads it
+# from CDN when this key is present.
+mermaid:
+  version: "10.9.1"
+
+# Derived pattern cards: atoms/ and compositions/ pages get the `pattern` layout
+# (which injects _includes/pattern-card.html from _data/patterns.json) via defaults,
+# so the canonical pattern files themselves are never edited. Regenerate the data
+# with `python3 tools/taxonomy/generate_graph.py .`.
+defaults:
+  - scope:
+      path: "atoms"
+    values:
+      layout: "pattern"
+  - scope:
+      path: "compositions"
+    values:
+      layout: "pattern"
+
 exclude:
   - AGENTS.md
   - CLAUDE.md
