@@ -1,0 +1,36 @@
+// Custom styles — Just the Docs imports this file automatically.
+//
+// Pattern card: the derived per-pattern header injected by _layouts/pattern.html
+// from _data/patterns.json (see _includes/pattern-card.html). Tags lay out as a
+// wrapping flex row; the gap owns all spacing, so the theme's label margins are
+// zeroed inside the card.
+
+.pattern-card {
+  margin: 1rem;
+  padding: .5rem 1rem;
+  border: 1px solid rgba(72, 72, 72, .5);
+  border-radius: 6px;
+
+  .pattern-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+
+    .label {
+      margin: 0; // gap owns spacing
+    }
+  }
+
+  .pattern-card-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin-top: .5rem;
+
+    a {
+      white-space: nowrap;
+    }
+  }
+}
