@@ -54,6 +54,8 @@ _Working staging, not canonical. Ranked by payoff per effort from an external re
 
 **Effort.** Mostly promotion + a fresh-reader pass (the staging note was call-prep; a public page carries a different tone bar). Note the canonical-vs-staging rule: promotion means the page becomes canon and the staging note dies into it.
 
+*Progress 2026-07-06 — drafted, fresh-reader pass owed.* [`positioning.md`](../positioning.md) landed ("Earning Source of Truth", nav directly after The Spec Layer): two-senses-of-SSOT headline with the drift-direction and verification-floor tells, the Design-vs-Development naming claim, the three conditions each anchored to runnable evidence, the six-row lineage table (each tradition credited, each gap named), the isn't-this-just rebuttals, a softened owning-the-meaning section (anti-ransom stance kept, pitch tone dropped), the honest concessions, and the one-liner. The staging note carries a PROMOTED marker and remains as dated call-prep history (the full business-pitch framing and the Temporal case deliberately stayed internal); the fold-into-the-spec-layer option is flagged there as a separate review-pass decision. **Owed before this item closes: a fresh-reader pass by someone other than the drafter** — this page is the corpus's most public-facing argument and was drafted, not gated.
+
 ## 6. Smaller, still real
 
 - **Harmonize the demo login walls.** Multi-Party Approval lands logged-in with an acting-as switcher — a stranger understands the library in ten seconds. Attributed Permissions Admin and both Beacon renders land on sign-in forms (credentials printed, but still a wall). Adopt the acting-as pattern, or add a one-click demo-account button.
