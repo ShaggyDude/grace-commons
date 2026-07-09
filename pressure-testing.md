@@ -1,6 +1,7 @@
 ---
 title: Pressure Testing
 nav_order: 3
+parent: The Method
 has_toc: true
 toc: true
 ---

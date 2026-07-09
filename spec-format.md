@@ -1,6 +1,7 @@
 ---
 title: Spec Format
 nav_order: 4
+parent: The Corpus
 has_toc: true
 toc: true
 ---

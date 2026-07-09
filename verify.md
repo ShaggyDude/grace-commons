@@ -1,6 +1,7 @@
 ---
 title: Verify It Yourself
-nav_order: 9.5
+nav_order: 2
+parent: Evidence
 has_toc: true
 toc: true
 ---

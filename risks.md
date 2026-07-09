@@ -1,6 +1,7 @@
 ---
 title: Risks & Mitigations
-nav_order: 12
+nav_order: 4
+parent: Project Log
 has_toc: true
 toc: true
 ---

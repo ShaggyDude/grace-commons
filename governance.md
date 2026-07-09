@@ -1,6 +1,7 @@
 ---
 title: Governance
-nav_order: 11
+nav_order: 2
+parent: Community
 has_toc: true
 toc: true
 ---

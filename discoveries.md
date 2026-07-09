@@ -1,6 +1,7 @@
 ---
 title: Discoveries
-nav_order: 17
+nav_order: 3
+parent: Project Log
 ---
 
 # Discoveries

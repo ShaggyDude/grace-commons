@@ -1,6 +1,7 @@
 ---
 title: AI Usage Log
-nav_order: 14
+nav_order: 5
+parent: Project Log
 ---
 
 # AI Usage Log

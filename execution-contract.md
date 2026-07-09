@@ -1,6 +1,7 @@
 ---
 title: Execution Contract
-nav_order: 6
+nav_order: 4
+parent: The Method
 has_toc: true
 toc: true
 ---

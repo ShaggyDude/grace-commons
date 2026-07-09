@@ -1,6 +1,7 @@
 ---
 title: The Spec Layer
-nav_order: 2
+nav_order: 1
+parent: The Method
 has_toc: true
 toc: true
 ---

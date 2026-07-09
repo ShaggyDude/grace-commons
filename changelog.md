@@ -1,6 +1,7 @@
 ---
 title: Changelog
-nav_order: 15
+nav_order: 2
+parent: Project Log
 ---
 
 # Changelog

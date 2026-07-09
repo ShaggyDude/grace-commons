@@ -1,6 +1,7 @@
 ---
 title: Measurement
-nav_order: 13
+nav_order: 4
+parent: Evidence
 ---
 
 # Measurement

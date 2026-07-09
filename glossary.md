@@ -1,6 +1,7 @@
 ---
 title: Glossary
-nav_order: 9999
+nav_order: 5
+parent: The Corpus
 ---
 
 # Glossary

@@ -1,6 +1,7 @@
 ---
 title: Earning Source of Truth
-nav_order: 2.5
+nav_order: 2
+parent: The Method
 has_toc: true
 toc: true
 ---

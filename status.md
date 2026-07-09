@@ -1,6 +1,7 @@
 ---
 title: Live Status
-nav_order: 9.6
+nav_order: 3
+parent: Evidence
 ---
 
 # Live Status

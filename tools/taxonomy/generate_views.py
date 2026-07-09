@@ -52,7 +52,8 @@ def main():
     P = L.append
     P("---")
     P("title: Atomic Concepts")
-    P("nav_order: 7")
+    P("nav_order: 1")
+    P("parent: The Corpus")
     P("has_children: true")
     P("permalink: /atoms/")
     P("has_toc: true")
