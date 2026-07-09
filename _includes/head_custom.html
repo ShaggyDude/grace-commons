@@ -17,20 +17,8 @@
     }
 }
 </style>
-<!-- Root page: override og:title so the OG card headline matches the description's subject. Since 2026-07-06 the root is Start Here (the landing); "Grace Commons" remains the right card headline for it. Sub-pages keep their per-page title. -->
-{% if page.url == "/" or page.url == "/home/" %}
+<!-- Root page: override og:title so the OG card headline matches the description's subject. Since 2026-07-06 the root is Start Here (the landing; the logo points here, theme default); the old Home lives at /why/ with its own honest title ("Why Grace Commons"), so it needs no override. -->
+{% if page.url == "/" %}
 <meta property="og:title" content="Grace Commons">
 <meta property="twitter:title" content="Grace Commons">
 {% endif %}
-<script>
-  // The site logo links to the vision page (/home/) rather than the root
-  // landing (Start Here). Home left the nav menu 2026-07-06 but stays one
-  // click away behind the logo; Just the Docs hardwires the site-title href
-  // to the root, and this hook retargets it without copying the theme's
-  // sidebar internals.
-  document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('a.site-title').forEach(function (a) {
-      a.href = '{{ "/home/" | relative_url }}';
-    });
-  });
-</script>
