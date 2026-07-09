@@ -214,7 +214,7 @@ def main():
         label = cards[n]["title"] + (f" · {fan}" if fan else "")
         P(f'  {node_id(n)}["{label}"]')
     for composer, sub in sorted(substrate_edges):
-        P(f"  {node_id(composer)} -.->|substrate| {node_id(sub)}")
+        P(f"  {node_id(composer)} -.-> {node_id(sub)}")
     P("  classDef comp fill:#3b2a52,stroke:#c7a8e8,color:#f2ebfa;")
     P("  classDef spine fill:#52341f,stroke:#f0b27a,color:#fdf2e9;")
     P(f"  class {','.join(node_id(n) for n in sorted(spine_nodes))} comp;")

@@ -85,21 +85,21 @@ flowchart LR
   privileged_access_provisioning["Privileged Access Provisioning"]
   propagate_consent_revocation_downstream["Propagate Consent Revocation Downstream"]
   resolve_a_persons_data_rights["Resolve a Person's Data Rights"]
-  actor_suspension -.->|substrate| audit_trail
-  capability_backed_sharing -.->|substrate| audit_trail
-  chain_of_custody -.->|substrate| audit_trail
-  customer_onboarding -.->|substrate| audit_trail
-  defensible_retention -.->|substrate| audit_trail
-  execute_gated_workflow -.->|substrate| audit_trail
-  external_onboarding -.->|substrate| audit_trail
-  forensic_recovery -.->|substrate| audit_trail
-  immutable_transaction_ledger -.->|substrate| audit_trail
-  login -.->|substrate| audit_trail
-  multi_party_approval -.->|substrate| audit_trail
-  privileged_access_provisioning -.->|substrate| audit_trail
-  privileged_access_provisioning -.->|substrate| multi_party_approval
-  propagate_consent_revocation_downstream -.->|substrate| audit_trail
-  resolve_a_persons_data_rights -.->|substrate| defensible_retention
+  actor_suspension -.-> audit_trail
+  capability_backed_sharing -.-> audit_trail
+  chain_of_custody -.-> audit_trail
+  customer_onboarding -.-> audit_trail
+  defensible_retention -.-> audit_trail
+  execute_gated_workflow -.-> audit_trail
+  external_onboarding -.-> audit_trail
+  forensic_recovery -.-> audit_trail
+  immutable_transaction_ledger -.-> audit_trail
+  login -.-> audit_trail
+  multi_party_approval -.-> audit_trail
+  privileged_access_provisioning -.-> audit_trail
+  privileged_access_provisioning -.-> multi_party_approval
+  propagate_consent_revocation_downstream -.-> audit_trail
+  resolve_a_persons_data_rights -.-> defensible_retention
   classDef comp fill:#3b2a52,stroke:#c7a8e8,color:#f2ebfa;
   classDef spine fill:#52341f,stroke:#f0b27a,color:#fdf2e9;
   class actor_suspension,audit_trail,capability_backed_sharing,chain_of_custody,customer_onboarding,defensible_retention,execute_gated_workflow,external_onboarding,forensic_recovery,immutable_transaction_ledger,login,multi_party_approval,privileged_access_provisioning,propagate_consent_revocation_downstream,resolve_a_persons_data_rights comp;
