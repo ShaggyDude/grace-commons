@@ -1,119 +1,53 @@
 ---
-title: Why Grace Commons
-nav_exclude: true
-permalink: /why.html
-has_toc: true
-toc: true
+title: Start Here
+nav_order: 1
+permalink: /
 ---
-<!-- Left the nav menu 2026-07-06: Start Here is the landing (permalink /,
-     where the logo points, as on any real site); this vision page lives at
-     /why.html — a root page like the others, no subdirectory — and is linked
-     from Start Here's fan-out. -->
 
-# Grace Commons
+# Start Here
 
-<details markdown="block">
-<summary>Table of contents</summary>
-{: .text-delta }
-1. TOC
-{:toc}
-</details>
-
-
-Atomic concepts & compositions thereof, expressed as structured natural language. Code is derived (generated from the spec); intent is canonical (the single authoritative source from which everything else is built). This is **Intent-Driven Design (IDD)** — the design discipline that authors the intent first and in full, upstream of how any system is later built.
-
-Named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
+> Fifty-plus specifications, a methodology, formal models, and a verification harness is a lot of surface to land on. This is the short path through it: four stops, about an hour of focused attention, and at the end you will know what this library is, whether its claims hold, and whether it matters to you. Resist the nav sidebar until stop four — it will still be there.
 
 ---
 
-## Four reasons Grace Commons is different
+## Stop 1 — Read one atom: [Event Log](./atoms/event-log.md) *(~10 minutes)*
 
-Architects draw plans. Composers write scores. Car designers build CAD (computer-aided design) models. Lawyers write statutes. Software has a Git repo and hopes the README is current.
+An **atom** is a freestanding concept — one recurring piece of business behavior, specified completely, naming no other pattern. Event Log is the best first one: small enough to read in a sitting, load-bearing enough that half the library composes on top of it.
 
-Software is the only engineering discipline operating without a canonical-intent layer — a single, authoritative description of what the software is supposed to do. We're closing the gap.
+What to notice while you read:
 
-1. **Structured English as the canonical form.** Your PM, your lawyer, your auditor, your regulator can read it *and edit it*. Formal methods (mathematical, notation-heavy approaches to writing software specifications) exclude these stakeholders (people who have a direct interest in the outcome) by notation; Grace Commons includes them by design.
-2. **One spec, many derivations.** Tests, code, multiple frontends (user interfaces — web, mobile, voice), formal models (precise mathematical representations of the system), audit artifacts (official records used in compliance reviews) — all projected from the same canonical source.
-3. **Stack-agnostic by construction.** The spec doesn't know about your runtime (the environment where software actually runs — a web server, a phone, a browser). The projector (the tool that converts the spec into working code) is designed to compile to whatever stack (combination of technologies) a deployment needs — web, CLI, mobile, voice, future channels.
-4. **Bidirectional refinement.** Findings from running tests, real-world incidents, regulator audits (official inspections by government or industry overseers) feed back into the canonical spec via the methodology. The system improves with use; it doesn't go stale.
+- **The Summary is plain English.** A compliance officer can read it. That is a design rule, not an accident — every spec here is written for three audiences at once.
+- **The Invariants are numbered and testable.** "Append-only," "total order," "no id reuse" — each is a property an implementation must produce *records* to prove, not a vibe.
+- **Time and identity are injected, not grabbed.** The spec forbids the core logic from reading the clock or generating ids itself — that is what makes the behavior deterministic and checkable. (The rule is the Logic Confinement Principle; you will meet it again.)
+- **What it refuses to do.** Retention, tamper-evidence, who-did-it attribution — all explicitly out of scope, each pointing at the pattern that owns it. The discipline of *not* absorbing responsibilities is most of what makes atoms composable.
 
----
+## Stop 2 — Read one composition: [Audit Trail](./compositions/audit-trail.md) *(~15 minutes)*
 
-## What this is
+A **composition** wires atoms together and is where the payoff lives. Audit Trail composes Event Log with Actor Identity, Tamper Evidence, and Retention Window — and produces guarantees *none of the four carries alone*.
 
-Most software systems are 80% patterns that have been implemented thousands of times: resource reservation, billing cycles, auth flows (the process of verifying who someone is and letting them log in), audit trails, compliance rules, notification logic. None of this is novel. All of it gets reinvented, inconsistently, in every new system.
+What to notice:
 
-Grace Commons is the attempt to specify these patterns once — clearly, completely, in structured natural language — so they can be referenced, validated against, and eventually generated from rather than reimplemented.
+- **The Composes section names constituents by reference.** Nothing is re-specified; the atoms remain unchanged. Compositions are wiring, not new primitives.
+- **Emergent invariants.** Attribution coverage, cascade-on-purge, forensic completability — properties that only exist because of how the atoms are wired. This middle layer — guarantees that appear at composition time — is the library's most distinctive idea.
+- **Generation acceptance.** The section listing what an external auditor must be able to verify *from the records alone*, with no access to source code. Hold that thought for stop three, because those sentences are about to become executable.
 
-The library is organized around business patterns, not technologies. The same provisional resource commitment pattern (temporarily holding a resource — a seat, a hotel room, an inventory item — while waiting for final confirmation) appears in banking, healthcare, logistics, and e-commerce. It belongs in one place.
+## Stop 3 — Run the evidence: [Verify It Yourself](./verify.md) *(~20 minutes hands-on, or 5 skimming)*
 
-Specifying patterns together surfaces a third layer the implementations never see: **emergent invariants** — guarantees that hold only once atoms are composed and that no single atom carries (worked examples in *How it's organized*).
+The auditor checks you just read are not aspirational prose — they are the literal source of a conformance validator, and this library's claims are built to be re-run by strangers. The verify page walks you through measuring an implementation (20/20, counted by a program), watching five independent implementations on unrelated storage engines agree identically, injecting a real historical bug and watching the machinery catch and localize it, and running the formal models with their deliberately-sabotaged twins.
 
----
+If you only have five minutes, read the *negative control* step and the *what each number means* section — the failure behavior is more persuasive than the passes.
 
-## What this is not
+## Stop 4 — Read the why: [The Spec Layer](./the-spec-layer.md) *(~25 minutes)*
 
-This is not a code library.
-It is not a framework.
-It is not a domain-specific language.
-
-It is a specification library (a collection of precise written descriptions of how common software behaviors work) — patterns expressed as intent, independent of any implementation language or technology stack.
+Now the manifesto will read as a description of things you have touched rather than an ambition. The sections worth the closest read: **The Problem** (why software's truth is scattered across eight artifacts that silently disagree), **The Architecture** (why verbose structured English is the canonical form and code is derived), and **Bridges** (the litmus test every addition here must pass). You have already seen each principle operating — the three-tier Event Log spec, the emergent invariants, the validator.
 
 ---
 
-## How it's organized
+## Where to go next — by who you are
 
-Grace Commons distinguishes **atoms** from **compositions**.
-
-An atom — short for atomic concept — is freestanding: its specification names no other pattern. Personal Todo, Duplicate Prevention, and Event Log are atoms. Each is a complete concept whose state, actions, and operational principles are independent of every other concept.
-
-A composition is the wiring of concepts, not a new concept — its specification names other patterns and the logic that combines them. Audit Trail composes Event Log with retention (rules about how long records must be kept), tamper-evidence (the ability to detect if records have been secretly altered), and actor identity (a verifiable link between every action and who performed it). Shared Todo composes Personal Todo with Permissions and Assignment. Compositions are where atoms come together to do real work.
-
-The directory layout reflects the split:
-
-- `atoms/` holds atoms, stored flat as `atoms/<name>.md` — classification is derived rather than encoded in the folder layout (browse the generated catalog at [`atoms/index.md`](./atoms/index.md); the classification axes are defined in [`atoms/TAXONOMY.md`](./atoms/TAXONOMY.md)).
-- `compositions/` holds compositions. Each file declares which atoms it composes and the logic that wires them together.
-
-The test for which folder a contribution belongs in: **does its specification name another pattern?** If no, it's an atom — file under `atoms/`. If yes, it's a composition — file under `compositions/`.
-
-For the current contents — every grounded atom and composition, with counts and sequencing — see [`roadmap.md`](./roadmap.md), the single source of truth.
-
-Three layers structure the library: **atoms** (the freestanding patterns), **compositions** (the wired combinations), and **emergent invariants** that appear at composition time and don't belong to any single constituent atom. The identity-preservation invariant (a rule that must always be true — here, that deleting and undoing a task leaves it with the same identity it had before) in Undo History is the simplest example — it falls out of wiring Personal Todo's `delete` against Event Log's append-only history, and neither pattern carries it alone. The Audit Trail composition wires four atoms together to produce attribution coverage, retention coverage, cascade-on-purge, and forensic completability — emergent invariants none of the four constituents carries — and its verification surface answers four regulator questions at once that the four atoms would otherwise answer separately. Notification Fanout is structurally distinct: it is the first composition in the library where a single trigger produces a variable number of effects — the fan-out count is determined at runtime by the Active subscriber set, not at composition time — and its emergent invariants (fanout coverage, payload consistency, at-most-one per subscriber) are properties of the directed invocation graph that neither constituent atom can assert alone. Each pattern also carries **Lineage notes** (a record of what each review pass found and how it was resolved) recording its three-pass review arc; see [`pressure-testing.md`](./pressure-testing.md).
-
-The `atoms/` + `compositions/` split mirrors the structural logic of [concept-catalog](https://github.com/dpapathanasiou/concept-catalog) (an open library of freestanding software concepts) and its `concepts/` + `applications/` — composition is a different kind of work from atom definition, and the directory layout makes that visible without forcing a reader to infer it. Grace Commons uses `compositions/` because these artifacts are structurally compositions — formal combinations of independently valid patterns — not deployable products.
-
----
-
-## Status
-
-Early but stable (as of mid-June 2026). The architectural philosophy is in [`the-spec-layer.md`](./the-spec-layer.md).
-
-The corpus is the gift — the patterns that belong to everyone, grounded once so no one has to reinvent them. The methodology is the engine that produces the corpus and keeps it sound as it grows. The engine works today; the commons it produces is early and compounding — being built, not unfinished.
-
-Contributors who understand the problem are welcome now. While the structure is still being set is the right time to help shape it.
-
----
-
-## Contributing
-
-The most valuable contributions right now are pattern proposals, domain expertise, and honest criticism of the architecture.
-
-If you work in a domain with well-specified standards — healthcare, finance, logistics, government — and recognize the problem this is trying to solve, we want to hear from you.
-
----
-
----
-
-## Where this is going
-
-Grace Commons is a commons: the shared patterns that sit under most systems, grounded once where anyone can inspect them. The methodology is the engine that produces that commons and proves it sound — and because the engine, not any single artifact, is the durable thing, the commons keeps growing while the implementations stay disposable.
-
-The bet is not incremental: the structured specification is the single source of truth, mechanically projected into working software — so the system is legible to everyone accountable for it, not only the people who can read the code. Compliance logic stops living buried in opaque implementations and starts living in clear, inspectable patterns.
-
-Because the spec is the source and the code is derived, Grace binds to no stack, language, or era. A single specification already drives seven independent implementations — across SQLite, PostgreSQL, MongoDB, and an append-only flat-file log — with their agreement *measured* at 20/20, not asserted. Whatever the future runs on, the pattern plugs into it at the seam. Grace is built to outlive its own implementations.
-
-And it does not claim to be finished — it says so in the open. Every pattern carries a measured quality grade, today 92–99%, against a published rubric anyone can re-run, and it names the assumptions and the work it still owes. The methodology follows the pattern it teaches: strong now, evolving under discipline as more authors and real use bear on it. The homework is done in public, and the means to prove it wrong come with it.
-
----
-
-*Grace Commons is the open foundation. The patterns that belong to everyone should live somewhere everyone can see them.*
+- **Compliance, audit, or regulatory:** browse the regulated patterns from the [atoms catalog](./atoms/index.md) — start with Retention Window, Legal Hold, and the Defensible Retention composition; every regulated pattern carries auditor-facing scenarios and standards anchors (HIPAA, GDPR, SOX, FDA).
+- **Engineer wondering how this becomes software:** the [Execution Contract](./execution-contract.md) — the deterministic compilation target: three primitives, a four-step pipeline, and the mapping from spec sections to runtime obligations. Then the live [demos](./demos.md) and their RECIPEs.
+- **Formal methods background:** [Pressure Testing](./pressure-testing.md) §Formal models — the vote, the model-present bar, the buggy-twin vacuity guard, the coverage cross-check — then `tools/harness/` for the reproducible checker.
+- **Thinking about contributing:** [Contributing](./contributing.md). The cheapest real contribution is reporting an ambiguity you found while reading — a finding routed through review is exactly how this library improves, and its first external issue produced a canonicalized methodology section.
+- **Just want the state of things:** the [Roadmap](./roadmap.md) is the single source of truth for what exists, and [Risks & Mitigations](./risks.md) is the library grading itself honestly — including the parts that are not done.
+- **The big picture:** [Why Grace Commons](./why.md) — the vision page: what this is, what it is not, and where it is going. Pair it with [Earning Source of Truth](./positioning.md) for where this sits in the lineage.

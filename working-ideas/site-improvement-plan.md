@@ -44,7 +44,7 @@ _Working staging, not canonical. Ranked by payoff per effort from an external re
 
 **Effort.** An hour of writing. The hardest part is resisting the urge to add a fifth stop.
 
-*Progress 2026-07-06 — drafted.* [`start-here.md`](../start-here.md) landed at the repo root (nav slot directly after Home): four stops with per-stop times and what-to-notice pointers (Event Log → Audit Trail → Verify It Yourself → The Spec Layer), plus a by-reader-type fan-out epilogue (compliance / engineer / formal methods / contributor / state-of-things). The fifth stop was successfully resisted; the fan-out is an epilogue, not a stop.
+*Progress 2026-07-06 — drafted.* [`start-here.md`](../readme.md) landed at the repo root (nav slot directly after Home; content later became `readme.md` itself — the landing — on 2026-07-06, with the vision moving to `why.md`): four stops with per-stop times and what-to-notice pointers (Event Log → Audit Trail → Verify It Yourself → The Spec Layer), plus a by-reader-type fan-out epilogue (compliance / engineer / formal methods / contributor / state-of-things). The fifth stop was successfully resisted; the fan-out is an epilogue, not a stop.
 
 ## 5. The positioning page, made public
 

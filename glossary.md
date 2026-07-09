@@ -58,7 +58,7 @@ a different sense, it must say so locally.
   structural by the composition-state rule); a
   pre-triage item in the guided tool is a **candidate concept** (a stage, consumed
   by triage — promoted or rejected, never outliving Phase 1). Atom and composition
-  are defined in [`readme.md`](./readme.md); the thesis phrase is claimed in
+  are defined in [`why.md`](./why.md); the thesis phrase is claimed in
   [`the-spec-layer.md`](./the-spec-layer.md).
 - **application** — a deployed build output; output-level vocabulary only, never
   a spec-layer artifact. The canonical layer has exactly two artifact kinds:

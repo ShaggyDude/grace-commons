@@ -8,7 +8,7 @@
 
 ## What Grace Commons is
 
-A public library of **atoms** and **compositions** expressed as structured natural language: the spec is canonical, code is a derived build artifact. The thesis, philosophy, and inheritance are in [`the-spec-layer.md`](./the-spec-layer.md); the architecture overview is in [`readme.md`](./readme.md). Named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
+A public library of **atoms** and **compositions** expressed as structured natural language: the spec is canonical, code is a derived build artifact. The thesis, philosophy, and inheritance are in [`the-spec-layer.md`](./the-spec-layer.md); the architecture overview is in [`why.md`](./why.md) (the vision page; `readme.md` is the site's Start Here landing/tour). Named for Grace Hopper, who first argued that business logic should be readable by the people who understand the business.
 
 ---
 
@@ -16,7 +16,7 @@ A public library of **atoms** and **compositions** expressed as structured natur
 
 If you have no prior context, read in this order:
 
-1. **[`readme.md`](./readme.md)** — architecture overview, atoms vs. compositions, the three-layers framing. Brief.
+1. **[`why.md`](./why.md)** — architecture overview, atoms vs. compositions, the three-layers framing. Brief. (`readme.md` is the Start Here landing/tour — orientation for humans, not canon.)
 2. **[`the-spec-layer.md`](./the-spec-layer.md)** — the manifesto. *Principles* and *Bridges* anchor the framing.
 3. **[`pressure-testing.md`](./pressure-testing.md)** — the three-pass methodology, round structure and grounding semantics, formal-layer machinery, regulated-pattern conventions, capability provenance, the no-snapshot rule.
 4. **[`spec-format.md`](./spec-format.md)** — the three spec shapes, required sections in order, and the cross-cutting authoring conventions (owned there as of 2026-06-11).
@@ -31,7 +31,7 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 
 ## Canonical documents — where every rule lives
 
-- [`readme.md`](./readme.md) — home page, three-layers framing, atom/composition vocabulary.
+- [`why.md`](./why.md) — the vision page (former home content, moved 2026-07-06): three-layers framing, atom/composition vocabulary. [`readme.md`](./readme.md) — the Start Here landing/tour at the site root.
 - [`the-spec-layer.md`](./the-spec-layer.md) — the architectural manifesto; principles, bridges, tone.
 - [`pressure-testing.md`](./pressure-testing.md) — three-pass methodology; round structure and `grounded` semantics; formal models, the formal-layer vote, the coverage cross-check; capability provenance; regulated-pattern conventions; the no-snapshot rule.
 - [`spec-format.md`](./spec-format.md) — the three spec shapes, required sections, reading tiers, authoring conventions.
@@ -49,7 +49,7 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 
 ## Vocabulary — load-bearing terms
 
-Moved — no mirror kept. Atom (atomic concept), composition, freestanding, and emergent invariant are defined in [`readme.md`](./readme.md); GRID, the three passes, `grounded`, and Lineage notes in [`pressure-testing.md`](./pressure-testing.md); the three shapes and regulated overlay in [`spec-format.md`](./spec-format.md); strict spec-language terms in [`glossary.md`](./glossary.md).
+Moved — no mirror kept. Atom (atomic concept), composition, freestanding, and emergent invariant are defined in [`why.md`](./why.md); GRID, the three passes, `grounded`, and Lineage notes in [`pressure-testing.md`](./pressure-testing.md); the three shapes and regulated overlay in [`spec-format.md`](./spec-format.md); strict spec-language terms in [`glossary.md`](./glossary.md).
 
 ## Authoring conventions
 
