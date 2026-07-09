@@ -15,7 +15,7 @@ toc: true
 </details>
 
 
-> Everyone now declares the spec a source of truth. The hard word is *truth* — a source whose own correctness can be shown, and that settles disagreements. This page is where Grace Commons sits in that lineage: what the 2024–26 spec-driven wave validated, where every tradition before it stopped short, and the three specific costs this library pays that turn the declaration into a demonstrable property. The claims here are the measured kind — each one links to something you can [run yourself](./verify.html).
+> Everyone now declares the spec a source of truth. The hard word is *truth* — a source whose own correctness can be shown, and that settles disagreements. This page is where Grace Commons sits in that lineage: what the 2024–26 spec-driven wave validated, which parts of the problem earlier traditions each solved and the gaps they left, and the three specific costs this library pays that turn the declaration into a demonstrable property. The claims here are the measured kind — each one links to something you can [run yourself](./verify.html).
 
 ## Two senses of "single source of truth"
 
@@ -24,6 +24,8 @@ There is a **bookkeeping** sense: one canonical place the intent lives, no dupli
 The spec-driven development wave of 2024–26 — GitHub Spec Kit, AWS Kiro, Tessl, OpenSpec, and their peers — reached the first sense and borrowed the language of the second. That wave did this library an enormous favor: it validated the premise (spec as source of truth) and taught the market the vocabulary. But "source of truth" with no way to verify the source is just "the artifact we agreed to treat as primary." **Primary is not the same as true.**
 
 Two tells mark the gap, observable in the wave's own practice. The first is **drift direction**: the emerging discipline is "update the spec alongside every change," and the emerging metric is *drift rate* — how fast the spec falls behind the code. A spec that chases the code is documentation with better hygiene; the code holds authority. Here the direction is inverted — implementations chase the spec, and the measured quantity is *conformance*. The second is the **verification floor**: in the wave's practice, "machine-checkable spec" typically means schema linting — the spec file is well-formed. Here it means the records an implementation produces provably honor the spec's claims, counted by a validator, across independent implementations.
+
+None of this is a hypothetical separation. The same specification surface here renders into five materially different implementations — SQLite, PostgreSQL, Go, a flat-file log, and a document store with no relational constraint enforcement at all — and a validator measures invariant preservation across every one of them, identically ([the demos](./demos.html); [run it yourself](./verify.html)). The philosophy below has that proof standing behind it.
 
 ## The name encodes the claim
 
@@ -37,22 +39,40 @@ The two are not rivals. Intent-Driven Development drives the *build* from intent
 
 **2. The spec's own truth is checkable without an implementation.** A derived formal model establishes that the invariants are mutually consistent and preserved under every interleaving within bounds — with a deliberately-sabotaged twin the checker must reject, proving the check has teeth. Until this exists, correctness is established by *running code*, which quietly makes the implementation the source and the spec downstream. Here, every pattern whose formal-layer vote is yes ships a machine-checked model and a rejected buggy twin ([run them](./verify.html)).
 
-**3. Any implementation introduces only meaning-free truth, conformance-enforced.** The obligation/realization boundary keeps the *how* — which database, which lock, which engine — below the contract, and conformance validates the observable contract, never the realization. The worked proof is the [Beacon render family](./demos.html): the same specs on SQLite, PostgreSQL, Go, a flat-file log, and MongoDB — an engine with no foreign keys, no CHECK constraints — and every spec invariant survived; only the *enforcement locus* moved. The spec stays the single source of *meaning* even though each realization holds its own meaning-free mechanics.
+**3. Any implementation introduces only meaning-free truth, conformance-enforced.** *Meaning-free* is precise, not rhetorical: an implementation holds real truths — which lock serializes the log, which index enforces uniqueness — but they are truths about *mechanism*, never about the *domain*. The obligation/realization boundary keeps that how — which database, which lock, which engine — below the contract, and conformance validates the observable contract, never the realization. The worked proof is the [Beacon render family](./demos.html): the same specs on SQLite, PostgreSQL, Go, a flat-file log, and MongoDB — an engine with no foreign keys, no CHECK constraints — and every spec invariant survived; only the *enforcement locus* moved. The spec stays the single source of *meaning* even though each realization holds its own meaning-free mechanics.
 
 Example-based specification has enforcement but a partial spec — examples under-determine the system, so truth lives in the uncovered space. The SDD wave has the slogan but neither verifiability nor a meaning/mechanism boundary — the moment an agent fills a gap the spec didn't pin, truth lives outside the spec. This library is the intersection where all three conditions hold at once.
 
-## The lineage — and where each stops short
+The whole relationship in one picture — the spec verified from above, the implementations measured from below:
+
+```mermaid
+%%{init: {"theme": "dark"} }%%
+flowchart TD
+  SPEC["Canonical specification<br/>concepts · invariants · compositions"]
+  FM["Formal models<br/>machine-checked, sabotaged twins rejected"]
+  CONF["Conformance checks<br/>records-alone, counted by a validator"]
+  SPEC -->|derived| FM
+  FM -.->|"verify the spec itself,<br/>before any implementation"| SPEC
+  SPEC -->|derived| CONF
+  CONF --> R1["SQLite"]
+  CONF --> R2["PostgreSQL"]
+  CONF --> R3["Go"]
+  CONF --> R4["Flat-file log"]
+  CONF --> R5["MongoDB"]
+```
+
+## The lineage — what each solved, where each stopped
 
 Every row below contributed something this library inherits; none is dismissed. The last column is the specific gap, not a verdict.
 
 | Tradition | What it does at the spec level | Where it stops short of earned source-of-truth |
 |---|---|---|
-| **Formal methods** — Z, B/Event-B, TLA+, Alloy, seL4, SCADE | Spec canonical, verified, code derived or refined — correct-by-construction systems in rail signaling, cloud infrastructure, avionics | The canonical artifact is a formalism, unreadable by the domain expert whose logic it encodes; built for proof, not for a living, readable library |
+| **Formal methods** — Z, B/Event-B, TLA+, Alloy, seL4, SCADE | Spec canonical, verified, code derived or refined — correct-by-construction systems in rail signaling, cloud infrastructure, avionics | Optimized for proof precision, not for being the shared artifact across engineering, product, legal, operations, and domain experts — the notation excludes the very stakeholders whose logic it encodes |
 | **Model-driven** — MDA, Executable UML | Model canonical, code generated; platform-independent models with many platform-specific renders — the "many renders" idea, decades early | Over-promised generation and round-trip and under-delivered; the canonical artifact was UML, not language a stakeholder reads |
 | **Behavior-driven development** — North (~2006), Gherkin/Cucumber | Executable acceptance *scenarios* as shared spec; tests fail on drift — genuine conformance, years before the current wave | Scenarios are examples, not invariants: they sample the state space, so the truth of everything unsampled lives in the code |
 | **Concept design** — Jackson, *The Essence of Software* (2021) | Concepts (one purpose; state + actions + invariants) composed by synchronizations; proposed a reusable concept catalog | It is the framework. This library is arguably its most concrete instantiation — plus the verification layer, the conformance boundary, and the build-artifact discipline. An extension, not a departure |
 | **AI-era spec-driven development** (2024–26) — Spec Kit, Kiro, Tessl, OpenSpec | Specs as source of truth, code derived by agents — BDD's executable-spec insight, generalized and AI-driven | Declares the source of truth but cannot back it: the spec is neither invariant-complete nor self-verifiable, and with no meaning/mechanism boundary, agent gap-filling puts truth outside the spec |
-| **Intent-Driven Design** — this library | The intent is the designed, verifiable artifact: Jackson's concepts + derived formal models + the conformance boundary | The fulfillment position — it supplies exactly the three conditions the rows above lack. Its own gaps are declared in [Risks & Mitigations](./risks.html) |
+| **Intent-Driven Design** — this library | The intent is the designed, verifiable artifact: Jackson's concepts + derived formal models + the conformance boundary | The intersection where the three conditions hold at once — inherited from the rows above, not invented against them. Its own gaps are declared in [Risks & Mitigations](./risks.html) |
 
 ## "Isn't this just—?"
 
@@ -70,7 +90,7 @@ The practical consequence is about lock-in. Vendor lock-in works because the ven
 
 ## Honest concessions
 
-Three, so this position survives pressure rather than merely sounding good. First: since the 2025 wave, the *stance* is no longer differentiating — the rigor is the entire moat, and it must keep being re-earned as the library grows (the gates on the [status page](./status.html) are that re-earning, automated). Second: the distinctive bet — a canonical layer in structured natural language rather than a formalism — carries a real question: is structured English rigorous enough to be a source of truth? The derived formal models and the conformance harness are the answer, and they must remain the answer at scale. Third: legibility framings make this position readable; only the verification layer makes it true. The two jobs are kept distinct on purpose.
+Four, so this position survives pressure rather than merely sounding good. First: since the 2025 wave, the *stance* is no longer differentiating — the rigor is the entire moat, and it must keep being re-earned as the library grows (the gates on the [status page](./status.html) are that re-earning, automated). Second: the distinctive bet — a canonical layer in structured natural language rather than a formalism — carries a real question: is structured English rigorous enough to be a source of truth? The derived formal models and the conformance harness are the answer, and they must remain the answer at scale. Third: legibility framings make this position readable; only the verification layer makes it true. The two jobs are kept distinct on purpose. Fourth — scale, stated plainly: the three conditions are demonstrated on *today's* corpus, measured, not at every size. The library is young, formal checking is exhaustive only within declared bounds, and emergent-invariant coverage is a maintained discipline, not a law of nature; holding all three conditions at ten times the corpus is the open bet, and it is instrumented rather than assumed. And if the wave's tools grow real verification stories of their own, the moat narrows to what it always truly was — the verified corpus and the discipline that keeps it verified — which is a future this library would count as winning, not losing.
 
 ## The one-liner
 
