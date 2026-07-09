@@ -1,13 +1,14 @@
 ---
 title: Why Grace Commons
 nav_exclude: true
-permalink: /why/
+permalink: /why.html
 has_toc: true
 toc: true
 ---
 <!-- Left the nav menu 2026-07-06: Start Here is the landing (permalink /,
      where the logo points, as on any real site); this vision page lives at
-     /why/ and is linked from Start Here's fan-out. -->
+     /why.html — a root page like the others, no subdirectory — and is linked
+     from Start Here's fan-out. -->
 
 # Grace Commons
 
