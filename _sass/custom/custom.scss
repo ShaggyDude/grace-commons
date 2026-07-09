@@ -1,9 +1,4 @@
 // Custom styles — Just the Docs imports this file automatically.
-//
-// Pattern card: the derived per-pattern header injected by _layouts/pattern.html
-// from _data/patterns.json (see _includes/pattern-card.html). Tags lay out as a
-// wrapping flex row; the gap owns all spacing, so the theme's label margins are
-// zeroed inside the card.
 
 .pattern-card {
   margin: 1rem;
@@ -18,7 +13,7 @@
     align-items: center;
 
     .label {
-      margin: 0; // gap owns spacing
+      padding: 0 .5rem;
     }
   }
 
