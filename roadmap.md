@@ -22,6 +22,8 @@ The library's vision and framing are in [`why.md`](./why.md). This file records 
 
 The topological ordering principle is codified in [`pressure-testing.md`](./pressure-testing.md): atoms before compositions, constituents before the applications that name them. This roadmap is organized accordingly.
 
+**How to read this file** *(orientation added 2026-07-06 — navigation only, never state)*: this is a **dated ledger**, not a report. §Current state carries the running record, one dated bullet per landing, newest additions at the top of the list; the grounded catalog below it is the **registry** whose status cells mirror each pattern's own Status line (the pattern file is the source of truth — a mismatch is a finding). Methodology debts are numbered and permanent; progress and resolution notes ride each debt as dated additions, so a debt's history reads top to bottom inside its own entry. Candidate backlogs (healthcare, concept-recovery, exhibit-sourced) sit at the bottom and change no counts. This file deliberately carries **no summary block** — a hand-written "current totals" section is exactly the drift class the no-snapshot rule kills; the counts live inside dated entries where they can never silently lie, and the computed overviews live at [`graph.md`](./graph.md) (structure) and [`status.md`](./status.md) (gates).
+
 ---
 
 ## Current state

@@ -10,6 +10,20 @@ Accidental findings during the build. Raw, dated, unpolished. Grant proposals an
 
 ---
 
+### 2026-07-06 — Structured density: dense text is only a bridge when it carries handles
+
+A day of external readability reviews (three model families critiquing the site and the roadmap) kept producing the same request — summaries, dashboards, executive overviews — and every request was satisfiable **by projection, with zero edits to canon**: per-pattern cards and the composition-graph page derived in an afternoon (`tools/taxonomy/generate_graph.py`, `_data/patterns.json`), the roadmap dashboard deferred to the same generated-view plan, the landing-page child lists auto-rendered. The counterexample arrived the same day: a reviewer's hand-written summary of the Branching Undo candidate drifted from its source *within the hour* — restating as an open challenge an acid test the row had already resolved.
+
+The finding: **verbosity is only the architecture of the bridge when the verbose text is addressable.** The corpus projects cleanly not because it is dense but because its density carries handles — status tokens with a pinned grammar, invariants named-then-numbered, declared `## Composes` edges, dated markers, required section names. Prose that is merely thick resists every audience; prose that is thick *and* addressable projects to any of them, human or machine, including summarizers that have not been built yet. The one-line form: **dense and readable are not contradictory when the writing is structured.** Structure is the single property that serves both readers — predictable places for the human eye (named sections, topic sentences, invariants named-then-numbered) and stable handles for the deriving machine (tokens, edges, dated markers) — and unlike "well-written," *structured* is checkable: the linter already enforces pieces of it. Call the property **structured density**: one discipline, both readabilities, with every further audience served by projection rather than edit.
+
+This is the same insight as 2026-05-19 (readable-first and formally verifiable are one discipline), 2026-05-20 (complexity reduced to named state before tools apply), and 2026-06-08 (the rigor lives in the substrate; derivations fall out for free), extended to the audience problem: **audience tuning is a derivation, and derivations are only as good as the substrate's handles.** The authoring rule it implies is cheap: when adding dense content, add its handle in the same edit — a token, a number, a declared edge, a dated marker — because the handle is what every future view hangs from.
+
+### Implication for Grace Commons
+
+The open readability ↔ completeness question ([`open-questions.md`](./open-questions.md)) may resolve here: the readability discipline that *sticks* is not a prose sweep (those decayed) and not a hand summary (those drift) — it is handles-at-authoring-time plus derived views, enforced the way the acronym and status-grammar rules already are. Write for all audiences by tuning toward density, and let projection do the tuning — which only works if the density is structured. Honest bound: the evidence is one corpus and one day of reviews; the claim earns more weight each time a new audience's view derives without touching canon, and loses it the first time a needed view can't be derived because a handle is missing.
+
+---
+
 ### 2026-06-23 — Derive-expiry-at-read applies only to *side-effect-free* lapse
 
 A corpus-wide "derive expiry at read time" pass (remove the stored `Expired` terminal and the `expire()` write; compute `Expired` as a read-time projection from the injected clock vs the deadline — the *derive the idealization, don't lag it with a flag* discipline) ran cleanly across seven temporal atoms: Invitation, Session, Capability, Credential, Retention Window, Selective Disclosure, Consent. It **broke on the eighth — Provisional Commitment — and the break is the rule.**
