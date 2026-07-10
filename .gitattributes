@@ -1,0 +1,5 @@
+# Count Markdown in GitHub's language statistics. Linguist classifies .md as
+# "prose" and excludes it from the language bar by default — which misrepresents
+# this repository: here the Markdown IS the source (the spec is canonical; code
+# is a derived build artifact), so the language bar should say so.
+*.md linguist-detectable
