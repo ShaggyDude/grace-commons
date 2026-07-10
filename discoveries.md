@@ -316,4 +316,3 @@ Two corollaries, stated because they bound the claim:
 | Derived views / filters | **Intent Lens** | (Semantic) Intent Lens | A labeled projection over the graph; singular for the concept. |
 
 The Intent Graph is authority; every Lens is a labeled projection over it — "regulated-scope," "customer-facing," "audit-relevant" as lenses rather than folders ("HIPAA *via* audit-trail," never "regulated: true"). What today demonstrated is the existence proof on a deliberately small, clean Intent Graph. The distance to the org-scale version is *entirely* the substrate discipline — whether Grace-Commons-grade structured intent with explicit composition edges can be imposed across an organization's real artifacts — a people-and-process problem, not a generator. The distinction this file exists to hold: the computed *taxonomy* is the demonstrated result; the computed *organizational Intent Graph* is where it points, gated on a substrate nobody has yet built at scale.
-..
