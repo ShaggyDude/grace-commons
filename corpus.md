@@ -23,4 +23,6 @@ flowchart LR
   C ==>|"emergent invariants"| E["guarantees no constituent carries"]
 ```
 
+The lattice, argued interactively: [**Undoing Undos**](./three-undos.html) — one input stream, three engines, three shapes of the past, and therefore three concepts rather than one with options. Two of its three are grounded patterns ([Undo History](./compositions/undo-history.md), reversing by replay-skip; [Compensable Workflow](./compositions/compensable-workflow.md), reversing by compensating action); the third — branching undo — is a candidate concept that has not yet faced the freestanding test. The exhibit demonstrates every state of the lattice by accident, which is the best way.
+
 The pages below are the lattice populated: the two catalogs, the graph that renders their edges, the format every entry conforms to, and the strict definitions for the handful of English words the specs lean on.
