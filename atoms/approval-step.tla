@@ -16,8 +16,15 @@
 \* - Two steps with fixed approver/submitter bindings, a set of candidate actors.
 \*   Every decision action quantifies over ALL actors; the guard enforces the
 \*   exclusivity, so the model would EXPOSE any actor able to decide who should
-\*   not be. Each action updates only its own step (the frame), so Invariant 9
-\*   (independence) is modeled directly: the other step is UNCHANGED.
+\*   not be.
+\* - Invariant 9 is CHECKED, not assumed (promoted 2026-07-12 by the scheduled
+\*   rescan's coverage cross-check — the Party Identity Invariant-6 precedent):
+\*   each action records which step it did NOT act on (lastOther) and snapshots
+\*   that step's pre-action state/decidedBy from the UNPRIMED variables;
+\*   Inv9_StepIndependence then asserts, in the post-state, that the untouched
+\*   step still carries its snapshot. The snapshot derives from actual history,
+\*   so a frame-violating action (one whose EXCEPT reaches the other step) is
+\*   caught rather than assumed impossible.
 \*
 \* NOT MODELED (out of scope): id immutability / no-reuse / store durability /
 \* timestamp ordering (Invariants 1,6-8,10 — structural / clock).
@@ -30,36 +37,56 @@ StepStates == {"Pending", "Approved", "Rejected", "Withdrawn"}
 approver  == [s \in Steps |-> IF s = "s1" THEN "a1" ELSE "a2"]
 submitter == [s \in Steps |-> "a3"]
 
-VARIABLES state, decidedBy      \* Steps -> StepStates ; Steps -> Actors \cup {none}
-vars == <<state, decidedBy>>
+Other(s) == IF s = "s1" THEN "s2" ELSE "s1"
+
+\* state: Steps -> StepStates ; decidedBy: Steps -> Actors \cup {none}
+\* lastOther/preState/preDecided: the Inv9 frame-witness (see header).
+VARIABLES state, decidedBy, lastOther, preState, preDecided
+vars == <<state, decidedBy, lastOther, preState, preDecided>>
 
 TypeOK ==
     /\ state \in [Steps -> StepStates]
     /\ decidedBy \in [Steps -> (Actors \cup {"none"})]
+    /\ lastOther \in (Steps \cup {"none"})
+    /\ preState \in StepStates
+    /\ preDecided \in (Actors \cup {"none"})
 
 Init ==
     /\ state = [s \in Steps |-> "Pending"]
     /\ decidedBy = [s \in Steps |-> "none"]
+    /\ lastOther = "none"
+    /\ preState = "Pending"
+    /\ preDecided = "none"
 
 \* CORRECT: approve/reject guarded on actor = approver_ref; withdraw on
-\* actor = submitter_ref. Each updates only step s (frame => independence).
+\* actor = submitter_ref. Each updates only step s; the witness conjuncts
+\* snapshot the OTHER step's pre-action values (unprimed reads only).
 Approve(s, actor) ==
     /\ state[s] = "Pending"
     /\ actor = approver[s]
     /\ state' = [state EXCEPT ![s] = "Approved"]
     /\ decidedBy' = [decidedBy EXCEPT ![s] = actor]
+    /\ lastOther' = Other(s)
+    /\ preState' = state[Other(s)]
+    /\ preDecided' = decidedBy[Other(s)]
 
 Reject(s, actor) ==
     /\ state[s] = "Pending"
     /\ actor = approver[s]
     /\ state' = [state EXCEPT ![s] = "Rejected"]
     /\ decidedBy' = [decidedBy EXCEPT ![s] = actor]
+    /\ lastOther' = Other(s)
+    /\ preState' = state[Other(s)]
+    /\ preDecided' = decidedBy[Other(s)]
 
 Withdraw(s, actor) ==
     /\ state[s] = "Pending"
     /\ actor = submitter[s]
     /\ state' = [state EXCEPT ![s] = "Withdrawn"]
     /\ decidedBy' = [decidedBy EXCEPT ![s] = actor]
+    /\ lastOther' = Other(s)
+    /\ preState' = state[Other(s)]
+    /\ preDecided' = decidedBy[Other(s)]
 
 Next == \E s \in Steps, actor \in Actors :
             \/ Approve(s, actor)
@@ -75,11 +102,17 @@ Inv4_ApproverExclusivity ==
 Inv5_SubmitterExclusivity ==
     \A s \in Steps : state[s] = "Withdrawn" => decidedBy[s] = submitter[s]
 
-Safety == TypeOK /\ Inv4_ApproverExclusivity /\ Inv5_SubmitterExclusivity
+\* Invariant 9 — concurrent step independence (checked, not assumed).
+\* In the post-state of every action, the step the action did NOT target still
+\* carries exactly the state/decidedBy it had before the action fired.
+Inv9_StepIndependence ==
+    \/ lastOther = "none"
+    \/ (state[lastOther] = preState /\ decidedBy[lastOther] = preDecided)
 
-\* NOTE Invariant 3 (terminal absorption) is enforced by construction (every
-\* action guards on state[s] = "Pending"). Invariant 9 (concurrent step
-\* independence) is modeled by the frame: each action's EXCEPT touches only step
-\* s, so the other step's state and decidedBy are unchanged.
+Safety == TypeOK /\ Inv4_ApproverExclusivity /\ Inv5_SubmitterExclusivity /\ Inv9_StepIndependence
+
+\* NOTE Invariant 3 (terminal absorption) remains enforced by construction (every
+\* action guards on state[s] = "Pending"); it is not vote-named load-bearing, so
+\* by-construction is acceptable per the coverage cross-check verdicts.
 
 ====

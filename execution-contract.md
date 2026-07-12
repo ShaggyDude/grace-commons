@@ -36,7 +36,7 @@ The overwhelming majority of async, consistency, timing, and correctness problem
 
 **2. Single seam rule.** Every mutation crosses exactly one transactional boundary. No business logic is permitted in route handlers, middleware, or adapters. The composition layer is the seam; handlers are plumbing.
 
-**3. Explicit inputs only.** Time (`clock_t`), identifiers (`id_t`), and cryptographic material are injected as explicit inputs — never generated inside T. A transition function that calls `Date.now()` or `crypto.randomUUID()` internally is non-deterministic by construction. The pipeline makes both reads explicit direct effects at the top of Step 3, before T runs.
+**3. Explicit inputs only.** Time (`clock_t`), identifiers (`id_t`), and cryptographic material are injected as explicit inputs — never generated inside G or T. A transition function that calls `Date.now()` or `crypto.randomUUID()` internally is non-deterministic by construction. The pipeline makes both reads explicit direct effects — the clock at the top of Step 2 (one reading per invocation, shared by G and T), entropy at the top of Step 3, before T runs.
 
 **4. Behavior as data transformation.** Prefer explicit construction over hidden work inside transactional functions. The pattern is: construct the value outside the boundary, pass it in, append it. Hidden side effects inside transactions are where correctness guarantees degrade silently.
 
@@ -44,7 +44,7 @@ The overwhelming majority of async, consistency, timing, and correctness problem
 
 **6. Async at the edge only.** All asynchronous, network, storage, and external work is confined to adapters. The pipeline itself — Steps 1 through 4 — is synchronous. Async enters core and complexity grows nonlinearly; Grace Commons eliminates the category by construction.
 
-**Current status.** The Beacon reference implementation satisfies rules 1, 2, 3, and 6 fully. Rule 4 (explicit construction / `createEvent` before `appendEvent`) and rule 5 (compiler-emitted invariant assertions) are targeted for the projector build phase — the gap is tracked as methodology debt #7 in [`roadmap.md`](./roadmap.md) §Methodology debts (the projector / verification-harness deliverable). The principle is stated here as a first-class commitment, not a retrospective description of the demo.
+**Current status.** The Beacon reference implementation satisfies rules 1, 2, 3, and 6 fully — against rule 3 as it stood when Beacon was built: Beacon reads the clock at Step 3, predating the 2026-07-12 placement revision (clock read at the top of Step 2, shared by G and T — see Pipeline). The injection principle holds in Beacon; the step-placement update rides the same projector build phase as rules 4 and 5. Rule 4 (explicit construction / `createEvent` before `appendEvent`) and rule 5 (compiler-emitted invariant assertions) are targeted for the projector build phase — the gap is tracked as methodology debt #7 in [`roadmap.md`](./roadmap.md) §Methodology debts (the projector / verification-harness deliverable). The principle is stated here as a first-class commitment, not a retrospective description of the demo.
 
 ---
 
@@ -61,7 +61,7 @@ SM = (S, E, T, G, I, Q)
 - **S** — the finite set of named states. Maps to the atom's State section (state names only).
 - **E** — the set of typed events, one per action. Maps to the atom's action signatures.
 - **T** — the transition function: `S × E × Params × clock_t × id_t → S`. The body of T is a direct effect (a database write); T itself is deterministic given its inputs. `clock_t` and `id_t` are injected — see Pipeline below.
-- **G** — the guard function: `S × E × Params → pass | typed_failure(reason)`. G is a pure function. It takes `state_t` (read in Step 1) and the event parameters; it returns either pass or a typed rejection. The typed failure space is exactly the set of rejection reasons named in the atom's Decision points.
+- **G** — the guard function: `S × E × Params × clock_t → pass | typed_failure(reason)`. G is a pure function. It takes `state_t` (read in Step 1), the event parameters, and the injected clock reading `clock_t` (read as a direct effect at the top of Step 2 — see Pipeline below); it returns either pass or a typed rejection. `clock_t` is what temporal guards evaluate against: a reject-future-timestamp bound or an ordering check against a stored timestamp is a comparison between explicit inputs, never an internal clock read. The typed failure space is exactly the set of rejection reasons named in the atom's Decision points.
 - **I** — the invariant set. Each named invariant in the atom's Invariants section maps to a member of I. Invariants are not assertions run on every read; they are correctness conditions the compiler must prove T preserves. Two classes: *single-state invariants* (hold over the new state after each write — assertable as a post-write pure function) and *sequence-safety invariants* (hold over any history of states — the compiler must prove T never produces a violating state, not assert at runtime).
 - **Q** — the query surface: the named read queries the SM exposes without triggering a transition. Maps to the atom's Outputs section (read surfaces only). Each query is a direct effect (DB read) followed by a pure projection. Q does not modify state.
 
@@ -89,10 +89,10 @@ Every state machine transition executes this exact sequence. No deviations. No a
 
 ```
 Step 1.  READ STATE          DE   state_t  = store.read(entity_id)
-Step 2.  EVALUATE GUARDS     PF   result   = G(state_t, event, params)
+Step 2.  EVALUATE GUARDS     PF   clock_t  = clock.now()              (DE)
+                                  result   = G(state_t, event, params, clock_t)
          if typed_failure:        return typed_failure(reason)   → caller
 Step 3.  TRANSITION + WRITE  DE   if pass:
-                                    clock_t     = clock.now()          (DE)
                                     id_t        = entropy.generate()   (DE, if needed)
                                     state_{t+1} = T(state_t, event, params, clock_t, id_t)
                                     store.write(state_{t+1})
@@ -100,7 +100,7 @@ Step 4.  PROJECT OUTPUT      PF   output = R(state_{t+1}, event)
                                   return output   → caller
 ```
 
-**Clock and ID are injected at Step 3, not called from within T.** T receives `clock_t` and `id_t` as parameters; it does not read the clock or generate IDs internally. A T that calls `now()` or `uuid()` inside itself is non-deterministic — it cannot be given fixed inputs to produce a predictable output, which means it cannot be tested deterministically and cannot be treated as a compilation target. Injection discipline is what makes T a deterministic function of its inputs. The clock read and entropy read are explicit direct effects at the top of Step 3, before T runs.
+**Clock and ID are injected, never called from within G or T.** The clock is read once per invocation — an explicit direct effect at the top of Step 2 — and the same `clock_t` is passed first to G and then to T; the entropy read is an explicit direct effect at the top of Step 3, before T runs. G and T receive `clock_t` (and T additionally `id_t`) as parameters; neither reads the clock or generates IDs internally. A G or T that calls `now()` or `uuid()` inside itself is non-deterministic — it cannot be given fixed inputs to produce a predictable output, which means it cannot be tested deterministically and cannot be treated as a compilation target. Injection discipline is what makes both functions deterministic in their inputs. The single shared reading also removes guard/stamp skew: the value a temporal guard validated is byte-identical to the value T stamps into the record. *(Placement revised 2026-07-12: this section previously read the clock at the top of Step 3, after guards — which left temporal guards, e.g. Approval Step's reject-future-timestamp and resolved-value ordering bounds, with no legitimate clock access, since a pure G may not invoke a direct effect. Surfaced by the 2026-07-12 scheduled rescan of Approval Step and Party Identity.)*
 
 **ID generation is conditional.** `id_t` is generated only for transitions that create new records — `place_hold` in Provisional Commitment, `assign` in Assignment, `add` in Personal Todo. Transitions that mutate existing records (confirm, release, expire, recall, edit, complete) do not generate an id.
 
@@ -134,7 +134,7 @@ The Grace Commons atom spec maps to the execution model through a direct section
 | State (transition descriptions) | T — transition function body (DB write per transition) |
 | Inputs (action signatures) | E — typed event set per action |
 | Inputs (rejection reasons in signatures) | Typed failure space of G |
-| Decision points | G — guard function per event, evaluating over state_t |
+| Decision points | G — guard function per event, evaluating over state_t and clock_t |
 | Invariants (single-state) | Post-write PF assertions; compiler emits checks after store.write |
 | Invariants (sequence-safety) | Compiler correctness obligations on T; runtime serialization guarantees |
 | Outputs (read surfaces) | Q — named read queries; DE reads + PF projection |
@@ -375,7 +375,7 @@ Testing in Grace Commons is not a separate layer. It is a second view over the s
 
 ### Test types
 
-**Guard test.** Exercises G directly — no store, no pipeline, no IO. Inputs: a known `state_t` and event parameters. Execution: call `G(state_t, event, params)` as a pure function. Assertion: result is the expected `pass` or `typed_failure(reason)`. One guard test per named rejection reason in the atom's Decision points, plus one for the pass case per transition. These are the fastest tests in the suite and the ones that cover the entire guard logic surface in isolation.
+**Guard test.** Exercises G directly — no store, no pipeline, no IO. Inputs: a known `state_t`, event parameters, and a fixed `clock_t`. Execution: call `G(state_t, event, params, clock_t)` as a pure function. Temporal guards (future-timestamp bounds, ordering checks against stored timestamps) are exercised by varying the fixed `clock_t`; the test stays deterministic because the clock is an input, not a read. Assertion: result is the expected `pass` or `typed_failure(reason)`. One guard test per named rejection reason in the atom's Decision points, plus one for the pass case per transition. These are the fastest tests in the suite and the ones that cover the entire guard logic surface in isolation.
 
 **Transition test.** Runs the full four-step pipeline against a real store seeded to a known state. Inputs: seed data in store (derived from the atom's Examples section) + event + params. Execution: full pipeline (Read → Guard → Transition+Write → Project). Assertions: (a) R returns the expected output; (b) Q returns results consistent with the new state; (c) single-state invariants hold over `state_{t+1}`. One transition test per named transition in the atom's State section, covering both the happy path and each guard-failure path.
 
@@ -427,7 +427,7 @@ There is also no divergence path. A test cannot encode behavior the spec does no
 A runtime implementation of a Grace Commons atom is conforming when all of the following hold:
 
 1. Every transition executes the four-step pipeline in order (Read → Guard → Transition+Write → Project) with no additional steps and no reordering.
-2. `clock_t` and `id_t` are read as direct effects and injected into T as parameters. T does not call the clock or entropy source internally.
+2. `clock_t` is read as a direct effect at the top of Step 2 and injected into both G and T as a parameter; `id_t` is read as a direct effect at Step 3 and injected into T. Neither G nor T calls the clock or entropy source internally.
 3. No persistent state mutation occurs outside Step 3's `store.write`.
 4. Every rejection reason named in the atom's Decision points is reachable and typed. No rejection reason exists that is not named in the spec.
 5. Every named invariant in I holds over the record set after any valid sequence of transitions, including sequences interleaved by other conforming callers under the implementation's serialization guarantees.

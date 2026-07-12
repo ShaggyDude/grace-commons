@@ -12,6 +12,38 @@ cut a versioned release, so everything below sits under **Unreleased**.
 
 ## [Unreleased]
 
+### Changed
+
+- **2026-07-12 — Execution Contract: guard-time clock placement revised.** The
+  pipeline's clock read moves from the top of Step 3 to the top of Step 2, and
+  G's signature gains `clock_t` (`S × E × Params × clock_t → pass |
+  typed_failure`). One reading per invocation, shared by G and T. Surfaced by
+  the 2026-07-12 scheduled rescan: temporal guards (Approval Step's
+  reject-future-timestamp and resolved-value ordering bounds; Party Identity's
+  future-date-of-birth check) had no legitimate clock access under the old
+  placement, since guards run before Step 3 and a pure function may not invoke
+  a direct effect. Beacon predates the revision (noted in §Logic Confinement
+  *Current status*); the placement update rides the projector build phase.
+- **2026-07-12 — Approval Step regrounded on Final Critique 5.** Scheduled-
+  rescan round: Invariant 9 (concurrent step independence) promoted from
+  by-construction to an explicit checked predicate in `approval-step.tla`
+  (+ twin; model 25 states, twin still rejected) per the coverage cross-check —
+  the Party Identity Invariant-6 precedent; byte-for-byte reference-equality
+  rule pinned; Invariant 9's English made universal; indeterminate-storage
+  edge case added; stale Multi-Party Approval / Notification Fanout references
+  re-pointed; acronym glosses and peer-status mirrors cleaned.
+- **2026-07-12 — Party Identity regrounded on Final Critique 5.** Scheduled-
+  rescan round: foundational capability-provenance repair — Invariant 7's
+  field-scrubbing carve-out was pinned on Retention Window, which declares no
+  scrub surface and routes privacy-law erasure elsewhere; re-declared to a
+  composing **Erasure Coordination** pattern *(forthcoming)*. The `read` query
+  surface specified (filter axes, insertion-order results, invalid-query
+  taxonomy — 45 terms in the registry). Trusted Timestamping marked
+  *(forthcoming)* and given a Composition-notes entry; malformed-party-id
+  ordering pinned to the sibling convention; "implicit clock" wording aligned
+  to the Contract's injected `clock_t`; no-caller-timestamp decision defended
+  in-line; indeterminate-storage edge case added.
+
 ### Added
 
 - **Conformance validator** ([`tools/conformance/`](./tools/conformance/README.md)) —
