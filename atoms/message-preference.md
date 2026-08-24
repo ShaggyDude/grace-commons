@@ -47,7 +47,7 @@ Instance configuration records are owned by the deployment, not by the atom's ru
 
 ### Identity model
 
-Every preference record known to the system has a **[Preference Id]** — an opaque, immutable, system-generated identifier produced by [Set]. The id is the record's identity; the principal reference and the preference values are immutable *properties* of the record, not its identity.
+Every preference record known to the system has a **[Preference Id]** — an opaque, immutable identifier host-allocated at the I/O seam (injected into the transition, not generated inside it) and produced by [Set]. The id is the record's identity; the principal reference and the preference values are immutable *properties* of the record, not its identity.
 
 The opaque-id model follows the same discipline used across the library. Identifying a record by [Principal Ref] alone would collapse the principal's update history into a single mutable record, defeating the audit story — a principal who updates their preferences three times has three records, each with its own id, each independently queryable. Identifying by ([Principal Ref], [Set At]) would entangle identity with timestamps, which the at-most-one-currently-in-effect rule (Invariant 3) already polices on a different axis. Opaque ids preserve one-record-one-id discipline.
 
@@ -70,7 +70,7 @@ Ids are not reused after a record reaches Deleted.
   - [Delete] — (Projected contract: `delete(preference_id) → ok | rejected(reason)`)
   - [Current For] — (Projected contract: `current_for(principal_ref) → preference_record | none`)
   - [Read] — (Projected contract: `read(preference_id) → preference_record | not-known`)
-- A clock providing wall-time timestamps, injected at the atom's single I/O seam. Per the Logic Confinement Principle (`execution-contract.md`), the host reads wall-time at the seam and the pure transition *receives* the timestamp as an input — the clock is neither read inside the pure core nor supplied by the business caller. Timestamps on each action ([Set At], [Suspended At], [Deleted At]) are stamped from this host-injected clock at the moment of the write, never passed in by the caller. This is both logic-confinement-conformant (no internal clock read in the core) and audit-sound: it forecloses caller-supplied timestamp lying and binds the audit story (Temporal property 11, clock-tolerance disclosure) to a single clock the deployment can characterize.
+- A clock providing wall-time timestamps and an id source for [Preference Id] allocation, both injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock and allocates the [Preference Id] at the seam before the transition runs; the pure transition *receives* the reading (`now`) and the id as injected inputs — it reads no clock and mints no id internally. Neither is supplied by the business caller, which keeps the transition deterministic. The clock enters at that single seam (the execution contract injects `clock_t` there, so the seam is not a signature parameter, and none of the projected contracts above carries a `now` argument); the reading is consumed for exactly one purpose — stamping the immutable write timestamps [Set At], [Suspended At], and [Deleted At] at the moment of the write. No guard consults it. This is both logic-confinement-conformant (no internal clock read in the core) and audit-sound: it forecloses caller-supplied timestamp lying and binds the audit story (Temporal property 11, clock-tolerance disclosure) to a single clock the deployment can characterize.
 
 ### Outputs
 
@@ -91,7 +91,7 @@ A preference record occupies one of three named states:
 
 Each record carries:
 
-- **[Preference Id]** — opaque, immutable, system-generated. Set on [Set]. Never changes.
+- **[Preference Id]** — opaque, immutable, host-allocated at the I/O seam (injected into the transition, not generated inside it). Set on [Set]. Never changes.
 - **[Principal Ref]** — opaque reference to the principal whose preferences are recorded. Set on [Set]. Never changes.
 - **[Channel Preferences]** — map from declared channel name to opaque per-channel preference value. Set on [Set] if supplied. Never changes; absence is also immutable.
 - **[Frequency Limit]** — opaque value if supplied. Set on [Set]. Never changes; absence is also immutable.
@@ -130,6 +130,8 @@ Three semantics the cells cannot hold:
 4. **Audit and recovery queries.** An auditor, DSAR (Data Subject Access Request) processor, or compliance review queries `read(preference_id)` for any record ([Active], [Suspended], or [Deleted]) or `current_for(principal_ref)` for the principal's currently-in-effect record. [Deleted] records are returned by [Read] for the lifetime of the store.
 
 ### Decision points
+
+**Logic confinement (clock and id).** The clock and the id are **injected inputs at the atom's single I/O seam**, never produced inside a transition and never passed as action parameters. The wall-time reading (`clock_t`) is taken once by the host and injected at the seam before the transition runs; the [Preference Id] is the injected `id_t`, host-allocated at the same seam. Because the clock is injected at the seam rather than threaded through the caller signatures, none of the five projected contracts carries a `now` argument. In this atom the reading is consumed for exactly one purpose — stamping the immutable write timestamps inside a committed transition: [Set At] on [Set] (and, in that same atomic supersession, [Deleted At] on the prior record), [Suspended At] on [Suspend], and [Deleted At] on [Delete]. **No guard reads it.** Every precondition below is a presence check on [Principal Ref] or [Preference Id], a declared-channel-set membership check, or a [Status] check — none is time-gated, so no rejection in this atom's taxonomy ([Invalid Request], [Not Known], [Not Active], [Already Deleted]) depends on the clock reading, and a skewed clock can only make a stored timestamp advisory (Temporal property 11), never admit or refuse a call.
 
 - **At `set(principal_ref, channel_preferences?, frequency_limit?, quiet_hours?, format?, metadata?)`** — [Principal Ref] must be non-empty — specifically, not null, undefined, or the empty string; otherwise [Invalid Request]. The atom does not parse or interpret the opaque value beyond this presence check. At least one of [Channel Preferences], [Frequency Limit], [Quiet Hours], or [Format] must be supplied — a [Set] call carrying no preference field has nothing to record and is rejected as [Invalid Request]. (The atom records the *absence* of preferences as the absence of a record, not as an empty record.) An empty [Channel Preferences] map (`{}`) does not satisfy this requirement: it carries no channel preference and is treated as not-supplied, so a [Set] whose only preference field is an empty [Channel Preferences] map is rejected as [Invalid Request]. If [Channel Preferences] is supplied, every channel name appearing as a key must be a member of the instance's declared channel set; a reference to an undeclared channel is [Invalid Request]. The per-channel preference value, the [Frequency Limit] value, the [Quiet Hours] value, the [Format] value, and [Metadata] are opaque — the atom does not parse, validate, or interpret their contents. There is no uniqueness constraint on the preference values themselves: two principals may hold identical preferences. All three rejection cases (empty [Principal Ref], no preference field supplied, undeclared channel key) produce [Invalid Request]; the implementation is free to choose which to report first in error messages or telemetry, but the rejection code is invariant across them — the caller branches on the code, not the priority.
 
@@ -314,7 +316,7 @@ What this atom does not cover:
 
 - **Cryptographic integrity of records.** The atom's immutability is spec-level — the spec says fields never change; it does not seal the records against malicious modification. Court-admissible and regulator-admissible preference records require composition with Tamper Evidence.
 
-- **Clock semantics.** [Set At], [Suspended At], and [Deleted At] are wall-time from the implicit clock. Clock skew, NTP adjustments, and timezone handling are handled at the deployment layer. Temporal property 11 is best-effort under non-monotonic clocks.
+- **Clock semantics.** Wall-time is supplied as an input injected at the atom's single I/O seam (the execution contract's `clock_t`; it is not threaded through the [Set] / [Suspend] / [Delete] signatures, none of which carries a `now` argument). The host reads the clock and supplies the reading before the transition runs, so the transition stays a pure function of its inputs and reads no clock internally. That one injected reading is what stamps [Set At], [Suspended At], and [Deleted At] — the atom's only consumers of it; no guard is time-gated. Clock skew, NTP adjustments, monotonicity, and timezone handling remain a deployment matter, handled at the deployment layer. Because no precondition consults the reading, a non-monotonic clock degrades only the annotation, never an admission decision: Temporal property 11's inequalities are best-effort under non-monotonic clocks, and the deployment's declared clock tolerance (Generation acceptance check 4) is what bounds how a supersession gap should be read.
 
 ---
 
@@ -376,7 +378,7 @@ Kind: Operation
 
 #### Preference Id
 
-The opaque, immutable, system-generated identity of a preference record, produced by [Set], never reused (Invariant 8). The principal reference and preference values are properties of the record, not its identity.
+The opaque, immutable identity of a preference record, host-allocated at the I/O seam on [Set], never reused (Invariant 8). The principal reference and preference values are properties of the record, not its identity.
 
 Kind:     Field
 Field of: the preference record
@@ -432,7 +434,7 @@ Projects: metadata
 
 #### Set At
 
-The wall-time the record was created, stamped from the host-injected clock at [Set]. Immutable (Invariant 1). The currency-reconstruction key for [Current For] and audit.
+The wall-time the record was created, stamped from the seam-injected clock reading at [Set]. Immutable (Invariant 1). The currency-reconstruction key for [Current For] and audit.
 
 Kind:     Field
 Field of: the preference record

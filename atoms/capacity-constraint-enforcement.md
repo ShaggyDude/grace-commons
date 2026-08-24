@@ -37,11 +37,11 @@ This is a freestanding (can be specified without naming any other pattern) atom 
 
 ### Identity model
 
-Every pool known to the system has a **[Pool Id]** — an opaque, immutable, system-generated identifier produced by [Declare Pool]. The id is the pool's identity; the [Declaring Actor Ref], [Declared At] timestamp, and [Declaration Reason] are immutable *properties* of the pool record, set at creation.
+Every pool known to the system has a **[Pool Id]** — an opaque, immutable identifier host-allocated at the I/O seam (injected into the transition, not generated inside it) and produced by [Declare Pool]. The id is the pool's identity; the [Declaring Actor Ref], [Declared At] timestamp, and [Declaration Reason] are immutable *properties* of the pool record, set at creation.
 
 The opaque-id model is load-bearing for two reasons. First, the *name* a deployment might use for a pool (e.g., `"flight-NK1234-2026-05-14-seats"` or `"connection-pool-primary"`) is a host-system concept: pools may be re-named, re-categorized, or re-tagged without the pool's identity changing. Second, two pools with the same human-readable label — declared in different deployment regions or against different resource registries — must have distinct ids so their arithmetic does not merge. Using a content field as identity would silently conflate logical-rename and distinct-pool cases.
 
-Each [Allocate] call produces an **[Allocation Event Id]** — opaque, immutable, system-generated. Each [Release] call produces a **[Release Event Id]**. Each [Adjust Capacity] call produces an **[Adjustment Event Id]**. Each [Suspend Pool], [Resume Pool], or [Close Pool] call produces a **[State Change Id]**. All four event-id classes are sub-records of the pool, accumulating on the pool's audit log in insertion order, each individually addressable so that composing patterns (Actor Identity attestation, Audit Trail recording, Reserve from Pool's per-commitment cross-reference) can reference a specific event by id without depending on timestamp or position.
+Each [Allocate] call produces an **[Allocation Event Id]** — opaque, immutable, host-allocated at the I/O seam (injected into the transition, not minted inside it). Each [Release] call produces a **[Release Event Id]**. Each [Adjust Capacity] call produces an **[Adjustment Event Id]**. Each [Suspend Pool], [Resume Pool], or [Close Pool] call produces a **[State Change Id]**. All four event-id classes are sub-records of the pool, accumulating on the pool's audit log in insertion order, each individually addressable so that composing patterns (Actor Identity attestation, Audit Trail recording, Reserve from Pool's per-commitment cross-reference) can reference a specific event by id without depending on timestamp or position.
 
 Units are fungible at this atom's grain — the atom does not assign or track per-allocation identities. An `allocate(pool_id, count=5, ...)` call increments the running total by five and emits one allocation event with one id; it does not produce five sub-records or five allocation ids. A subsequent `release(pool_id, count=5, ...)` decrements the running total by five and emits one release event with one id. The composing pattern (Provisional Commitment, or whatever owns the per-allocation lifecycle in the host system) supplies the per-allocation identity; this atom owns only the pool's arithmetic.
 
@@ -61,7 +61,7 @@ Units are fungible at this atom's grain — the atom does not assign or track pe
   - `resume_pool(pool_id, resuming_actor_ref, reason) → state_change_id | rejected(not-known | not-suspended | already-closed | invalid-request | storage-failure)`
   - `close_pool(pool_id, closing_actor_ref, reason) → state_change_id | rejected(not-known | already-closed | invalid-request | storage-failure)`
   - `query(pool_id) → {capacity, allocated, available, state} | rejected(not-known)`
-- An implicit clock providing the wall-time [Now] (clock time as a human would read it) stamped into each event's [Recorded At] and into [Declared At].
+- A clock providing wall-time timestamps and an id source for [Pool Id] and event-id allocation, both injected at the atom's single I/O seam. Per the Logic Confinement Principle (see [`execution-contract.md`](../execution-contract.md)), the host reads the clock and allocates the fresh id ([Pool Id], [Allocation Event Id], [Release Event Id], [Adjustment Event Id], or [State Change Id]) at the seam before the transition runs; the pure transition receives [Now] (clock time as a human would read it) and the id as injected inputs and reads no clock and mints no id internally. Neither is supplied by the business caller — which keeps the transition deterministic. The clock enters at a single seam (the execution contract injects `clock_t` there, so the seam is not a signature parameter, and none of the action signatures above carries a [Now] parameter); [Now] is consumed for exactly one purpose — stamping immutable write timestamps inside a committed transition ([Declared At] on [Declare Pool], and each audit-log event's [Recorded At]). No guard in this atom consults the clock: every precondition is a state, field-format, or arithmetic check.
 
 **On [Declare Pool]:** [Capacity] must be a non-negative integer; otherwise [Invalid Request]. [Declaring Actor Ref] and [Reason] must satisfy the uniform validation rule below.
 
@@ -100,11 +100,11 @@ A pool, once declared, occupies exactly one of three states:
 
 **Drained is not a state.** The arithmetic condition [Allocated] == [Capacity] is observable via [Query] (returns [Available] = 0) and is the precondition that causes [Allocate] to reject with [Over Capacity]. Treating it as a state would conflate a policy decision (an actor deciding to stop new allocations) with an arithmetic property (the running total has reached the bound). The state machine names policy-driven transitions only; arithmetic conditions are derived.
 
-**Ordering.** The pool's audit log is ordered by insertion sequence. References elsewhere in this spec to "after the most recent X," "between X and Y," or "most recent X" mean by insertion order, not by timestamp order. Timestamps on log entries are best-effort wall-time metadata sourced from the implicit clock; under skew or clock adjustment, timestamps may not be monotonic. Composing with Trusted Timestamping binds insertion order to externally-verifiable wall-time; without that composition, timestamps are advisory and insertion order is authoritative.
+**Ordering.** The pool's audit log is ordered by insertion sequence. References elsewhere in this spec to "after the most recent X," "between X and Y," or "most recent X" mean by insertion order, not by timestamp order. Timestamps on log entries are best-effort wall-time metadata sourced from the seam-injected [Now]; under skew or clock adjustment, timestamps may not be monotonic. Composing with Trusted Timestamping binds insertion order to externally-verifiable wall-time; without that composition, timestamps are advisory and insertion order is authoritative.
 
 Each pool record carries:
 
-- **[Pool Id]** — opaque, immutable, system-generated. Set on [Declare Pool]. Never changes.
+- **[Pool Id]** — opaque, immutable, host-allocated at the I/O seam (injected into the transition, not generated inside it). Set on [Declare Pool]. Never changes.
 - **[Declared At]** — wall-time of declaration. Set on [Declare Pool]. Never changes.
 - **[Declaring Actor Ref]** — set on [Declare Pool]. Never changes.
 - **[Declaration Reason]** — set on [Declare Pool]. Never changes.
@@ -113,11 +113,11 @@ Each pool record carries:
 - **current [State]** — one of {[Open], [Suspended], [Closed]}. Modified only by [Suspend Pool], [Resume Pool], [Close Pool].
 - **audit log** — ordered, append-only list of allocation events, release events, capacity-adjustment events, and state-change events. Each entry is individually addressable by its respective event id.
 
-Transitions — each successful write appends one audit-log event and stamps its [Recorded At] from the implicit clock:
+Transitions — each successful write appends one audit-log event and stamps its [Recorded At] from the seam-injected [Now]; no transition reads a clock internally, and no guard below consults one:
 
 | action | from state | guard | effect | result |
 |--------|-----------|-------|--------|--------|
-| [Declare Pool] | *(no record)* | — | pool created in **[Open]**; fresh [Pool Id]; [Declared At] = now; [Allocated] = 0; [Capacity] = supplied | [Pool Id] |
+| [Declare Pool] | *(no record)* | — | pool created in **[Open]**; injected [Pool Id]; [Declared At] = [Now]; [Allocated] = 0; [Capacity] = supplied | [Pool Id] |
 | [Allocate] | [Open] | [Allocated] + [Count] ≤ [Capacity] | [Allocated] += [Count]; allocation event appended; state unchanged | [Allocation Event Id] |
 | [Allocate] | [Open] | [Allocated] + [Count] > [Capacity] | none | [Over Capacity] |
 | [Allocate] | [Suspended] | — | none | [Suspended] |
@@ -168,6 +168,8 @@ Three semantics the cells cannot hold:
 This is the *preserve-by-precondition* discipline: the atom enforces the constraint by rejecting actions that would violate it, never by silently clamping a value to fit. The caller owns the resolution policy — release first, then adjust; or accept that the desired downgrade is currently infeasible.
 
 ### Decision points
+
+**Logic confinement (clock and id).** The clock and the ids are **injected inputs at the I/O seam**, never produced inside a transition and never passed as action parameters. [Now] (`clock_t`) is read once by the pipeline and injected at the seam before the transition runs; the [Pool Id] and the four event-id classes ([Allocation Event Id], [Release Event Id], [Adjustment Event Id], [State Change Id]) are the injected `id_t`, host-allocated at the same seam. Because the clock is pipeline-injected at the seam rather than threaded through the caller signatures, none of the eight action signatures carries a [Now] parameter. In this atom [Now] is consumed for exactly one purpose — stamping immutable write timestamps inside a committed transition: [Declared At] on [Declare Pool], and [Recorded At] on each allocation, release, capacity-adjustment, and state-change event. **No guard reads it.** Every precondition below is a state check ([Not Known], [Suspended], [Closed], [Not Open], [Not Suspended], [Already Closed]), a field-format check ([Invalid Request]), or an arithmetic check on stored integers ([Over Capacity], [Over Release], [Over Allocated]) — none is time-gated, so no rejection in this atom's taxonomy depends on the clock reading, and a stale or skewed [Now] can only make a timestamp advisory, never admit or refuse a call. Ordering follows from insertion sequence, not from [Now] (see *State → Ordering*).
 
 **Uniform validation rule.** Across all actions, every required string field (actor references, reasons) must be non-null, non-empty, and non-whitespace-only; otherwise [Invalid Request]. String validation operates on the Unicode codepoint sequence: *non-empty* means at least one codepoint; *non-whitespace-only* means at least one codepoint outside the Unicode whitespace category (`\p{White_Space}`); the 2000-character cap for reasons is a codepoint count, not a byte length, so multi-byte scripts are not penalized against single-byte ASCII (American Standard Code for Information Interchange — the basic English-character encoding). The atom additionally rejects with `invalid-request` any string field containing control characters (Unicode general category `Cc`: `U+0000`–`U+001F`, `U+007F`, `U+0080`–`U+009F`), zero-width characters (`U+200B`–`U+200D`, `U+FEFF`), or bidi-override characters (`U+202A`–`U+202E`, `U+2066`–`U+2069`) — the rationale is regulator-readability: a `reason` field whose contents are control bytes, zero-width-only, or bidi-spoofed is invisibly empty or deceptively rendered to a human auditor reading the records, and admitting such values would pass the atom's syntactic check while failing the audit-surface intent the field exists to serve. Unicode normalization (NFC and NFKC — Normalization Forms C and KC, the Unicode standard's canonical forms for giving equivalent characters one standard byte sequence; others) is *not* applied by the atom — it stores the codepoint sequence as supplied; deployments under regulators that require comparison or deduplication on string fields apply normalization at the deployment boundary before passing to the atom, and the atom records the normalized form. The atom does not perform case-folding on any string field — [Acting Actor Ref] values that differ in case are distinct attribution surfaces to the atom; deployments requiring case-insensitive actor identity normalize at the boundary. Every required integer field ([Capacity], [Count], [New Capacity]) must be of the correct sign (non-negative for [Capacity] and [New Capacity]; positive for [Count]); otherwise [Invalid Request].
 
@@ -400,7 +402,7 @@ What this atom does not cover:
 
 **Id-generation discipline.** The atom requires the deployment to produce [Pool Id] and event-id values that are unique across the lifetime of the system: no two pools share a [Pool Id]; no two events of the same class share an event id; no event id is reused across classes (Invariants 12 and 13). The atom does not specify the generation mechanism — UUIDv4 / UUIDv7 (Universally Unique Identifier, versions 4 and 7 — standard 128-bit random or time-ordered identifiers), content-hashed identifiers, or a coordinated monotonic sequence generator are all viable — but the obligation lives with the deployment. A generator that admits collisions under concurrent [Declare Pool] calls (e.g., a sequence counter without coordination across writers) or that re-uses ids after Retention Window purge violates Invariants 12 and 13, and the audit chain's appeal to "the event identified by [Allocation Event Id] = X" becomes ambiguous: a regulator who finds two events sharing an id has found evidence of a generator failure that invalidates downstream cross-references, and no atom-side discipline can compensate. The cross-reference surfaces this atom supports for composing patterns (Provisional Commitment commitments keyed by [Allocation Event Id], Actor Identity attestations keyed by event id, Audit Trail composite recordings keyed by event id, Permissions decisions keyed by call surface) depend structurally on id uniqueness. Implementations are expected to use a generator whose collision probability over the deployment's lifetime is negligible — UUIDv4 is the typical floor for distributed deployments; in-database generators with serialized id allocation are appropriate when a single writer can coordinate. The obligation extends across deployments that perform Retention Window purge: a purged id must not be reused for a subsequently-declared pool or event, even though the originally-bearing record no longer exists in the active log.
 
-**Clock semantics.** Timestamps on audit-log events come from an implicit clock. Skew, monotonicity, and timezone handling are handled at the deployment layer. Insertion order — not timestamp order — is the authoritative ordering for "after," "between," and "most recent" references; Trusted Timestamping composes to bind insertion order to externally-verifiable wall-time.
+**Clock semantics.** Wall-time is supplied as a pipeline-injected input at the seam (the execution contract injects `clock_t` there; it is not threaded through any of the eight action signatures); the host reads the clock and supplies [Now] before the transition runs, so the core transition remains a pure function of its inputs and reads no clock internally. The same injected [Now] stamps [Declared At] on [Declare Pool] and [Recorded At] on every audit-log event; nothing else consumes it, and no guard in this atom is time-gated. Clock quality — skew, monotonicity, timezone handling — remains a deployment matter. Because no precondition consults [Now], a dishonest or non-monotonic clock degrades only the annotation: timestamps on log entries are best-effort wall-time metadata, and **insertion order — not timestamp order — is the authoritative ordering** for "after," "between," and "most recent" references throughout this spec. Trusted Timestamping composes to bind insertion order to externally-verifiable wall-time for deployments whose regulators audit the wall-time claim.
 
 **Retention of audit-log entries and pool records.** Invariants 1, 8, and 9 establish what the atom's actions never modify or remove (the pool record itself; events' audit-identifier surface; events' append-only insertion order). The atom does not set the retention policy for how long pool records and audit-log entries remain queryable before archival or purge. Composing systems whose regulators require multi-year retention of capacity-management evidence (SOX-scope credit-limit pools, FRCP-scope (Federal Rules of Civil Procedure — the rules governing civil lawsuits in US federal courts) inventory adjustments) compose with Retention Window. Under that composition the composed-system view of both surfaces — the pool record and the audit log — is bounded by the retention schedule; the atom's Generation acceptance reconstruction is scoped to records within the active window, with archived history out-of-scope when the deployment maintains no archive. The split between scrubbing (Retention Window erasing PII-bearing `*_actor_ref` and [Reason] fields while preserving the audit-identifier surface) and purging (Retention Window removing events or pool records entirely) is named in Invariants 1, 8, and 9 and elaborated in the Retention Window Composition note.
 
@@ -466,7 +468,7 @@ Kind: Operation
 
 #### Pool Id
 
-The opaque, immutable, system-generated identity of a pool, produced by [Declare Pool] and never reused. The declaration metadata, [Capacity], [Allocated], and [State] are properties of the pool, not its identity.
+The opaque, immutable identity of a pool, host-allocated at the I/O seam on [Declare Pool] and never reused. The declaration metadata, [Capacity], [Allocated], and [State] are properties of the pool, not its identity.
 
 Kind:     Field
 Field of: Pool
@@ -506,7 +508,7 @@ Projects: state
 
 #### Declared At
 
-The wall-time a pool was declared, stamped from the implicit clock ([Now]) on [Declare Pool]. Immutable thereafter.
+The wall-time a pool was declared, stamped from the seam-injected [Now] on [Declare Pool]. Immutable thereafter.
 
 Kind:     Field
 Field of: Pool
@@ -530,7 +532,7 @@ Projects: declaration_reason
 
 #### Allocation Event Id
 
-The opaque, immutable, system-generated id of an allocation event, produced by each [Allocate] and individually addressable on the pool's audit log. Composing patterns key against it.
+The opaque, immutable id of an allocation event, host-allocated at the I/O seam on each [Allocate] and individually addressable on the pool's audit log. Composing patterns key against it.
 
 Kind:     Field
 Field of: the allocation event
@@ -538,7 +540,7 @@ Projects: allocation_event_id
 
 #### Release Event Id
 
-The opaque, immutable, system-generated id of a release event, produced by each [Release].
+The opaque, immutable id of a release event, host-allocated at the I/O seam on each [Release].
 
 Kind:     Field
 Field of: the release event
@@ -546,7 +548,7 @@ Projects: release_event_id
 
 #### Adjustment Event Id
 
-The opaque, immutable, system-generated id of a capacity-adjustment event, produced by each [Adjust Capacity].
+The opaque, immutable id of a capacity-adjustment event, host-allocated at the I/O seam on each [Adjust Capacity].
 
 Kind:     Field
 Field of: the capacity-adjustment event
@@ -554,7 +556,7 @@ Projects: adjustment_event_id
 
 #### State Change Id
 
-The opaque, immutable, system-generated id of a state-change event, produced by each [Suspend Pool], [Resume Pool], or [Close Pool].
+The opaque, immutable id of a state-change event, host-allocated at the I/O seam on each [Suspend Pool], [Resume Pool], or [Close Pool].
 
 Kind:     Field
 Field of: the state-change event
@@ -618,7 +620,7 @@ Projects: new_state
 
 #### Recorded At
 
-The wall-time an event was appended to the audit log, stamped from the implicit clock ([Now]). Best-effort metadata; insertion order, not timestamp order, is authoritative.
+The wall-time an event was appended to the audit log, stamped from the seam-injected [Now]. Best-effort metadata; insertion order, not timestamp order, is authoritative.
 
 Kind:     Field
 Field of: the audit-log event
@@ -666,10 +668,10 @@ Projects: reason
 
 #### Now
 
-The wall-time reading the implicit clock supplies, consumed to stamp [Declared At] and each event's [Recorded At]. Not stored under this name; the stored forms are the timestamps.
+The current wall-clock reading, pipeline-injected at the single I/O seam (the execution contract supplies `clock_t` there) before a transition runs — never a caller-supplied action parameter. Consumed only to stamp [Declared At] and each event's [Recorded At]; no guard consults it. Not stored under this name; the stored forms are the timestamps.
 
 Kind:         Parameter
-Parameter of: Declare Pool
+Parameter of: Declare Pool, Allocate, Release, Adjust Capacity, Suspend Pool, Resume Pool, Close Pool
 Projects:     now
 
 #### Open
@@ -840,7 +842,7 @@ Capacity Constraint Enforcement is freestanding and is designed to compose with 
 - **[Event Log](./event-log.md)** — for two distinct deployment-grain journals built around the atom's call surface. *First*, a unified system-wide event stream that includes pool-management events (the successful state changes this atom records internally) alongside other systems' events; the atom's internal audit log is the canonical record at the pool's grain, Event Log is the journal at the deployment's grain. *Second*, the attempt-journal that captures rejected calls — Event Log records the call site, rejection reason, actor, and wall-time for every `over-capacity`, `over-release`, `over-allocated`, `suspended`, `closed`, `invalid-request`, `storage-failure`, etc. that this atom emits. The second use case is what makes the atom's rejection-visibility boundary (see *Edge cases → Rejection visibility*) tractable: deployments under PCI DSS Req. 10.2.4 or with breach-investigation requirements for denied-attempt visibility wire Event Log around the call surface and read the rejection journal from there.
 - **[Actor Identity](./actor-identity.md)** — for non-repudiable attribution. The atom's `*_actor_ref` fields supply attribution; Actor Identity supplies the cryptographic or procedural binding that makes the attribution survive a regulated audit. Each `allocate`, `release`, `adjust_capacity`, `suspend_pool`, `resume_pool`, and `close_pool` action's event id is the surface Actor Identity attests against.
 - **[Permissions](./permissions.md)** — for authorization, the boundary this atom does not enforce (see *Edge cases → Authorization*). Where Actor Identity binds an action to a specific actor (who acted?), Permissions decides whether that actor was entitled to act (was the action permitted?). The composition sits in front of `allocate`, `release`, `adjust_capacity`, `suspend_pool`, `resume_pool`, and `close_pool`; an unauthorized caller is rejected at the Permissions layer before reaching this atom, so the atom's records contain only actions whose Permissions check passed. Deployments under regulators requiring explicit authorization controls (SOX segregation-of-duties for capacity adjustments, HIPAA minimum-necessary for healthcare allocations, PCI DSS Req. 7 for least-privilege access to payment-related capacity pools) compose this atom with Permissions and Actor Identity together — Permissions for the authorization decision, Actor Identity for the non-repudiable attribution of the admitted action.
-- **Trusted Timestamping** *(forthcoming)* — for binding the atom's insertion-order audit log to externally-verifiable wall-time. The atom's `recorded_at` timestamps are best-effort wall-time metadata from the implicit clock; under skew or clock adjustment they may not be monotonic, and insertion order is authoritative for the atom's own consistency. Trusted Timestamping composes by anchoring event ids (or batches of event ids) to externally-verifiable wall-time, producing a record that both (a) the event was recorded at the claimed wall-time and (b) the insertion order is consistent with monotonic wall-time. Deployments whose regulators audit wall-time claims (SOX-scope material transactions with end-of-period cutoff, healthcare event-time attribution under HIPAA, payment-network settlement windows) compose Trusted Timestamping to make the wall-time surface defensible. Without that composition, the *Clock semantics* edge case applies: timestamps are advisory, insertion order is authoritative.
+- **Trusted Timestamping** *(forthcoming)* — for binding the atom's insertion-order audit log to externally-verifiable wall-time. The atom's `recorded_at` timestamps are best-effort wall-time metadata from the seam-injected clock; under skew or clock adjustment they may not be monotonic, and insertion order is authoritative for the atom's own consistency. Trusted Timestamping composes by anchoring event ids (or batches of event ids) to externally-verifiable wall-time, producing a record that both (a) the event was recorded at the claimed wall-time and (b) the insertion order is consistent with monotonic wall-time. Deployments whose regulators audit wall-time claims (SOX-scope material transactions with end-of-period cutoff, healthcare event-time attribution under HIPAA, payment-network settlement windows) compose Trusted Timestamping to make the wall-time surface defensible. Without that composition, the *Clock semantics* edge case applies: timestamps are advisory, insertion order is authoritative.
 - **[Retention Window](./retention-window.md)** — for governing how long audit-log entries *and pool records themselves* remain actively accessible, including the distinction between *scrubbing* (erasing personally-identifying attribution while preserving the audit-identifier surface) and *purging* (removing entries entirely). Invariants 1, 8, and 9 each name the atom's contribution (no atom-defined action removes a pool record or modifies/removes an event) and acknowledge that the composed-system view differs under retention schedules: Invariant 1 covers the pool record; Invariant 8 covers the event-level attribution/audit-identifier split; Invariant 9 covers the audit log's append-only discipline. *Scrubbing scope*: when the composing deployment's `*_actor_ref` or `reason` fields contain personally-identifying information (a credit-line pool's `declaration_reason` referencing a customer by id; a healthcare pool's `reason` naming a patient cohort), Retention Window may erase those fields under GDPR Article 17 or post-retention obligations. The audit-identifier surface that survives scrubbing is: `pool_id`, all event ids (`allocation_event_id`, `release_event_id`, `adjustment_event_id`, `state_change_id`), `declared_at`, per-event `recorded_at`, arithmetic fields (`capacity`, `count`, `allocated_before`, `allocated_after`, `prior_capacity`, `new_capacity`, `prior_state`, `new_state`), and event-class indicator. The arithmetic chain remains reconstructable across scrubbing — Invariant 4 is verifiable from the scrubbed records. *Purging scope*: Retention Window may additionally remove entries entirely from the active log under post-retention regulatory schedules, optionally moving them to an archive maintained by the deployment. Once purged, the arithmetic chain for pre-purge history is no longer reconstructable from active records; Generation acceptance scopes reconstruction to the active retention window (see Generation acceptance preamble). Deployments that need verifiable pre-retention history must maintain the archive; deployments that operate under purge-without-archive (regulatory minimums met by the active retention) accept the bounded reconstruction surface.
 - **[Audit Trail](../compositions/audit-trail.md)** — the canonical regulated-audit composition (Event Log + Actor Identity + Retention Window + Tamper Evidence) wrapped around the atom's event surface to produce tamper-evident composite recording. Where the *Event Log* composition supplies a deployment-grain journal and the *Actor Identity* composition supplies attribution binding, *Audit Trail* supplies the composite — including the Tamper Evidence layer that makes any post-hoc modification to the recorded event stream detectable. Deployments whose regulators require tamper-evident audit (SOX §404 records-alone-defensible evidence, PCI DSS Req. 10.5 audit-trail integrity, GDPR Article 30 records-of-processing under tamper-evident discipline) compose Audit Trail rather than Event Log alone. The atom's contribution to the composition is the event-id surface and the immutable audit-identifier fields under Invariant 8; Audit Trail layers the other obligations on top.
 - **[Subscription](./subscription.md) + [Notification](./notification.md)** — for propagating pool state changes (Open → Suspended, drained-condition reached, capacity adjusted) to downstream consumers. Composes via the existing Notification Fanout pattern.
