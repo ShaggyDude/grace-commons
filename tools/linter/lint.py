@@ -353,6 +353,156 @@ def check_rests_on_refs(patterns: dict[Path, Pattern], md_files: list[Path]) -> 
 
 
 # --------------------------------------------------------------------------- #
+# F-constituent-call — composition call sites vs. constituent contracts
+# --------------------------------------------------------------------------- #
+# The second mechanical slice of the capability-provenance rule (the first is
+# F-invariant-ref above): a composition's qualified constituent call —
+# `Constituent.action(args)` — must name an action the constituent actually
+# declares, and any keyword argument it passes must appear in that action's
+# declared contract. This is the drift class that produced the 2026-08-24
+# findings (calls to a removed `Capability.expire`; `allocated_by_ref=` /
+# `resource_ref=` against `allocate(allocator_ref, scope, max_redemptions,
+# ttl)`; a phantom `retention_policy=` on `record_action`): an atom re-grounds,
+# its contract moves, and nothing mechanical re-checked the composers.
+#
+# Precision over recall, per the linter's division of labor:
+#   - action existence is checked against a BROAD set (every backticked
+#     `name(` in the constituent, plus declared contracts), so an action
+#     declared in an unrecognized format never false-positives;
+#   - keyword arguments are checked only where a STRICT contract declaration
+#     was parsed ("Projected contract: `f(a, b)`" or a bold-inline signature
+#     "**`f(a, b) → ...`**"), with `?`-optional and [bracket]-optional markers
+#     stripped;
+#   - positional-arity drift, renamed rejection reasons, and semantic drift
+#     stay fresh-reader concerns.
+# Call sites are scanned only ABOVE the "## Status" heading — Lineage notes
+# legitimately quote superseded signatures as history.
+
+CONSTITUENT_CALL = re.compile(
+    r"\b((?:[A-Z][A-Za-z]+ )?[A-Z][A-Za-z]+)\.([a-z_][a-z0-9_]*)\(")
+CONTRACT_PROJECTED = re.compile(
+    r"Projected contract:\s*`([a-z_][a-z0-9_]*)\(([^)]*)\)")
+CONTRACT_BOLD = re.compile(
+    r"^\s*(?:[-*]\s*)?\*\*`([a-z_][a-z0-9_]*)\(([^)]*)\)", re.M)
+BACKTICKED_ACTION = re.compile(r"`([a-z_][a-z0-9_]*)\(")
+KWARG = re.compile(r"^\s*([a-z_][a-z0-9_]*)\s*=[^=]")
+HANDLE_ALIASES = {"workflow-state-machine": "state-machine"}
+
+
+def _handle_to_kebab(handle: str) -> str:
+    s = handle.replace(" ", "")
+    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "-", s).lower()
+
+
+def _resolve_handle(handle: str, stems: dict[str, Path]) -> Path | None:
+    """Map a call-site handle to a pattern file: exact kebab, alias, unique
+    prefix (Capacity Constraint -> capacity-constraint-enforcement), then a
+    retry on the last word alone (a sentence capital glued to a one-word
+    handle: 'The LegalHold' -> 'LegalHold')."""
+    for candidate in (handle, handle.split(" ")[-1] if " " in handle else None):
+        if not candidate:
+            continue
+        kebab = _handle_to_kebab(candidate)
+        kebab = HANDLE_ALIASES.get(kebab, kebab)
+        if kebab in stems:
+            return stems[kebab]
+        prefixed = [p for s, p in stems.items() if s.startswith(kebab + "-")]
+        if len(prefixed) == 1:
+            return prefixed[0]
+    return None
+
+
+def _declared_contracts(text: str) -> dict[str, set[str]]:
+    out: dict[str, set[str]] = {}
+    for rx in (CONTRACT_PROJECTED, CONTRACT_BOLD):
+        for name, params in rx.findall(text):
+            cleaned = set()
+            for piece in params.split(","):
+                piece = piece.strip().strip("?").strip("[]").strip("?").strip()
+                if re.fullmatch(r"[a-z_][a-z0-9_]*", piece):
+                    cleaned.add(piece)
+            out.setdefault(name, set()).update(cleaned)
+    return out
+
+
+def _top_level_kwargs(text: str, open_paren: int) -> list[str]:
+    """Keyword-argument names at depth 0 of the call, best-effort to end of
+    line if the paren never closes there."""
+    depth, start, pieces = 0, open_paren + 1, []
+    i = open_paren + 1
+    while i < len(text) and text[i] != "\n":
+        c = text[i]
+        if c in "({[":
+            depth += 1
+        elif c in ")}]":
+            if c == ")" and depth == 0:
+                break
+            depth -= 1
+        elif c == "," and depth == 0:
+            pieces.append(text[start:i])
+            start = i + 1
+        i += 1
+    pieces.append(text[start:i])
+    kwargs = []
+    for piece in pieces:
+        m = KWARG.match(piece)
+        if m:
+            kwargs.append(m.group(1))
+    return kwargs
+
+
+def check_constituent_calls(patterns: dict[Path, Pattern]) -> list[Finding]:
+    stems = {p.path.stem: p.path for p in patterns.values()}
+    # per-constituent caches
+    contracts_cache: dict[Path, dict[str, set[str]]] = {}
+    broad_cache: dict[Path, set[str]] = {}
+
+    def contracts_of(path: Path) -> dict[str, set[str]]:
+        if path not in contracts_cache:
+            contracts_cache[path] = _declared_contracts(patterns[path].text)
+        return contracts_cache[path]
+
+    def broad_actions_of(path: Path) -> set[str]:
+        if path not in broad_cache:
+            broad_cache[path] = set(BACKTICKED_ACTION.findall(patterns[path].text)) \
+                                | set(contracts_of(path))
+        return broad_cache[path]
+
+    findings: list[Finding] = []
+    for p in patterns.values():
+        if "/compositions/" not in p.path.as_posix():
+            continue
+        cut = p.text.find("\n## Status")
+        body = p.text if cut == -1 else p.text[:cut]
+        for m in CONSTITUENT_CALL.finditer(body):
+            handle, action = m.group(1), m.group(2)
+            target = _resolve_handle(handle, stems)
+            if target is None or target == p.path:
+                continue
+            tname = target.stem
+            if action not in broad_actions_of(target):
+                findings.append(Finding(
+                    p.path, line_of(body, m.start()), "F-constituent-call",
+                    f"calls {handle}.{action}(...) but {tname} declares no "
+                    f"such action",
+                ))
+                continue
+            declared = contracts_of(target).get(action)
+            if not declared:
+                continue  # action exists but no strict contract parsed — skip kwargs
+            open_paren = m.end() - 1
+            for k in _top_level_kwargs(body, open_paren):
+                if k not in declared:
+                    findings.append(Finding(
+                        p.path, line_of(body, m.start()), "F-constituent-call",
+                        f"{handle}.{action}(... {k}= ...) — parameter `{k}` is "
+                        f"not in {tname}'s contract "
+                        f"`{action}({', '.join(sorted(declared))})`",
+                    ))
+    return findings
+
+
+# --------------------------------------------------------------------------- #
 # Status grammar / mirror (G, H, I)
 # --------------------------------------------------------------------------- #
 
@@ -809,6 +959,7 @@ def main(argv: list[str]) -> int:
     findings += check_stale_forthcoming(root, patterns, scan)
     findings += check_counts(root, patterns)
     findings += check_rests_on_refs(patterns, scan)
+    findings += check_constituent_calls(patterns)
     findings += check_status_grammar(patterns)
     findings += check_status_mirror(root, patterns)
     findings += check_duplicate_rows(root)
