@@ -20,25 +20,38 @@
 
 CONSTANT Entries
 
-VARIABLES provState, auditState, surfaced
-vars == <<provState, auditState, surfaced>>
+VARIABLES intentState, provState, auditState, surfaced
+vars == <<intentState, provState, auditState, surfaced>>
 
 TypeOK ==
+    /\ intentState \in [Entries -> {"absent", "present"}]
     /\ provState  \in [Entries -> {"absent", "present"}]
     /\ auditState \in [Entries -> {"absent", "clean", "recovered"}]
     /\ surfaced   \in [Entries -> BOOLEAN]
 
 Init ==
+    /\ intentState = [e \in Entries |-> "absent"]
     /\ provState  = [e \in Entries |-> "absent"]
     /\ auditState = [e \in Entries |-> "absent"]
     /\ surfaced   = [e \in Entries |-> FALSE]
 
 \* BUG: the Provenance write lands as its own step — no surfacing, no finding,
 \* no compensation obligation taken on. The orphan is silent.
+\* The intent record is kept correct in this twin — authentication precedence
+\* still holds here — so that this twin isolates the BINDING defect alone and
+\* does not co-break Invariant 7. (Added 2026-08-26 with the authentication
+\* -precedence round; the dedicated twin for Invariant 7 is
+\* chain-of-custody-buggy-unauthenticated.tla.)
+WriteIntent(e) ==
+    /\ intentState[e] = "absent"
+    /\ intentState' = [intentState EXCEPT ![e] = "present"]
+    /\ UNCHANGED <<provState, auditState, surfaced>>
+
 WriteProv(e) ==
+    /\ intentState[e] = "present"
     /\ provState[e] = "absent"
     /\ provState' = [provState EXCEPT ![e] = "present"]
-    /\ UNCHANGED <<auditState, surfaced>>
+    /\ UNCHANGED <<intentState, auditState, surfaced>>
 
 \* The audit write may eventually follow — or never. Even when it does, the
 \* interleaving already passed through the silent orphan.
@@ -46,9 +59,9 @@ WriteAudit(e) ==
     /\ provState[e] = "present"
     /\ auditState[e] = "absent"
     /\ auditState' = [auditState EXCEPT ![e] = "clean"]
-    /\ UNCHANGED <<provState, surfaced>>
+    /\ UNCHANGED <<intentState, provState, surfaced>>
 
-Next == \E e \in Entries : WriteProv(e) \/ WriteAudit(e)
+Next == \E e \in Entries : WriteIntent(e) \/ WriteProv(e) \/ WriteAudit(e)
 Spec == Init /\ [][Next]_vars
 
 Orphan(e) == provState[e] = "present" /\ auditState[e] = "absent"
@@ -69,8 +82,12 @@ Inv4_RecoveryDistinguishable ==
         /\ (auditState[e] = "clean")     => ~surfaced[e]
         /\ (auditState[e] = "recovered") => surfaced[e]
 
+Inv7_AuthPrecedence ==
+    \A e \in Entries : (provState[e] = "present") => (intentState[e] = "present")
+
 Safety ==
     /\ TypeOK
+    /\ Inv7_AuthPrecedence
     /\ Inv4_SafetyBijection
     /\ Inv4_NoUnsurfacedOrphan
     /\ Inv4_NoOrphanAudit

@@ -35,6 +35,11 @@
 \* a derived index per execution-contract.md §Composition state — rebuildable by
 \* enumerating Audit Trail events whose `data.entry_id` names the entry; outside
 \* the atomicity surface; omitted from the model per that section's obligation 2):
+\*   intentState: absent | present                      (the pre-commit intent record —
+\*                the AuditTrail.record_action written BEFORE the Provenance
+\*                write, inside which the substrate validates the acting
+\*                custodian's credential; added 2026-08-26 by the
+\*                authentication-precedence round)
 \*   provState  : absent | present                      (Provenance custody entry)
 \*   auditState : absent | clean | recovered            (Audit Trail record_action
 \*                                                       event; `recovered` carries
@@ -80,16 +85,18 @@
 
 CONSTANT Entries                \* finite set of custody entry creations
 
-VARIABLES provState, auditState, surfaced
-vars == <<provState, auditState, surfaced>>
+VARIABLES intentState, provState, auditState, surfaced
+vars == <<intentState, provState, auditState, surfaced>>
 
 TypeOK ==
+    /\ intentState \in [Entries -> {"absent", "present"}]
     /\ provState  \in [Entries -> {"absent", "present"}]
     /\ auditState \in [Entries -> {"absent", "clean", "recovered"}]
     /\ surfaced   \in [Entries -> BOOLEAN]
 
 \* Every entry begins uncreated: no Provenance entry, no audit event, no finding.
 Init ==
+    /\ intentState = [e \in Entries |-> "absent"]
     /\ provState  = [e \in Entries |-> "absent"]
     /\ auditState = [e \in Entries |-> "absent"]
     /\ surfaced   = [e \in Entries |-> FALSE]
@@ -97,21 +104,33 @@ Init ==
 \* Happy path: the Provenance custody entry and the Audit Trail record_action
 \* land together (the transactional-boundary form of the atomic-commit arm).
 \* The audit event is a CLEAN binding.
+\* The intent record: written before any Provenance call that commits. This is
+\* where the acting custodian's credential is validated (the substrate's
+\* ActorIdentity.attest guard inside record_action), so it is the enabling
+\* condition for every committing action below. It commits nothing itself —
+\* an intent record with no outcome is an authenticated attempt, not an orphan.
+WriteIntent(e) ==
+    /\ intentState[e] = "absent"
+    /\ intentState' = [intentState EXCEPT ![e] = "present"]
+    /\ UNCHANGED <<provState, auditState, surfaced>>
+
 CommitClean(e) ==
+    /\ intentState[e] = "present"
     /\ provState[e] = "absent"
     /\ provState'  = [provState  EXCEPT ![e] = "present"]
     /\ auditState' = [auditState EXCEPT ![e] = "clean"]
-    /\ UNCHANGED surfaced
+    /\ UNCHANGED <<intentState, surfaced>>
 
 \* Partial failure: the irreversible Provenance write lands, the audit write
 \* fails. The action's declared failure path returns rejected(recording-failure)
 \* AND surfaces the orphan to the compliance dashboard in the same outcome —
 \* the orphan is reachable, durable until compensated, and never silent.
 FailPartial(e) ==
+    /\ intentState[e] = "present"
     /\ provState[e] = "absent"
     /\ provState'  = [provState EXCEPT ![e] = "present"]
     /\ surfaced'   = [surfaced  EXCEPT ![e] = TRUE]
-    /\ UNCHANGED auditState
+    /\ UNCHANGED <<intentState, auditState>>
 
 \* Compensation: the failed AuditTrail.record_action is retried until it lands;
 \* the compensating event carries cascade_recovery = true, so the recovered
@@ -128,12 +147,13 @@ RetryAudit(e) ==
     /\ provState[e] = "present"
     /\ auditState[e] = "absent"
     /\ auditState' = [auditState EXCEPT ![e] = "recovered"]
-    /\ UNCHANGED <<provState, surfaced>>
+    /\ UNCHANGED <<intentState, provState, surfaced>>
 
-Next == \E e \in Entries : CommitClean(e) \/ FailPartial(e) \/ RetryAudit(e)
+Next == \E e \in Entries :
+            WriteIntent(e) \/ CommitClean(e) \/ FailPartial(e) \/ RetryAudit(e)
 Spec == Init /\ [][Next]_vars
 
-\* @isolate-facets Inv4_SafetyBijection Inv4_NoUnsurfacedOrphan Inv4_NoOrphanAudit Inv4_RecoveryDistinguishable
+\* @isolate-facets Inv4_SafetyBijection Inv4_NoUnsurfacedOrphan Inv4_NoOrphanAudit Inv4_RecoveryDistinguishable Inv7_AuthPrecedence
 \* --- composition-level safety invariants (Invariant 4, safety arm) ---
 
 \* The orphan configuration: a Provenance custody entry with no audit event —
@@ -167,8 +187,20 @@ Inv4_RecoveryDistinguishable ==
         /\ (auditState[e] = "clean")     => ~surfaced[e]
         /\ (auditState[e] = "recovered") => surfaced[e]
 
+\* --- Invariant 7, authentication precedence (added 2026-08-26) ---
+
+\* No custody entry is ever committed without its intent record already present.
+\* The intent record is where the acting custodian's credential was validated,
+\* so this is the model form of "custody never moves on an unverified identity."
+\* Note the asymmetry, which is the point: the converse does NOT hold — an
+\* intent record with no Provenance entry is an authenticated attempt the chain
+\* refused, a reachable and desirable state, not a violation.
+Inv7_AuthPrecedence ==
+    \A e \in Entries : (provState[e] = "present") => (intentState[e] = "present")
+
 Safety ==
     /\ TypeOK
+    /\ Inv7_AuthPrecedence
     /\ Inv4_SafetyBijection
     /\ Inv4_NoUnsurfacedOrphan
     /\ Inv4_NoOrphanAudit
