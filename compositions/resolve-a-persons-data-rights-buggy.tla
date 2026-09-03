@@ -1,80 +1,83 @@
 ---- MODULE resolve-a-persons-data-rights-buggy ----
-\* BUGGY TWIN (binding hazard; vacuity guard) for resolve-a-persons-data-rights.tla.
+\* BUGGY TWIN (orphan-silence hazard; vacuity guard) for
+\* resolve-a-persons-data-rights.tla.
+\* Grace Commons — derived validator. The English spec is the source of truth.
 \*
-\* The fulfillment commit is split into three separate, interleavable sub-steps
-\* with NO compensation — the naive non-atomic implementation the *Cross-store
-\* consistency under partial failure* edge case and Invariant 1 warn against. The
-\* Selective Disclosure response-disclosure writes first, then the dsar.*_fulfilled
-\* event, then the request_to_fulfillment binding:
-\*   WriteSD    -> response-disclosure lands (dispositions land with it here)
-\*   WriteAudit -> dsar.*_fulfilled event lands
-\*   Bind       -> request_to_fulfillment binding lands
-\* Because they are distinct actions, TLC stops after WriteSD alone: sdState =
-\* present, auditState = absent, bound = FALSE — a dangling response-disclosure
-\* with no sealed fulfillment event (the exact orphan the partial-failure edge
-\* case describes). Inv1_BindingBijection and Inv1_NoDanglingFulfillment both fail.
-\* The checker rejects the twin. If it reports all invariants hold, the harness is
-\* vacuous.
+\* Updated 2026-08-27 alongside the correct model, when Invariant 1 was restated
+\* from one atomic commit to safety plus liveness (methodology debt #19, the
+\* atomicity class). A twin has to break the invariant as it is NOW stated, or it
+\* guards a claim the corpus no longer makes.
+\*
+\* BUG: the disclosure and the event are split into interleavable steps with NO
+\* surfacing and NO compensation — the shape the restated Invariant 1 forbids.
+\* The orphan is reachable here, but so is it in the CORRECT model, deliberately;
+\* the difference is that here it is SILENT and terminal. Nothing sets surfaced,
+\* nothing retries the audit write, and the state is a dead end. That is what the
+\* restatement turns on — not whether a partial exists, but whether anyone is
+\* looking at it and whether it resolves.
+\*
+\* Breaks Inv1_NoUnsurfacedOrphan and, with it, the umbrella Inv1_BindingBijection
+\* (which is that facet conjoined with Inv1_NoOrphanEvent — see the correct
+\* model's comment on the umbrella). Of the CFG-LISTED invariants it breaks
+\* exactly one, Inv1_BindingBijection, and it leaves Inv2_NoSilentOmission intact:
+\* every disposition is set before the disclosure lands. That is what keeps this
+\* twin dedicated to the orphan-silence claim rather than to coverage.
 
 CONSTANT Records
 
-VARIABLES disp, sdState, auditState, bound
-vars == <<disp, sdState, auditState, bound>>
+VARIABLES disp, sdState, auditState, surfaced
+vars == <<disp, sdState, auditState, surfaced>>
 
 TypeOK ==
     /\ disp       \in [Records -> {"none", "set"}]
     /\ sdState    \in {"absent", "present"}
-    /\ auditState \in {"absent", "present"}
-    /\ bound      \in BOOLEAN
+    /\ auditState \in {"absent", "clean", "recovered"}
+    /\ surfaced   \in BOOLEAN
 
 Init ==
     /\ disp       = [r \in Records |-> "none"]
     /\ sdState    = "absent"
     /\ auditState = "absent"
-    /\ bound      = FALSE
+    /\ surfaced   = FALSE
 
-\* BUG: three separate sub-steps, interleavable, no compensation. Dispositions
-\* land atomically with the SD write (coverage is not the focus of this twin), but
-\* the disclosure / event / binding are split, so a dangling partial is reachable.
+\* The disclosure lands, and nothing surfaces it and nothing compensates it.
 WriteSD ==
     /\ sdState = "absent"
     /\ disp'    = [r \in Records |-> "set"]
     /\ sdState' = "present"
-    /\ UNCHANGED <<auditState, bound>>
+    /\ UNCHANGED <<auditState, surfaced>>
 
 WriteAudit ==
     /\ sdState = "present"
     /\ auditState = "absent"
-    /\ auditState' = "present"
-    /\ UNCHANGED <<disp, sdState, bound>>
+    /\ auditState' = "clean"
+    /\ UNCHANGED <<disp, sdState, surfaced>>
 
-Bind ==
-    /\ sdState = "present"
-    /\ auditState = "present"
-    /\ ~bound
-    /\ bound' = TRUE
-    /\ UNCHANGED <<disp, sdState, auditState>>
-
-Next == WriteSD \/ WriteAudit \/ Bind
+Next == WriteSD \/ WriteAudit
 Spec == Init /\ [][Next]_vars
 
 Coherent ==
-    \/ (sdState = "absent"  /\ auditState = "absent"  /\ bound = FALSE)
-    \/ (sdState = "present" /\ auditState = "present" /\ bound = TRUE)
+    \/ (sdState = "absent"  /\ auditState = "absent" /\ ~surfaced)
+    \/ (sdState = "present" /\ auditState \in {"clean", "recovered"})
 
-Inv1_BindingBijection == Coherent
-Inv1_NoDanglingFulfillment ==
-    (sdState = "present") => (auditState = "present" /\ bound)
+Orphan == sdState = "present" /\ auditState = "absent"
+
+Inv1_BindingBijection == Coherent \/ (Orphan /\ surfaced)
+Inv1_NoUnsurfacedOrphan == Orphan => surfaced
 Inv1_NoOrphanEvent ==
-    (auditState = "present") => (sdState = "present")
+    (auditState \in {"clean", "recovered"}) => (sdState = "present")
+Inv1_RecoveryDistinguishable ==
+    /\ (auditState = "clean")     => ~surfaced
+    /\ (auditState = "recovered") => surfaced
 Inv2_NoSilentOmission ==
-    bound => (\A r \in Records : disp[r] = "set")
+    (auditState \in {"clean", "recovered"}) => (\A r \in Records : disp[r] = "set")
 
 Safety ==
     /\ TypeOK
     /\ Inv1_BindingBijection
-    /\ Inv1_NoDanglingFulfillment
+    /\ Inv1_NoUnsurfacedOrphan
     /\ Inv1_NoOrphanEvent
+    /\ Inv1_RecoveryDistinguishable
     /\ Inv2_NoSilentOmission
 
 ====

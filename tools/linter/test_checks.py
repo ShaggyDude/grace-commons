@@ -51,10 +51,24 @@ from lint import (  # noqa: E402
 #
 # Pinning a substring of the enclosing block survives renumbering, which line
 # numbers do not.
-P_MOTIVATING_SITE = (
-    "resolve-a-persons-data-rights",
-    "Invariant 1 — Request",
-)
+# BOTH sites the regression silenced are pinned, and which two they are is the
+# point. A hedge word like "modulo" clusters around a pattern's most careful
+# claims, because those are the ones an author qualifies — so a hedge-word
+# suppressor is not randomly lossy, it is biased toward silencing the findings
+# that matter most. The two it dropped here are each their pattern's declared
+# formal-model subject.
+P_MOTIVATING_SITES = [
+    ("capability-backed-sharing", "Invariant 2 — Disclosure-accountability"),
+]
+# CLOSED 2026-08-27 — Resolve a Person's Data Rights. Its Invariant 1 was the
+# other motivating site, and it is now restated in safety-plus-liveness form, so
+# the check is correctly silent there and the pin is retired rather than
+# weakened. Retiring a pin is the only legitimate reason a positive disappears,
+# and it belongs in the same change as the fix: a pin removed without the
+# corresponding restatement is how a baseline quietly rots.
+P_RETIRED_SITES = [
+    ("resolve-a-persons-data-rights", "Invariant 1 — Request", "restated 2026-08-27"),
+]
 
 # ── P-atomic-audit ─────────────────────────────────────────────────────────── #
 # Silent: the exemplar. Chain of Custody's Invariant 4 splits the claim into
@@ -63,10 +77,14 @@ P_MOTIVATING_SITE = (
 # state is therefore reachable. Nothing to flag.
 P_SILENT = {"chain-of-custody"}
 # Firing: the three routed instances (roadmap.md debt #19, pre-campaign survey).
+# Resolve a Person's Data Rights was here until 2026-08-27; its four sites closed
+# when Invariant 1 was restated (debt #19 step (iii), atomicity class). It must
+# now stay OUT of this set — the `exact` comparison below turns that into a real
+# assertion rather than a deletion, so a regression that reopened it would be
+# reported as an unpinned firing.
 P_FIRING = {
     "capability-backed-sharing",
     "propagate-consent-revocation-downstream",
-    "resolve-a-persons-data-rights",
 }
 
 # ── Q-rebuild-bound ───────────────────────────────────────────────────────── #
@@ -101,22 +119,25 @@ def _block_at(text: str, line: int) -> str:
     return "\n".join(lines[start:end + 1])
 
 
-def check_motivating_site(patterns, findings) -> str | None:
-    """P must fire on the specific block that motivated the check, not merely
-    somewhere in that file."""
-    stem, marker = P_MOTIVATING_SITE
-    for f in findings:
-        if f.path.stem != stem:
-            continue
-        pat = next(p for p in patterns.values() if p.path.stem == stem)
-        if marker in _block_at(pat.text, f.line):
-            return None
-    return (
-        f"P-atomic-audit: fires somewhere in {stem} but NOT on the block "
-        f"containing {marker!r} — the case the check was built for. A "
-        f"suppressor has gone generic again; check what the block is being "
-        f"credited with acknowledging."
-    )
+def check_motivating_sites(patterns, findings) -> list[str]:
+    """P must fire on the specific blocks that motivated the check, not merely
+    somewhere in those files."""
+    problems: list[str] = []
+    for stem, marker in P_MOTIVATING_SITES:
+        pat = next((p for p in patterns.values() if p.path.stem == stem), None)
+        hit = pat is not None and any(
+            f.path.stem == stem and marker in _block_at(pat.text, f.line)
+            for f in findings
+        )
+        if not hit:
+            problems.append(
+                f"P-atomic-audit: does not fire on the {stem} block containing "
+                f"{marker!r} — one of the two cases the check was built for, and "
+                f"that pattern's own formal-model subject. A suppressor has gone "
+                f"generic again; check what the block is being credited with "
+                f"acknowledging."
+            )
+    return problems
 
 
 def main(argv: list[str]) -> int:
@@ -152,12 +173,11 @@ def main(argv: list[str]) -> int:
                 )
         print(f"{code}: {len(got)} pattern(s) firing — {', '.join(sorted(got)) or 'none'}")
         if code == "P-atomic-audit":
-            problem = check_motivating_site(patterns, fn(patterns))
-            if problem:
-                failures.append(problem)
-            else:
-                print(f"{code}: motivating site pinned — "
-                      f"{P_MOTIVATING_SITE[0]} / {P_MOTIVATING_SITE[1]!r} ✓")
+            problems = check_motivating_sites(patterns, fn(patterns))
+            failures.extend(problems)
+            if not problems:
+                for stem, marker in P_MOTIVATING_SITES:
+                    print(f"{code}: motivating site pinned — {stem} / {marker!r} ✓")
 
     for f in failures:
         print(f"FAIL  {f}", file=sys.stderr)

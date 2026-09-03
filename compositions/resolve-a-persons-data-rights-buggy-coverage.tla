@@ -1,72 +1,74 @@
 ---- MODULE resolve-a-persons-data-rights-buggy-coverage ----
 \* BUGGY TWIN (no-silent-omission / coverage hazard; vacuity guard) for
 \* resolve-a-persons-data-rights.tla.
+\* Grace Commons — derived validator. The English spec is the source of truth.
 \*
-\* This twin keeps the BINDING atomic — the response-disclosure, the dsar.*_fulfilled
-\* event, and the request_to_fulfillment binding still land together — so
-\* Inv1_BindingBijection holds here. The bug is in COVERAGE: in-scope records are
-\* disposed one at a time, and CommitBinding fires WITHOUT a full-coverage guard.
-\* So a committed fulfillment with an undispositioned in-scope record is reachable —
-\* the silent omission Invariant 2 forbids and that Immutable Transaction Ledger's binding-only model did not
-\* need to check. From Init, CommitBinding alone yields bound = TRUE with every
-\* disp[r] = "none": Inv2_NoSilentOmission fails. The checker rejects the twin.
+\* Updated 2026-08-27 alongside the correct model, when Invariant 1 was restated
+\* from one atomic commit to safety plus liveness (methodology debt #19, the
+\* atomicity class) and Inv2_NoSilentOmission was re-keyed from the derived index
+\* onto the sealed event. This twin's bug is unchanged in substance and its
+\* precondition is re-keyed to match.
 \*
-\* The two twins isolate the two load-bearing invariants: -buggy fails
-\* Inv1 (binding), -buggy-coverage fails Inv2 (coverage). Together they prove the
-\* CORRECT model's green is non-vacuous on BOTH guarantees.
+\* BUG: the fulfillment binds with NO full-coverage precondition, so it can seal
+\* the event while some in-scope record is still undispositioned. Breaks
+\* Inv2_NoSilentOmission only — the disclosure and the event stay coherent with
+\* each other and nothing is orphaned, which is what keeps this twin dedicated to
+\* the coverage claim.
 
 CONSTANT Records
 
-VARIABLES disp, sdState, auditState, bound
-vars == <<disp, sdState, auditState, bound>>
+VARIABLES disp, sdState, auditState, surfaced
+vars == <<disp, sdState, auditState, surfaced>>
 
 TypeOK ==
     /\ disp       \in [Records -> {"none", "set"}]
     /\ sdState    \in {"absent", "present"}
-    /\ auditState \in {"absent", "present"}
-    /\ bound      \in BOOLEAN
+    /\ auditState \in {"absent", "clean", "recovered"}
+    /\ surfaced   \in BOOLEAN
 
 Init ==
     /\ disp       = [r \in Records |-> "none"]
     /\ sdState    = "absent"
     /\ auditState = "absent"
-    /\ bound      = FALSE
+    /\ surfaced   = FALSE
 
-\* Records disposed one at a time.
 DisposeRecord(r) ==
     /\ disp[r] = "none"
     /\ disp' = [disp EXCEPT ![r] = "set"]
-    /\ UNCHANGED <<sdState, auditState, bound>>
+    /\ UNCHANGED <<sdState, auditState, surfaced>>
 
-\* BUG: the binding commits atomically but with NO full-coverage precondition, so
-\* it can fire while some in-scope record is still undispositioned.
+\* BUG: no full-coverage precondition on the commit.
 CommitBinding ==
-    /\ ~bound
+    /\ sdState = "absent"
     /\ sdState'    = "present"
-    /\ auditState' = "present"
-    /\ bound'      = TRUE
-    /\ UNCHANGED disp
+    /\ auditState' = "clean"
+    /\ UNCHANGED <<disp, surfaced>>
 
 Next == (\E r \in Records : DisposeRecord(r)) \/ CommitBinding
 Spec == Init /\ [][Next]_vars
 
 Coherent ==
-    \/ (sdState = "absent"  /\ auditState = "absent"  /\ bound = FALSE)
-    \/ (sdState = "present" /\ auditState = "present" /\ bound = TRUE)
+    \/ (sdState = "absent"  /\ auditState = "absent" /\ ~surfaced)
+    \/ (sdState = "present" /\ auditState \in {"clean", "recovered"})
 
-Inv1_BindingBijection == Coherent
-Inv1_NoDanglingFulfillment ==
-    (sdState = "present") => (auditState = "present" /\ bound)
+Orphan == sdState = "present" /\ auditState = "absent"
+
+Inv1_BindingBijection == Coherent \/ (Orphan /\ surfaced)
+Inv1_NoUnsurfacedOrphan == Orphan => surfaced
 Inv1_NoOrphanEvent ==
-    (auditState = "present") => (sdState = "present")
+    (auditState \in {"clean", "recovered"}) => (sdState = "present")
+Inv1_RecoveryDistinguishable ==
+    /\ (auditState = "clean")     => ~surfaced
+    /\ (auditState = "recovered") => surfaced
 Inv2_NoSilentOmission ==
-    bound => (\A r \in Records : disp[r] = "set")
+    (auditState \in {"clean", "recovered"}) => (\A r \in Records : disp[r] = "set")
 
 Safety ==
     /\ TypeOK
     /\ Inv1_BindingBijection
-    /\ Inv1_NoDanglingFulfillment
+    /\ Inv1_NoUnsurfacedOrphan
     /\ Inv1_NoOrphanEvent
+    /\ Inv1_RecoveryDistinguishable
     /\ Inv2_NoSilentOmission
 
 ====
