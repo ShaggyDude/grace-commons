@@ -34,12 +34,75 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lint import (  # noqa: E402
+    Pattern,
     check_atomicity_over_audit,
     check_rebuild_bound,
     load_patterns,
 )
 
-# ── The motivating case ───────────────────────────────────────────────────── #
+# ── The motivating case, pinned SYNTHETICALLY ─────────────────────────────── #
+# This started as a pin on two real corpus blocks and had to stop being one, and
+# why is the useful part.
+#
+# P's first draft treated the word "modulo" as an acknowledgement marker.
+# Resolve a Person's Data Rights carried a modulo-clause about a DIFFERENT
+# boundary — its irreversible purge precursor — and that clause suppressed the
+# finding on its Invariant 1, the claim the corpus survey had routed the day
+# before. Capability-Backed Sharing lost a finding the same way. The check went
+# silent on the two cases that motivated it, and a file-level pin would not have
+# shown it: both patterns still fired at other sites, so the run looked healthy.
+# A hedge word like "modulo" clusters around a pattern's most careful claims,
+# because those are the ones an author qualifies — so a hedge-word suppressor is
+# not randomly lossy, it is biased toward silencing the findings that matter
+# most. Both sites it dropped were their pattern's declared formal-model subject.
+#
+# Both are now FIXED — restated 2026-08-27 — and that is the problem with pinning
+# a regression to corpus text: the pin dies the moment the finding is repaired,
+# which is the moment you most want the guard still standing. A perishable pin
+# also creates a bad incentive, since the cheapest way to make it pass is to
+# delete it. So the regression is pinned to a SYNTHETIC block instead, which
+# encodes the bug rather than a victim of it and outlives every fix.
+FIXTURE_MODULO_DECOY = """
+## Composition-level invariants
+
+- **Invariant 1 — Binding.** The record and its sealed Audit Trail event commit
+  together or not at all. This holds *modulo* the inherited irreversible-purge
+  contract, which governs a different boundary entirely.
+"""
+# The negative half: a block that does the real acknowledgement must stay silent.
+FIXTURE_ACKNOWLEDGED = """
+## Composition-level invariants
+
+- **Invariant 1 — Binding.** The record and its sealed Audit Trail event commit
+  together or not at all — except that they do not: an appended event cannot be
+  withdrawn, so the honest claim therefore splits into safety and liveness.
+"""
+
+
+def check_synthetic(problems: list[str]) -> None:
+    """The check must fire on a hedge-word decoy and stay silent on a real
+    acknowledgement. Neither case depends on any corpus file."""
+    for name, text, want_fire in (
+        ("FIXTURE_MODULO_DECOY", FIXTURE_MODULO_DECOY, True),
+        ("FIXTURE_ACKNOWLEDGED", FIXTURE_ACKNOWLEDGED, False),
+    ):
+        pat = Pattern(path=Path(f"synthetic/{name}.md"), text=text,
+                      invariant_count=1, grounded=False)
+        fired = bool(check_atomicity_over_audit({pat.path: pat}))
+        if fired != want_fire:
+            problems.append(
+                f"P-atomic-audit: {name} expected "
+                f"{'a firing' if want_fire else 'silence'} and got the opposite. "
+                + ("A suppressor has gone generic — check what the block is being "
+                   "credited with acknowledging; a hedge word is not an "
+                   "acknowledgement." if want_fire else
+                   "The check no longer recognizes a genuine safety-plus-liveness "
+                   "restatement, so it now fires on patterns that did the right "
+                   "thing.")
+            )
+
+
+# ── Corpus pins ───────────────────────────────────────────────────────────── #
 # Pinned by SITE, not by file, and this distinction is the whole reason the
 # entry exists. P's first draft treated the word "modulo" as an acknowledgement
 # marker. Resolve a Person's Data Rights carries a modulo-clause about a
@@ -57,9 +120,10 @@ from lint import (  # noqa: E402
 # suppressor is not randomly lossy, it is biased toward silencing the findings
 # that matter most. The two it dropped here are each their pattern's declared
 # formal-model subject.
-P_MOTIVATING_SITES = [
-    ("capability-backed-sharing", "Invariant 2 — Disclosure-accountability"),
-]
+# Empty by design, and it should stay empty: both motivating sites are repaired.
+# The regression they exposed is guarded by check_synthetic() above, which no
+# fix can retire.
+P_MOTIVATING_SITES: list[tuple[str, str]] = []
 # CLOSED 2026-08-27 — Resolve a Person's Data Rights. Its Invariant 1 was the
 # other motivating site, and it is now restated in safety-plus-liveness form, so
 # the check is correctly silent there and the pin is retired rather than
@@ -68,6 +132,8 @@ P_MOTIVATING_SITES = [
 # corresponding restatement is how a baseline quietly rots.
 P_RETIRED_SITES = [
     ("resolve-a-persons-data-rights", "Invariant 1 — Request", "restated 2026-08-27"),
+    ("capability-backed-sharing", "Invariant 2 — Disclosure-accountability",
+     "protocol repair 2026-08-27 — the append moved out of the host transaction"),
 ]
 
 # ── P-atomic-audit ─────────────────────────────────────────────────────────── #
@@ -82,8 +148,13 @@ P_SILENT = {"chain-of-custody"}
 # now stay OUT of this set — the `exact` comparison below turns that into a real
 # assertion rather than a deletion, so a regression that reopened it would be
 # reported as an unpinned firing.
+# Capability-Backed Sharing was here until 2026-08-27; its three sites closed
+# when the durable-append protocol repair landed (methodology debt #19 step (iii),
+# atomicity class), leaving Propagate Consent Revocation Downstream as the class's
+# last open instance. The `exact` comparison below turns each absence into a real
+# assertion rather than a deletion: a regression that reopened one would be
+# reported as an unpinned firing.
 P_FIRING = {
-    "capability-backed-sharing",
     "propagate-consent-revocation-downstream",
 }
 
@@ -174,7 +245,11 @@ def main(argv: list[str]) -> int:
         print(f"{code}: {len(got)} pattern(s) firing — {', '.join(sorted(got)) or 'none'}")
         if code == "P-atomic-audit":
             problems = check_motivating_sites(patterns, fn(patterns))
+            check_synthetic(problems)
             failures.extend(problems)
+            if not problems:
+                print(f"{code}: synthetic regression fixtures hold "
+                      f"(hedge-word decoy fires, real acknowledgement silent) ✓")
             if not problems:
                 for stem, marker in P_MOTIVATING_SITES:
                     print(f"{code}: motivating site pinned — {stem} / {marker!r} ✓")

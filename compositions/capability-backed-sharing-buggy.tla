@@ -1,68 +1,91 @@
 ---- MODULE capability-backed-sharing-buggy ----
-\* BUGGY TWIN (vacuity guard) for capability-backed-sharing.tla.
+\* BUGGY TWIN (silence hazard; vacuity guard) for capability-backed-sharing.tla.
+\* Grace Commons — derived validator. The English spec is the source of truth.
 \*
-\* The disclosure commit is split into three separate, interleavable sub-steps
-\* with NO compensation — the naive non-atomic implementation the *Cross-store
-\* consistency under partial failure* edge case and Invariant 2 warn against.
-\* Selective Disclosure writes first (it is the disclosure-accounting record of
-\* record), then the Audit Trail event, then the binding:
-\*   WriteSD     -> Selective Disclosure disclosure record lands
-\*   WriteAudit  -> Audit Trail `sharing.disclosed` event lands
-\*   Bind        -> disclosure_to_redemption binding lands
-\* Because they are distinct actions, TLC stops after WriteSD(d) alone:
-\* sdState[d] = present, auditState[d] = absent, bound[d] = FALSE — a dangling
-\* Selective Disclosure record with no attributed sharing.disclosed event (the
-\* exact orphan the cross-store edge case describes). Inv2_BindingBijection and
-\* Inv2_NoDanglingDisclosure both fail. The checker rejects the twin.
-\* If the checker reports all invariants hold here, the harness is vacuous.
+\* Rewritten 2026-08-27 alongside the correct model, when Invariant 2 was repaired
+\* from one atomic commit to an ordering across durability boundaries (methodology
+\* debt #19, the atomicity class). A twin has to break the invariant as it is NOW
+\* stated, or it guards a claim the corpus no longer makes. The previous version of
+\* this twin split one transaction into three interleavable writes; that split is
+\* no longer a bug, because the repaired composition does exactly that on purpose.
+\* What IS a bug is doing it silently.
+\*
+\* BUG: the domain transaction commits and the seal does not, with NO surfacing
+\* and NO compensation. The unsealed disclosure is reachable here, but so it is in
+\* the CORRECT model, deliberately; the difference is that here it is SILENT and
+\* terminal. Nothing sets surfaced, nothing retries the append, and the state is a
+\* dead end. That is what the repaired invariant turns on — not whether a partial
+\* exists, but whether anyone is looking at it and whether it resolves.
+\*
+\* Breaks Inv2_NoUnsurfacedUnsealed. It leaves Inv2_NoOrphanSeal intact — the seal
+\* still never precedes its commit — which is what keeps this twin dedicated to the
+\* silence claim rather than to the ordering claim, whose own twin is
+\* capability-backed-sharing-old-wiring-buggy.tla.
 
 CONSTANT Disclosures
 
-VARIABLES sdState, auditState, bound
-vars == <<sdState, auditState, bound>>
+VARIABLES intentState, txState, auditState, surfaced
+vars == <<intentState, txState, auditState, surfaced>>
 
 TypeOK ==
-    /\ sdState    \in [Disclosures -> {"absent", "present"}]
-    /\ auditState \in [Disclosures -> {"absent", "present"}]
-    /\ bound      \in [Disclosures -> BOOLEAN]
+    /\ intentState \in [Disclosures -> {"absent", "present"}]
+    /\ txState     \in [Disclosures -> {"absent", "committed"}]
+    /\ auditState  \in [Disclosures -> {"absent", "clean", "recovered"}]
+    /\ surfaced    \in [Disclosures -> BOOLEAN]
 
 Init ==
-    /\ sdState    = [d \in Disclosures |-> "absent"]
-    /\ auditState = [d \in Disclosures |-> "absent"]
-    /\ bound      = [d \in Disclosures |-> FALSE]
+    /\ intentState = [d \in Disclosures |-> "absent"]
+    /\ txState     = [d \in Disclosures |-> "absent"]
+    /\ auditState  = [d \in Disclosures |-> "absent"]
+    /\ surfaced    = [d \in Disclosures |-> FALSE]
 
-\* BUG: three separate sub-steps, interleavable, no compensation.
-WriteSD(d) ==
-    /\ sdState[d] = "absent"
-    /\ sdState' = [sdState EXCEPT ![d] = "present"]
-    /\ UNCHANGED <<auditState, bound>>
+WriteIntent(d) ==
+    /\ intentState[d] = "absent"
+    /\ intentState' = [intentState EXCEPT ![d] = "present"]
+    /\ UNCHANGED <<txState, auditState, surfaced>>
 
-WriteAudit(d) ==
-    /\ sdState[d] = "present"
+\* The transaction commits, and nothing surfaces the missing seal.
+CommitTx(d) ==
+    /\ intentState[d] = "present"
+    /\ txState[d] = "absent"
+    /\ txState' = [txState EXCEPT ![d] = "committed"]
+    /\ UNCHANGED <<intentState, auditState, surfaced>>
+
+Seal(d) ==
+    /\ txState[d] = "committed"
     /\ auditState[d] = "absent"
-    /\ auditState' = [auditState EXCEPT ![d] = "present"]
-    /\ UNCHANGED <<sdState, bound>>
+    /\ auditState' = [auditState EXCEPT ![d] = "clean"]
+    /\ UNCHANGED <<intentState, txState, surfaced>>
 
-Bind(d) ==
-    /\ sdState[d] = "present"
-    /\ auditState[d] = "present"
-    /\ ~bound[d]
-    /\ bound' = [bound EXCEPT ![d] = TRUE]
-    /\ UNCHANGED <<sdState, auditState>>
-
-Next == \E d \in Disclosures : WriteSD(d) \/ WriteAudit(d) \/ Bind(d)
+Next == \E d \in Disclosures : WriteIntent(d) \/ CommitTx(d) \/ Seal(d)
 Spec == Init /\ [][Next]_vars
 
+Inv2_NoOrphanSeal ==
+    \A d \in Disclosures :
+        (auditState[d] \in {"clean", "recovered"}) => (txState[d] = "committed")
+Inv2_NoUnsurfacedUnsealed ==
+    \A d \in Disclosures :
+        (txState[d] = "committed" /\ auditState[d] = "absent") => surfaced[d]
+Inv2_IntentPrecedesCommit ==
+    \A d \in Disclosures :
+        (txState[d] = "committed") => (intentState[d] = "present")
+Inv2_RecoveryDistinguishable ==
+    \A d \in Disclosures :
+        /\ (auditState[d] = "clean")     => ~surfaced[d]
+        /\ (auditState[d] = "recovered") => surfaced[d]
 Coherent(d) ==
-    \/ (sdState[d] = "absent"  /\ auditState[d] = "absent"  /\ bound[d] = FALSE)
-    \/ (sdState[d] = "present" /\ auditState[d] = "present" /\ bound[d] = TRUE)
+    \/ (txState[d] = "absent"    /\ auditState[d] = "absent")
+    \/ (txState[d] = "committed" /\ auditState[d] \in {"clean", "recovered"})
+Unsealed(d) == txState[d] = "committed" /\ auditState[d] = "absent"
+Inv2_BindingBijection ==
+    \A d \in Disclosures : Coherent(d) \/ (Unsealed(d) /\ surfaced[d])
 
-Inv2_BindingBijection == \A d \in Disclosures : Coherent(d)
-Inv2_NoDanglingDisclosure ==
-    \A d \in Disclosures : (sdState[d] = "present") => (auditState[d] = "present" /\ bound[d])
-Inv2_NoOrphanAudit ==
-    \A d \in Disclosures : (auditState[d] = "present") => (sdState[d] = "present")
-
-Safety == TypeOK /\ Inv2_BindingBijection /\ Inv2_NoDanglingDisclosure /\ Inv2_NoOrphanAudit
+Safety ==
+    /\ TypeOK
+    /\ Inv2_NoOrphanSeal
+    /\ Inv2_NoUnsurfacedUnsealed
+    /\ Inv2_IntentPrecedesCommit
+    /\ Inv2_RecoveryDistinguishable
+    /\ Inv2_BindingBijection
 
 ====
