@@ -66,6 +66,24 @@ the three-pass review otherwise has to catch by eye —
                               Rn-Fn, Cn-N, OG-n) survives in an atom/composition
                               live body (debt #15, naming.md Rule zero). High
                               precision: these shapes have no legitimate collision.
+  P. Atomicity over audit   — an all-or-nothing claim ("together or not at all")
+                              whose member set names an audit write, with no
+                              acknowledgement in the enclosing block that an
+                              appended event cannot be withdrawn. The first
+                              mechanical slice that polices a *use* of a
+                              constituent capability rather than a claim about
+                              one (pressure-testing.md §Capability provenance,
+                              widened 2026-08-27). The phrase alone is not the
+                              signal — most uses of it are benign, over
+                              constituent-store writes only.
+  Q. Rebuild totality bound — a `*Rebuild procedure:*` that reads an event
+                              payload with no stated bound on its own totality.
+                              The substrate's purge cascade destroys Event Log's
+                              `data` in its entirety at the retention horizon, so
+                              an unbounded rebuild claims something that stops
+                              being true on a schedule the composition does not
+                              control. Exemplar: Audit Trail's "Bound on the
+                              rebuild's totality, stated rather than assumed".
   O. Term registry resolver — on any page carrying an annotation.md `## Terms`
                               registry, every `[Term]` shortcut-reference marker
                               resolves to a `[Term]: …` definition (no dangling)
@@ -122,6 +140,19 @@ INV_COUNT_REF = re.compile(
 # the pattern's display name, read from its H1 title (trailing " (Cxx)" stripped)
 H1_TITLE = re.compile(r"^#\s+(.+?)\s*$", re.M)
 TRAILING_PAREN = re.compile(r"\s*\([^)]*\)\s*$")
+
+
+# Checks that REPORT but do not fail the build. A new check landed against an
+# existing corpus starts here: it is worth reading from the day it lands, and
+# turning the continuous-integration gate red before the findings it names have
+# been worked is how a check gets muted rather than fixed. A code leaves this
+# set when its findings reach zero — that is the moment the check starts
+# defending the property instead of measuring it.
+#
+# P-atomic-audit and Q-rebuild-bound landed 2026-08-27 with a recorded baseline
+# (roadmap.md methodology debt #19): 3 patterns and 8 patterns respectively.
+# Their propagation is debt #19 step (iii); they become gating when it closes.
+ADVISORY_CODES = frozenset({"P-atomic-audit", "Q-rebuild-bound"})
 
 
 @dataclass
@@ -501,6 +532,195 @@ def check_constituent_calls(patterns: dict[Path, Pattern]) -> list[Finding]:
                     ))
     return findings
 
+
+# --------------------------------------------------------------------------- #
+# P-atomic-audit — all-or-nothing claimed over a write the substrate cannot
+#                  withdraw
+# --------------------------------------------------------------------------- #
+# The third mechanical slice of the capability-provenance rule, and the first
+# that polices a *use* rather than a claim (pressure-testing.md §Capability
+# provenance, widened 2026-08-27). A composition that says a write set "commits
+# together or not at all" is claiming a withdrawal capability over every member
+# of that set. Where a member is an Audit Trail write, the substrate declares
+# the opposite: an appended event cannot be withdrawn and synchronous rollback
+# is unavailable to it. The claim is then an undeclared dependency of exactly
+# the kind the rule forbids — invisible because nothing on the page announces it.
+#
+# Precision over recall, per the linter's division of labor:
+#   - the phrase alone is NOT the signal. Nine patterns use "together or not at
+#     all" and most do so benignly, over constituent-store writes only. The
+#     check fires only where the SAME SENTENCE also names an audit write.
+#   - a pattern that has already done the honest restatement is not flagged.
+#     Chain of Custody's Invariant 4 states the safety-plus-liveness split
+#     outright ("synchronous rollback is unavailable … the orphan state *is*
+#     reachable … The honest claim therefore splits"), and Resolve a Person's
+#     Data Rights carries a modulo-clause for its irreversible precursor. Any
+#     acknowledgement marker in the enclosing block suppresses the finding —
+#     the check asks "is the un-withdrawable half acknowledged anywhere near
+#     this claim", not "is the wording ideal".
+#   - the fix a firing asks for is a restatement, never a rewiring: order the
+#     un-withdrawable write last, claim "no sealed event without its record" as
+#     safety and "no record without its sealed event, within a declared
+#     compensation window" as liveness. The in-corpus exemplar is Chain of
+#     Custody Invariant 4.
+
+ALL_OR_NOTHING = re.compile(
+    r"together or not at all"
+    r"|commits? (?:them |the \w+ )?atomically"
+    r"|commit \*?\*?atomically",
+    re.I,
+)
+# an audit write named inside the same sentence
+AUDIT_WRITE = re.compile(
+    r"record_action|[Aa]udit [Tt]rail event|audit event|sealed event|sealed \w+ event",
+)
+# the un-withdrawable half acknowledged anywhere in the enclosing block
+ATOMICITY_ACKNOWLEDGED = re.compile(
+    r"synchronous rollback is (?:not available|unavailable)"
+    r"|cannot be (?:rolled back|withdrawn|un-appended|unappended)"
+    r"|safety ?\+ ?liveness|safety-plus-liveness"
+    r"|compensation window"
+    r"|honest claim therefore splits",
+    re.I,
+)
+
+
+def _enclosing_block(text: str, idx: int) -> str:
+    """The blank-line-delimited block containing idx, plus any immediately
+    following indented continuation lines (an invariant's sub-bullets)."""
+    start = text.rfind("\n\n", 0, idx)
+    start = 0 if start == -1 else start + 2
+    end = idx
+    while True:
+        nxt = text.find("\n\n", end)
+        if nxt == -1:
+            return text[start:]
+        # keep going while the paragraph after the break is an indented
+        # continuation of the same item
+        after = text[nxt + 2: nxt + 6]
+        if after.startswith("  ") or after.startswith("\t"):
+            end = nxt + 2
+            continue
+        return text[start:nxt]
+
+
+def _sentence_at(text: str, idx: int) -> tuple[int, int]:
+    """Crude sentence bounds around idx: previous '. ' to next '.'."""
+    start = text.rfind(". ", 0, idx)
+    start = 0 if start == -1 else start + 2
+    end = text.find(".", idx)
+    end = len(text) if end == -1 else end + 1
+    return start, end
+
+
+def check_atomicity_over_audit(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """P. An all-or-nothing claim whose member set names an audit write, with no
+    acknowledgement of the un-withdrawable half in the enclosing block."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        cut = p.text.find("\n## Status")
+        body = p.text if cut == -1 else p.text[:cut]
+        seen_blocks: set[int] = set()
+        for m in ALL_OR_NOTHING.finditer(body):
+            s0, s1 = _sentence_at(body, m.start())
+            if not AUDIT_WRITE.search(body[s0:s1]):
+                continue
+            block = _enclosing_block(body, m.start())
+            if ATOMICITY_ACKNOWLEDGED.search(block):
+                continue
+            # one finding per block, not per phrase
+            key = body.rfind("\n\n", 0, m.start())
+            if key in seen_blocks:
+                continue
+            seen_blocks.add(key)
+            findings.append(Finding(
+                p.path, line_of(body, m.start()), "P-atomic-audit",
+                "all-or-nothing claimed over a set naming an audit write, with "
+                "no acknowledgement that an appended event cannot be withdrawn "
+                "— restate as safety plus liveness (exemplar: Chain of Custody "
+                "Invariant 4)",
+            ))
+    return findings
+
+
+# --------------------------------------------------------------------------- #
+# Q-rebuild-bound — a payload-sourced rebuild claiming totality it cannot have
+# --------------------------------------------------------------------------- #
+# The fourth mechanical slice, and the second that polices a use. A composition
+# whose derived-index rebuild reads fields out of audit event payloads is using
+# a capability the substrate lawfully withdraws: the purge cascade destroys
+# Event Log's `data` field in its entirety at the retention horizon. A rebuild
+# stated without a bound on its own totality therefore claims something that
+# stops being true on a schedule the composition does not control — and the
+# consequence is not always cosmetic (in one pattern a purged payload lets one
+# human approval authorize a second regulated firing).
+#
+# Precision over recall:
+#   - fires only on an explicit `*Rebuild procedure:*` clause that names a
+#     payload read. A rebuild described in prose is missed; that is a recall
+#     gap, deliberately taken, because a looser trigger would fire on every
+#     "for every event" in the corpus.
+#   - any bound marker in the enclosing block suppresses it. The in-corpus
+#     exemplar is Audit Trail's "Bound on the rebuild's totality, stated rather
+#     than assumed" — which then states the bound and why it suffices.
+#   - atoms owning their own store are unaffected: they are not reading a
+#     substrate payload they do not control.
+#
+# Known recall gaps, recorded rather than chased. Preference-Aware Notification
+# Fanout reads payload fields with the phrasings "every fact in the index is a
+# `fanout.created` event's (principal_ref, decided_at, channels) triple" and
+# "the `fanout.initiated` event carries the invocation's scope" — both genuine
+# instances this check does not see. Widening the trigger to "event carries" /
+# "event's (tuple)" catches them AND produces a false positive on Audit Trail's
+# own `event_to_sequence`, whose rebuild reads `event_id` and `sequence_number`
+# — fields the purge cascade PRESERVES, so no bound is owed. That is the real
+# shape of the test: not "does it touch a payload" but "does it read a field
+# the cascade destroys", which needs the surviving-field set (action_ref,
+# actor_ref, attested_at, attestation_id, recorded_at, sequence_number,
+# event_id) subtracted from what the clause names. Until a check can do that
+# subtraction, this one stays tight and the gap stays written down — the
+# linter's rule is that recall grows by adding checks, not by loosening one
+# until it matches the answer you expected.
+
+REBUILD_CLAUSE = re.compile(r"\*Rebuild procedure:\*[^\n]*")
+PAYLOAD_READ = re.compile(
+    r"from each payload|from the payload|payload alone|each event's payload"
+    r"|take `?\{[^}]*\}`? from|event'?s? `?data`?|`data` field"
+    r"|each data's",
+    re.I,
+)
+REBUILD_BOUNDED = re.compile(
+    r"bound on the rebuild"
+    r"|totality[^.]{0,90}(?:horizon|retention|purge)"
+    r"|(?:horizon|retention|purge)[^.]{0,90}totality"
+    r"|still live in the log|still readable|purged subset"
+    r"|past the (?:retention )?horizon"
+    r"|until its retention",
+    re.I,
+)
+
+
+def check_rebuild_bound(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """Q. A `*Rebuild procedure:*` that reads an event payload with no stated
+    bound on its own totality in the enclosing block."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        cut = p.text.find("\n## Status")
+        body = p.text if cut == -1 else p.text[:cut]
+        for m in REBUILD_CLAUSE.finditer(body):
+            clause = m.group(0)
+            if not PAYLOAD_READ.search(clause):
+                continue
+            if REBUILD_BOUNDED.search(_enclosing_block(body, m.start())):
+                continue
+            findings.append(Finding(
+                p.path, line_of(body, m.start()), "Q-rebuild-bound",
+                "rebuild reads an event payload with no stated bound on its own "
+                "totality — the substrate destroys `data` at the retention "
+                "horizon (exemplar: Audit Trail's \"Bound on the rebuild's "
+                "totality, stated rather than assumed\")",
+            ))
+    return findings
 
 # --------------------------------------------------------------------------- #
 # Status grammar / mirror (G, H, I)
@@ -960,6 +1180,8 @@ def main(argv: list[str]) -> int:
     findings += check_counts(root, patterns)
     findings += check_rests_on_refs(patterns, scan)
     findings += check_constituent_calls(patterns)
+    findings += check_atomicity_over_audit(patterns)
+    findings += check_rebuild_bound(patterns)
     findings += check_status_grammar(patterns)
     findings += check_status_mirror(root, patterns)
     findings += check_duplicate_rows(root)
@@ -972,14 +1194,21 @@ def main(argv: list[str]) -> int:
     findings.sort(key=lambda f: (f.code, str(f.path), f.line))
     for f in findings:
         rel = f.path.relative_to(root)
-        print(f"{rel}:{f.line}: [{f.code}] {f.message}")
+        tag = " (advisory)" if f.code in ADVISORY_CODES else ""
+        print(f"{rel}:{f.line}: [{f.code}]{tag} {f.message}")
+
+    gating = [f for f in findings if f.code not in ADVISORY_CODES]
+    advisory = [f for f in findings if f.code in ADVISORY_CODES]
 
     n_atoms = sum(1 for p in patterns.values() if "/atoms/" in p.path.as_posix())
     n_comps = sum(1 for p in patterns.values() if "/compositions/" in p.path.as_posix())
+    tail = f"{len(gating)} finding(s)"
+    if advisory:
+        tail += f" + {len(advisory)} advisory (non-gating)"
     print(f"\n— scanned {len(patterns)} patterns "
           f"({n_atoms} atoms, {n_comps} compositions); "
-          f"{len(findings)} finding(s).", file=sys.stderr)
-    return 1 if findings else 0
+          f"{tail}.", file=sys.stderr)
+    return 1 if gating else 0
 
 
 if __name__ == "__main__":
