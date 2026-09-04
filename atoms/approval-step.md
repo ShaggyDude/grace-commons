@@ -600,13 +600,27 @@ Approval Step is the approval-gate primitive that Multi-Party Approval and Execu
 
 ## Status
 
-`grounded on Final Critique 5 — 2026-07-12` (regrounded by the 2026-07-12 scheduled rescan — Final Critique 5, AI-conducted, fresh-reader, claude-fable-5; seven findings closed in-pattern or at their owning document, and Invariant 9 promoted from by-construction to an explicit checked predicate in the formal model — see Lineage §Final Critique 5. Formal layer landed 2026-06-03 — TLA+ model `approval-step.tla` + buggy twin verified; see Lineage §Formal model. Prior groundings: Final Critique 4 — 2026-05-20; cleared `grounded (English) — formal layer pending` 2026-06-03; full prose round was `grounded — 2026-05-20`.) — foundation round (Pass 1 + Pass 2 + Pass 3, author-led), Round 2 (AI-conducted, claude-sonnet-4-6), and Round 3 (AI-conducted adversarial, claude-opus-4-7, Torvalds posture) complete. All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concepts independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. First entry in `workflow`. Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Round 3 AI-conducted adversarial round (claude-opus-4-7, Torvalds posture) is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+`grounded on Final Critique 5 — 2026-07-12` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 5 — 2026-07-12
+formal: verified — approval-step.tla + 1 twin, 2026-06-03
+last gate: 2026-07-12 — Final Critique 5, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/approval-step.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Regulated atom. Conventions — *Regulated adversarial scenarios* and *Generation acceptance* — inherited from the methodology directly ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft. Legal Hold is the reference shape for regulated atoms with two-terminal-to-three-terminal state machine expansion; Provisional Commitment is the reference for multi-terminal-state lifecycle specification. Category `workflow` is new; this atom opens it.

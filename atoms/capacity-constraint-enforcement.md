@@ -879,13 +879,27 @@ The atom inherits from:
 
 ## Status
 
-`grounded on Final Critique 8 — 2026-08-26` — re-grounded: the Final Critique 7 routed findings (one foundational + five refining + one rhetorical) were closed 2026-08-26 and the closure gated by a fresh fresh-reader round (Final Critique 8 — 2026-08-26) that returned **zero foundational** findings — eight refining and five rhetorical remain routed open and non-blocking under the 92%-good threshold (see Lineage §Final Critique 8). History of the downgrade: 2026-08-24 a load-bearing touch (the Logic Confinement clock-injection fix, below) drew a closing fresh-reader round (Final Critique 6, Opus, Happy-Torvalds-X2) with **two foundational findings**; both were closed 2026-08-25 and gated by Final Critique 7 (2026-08-25), which confirmed both closures held but surfaced the one-foundational routed set closed above. The clock fix itself cleared the 2026-08-24 round. Prior grounding: `grounded on Final Critique 5 — 2026-05-20` (formal layer complete 2026-06-04 — TLA+ model `capacity-constraint-enforcement.tla` with `release` action makes Inv5 non-vacuous; buggy twin rejects on `Inv5_NonNegativity` (unguarded release underflow); Inv 14 vote reconsidered to out-of-scope (within-action, not an interleaving); coverage matrix updated. Cleared `grounded (English) — formal layer pending`, briefly held after the 2026-06-03 formal-layer vote; full prose round was `grounded — 2026-05-20`. See `tools/harness/coverage/capacity-constraint-enforcement.md`.) — capacity arithmetic atom; load-bearing invariant `allocated ≤ capacity` enforced by preconditions on `allocate` and `adjust_capacity`; suspend/resume/close state machine; audit-log discipline with the two-surfaces split (audit-identifier vs. attribution lifecycles); four host obligations named (serializable per-pool execution, overflow-safe integer arithmetic, crash-atomic multi-record writes, system-wide id uniqueness); regulated overlay complete. Foundation round complete (Pass 1 GRID — the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof — + 1 foundational finding closed; Pass 2 EOS clean; Pass 3 Linus + 5 foundational findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2) ran twice on 2026-05-15: round 1 closed 11 foundational findings + 2 sub-finding style notes; round 2 closed 3 foundational + 5 refining + 1 rhetorical. Grounded at this revision per the 92%-good threshold ([`pressure-testing.md`](../pressure-testing.md) §"What grounded means"): foundational density after round 2 = 0. Authored 2026-05-14; revised 2026-05-15 (round 1); revised 2026-05-15 (round 2). Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Opus clearance gate ran twice — round 1 (11 foundational findings) is retro-labeled Final Critique 4; round 2 (which cleared the remainder) is retro-labeled Final Critique 5 — so the pattern grounds on Final Critique 5; the original round-naming in the Lineage notes below is preserved as historical record.
+`grounded on Final Critique 8 — 2026-08-26` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 8 — 2026-08-26
+formal: verified — capacity-constraint-enforcement.tla + 2 twins, 2026-06-04
+last gate: 2026-08-26 — Final Critique 8, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/capacity-constraint-enforcement.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Capacity Constraint Enforcement is atom #8 in the ROADMAP's draft order and the third entry in `resource-lifecycle` after Provisional Commitment and Soft Delete. The closest existing pattern is Provisional Commitment — same category, same kind of resource-encumbrance concern — and the draft mirrors its shape, identity-model discipline, and authoring conventions. The regulated-overlay conventions (Regulated adversarial scenarios, Generation acceptance) are included per the methodology's required-when clause — three of the five domain examples (airline, banking, healthcare) invoke regulated domains. The conventions are inherited from the methodology directly rather than re-derived from predecessor patterns.

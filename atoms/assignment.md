@@ -462,13 +462,27 @@ It inherits from:
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 3 foundational finding(s): clock + `assignment_id` host-injected at the seam, `storage-failure` rejection example added, named read queries `active_for`/`history_for` declared; caller signatures unchanged; see Lineage. Formal-layer vote stands YES (TLA+ model present); the time/id seam is out of model scope, so F1 does not reopen it. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; assign, recall, and reassign preconditions explicit; rejection paths exercised in examples across four domains; deferred candidate concepts (accept/decline, expiry, assigner authorization, assigner attribution, capacity constraints, group assignment, task lifecycle, completion handling, concurrent races, reassign atomicity, clock semantics) named as out-of-scope with composing patterns where applicable. Second entry in `productivity`. Direct prerequisite for the Shared Todo composition.
+`grounded on Final Critique 4 — 2026-06-18` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-18
+formal: verified — assignment.tla + 1 twin, 2026-06-03
+last gate: 2026-06-18 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/assignment.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Assignment is drafted as the second prerequisite for the Shared Todo composition, following Permissions. Unlike the compliance atoms, Assignment carries no external regulatory acceptance bar, so the regulated-pattern conventions (Regulated adversarial scenarios, Generation acceptance) are not required.

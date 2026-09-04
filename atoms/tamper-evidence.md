@@ -484,13 +484,27 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 2 foundational finding(s): `evidence_id`, clock, and cryptographic primitive/entropy are now host-injected at the I/O seam, and `not-known` contradiction resolved with `record-set-mismatch` routing; caller signatures unchanged; see Lineage. Formal-layer vote stands NO (English-only, minimum-formalism). The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; action signatures with fully-named rejection taxonomies including `storage-failure` and `mechanism-verification-unavailable`; nine invariants including seal store durability (Invariant 9) and mechanism-soundness qualification on Invariant 2; five cross-domain examples plus `proof-invalid` and `record-set-mismatch` verification-failure examples; regulated adversarial scenarios; eleven edge cases. Third entry in `compliance`.
+`grounded on Final Critique 4 — 2026-06-18` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-18
+formal: not applicable — vote no 2026-06-03
+last gate: 2026-06-18 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/tamper-evidence.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This atom survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first iteration. The two regulated-pattern conventions canonicalized in [`contributing.md`](../contributing.md) and [`pressure-testing.md`](../pressure-testing.md) — *Regulated adversarial scenarios* and *Generation acceptance* — were baked in from the first draft; this atom inherits both conventions from the methodology directly rather than from any specific predecessor.

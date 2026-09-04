@@ -529,15 +529,29 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded on Final Critique 5 — 2026-06-23` — the **execution/render-time refactor** is complete and the closing fresh-reader Final Critique (Final Critique 5) returned clean. This was the LIGHT transform: there was no stored expiry flag to remove (Purged is a real write — it records that the purge happened — so it correctly stays stored, not derived). The injected clock `now` is **pipeline-injected at the I/O seam** (the execution contract supplies `clock_t` at the seam), so the `place_under_retention(record_ref, policy_ref)` and `purge(retention_id)` caller signatures carry **no** `now` parameter — an interim draft of this refactor threaded `now` into both signatures and was **reverted** (the seam, not a parameter, is the contract for clock entry; the revert also dissolves a spurious constituent-change cascade — see Lineage F2). The `retention-period-not-elapsed` guard is marked a **pure** function of the stored record and the injected `now` (`state = Retained ∧ now ≥ retention_until`) and is kept, not weakened (it is the residual execution-time check, clearly marked, not derived away); and a derived read-time **`purge_eligible`** projection plus **Invariant 11** (purge-eligibility is derived, never stored) make eligibility a computed condition rather than a stamped/stored flag. A Logic-confinement note was added to Decision points. Refining fixes folded in on the re-pass: F1 (Generation acceptance "five"→"six" checks), F4 (`place_under_retention` rejection-priority order), F5 (no-early-purge stated as a per-`retention_id` guarantee; overlapping-retention hazard named as the composing pattern's to close), F6 (undefined `purger` field dropped). Prior grounding: `grounded on Final Critique 4 — 2026-06-18` (formal-layer vote stands **NO** — English-only; confirmed NO on this re-pass — the revert and refining fixes change no load-bearing temporal/safety claim). See Lineage §Execution/render-time refactor — 2026-06-21 and §Final Critique 5.
+`grounded on Final Critique 5 — 2026-06-23` — see the Ledger.
 
-Prior status detail (retained for the audit trail): all required structural elements resolved; identity model explicit; transition preconditions with fully-named rejection taxonomies including `policy-not-found` and `storage-failure`; invariants including retention store durability (Invariant 10) and clock-qualified Invariant 8; five cross-domain examples plus two rejection-path examples; regulated adversarial scenarios; fourteen edge cases including concurrent retentions for the same record, purge persistence failure, and divergence between retention state and underlying record destruction (all added in refinement round 1). Second entry in `compliance`.
+## Ledger
+
+```
+status: grounded on Final Critique 5 — 2026-06-23
+formal: not applicable — vote no 2026-06-03
+last gate: 2026-06-23 — Final Critique 5, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/retention-window.md`.
+
+- **2026-06-21 — Purge eligibility is a pure read-time projection; `Purged` stays stored because it records a real write.** *Chose:* the no-early-purge guard reads the injected `now` against the immutable `retention_until` and rejects without writing; no stored eligible flag (Invariant 11); `now` is pipeline-injected at the seam, never an action parameter (a draft that threaded it into signatures was reverted). *Over:* a stored eligibility flag, or `now` as a caller-facing parameter. *Because:* eligibility is an idealization the clock decides, while a purge is a fact about the world that only a write can record.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This atom survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first iteration. The two regulated-pattern conventions documented in [`contributing.md`](../contributing.md) and [`pressure-testing.md`](../pressure-testing.md) — *Regulated adversarial scenarios* and *Generation acceptance* — were baked in from the first draft, the first regulated atom drafted entirely against the canonical methodology rather than against earlier worked examples.

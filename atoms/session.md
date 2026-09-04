@@ -595,15 +595,29 @@ This is the generator's contract: any implementation derived from this atom must
 
 ## Status
 
-`grounded on Final Critique 5 — 2026-06-23` — the **execution/render-time refactor** is complete and the closing fresh-reader Final Critique (Final Critique 5) returned clean. The stored `Expired` state, the `expired_at` field, the `expire` action, and all lazy-expiry writes were removed; a lapsed session is now a derived `effective_status`/`validate` outcome computed at read time from the injected clock and the immutable `expires_at` (Invariant 12). The stored state space is now just **Active** and **Revoked** (Revoked stays a real write). The clock `now` is **pipeline-injected at the I/O seam** (pipeline-implicit, not an action parameter — the 2026-06-21 now-explicit-signatures experiment was reverted per the Final Critique council) and consumed only by pure derivations (the expiry test in `validate`/`read`, no write) and immutable timestamp stamps (writes). Prior grounding (verbatim): `grounded on Final Critique 4 — 2026-06-10` (scheduled rescan, council-run — three rounds to clean, findings folded; see Lineage §Scheduled rescan 2026-06-10. Formal-layer vote **reconsidered 2026-06-03 to NO — formal-not-warranted**; the aggressive-bar YES was downgraded on a second pass — conjunctive validity is a conjunction of record fields and revoked-precedes-expired is precedence by insertion order, both records-alone; the interleaving worth modeling lives in the Session-Gated Authorization composition, which keeps its model. See Lineage §Formal-layer vote. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded on Final Critique 4`.) — three baseline rounds (Pass 1/2/3 each) plus Final Critique 4 complete. Six findings total; all resolved in-pattern. The **formal-layer vote stays as recorded — NO (formal-not-warranted)**; no model exists for Session and none is created by this refactor (the modeled interleaving lives in Session-Gated Authorization, which keeps its Alloy model). See Lineage §Execution/render-time refactor.
+`grounded on Final Critique 5 — 2026-06-23` — see the Ledger.
 
-*Classification (post-flatten): stored flat as `atoms/session.md` — no category folder. Session is an authentication-adjacent primitive with meaningful non-regulated uses (wherever authentication persistence is required), so its **regulated** and **security** classifications are overlays derived from its composers, not a folder it is filed under. This resolves the atom's former provisional `compliance/` placement and the question of relocating it to a security or identity folder: under the [usage-derived taxonomy](./TAXONOMY.md), `security` is an overlay it carries (derived from its identity/access standards), not a domain or a directory.*
+## Ledger
+
+```
+status: grounded on Final Critique 5 — 2026-06-23
+formal: not applicable — vote no 2026-06-03
+last gate: 2026-06-23 — Final Critique 5, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/session.md`.
+
+- **2026-06-21 — Expiry is derived at read time, never stored.** *Chose:* the stored state space is `{Active, Revoked}`; `Expired` is the projection `status = Active ∧ now ≥ expires_at` computed from the immutable `expires_at` and the injected clock (Invariant 12). *Over:* a stored `Expired` terminal written by a lazy or scheduled transition. *Because:* a stored flag lags the clock it idealizes, and a session's lapse has no side effect that would need a write to carry it.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 **Conventions inherited.** This atom carries the **regulated** and **security** overlays (both derived from its composers) and includes *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`pressure-testing.md`](../pressure-testing.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.

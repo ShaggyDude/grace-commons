@@ -262,32 +262,27 @@ It inherits from:
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 1 foundational finding(s): clock is now host-injected at the I/O seam; caller signatures unchanged; see Lineage. Formal-layer vote stands YES (Alloy/TLA model verified green); the clock seam is out of model scope, so F1 does not reopen it. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — concept is freestanding, composable, and carries a verifiable invariant set. Examples cover four distinct domains. Ready for composition with Personal Todo and other patterns.
+`grounded on Final Critique 4 — 2026-06-18` — see the Ledger.
 
----
+## Ledger
 
-## Composition notes
+```
+status: grounded on Final Critique 4 — 2026-06-18
+formal: verified — duplicate-prevention.tla + 1 twin, 2026-06-03
+last gate: 2026-06-18 — Final Critique 4, fresh reader — clean
 
-Patterns compose with Duplicate Prevention through a uniform contract:
+open: none
+```
 
-1. On every successful *remove* action (delete, abandon, expire), call [Record] with the item's [Identity].
-2. On every *add* action, call [Check] with the [Identity] before accepting; if [Seen], respond per the containing pattern's policy (reject, de-duplicate, return cached).
+## Decisions
 
-Window and identity-matching rule are configured per containing pattern, not globally. A single deployment may run multiple instances of Duplicate Prevention with different configurations — one per containing pattern.
-
-Current and forthcoming compositions:
-
-- [Personal Todo](./personal-todo.md) — 24-hour window, string-equality matching.
-- [Idempotent Reservation](../compositions/idempotent-reservation.md) — minutes-to-hours window, opaque-token matching. The general-purpose retry-safety wrapper around Provisional Commitment; subsumes the payment-processing idempotency pattern (Stripe Idempotency-Key, ISO 20022 (the International Organization for Standardization standard for financial-messaging data) BizMsgIdr, etc.).
-- Shared Todo *(forthcoming)* — same shape, possibly with longer windows for high-stakes domains.
-- Comment Posting *(forthcoming)* — short window with normalized-text matching.
-- Form Submission *(forthcoming)* — short window with idempotency-key matching.
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/duplicate-prevention.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This pattern survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first revision. Findings were modest.

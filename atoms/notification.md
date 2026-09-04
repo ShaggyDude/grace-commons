@@ -466,13 +466,27 @@ Notification is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed one foundational logic-confinement finding: the clock and `notification_id` are now host-injected at the I/O seam rather than generated inside the transitions; caller signatures unchanged and the invariant set held at 9; see Lineage. Formal layer landed 2026-06-03 — Alloy structural model `notification.als` + buggy twin verified, see Lineage §Formal model. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — structure and invariants specified; `status_of` query added after Pass 2 identified the missing read surface; Invariant 8 corrected to conditional-per-state form after Pass 1 identified the set-notation error; regulated adversarial scenarios and generation acceptance added after Pass 3 surfaced the compliance example obligation; three-pass lineage records all findings and resolutions. Second entry in `messaging`.
+`grounded on Final Critique 4 — 2026-06-18` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-18
+formal: verified — notification.als + 1 twin, 2026-06-03
+last gate: 2026-06-18 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/notification.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This atom is the second entry in the `messaging/` category, drafted alongside Subscription as the two-atom foundation for the forthcoming Notification Fanout composition.

@@ -342,13 +342,27 @@ It composes with, and is positioned against, two library patterns: [Undo History
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-16` — drafted, self-reviewed, refined through one council round, and ground by the **Opus "Happy Torvalds X2" clearance gate** (fresh-reader Phase 3 + Phase 4, merged) on 2026-06-16 with **0 foundational findings** (Lineage §Final Critique). The formal layer is present and verifying (model-present bar met); the formal-layer vote is **YES — cast and discharged**. Composition logic, nine emergent invariants, the load-bearing wiring decision (compensation-by-recorded-action for external-effect reversal), an order-fulfillment walkthrough exercising the committed, compensated, and idempotency-under-retry paths, and the deferred items are specified; the derived TLA+ model machine-checks the two load-bearing invariants (all-or-compensated, idempotency-under-retry) with a rejected twin each. `grounded` is a launch point, not a finish line — touch-triggered re-passes and scheduled rescans continue to ratchet confidence, and the named next formal increment is a log-plus-replay model promoting Invariants 1 and 2 from by-construction/out-of-scope to covered. Decomposition source: [`working-ideas/dream-compositions.md`](../working-ideas/dream-compositions.md) §7, source-grounded against the Temporal server and the Java and TypeScript SDKs. Under the unified methodology (3×3 baseline + Final Critique starting at Round 4), this pattern's closing fresh-reader Opus round is retro-labeled Final Critique 4; its baseline was compressed (draft → self-review → one council round → closing Opus review), preserved in the Lineage as historical record.
+`grounded on Final Critique 4 — 2026-06-16` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-16
+formal: verified — compensable-workflow.tla + 2 twins, 2026-06-16
+last gate: 2026-06-16 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/compensable-workflow.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This is a fresh draft; Lineage accumulates as the pattern survives passes.

@@ -355,13 +355,27 @@ Projects:  permission-denied
 
 ## Status
 
-`grounded on Final Critique 6 — 2026-08-26` — re-grounded: the Final Critique 5 routed findings (three foundational + seven refining + three rhetorical) were closed 2026-08-26 (the assign-side referential-integrity check with its additive `not-known` arm; the grant-administration non-goal with Attributed Permissions Admin named; the `actor_ref` ↔ authenticated-caller deployment seam with its suppliers named; the read queries made deterministic) and the closure gated by a fresh fresh-reader round (Final Critique 6 — 2026-08-26) that returned **zero foundational** findings — seven refining and four rhetorical remain routed open and non-blocking under the 92%-good threshold (see Lineage §Final Critique 6). Downgrade history: 2026-08-26, the batched pre-convention tail's closing gate (Final Critique 5) over the same-day convention fold returned three foundational (all dropped constituent delegations — since closed) plus seven refining and three rhetorical; the fold itself (conforming — no stored composition state) was confirmed by both gates. Prior grounding: `grounded on Final Critique 4 — 2026-06-18`. (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed the propagated unreachable `not-pending` rejection was dropped from `edit` (its own logic was already logic-confinement-clean); caller signatures unchanged; see Lineage. Formal-layer vote stands YES (model present and verifying); not reopened. The composition was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — composition logic specified across all three constituent atoms; emergent composition state (the two derived queries) named; cascade-on-delete rule stated as the load-bearing wiring decision; eight composition-level invariants stated and justified; scope vocabulary defined with canonical seven scopes; action wiring covers all state-changing surfaces with permission-check-first discipline; three cross-domain examples (sprint board, support queue, clinical care plan) exercising role-based access and task handoff; edge cases enumerate what is handled at the deployment layer (per-task visibility, self-assignment, completion handling, concurrent races, revoked grants, audit trail, undo). Fourth entry in `compositions/`. The three-atom composition the library has been forecasting since Personal Todo landed.
+`grounded on Final Critique 6 — 2026-08-26` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 6 — 2026-08-26
+formal: verified — shared-todo.tla + 1 twin, 2026-06-03
+last gate: 2026-08-26 — Final Critique 6, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/shared-todo.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Shared Todo is the composition that motivated the Permissions and Assignment atoms. Both were drafted as direct prerequisites; this composition is the context that explains why each atom is the shape it is.

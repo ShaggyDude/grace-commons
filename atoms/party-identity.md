@@ -782,13 +782,27 @@ Party Identity is freestanding and is the external-party identity contract that 
 
 ## Status
 
-`grounded on Final Critique 5 — 2026-07-12` (regrounded by the 2026-07-12 scheduled rescan — Final Critique 5, AI-conducted, fresh-reader, claude-fable-5; six findings closed in-pattern, including a foundational capability-provenance repair on Invariant 7's erasure carve-out and the specification of the [Read] query surface — see Lineage §Final Critique 5. Formal layer landed 2026-06-03 — TLA+ model `party-identity.tla` authored and verified, plus a buggy twin the checker rejects; see Lineage §Formal model. Prior groundings: Final Critique 4 — 2026-05-20; cleared `grounded (English) — formal layer pending`, which it briefly held after the 2026-06-03 formal-layer vote.) — foundation round complete (Pass 1 GRID — the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof; Pass 2 EOS, Pass 3 Linus all run; findings closed). Phase 4 Opus clearance gate (Angry Torvalds X2 — the persona pressure-testing.md §Phase 4 now names Happy Torvalds X2) ran against the foundation draft, surfaced six findings, and returned clean after all six were closed in-pattern. The gate also served as the closing AI adversarial round (Phase 3) given the gate's fresh-reader, full-three-pass coverage. Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Opus clearance gate is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+`grounded on Final Critique 5 — 2026-07-12` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 5 — 2026-07-12
+formal: verified — party-identity.tla + 1 twin, 2026-06-03
+last gate: 2026-07-12 — Final Critique 5, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/party-identity.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Party Identity began as the #6 atom in the ROADMAP's draft order. The foundation round (Pass 1 GRID, Pass 2 EOS, Pass 3 Linus) ran against the initial draft and produced the entries below; the Phase 4 Opus clearance gate ran against the post-foundation spec, surfaced six findings, and returned clean after all six were closed in-pattern. As of 2026-05-14 the atom is `grounded`.

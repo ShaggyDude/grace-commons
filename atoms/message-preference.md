@@ -624,13 +624,27 @@ Message Preference is freestanding and is designed to compose with:
 
 ## Status
 
-`grounded on Final Critique 8 — 2026-08-26` — re-grounded: the Final Critique 7 routed findings (two foundational + eight refining + one rhetorical) were closed 2026-08-26 and the closure gated by a fresh fresh-reader round (Final Critique 8 — 2026-08-26) that returned **zero foundational** findings — nine refining and four rhetorical remain routed open and non-blocking under the 92%-good threshold (see Lineage §Final Critique 8). History of the downgrade: 2026-08-24 a load-bearing touch (the Logic Confinement clock-injection fix, below) drew a closing fresh-reader round (Final Critique 6, Opus, Happy-Torvalds-X2) with **three foundational findings**; all three were closed 2026-08-25 — including the structural channel-set redesign to seam injection with a per-record [Declared Channels] stamp — and gated by Final Critique 7 (2026-08-25), which confirmed the closures held but surfaced the two-foundational routed set closed above. The clock fix itself cleared the 2026-08-24 round. Prior grounding: `grounded on Final Critique 5 — 2026-05-29` (formal layer landed 2026-06-03 — TLA+ model `message-preference.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded on Final Critique 5 — 2026-05-29`.) Foundation passes and one author-conducted refinement round (initial drafting session); fresh-reader AI Phase 3 round (2026-05-25); first Opus Phase 4 Happy Torvalds X2 gate (2026-05-25) surfaced 13 findings (3 foundational, 9 refining, 1 rhetorical), all closed in-pattern. The 2026-05-29 round ran a fresh-reader Phase 3 (claude-sonnet, all three passes) in parallel with a fresh-reader Opus Happy Torvalds X2 clearance gate (claude-opus), each given the spec body only (Status and Lineage withheld). The Opus gate returned **at-or-above the 92%-good threshold with zero foundational findings** — the grounding-determinative result; the round's refining and rhetorical findings (17 refining, 1 rhetorical, consolidated across both reviewers) were closed in-pattern. Retro-mapping to the [`CLAUDE.md`](../CLAUDE.md) round-structure convention: the first Opus gate (2026-05-25, 3 foundational, did not close clean) is Final Critique 4; the 2026-05-29 clean gate is Final Critique 5 — the canonical grounding marker. Third entry in `messaging`.
+`grounded on Final Critique 8 — 2026-08-26` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 8 — 2026-08-26
+formal: verified — message-preference.tla + 1 twin, 2026-06-03
+last gate: 2026-08-26 — Final Critique 8, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/message-preference.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This atom is the third entry in the `messaging/` category, drafted after Subscription, Notification, and Notification Fanout had grounded. The conceptual minefield — distinguishing Message Preference from Subscription and from Consent — was the load-bearing authoring challenge; the resolution lives in the Intent paragraphs and the Behavior bullets that name what this atom does not consult or evaluate. Lineage notes name Subscription and Consent by reference where defending the boundary; the specification body uses neutral language (*the topic-subscription concept*, *the legal-permission concept*) per the freestanding discipline.

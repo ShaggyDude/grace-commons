@@ -1255,12 +1255,260 @@ def check_term_registry(patterns: dict[Path, Pattern]) -> list[Finding]:
 
 
 # --------------------------------------------------------------------------- #
+# Ledger grammar and census (R)
+# --------------------------------------------------------------------------- #
+#
+# The Ledger is the countable single source of truth for a pattern's health
+# (open-questions.md §Replace the prose Lineage; pressure-testing.md §Where the
+# journey gets recorded). Its grammar is fixed so this file can parse it:
+#
+#   ## Ledger
+#
+#   ```
+#   status: <token — identical to the Status line's token>
+#   formal: <verified — model.tla + N twin(s), YYYY-MM-DD | pending — <why> |
+#            not applicable — <why>>
+#   last gate: <YYYY-MM-DD — <kind> — <result>> | none
+#
+#   open:
+#   - <YYYY-MM-DD-x> · <foundational|refining|rhetorical> · <where> · <defect> → <fix>
+#   ```
+#
+# `open: none` when nothing is open. When a finding closes its line is deleted;
+# the fact that it existed is in git. Derived rules the check refuses by
+# construction: a grounded token with an open foundational line; a Ledger
+# status that disagrees with the Status line; an open line with the wrong
+# field count, an unknown class, a malformed or duplicate id.
+
+LEDGER_SECTION = re.compile(r"^## Ledger\s*$", re.M)
+DECISIONS_SECTION = re.compile(r"^## Decisions\s*$", re.M)
+FENCE = re.compile(r"^```[^\n]*\n(.*?)^```", re.M | re.S)
+LEDGER_ID = re.compile(r"^\d{4}-\d{2}-\d{2}-[a-z]+$")
+LEDGER_CLASSES = ("foundational", "refining", "rhetorical")
+LEDGER_FORMAL = re.compile(
+    r"^(?:verified — .+\d{4}-\d{2}-\d{2}"
+    r"|pending — .+"
+    r"|not applicable — .+)$"
+)
+LEDGER_GATE = re.compile(r"^(?:none|\d{4}-\d{2}-\d{2} — [^—]+ — .+)$")
+DECISION_ENTRY = re.compile(
+    r"^- \*\*\d{4}-\d{2}-\d{2} — [^*]+\*\* \*Chose:\* .+ \*Over:\* .+ \*Because:\* .+$"
+)
+
+
+@dataclass
+class LedgerLine:
+    id: str
+    cls: str
+    where: str
+    defect: str
+    fix: str
+    line: int
+
+
+@dataclass
+class Ledger:
+    status: str | None = None
+    formal: str | None = None
+    gate: str | None = None
+    open: list[LedgerLine] = field(default_factory=list)
+    problems: list[tuple[int, str]] = field(default_factory=list)
+    line: int = 0
+
+    def count(self, cls: str) -> int:
+        return sum(1 for o in self.open if o.cls == cls)
+
+
+def parse_ledger(text: str) -> Ledger | None:
+    """Parse the fenced block under `## Ledger`; None when the section is absent.
+    Grammar problems are collected on the Ledger rather than raised, so one pass
+    reports all of them."""
+    m = LEDGER_SECTION.search(text)
+    if not m:
+        return None
+    led = Ledger(line=line_of(text, m.start()))
+    fence = FENCE.search(text, m.end())
+    # the fence must be the first non-blank content after the heading
+    between = text[m.end():fence.start()] if fence else text[m.end():m.end() + 200]
+    if not fence or between.strip():
+        led.problems.append((led.line, "no fenced block immediately after `## Ledger`"))
+        return led
+    base = line_of(text, fence.start()) + 1
+    seen_keys: set[str] = set()
+    in_open = False
+    ids: set[str] = set()
+    for i, raw in enumerate(fence.group(1).split("\n")):
+        ln = base + i
+        line = raw.rstrip()
+        if not line.strip():
+            continue
+        if in_open:
+            if not line.startswith("- "):
+                led.problems.append((ln, "line inside `open:` does not start with `- `"))
+                continue
+            parts = [s.strip() for s in line[2:].split(" · ")]
+            if len(parts) != 4 or " → " not in parts[3]:
+                led.problems.append((
+                    ln, "open line needs five fields: `id · class · where · defect → fix`"))
+                continue
+            defect, fix = (s.strip() for s in parts[3].split(" → ", 1))
+            oid, cls, where = parts[0], parts[1], parts[2]
+            if not LEDGER_ID.match(oid):
+                led.problems.append((ln, f"id `{oid}` is not `YYYY-MM-DD-x`"))
+            if oid in ids:
+                led.problems.append((ln, f"duplicate id `{oid}`"))
+            ids.add(oid)
+            if cls not in LEDGER_CLASSES:
+                led.problems.append((ln, f"class `{cls}` is not one of {', '.join(LEDGER_CLASSES)}"))
+            if not (where and defect and fix):
+                led.problems.append((ln, "empty field in open line"))
+            led.open.append(LedgerLine(oid, cls, where, defect, fix, ln))
+            continue
+        if ":" not in line:
+            led.problems.append((ln, f"unrecognized line `{line[:40]}`"))
+            continue
+        key, _, val = line.partition(":")
+        key, val = key.strip(), val.strip()
+        if key in seen_keys:
+            led.problems.append((ln, f"duplicate key `{key}`"))
+        seen_keys.add(key)
+        if key == "status":
+            led.status = val
+            if not any(rx.match(val) for rx in STATUS_TOKEN_FORMS):
+                led.problems.append((ln, f"status `{val}` matches no form of the pinned grammar"))
+        elif key == "formal":
+            led.formal = val
+            if not LEDGER_FORMAL.match(val):
+                led.problems.append((ln, "formal line is not `verified — … YYYY-MM-DD` / "
+                                         "`pending — …` / `not applicable — …`"))
+        elif key == "last gate":
+            led.gate = val
+            if not LEDGER_GATE.match(val):
+                led.problems.append((ln, "last gate is not `YYYY-MM-DD — kind — result` or `none`"))
+        elif key == "open":
+            if val == "none":
+                in_open = False
+                seen_keys.add("open-none")
+            elif val == "":
+                in_open = True
+            else:
+                led.problems.append((ln, "`open:` takes nothing (lines follow) or `none`"))
+        else:
+            led.problems.append((ln, f"unknown key `{key}`"))
+    for key in ("status", "formal", "last gate"):
+        if key not in seen_keys:
+            led.problems.append((led.line, f"missing `{key}:` line"))
+    if "open" not in seen_keys:
+        led.problems.append((led.line, "missing `open:` line"))
+    elif "open-none" in seen_keys and led.open:
+        led.problems.append((led.line, "`open: none` but open lines follow"))
+    elif "open-none" not in seen_keys and not led.open:
+        led.problems.append((led.line, "`open:` with no lines — write `open: none`"))
+    return led
+
+
+def check_ledger(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """R. Ledger grammar, and the contradictions it refuses by construction.
+    Every pattern carries a Ledger since the 2026-08-27 migration; a missing
+    one is a finding."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        led = parse_ledger(p.text)
+        if led is None:
+            findings.append(Finding(
+                p.path, 1, "R-ledger-missing",
+                "no `## Ledger` section (spec-format.md §Status / Ledger / Decisions; "
+                "pressure-testing.md §Where the journey gets recorded)",
+            ))
+            continue
+        for ln, msg in led.problems:
+            findings.append(Finding(p.path, ln, "R-ledger-grammar", msg))
+        token, _ = status_token_of(p.text)
+        if led.status and token and led.status != token:
+            findings.append(Finding(
+                p.path, led.line, "R-ledger-status",
+                f"Ledger says `{led.status}` but the Status line says `{token}`",
+            ))
+        if led.status and led.status.startswith("grounded") and led.count("foundational"):
+            findings.append(Finding(
+                p.path, led.line, "R-ledger-grounded-open",
+                f"status is grounded with {led.count('foundational')} open foundational "
+                f"line(s); grounding requires zero (pressure-testing.md §The 92%-good "
+                f"grounding threshold)",
+            ))
+        if led.status == "partially resolved" and not led.open and led.gate == "none":
+            findings.append(Finding(
+                p.path, led.line, "R-ledger-status",
+                "partially resolved with nothing open and no gate on record — "
+                "either an open line is missing or the status is `draft`",
+            ))
+        # Decisions: required alongside a Ledger; entries, if any, in the fixed form
+        d = DECISIONS_SECTION.search(p.text)
+        if not d:
+            findings.append(Finding(
+                p.path, led.line, "R-decisions-missing",
+                "a pattern with a Ledger carries a `## Decisions` section "
+                "(directional changes only; may have no entries)",
+            ))
+            continue
+        nxt = re.compile(r"^(?:## |---\s*$)", re.M).search(p.text, d.end())
+        body = p.text[d.end():nxt.start() if nxt else len(p.text)]
+        for i, raw in enumerate(body.split("\n")):
+            if raw.startswith("- ") and not DECISION_ENTRY.match(raw):
+                findings.append(Finding(
+                    p.path, line_of(p.text, d.end()) + i, "R-decisions-grammar",
+                    "decision entry is not `- **YYYY-MM-DD — title.** *Chose:* … "
+                    "*Over:* … *Because:* …`",
+                ))
+    return findings
+
+
+def census(root: Path, patterns: dict[Path, Pattern]) -> int:
+    """`--census`: the corpus health tally, derived from Ledgers. Patterns
+    without a Ledger are listed as unmigrated so the number is honest about
+    its own coverage."""
+    rows = []
+    unmigrated = []
+    for p in sorted(patterns.values(), key=lambda q: q.path.as_posix()):
+        led = parse_ledger(p.text)
+        rel = p.path.relative_to(root).as_posix()
+        if led is None:
+            unmigrated.append(rel)
+            continue
+        rows.append((rel, led.status or "?", led.count("foundational"),
+                     led.count("refining"), led.count("rhetorical"), led.gate or "?"))
+    w = max((len(r[0]) for r in rows), default=20)
+    print(f"{'pattern':<{w}}  {'status':<42}  fnd  ref  rhe  last gate")
+    for rel, st, f, r, h, g in rows:
+        print(f"{rel:<{w}}  {st[:42]:<42}  {f:>3}  {r:>3}  {h:>3}  {g}")
+    tf = sum(r[2] for r in rows); tr = sum(r[3] for r in rows); th = sum(r[4] for r in rows)
+    by_status: dict[str, int] = {}
+    for r in rows:
+        key = r[1].split(" on ")[0].split(" (")[0]
+        by_status[key] = by_status.get(key, 0) + 1
+    print()
+    print(f"— {len(rows)} pattern(s) with a Ledger: "
+          + ", ".join(f"{n} {k}" for k, n in sorted(by_status.items())))
+    print(f"— open: {tf} foundational, {tr} refining, {th} rhetorical "
+          f"across {sum(1 for r in rows if r[2] + r[3] + r[4])} pattern(s); "
+          f"{sum(1 for r in rows if r[2])} pattern(s) carry open foundational")
+    if unmigrated:
+        print(f"— {len(unmigrated)} pattern(s) without a Ledger (not counted): "
+              + ", ".join(unmigrated))
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
 
 def main(argv: list[str]) -> int:
-    root = Path(argv[1]).resolve() if len(argv) > 1 else Path(__file__).resolve().parents[2]
+    args = [a for a in argv[1:] if not a.startswith("--")]
+    flags = {a for a in argv[1:] if a.startswith("--")}
+    root = Path(args[0]).resolve() if args else Path(__file__).resolve().parents[2]
     patterns = load_patterns(root)
+    if "--census" in flags:
+        return census(root, patterns)
     # link / forthcoming / count checks also scan the top-level canonical docs
     extra_docs = [root / n for n in ("roadmap.md", "readme.md", "CLAUDE.md",
                                      "pressure-testing.md", "contributing.md",
@@ -1289,6 +1537,7 @@ def main(argv: list[str]) -> int:
     findings += check_internal_ids(patterns)
     findings += check_whitelist_gloss(patterns)
     findings += check_term_registry(patterns)
+    findings += check_ledger(patterns)
 
     findings.sort(key=lambda f: (f.code, str(f.path), f.line))
     for f in findings:

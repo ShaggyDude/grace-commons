@@ -522,13 +522,29 @@ This is the *generator's contract*: any code generated from this atom must produ
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` — the 2026-06-21 "derive expiry at read time" refactor (and its Final Critique 5 regrounding) has been **withdrawn for this atom**, returning it to its already-gated Final Critique 4 surface: expiry is once again a stored terminal `Expired` reached by an explicit `expire(id)` event, restoring the `expired_at` field, the `window-not-elapsed` rejection, and `confirm`'s `window-elapsed` guard. The reason the derive-at-read change does not apply here is that this atom's lapse has a **side effect** — the `expire` event returns the resource (and, in a pool-backed composition, a capacity slot) to availability, relied on by the [Reserve from Pool](../compositions/reserve-from-pool.md) and [Idempotent Reservation](../compositions/idempotent-reservation.md) compositions, which call `ProvisionalCommitment.expire(id)`. Derive-at-read applies only to a *side-effect-free* lapse; a side-effecting lapse needs an explicit expiry event. Because the content now matches the form that was already cleared at Final Critique 4, **no new gate is required** — this is a revert to a previously-grounded surface, not a new round; the meaning-preserving clock change from the withdrawn work (the clock is pipeline-implicit, not a `now` signature parameter — Final Critique 4 signatures had none either) is retained. The formal model was restored to the Final Critique 4 stored-`Expired` shape and re-verified green in the harness with both buggy twins rejected (resolution hazard and window hazard; see Lineage). Final Critique 4 (the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18) closed 1 foundational finding — `now`/id material supplied at the seam; formal-layer vote stood YES; the pattern was grandfathered at the legacy `grounded — 2026-05-20` token until that round. See Lineage §AI adversarial round — Final Critique 4 and §Derive-expiry refactor reverted.
+`grounded on Final Critique 4 — 2026-06-18` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-18
+formal: verified — provisional-commitment.tla + 2 twins, 2026-06-04
+last gate: 2026-06-18 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/provisional-commitment.md`.
+
+- **2026-06-23 — Expiry stays a stored terminal reached by an explicit `expire` event; the derived-expiry refactor is withdrawn for this atom.** *Chose:* stored `Expired` with `expired_at`, the `window-not-elapsed` rejection and `confirm`'s `window-elapsed` guard restored. *Over:* the corpus-wide derive-expiry-at-read-time move applied two days earlier. *Because:* this atom's lapse has a side effect — `expire` releases the resource, and in a pool-backed composition returns a capacity slot — which Reserve from Pool and Idempotent Reservation call and map; derived expiry is for side-effect-free lapses only.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This atom is the result of two iterations of pressure-testing.

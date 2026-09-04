@@ -666,13 +666,27 @@ It inherits from:
 
 ## Status
 
-`grounded on Final Critique 7 — 2026-08-26` — re-grounded: the Final Critique 6 routed findings (one foundational + fourteen refining + two rhetorical) were closed 2026-08-26 and the closure gated by a fresh fresh-reader round (Final Critique 7 — 2026-08-26) that returned **zero foundational** findings — ten refining and six rhetorical remain routed open and non-blocking under the 92%-good threshold (see Lineage §Final Critique 7). History of the downgrade: 2026-08-24 a load-bearing touch (the Logic Confinement clock-injection fix, below) drew a closing fresh-reader round (Final Critique 5, Opus, Happy-Torvalds-X2) with **five foundational findings**; all five were closed 2026-08-25 and gated by Final Critique 6 (2026-08-25), which confirmed every closure held but surfaced the one-foundational routed set closed above. The clock fix itself cleared the 2026-08-24 round. Prior grounding: `grounded on Final Critique 4 — 2026-06-04` (formal layer complete 2026-06-04 — Alloy model [`provenance.als`](./provenance.als) + buggy twin verified in `tools/harness/`; see Lineage §Formal model). Sonnet-drafted against an Opus plan, then Opus-gated through Pass 1 (GRID structural), Pass 2 (EOS conceptual independence — the load-bearing boundary against Event Log, plus the `disclose`-vs-Selective-Disclosure boundary), Pass 3 (Linus adversarial), and a Final Critique round: two foundational findings and four refining findings, all closed in-pattern (see Lineage notes). Regulated-pattern conventions (Regulated adversarial scenarios; Generation acceptance) baked in from the first draft, inherited from the methodology directly per [`pressure-testing.md`](../pressure-testing.md) §Regulated-pattern conventions. The formal-layer vote was YES; the derived Alloy model (custody continuity / single-origin / archived-absorbing on a linear chain, mirroring `clinical-observation.als`) verifies green — twelve checks hold, five non-vacuity runs satisfiable — with a buggy twin the checker rejects on five checks, clearing the "model present" bar. The English cleared the 92%-good threshold (foundational findings at zero) and the formal layer is discharged, so the pattern is unqualified `grounded`. Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Opus-led gating review (Pass 1/2/3 + Final Critique round) is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+`grounded on Final Critique 7 — 2026-08-26` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 7 — 2026-08-26
+formal: verified — provenance.als + 1 twin, 2026-06-04
+last gate: 2026-08-26 — Final Critique 7, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/provenance.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 **EOS Pass-2 boundary — conceptual independence against Event Log.** The key conceptual-independence record for this atom: Provenance is NOT a configured or specialized Event Log. Event Log (see [`atoms/event-log.md`](./event-log.md)) is a content-agnostic stream with no subject, no custodian, no continuity guarantee, and an explicitly-permitted sequence gap (a `storage-failure` consumes a sequence number; the next successful append receives a strictly higher number). The load-bearing distinction: Provenance maintains a `current_custodian` in chain state, updated atomically with every `transfer` entry, and every `transform`, `disclose`, and `archive` action is guarded against the then-current custodian. This state and these guards are properties of a *subject-scoped* chain; they cannot be expressed as invariants of a content-agnostic stream. The `transfer` action's reading of `from_custodian_ref` from chain state (rather than accepting it as a caller-supplied argument) is the structural mechanism that makes custody continuity an invariant rather than a convention — a convention Event Log could encourage but not enforce. The EOS test: does this concern have its own state machine? Yes: Open → Archived, with `current_custodian` as a state variable that changes only on `transfer`. Does it recur across many domains? Yes: pharmaceuticals, legal evidence, financial instruments, controlled substances, digital files. Could the host concept be specified without this concern, with the concern composed in? No — custody continuity is definitional to Provenance, not an optional additive. Verdict: freestanding atom, not a wrapper around Event Log.

@@ -626,15 +626,29 @@ A derived implementation of Invitation is *acceptable* — in the regulator-acce
 
 ## Status
 
-`grounded on Final Critique 5 — 2026-06-23` — the **execution/render-time refactor** is complete and the closing fresh-reader Final Critique (Final Critique 5) returned clean. The stored `Expired` state, the `expired_at` field, the `expire` action, and all lazy-expiry writes were removed; `Expired` is now a derived `effective_status` projection computed at read time from the injected clock and the immutable `expires_at` (Invariant 12). The clock `now` is **pipeline-injected at the I/O seam** (not an action parameter — the 2026-06-21 now-explicit-signatures experiment was reverted per the Final Critique council on 2026-06-23) and consumed only by pure derivations (guards and `read`) and timestamp stamps (writes). The formal layer's foundational findings (bound saturation, the vacuous Invariant 12 check, the single-resolution over-claim) were fixed on 2026-06-23 and the coverage cross-check is clean (see Lineage). Prior grounding: `grounded on Final Critique 4 — 2026-05-19` (formal layer landed 2026-06-03 — TLA+ `invitation.tla` + buggy twin verified). See Lineage §Execution/render-time refactor and §Final Critique 5.
+`grounded on Final Critique 5 — 2026-06-23` — see the Ledger.
 
-*Classification (post-flatten): stored flat as `atoms/invitation.md` — no category folder. Invitation is an identity-onboarding lifecycle primitive with meaningful non-regulated uses (wherever invitation-based onboarding is used), so its **regulated** and **security** classifications are overlays derived from its composers, not a folder it is filed under. This resolves the atom's former provisional `compliance/` placement and the question of relocating it to an identity folder: under the [usage-derived taxonomy](./TAXONOMY.md), `security` is an overlay it carries (derived from its identity/access standards), not a domain or a directory.*
+## Ledger
+
+```
+status: grounded on Final Critique 5 — 2026-06-23
+formal: verified — invitation.tla + 2 twins, 2026-06-03
+last gate: 2026-06-23 — Final Critique 5, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/invitation.md`.
+
+- **2026-06-21 — Expiry is derived at read time, never stored; this atom is the corpus's worked reference for the move.** *Chose:* the stored `Expired` state, the `expired_at` field and the `expire` action are removed; `Expired` is a read-time projection over the immutable `expires_at` and the injected clock. *Over:* a stored terminal a scheduler or a lazy write has to reach. *Because:* an invitation's lapse is side-effect-free, so a status that can be inferred at read time should be, and a flag that lags the clock is the idealization pitfall the methodology names.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 **Conventions inherited.** This atom carries the **regulated** and **security** overlays (both derived from its composers) and includes *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`pressure-testing.md`](../pressure-testing.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.

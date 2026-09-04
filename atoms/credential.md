@@ -633,15 +633,29 @@ This is the generator's contract: any implementation derived from this atom must
 
 ## Status
 
-`grounded on Final Critique 5 — 2026-06-23` — the **execution/render-time refactor** is complete and the closing fresh-reader Final Critique (Final Critique 5) returned clean. The stored `Expired` state, the "clock advance past `expires_at` → `Expired`" transition, and all lazy-expiry writes were removed; `Expired` is now a derived `effective_status` projection computed at read time from the injected clock and the immutable `expires_at` (Invariant 12). The single-Active uniqueness rule was reworded to range over **effective-Active** (stored `Active` ∧ `now < expires_at`) so a stored-`Active`-but-lapsed credential does not occupy the Active slot (Invariant 2). The clock `now` is injected by the pipeline at the I/O seam (pipeline-implicit `clock_t`, **not** an action parameter — the 2026-06-21 now-explicit-signatures experiment was reverted) and consumed only by pure derivations (guards) and timestamp stamps (writes). The TLA+ model was re-verified green in the harness with both buggy twins rejected and the coverage matrix regenerated clean against the refactored model (see Lineage). Prior grounding: `grounded on Final Critique 4 — 2026-06-10` (scheduled rescan, council-run — five rounds to clean, findings folded; see Lineage §Scheduled rescan 2026-06-10. Formal layer complete 2026-06-04 — TLA+ model `credential.tla` + buggy twin verified; see Lineage §Formal model and §Formal model — Inv 7 extension. Formal coverage: Invariant 7 (rotation-chain integrity) covered by `Inv_RotationChain` — coverage GAP closed 2026-06-04; see `tools/harness/coverage/credential.md`.) See Lineage §Execution/render-time refactor and §Final Critique 5.
+`grounded on Final Critique 5 — 2026-06-23` — see the Ledger.
 
-*Classification (post-flatten): stored flat as `atoms/credential.md` — no category folder. Credential is an authentication / credential-management primitive with meaningful non-regulated uses (wherever authentication is required), so its **regulated** and **security** classifications are overlays derived from its composers, not a folder it is filed under. This resolves the atom's former provisional `compliance/` placement and the question of relocating it to a security or identity folder: under the [usage-derived taxonomy](./TAXONOMY.md), `security` is an overlay it carries (derived from its identity/access standards), not a domain or a directory.*
+## Ledger
+
+```
+status: grounded on Final Critique 5 — 2026-06-23
+formal: verified — credential.tla + 2 twins, 2026-06-04
+last gate: 2026-06-23 — Final Critique 5, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/credential.md`.
+
+- **2026-06-21 — Expiry is derived at read time, never stored, and lazy-expiry writes are gone.** *Chose:* stored states `Active`, `Rotated`, `Revoked`; `Expired` is the projection over the immutable `expires_at` and the injected clock (Invariant 12). *Over:* the stored `Expired` terminal and the lazy transition at the next `verify` / `rotate` / `revoke`. *Because:* a stored flag lags the clock it idealizes, and a credential's lapse has no side effect that would need a write.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 **Conventions inherited.** This atom carries the **regulated** and **security** overlays (both derived from its composers) and includes *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`pressure-testing.md`](../pressure-testing.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.

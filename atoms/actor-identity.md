@@ -451,13 +451,27 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed three foundational logic-confinement findings: clock, cryptographic material, and `attestation_id` are now host-injected at the I/O seam rather than generated inside the `attest` transition; caller signatures unchanged; see Lineage. Formal-layer vote is NO, 2026-06-03 — English-only, minimum-formalism. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; attest and verify action signatures with fully-named rejection and outcome reasons; nine invariants including attestation durability (Invariant 9); five cross-domain examples spanning banking, healthcare, payments, legal, and source control, plus an `attest` rejection-path example; regulated adversarial scenarios cover regulator audit, disputed transaction, and compromised credential; fifteen edge cases including certificate revocation status and attestation store durability. First entry in `compliance`.
+`grounded on Final Critique 4 — 2026-06-18` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-18
+formal: not applicable — vote no 2026-06-03
+last gate: 2026-06-18 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/actor-identity.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This atom survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first iteration.

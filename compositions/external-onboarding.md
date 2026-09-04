@@ -516,7 +516,39 @@ Projects:  onboarding.interrupted
 
 ## Status
 
-`partially resolved` — downgraded 2026-08-26 by the batched pre-convention tail's closing fresh-reader gate (Final Critique 6) over the same-day convention fold (five foundational — the stored-Expired model, the orphaned credential check, the mis-cited detection claims, the token-less [Invite] event, the incomplete arm enumerations — plus nine refining and three rhetorical). The same-day closure pass folded **all seventeen** of those under the re-grounding campaign: the attempt-record credential gate on all four actions (the attest inside the substrate's declared `record_action` is the check), the derived-expiry model restated to the constituent's contract, the token-carrying `invitation.initiated` record, checks 5 and 6 rewritten to enumerate the actual failure signatures, and Invariant 4 restated as safety plus detectability. But that closure's own gate (Final Critique 7, claude-fable-5, Happy-Torvalds-X2) returned **six new foundational findings** — the false record-step unreachability claims and their missing landings (closure-introduced), check 2 falsified by lawful credential rotation, the purge-horizon blindness of the records-alone claims, the claimed-but-unwired inviter/revoker authorization, and the undeclared store scope checks 5(a)/6 quantify over — plus ten refining and three rhetorical, recorded as open routed findings in Lineage §Final Critique 7 per the stop rule. **Final Critique 7's F1, F2, F4, and F6 closed 2026-08-26** across the triage's crash-seam and validation rounds (the retention-horizon and store-scope standing rules; the dedicated-instance routing obligation; the gate discipline's stated validation rule — `reference_length_cap` adopted, minted-id width bounds declared — earning the unreachability claims, with the observed arm's single deployment-fault landing; gates deferred to the full-residue closing round), leaving **two foundational open** (check 2 vs lawful rotation; the unwired authorization claims). The composition holds at `partially resolved` until they close and a round returns zero foundational. Prior grounding: `grounded on Final Critique 5 — 2026-05-23`.
+`partially resolved` — see the Ledger.
+
+## Ledger
+
+```
+status: partially resolved
+formal: verified — external-onboarding.tla, no twin, 2026-06-03
+last gate: 2026-08-26 — Final Critique 7, fresh reader — 6 foundational (4 since closed), 10 refining, 3 rhetorical
+
+open:
+- 2026-08-26-a · foundational · Generation acceptance check 2 · "active Credential record" is falsified by lawful rotation, so a conforming implementation fails the check the day a principal rotates → require a Credential record in any lifecycle state whose `principal_ref` matches, walking `successor_credential_id`; drop the activeness quantifier
+- 2026-08-26-b · foundational · Summary; Examples, forensics walk; Standards references, SOC 2 CC6.2 · inviter/revoker authorization is claimed and neither wired nor declared out of scope; the gate authenticates but does not authorize → declare the authorization gate an above-composition obligation in a named edge case (a Permissions instance over `invitations:initiate` / `invitations:revoke`), downgrade the prose to authenticated-and-attributed, re-scope the CC6.2 paragraph
+- 2026-08-26-c · refining · every substrate-arm transcription · bare `recording-failure` where the contract is `recording-failure(step)` → carry the `(step)`
+- 2026-08-26-d · refining · [Invite] step 4 · "can never be accepted" overclaims; the atom's `read` projection returns the token to a store-reader → narrow the claim
+- 2026-08-26-e · refining · [Decline] · the decliner-identity sentence points at a `data` parameter the signature does not carry → pin the edge case's above-layer reading
+- 2026-08-26-f · refining · step 1 validation, all actions · validation depth unpinned; whether constituent semantic validation runs pre-gate decides whether a typo permanently consumes the invitation → pin that it runs pre-gate, citing the constituents' field rules, with steps 5/6's arms as backstop
+- 2026-08-26-g · refining · [Onboard], `duplicate-active-credential` · the causal story is impossible for a freshly minted `party_id` → re-derive as a cross-namespace `principal_ref` collision with an external writer
+- 2026-08-26-h · refining · [Revoke] · lacks its Arguments subsection → add it
+- 2026-08-26-i · refining · Invariant 2 · restates the constituent's Invariants 3/4 as composition-emergent → re-scope to the completion-record linkage
+- 2026-08-26-j · refining · Standards references · RFC and SP unglossed → gloss
+- 2026-08-26-k · refining · Examples, happy path · `Credential.register` argument order and the `<password hash>` material contradict the atom's raw-material model → match the atom
+- 2026-08-26-l · refining · Intent · "create no permanent records" for losing racers contradicts the attempt-event trace → restate
+- 2026-08-26-m · rhetorical · Composition logic overview; Actions · the same sequence numbered differently → number once
+- 2026-08-26-n · rhetorical · Invariant 4 · "exactly these" over-tightens against check 5's third signature → loosen
+- 2026-08-26-o · rhetorical · Invariant 4 · mixed marker/backtick notation and a sentence fragment → clean up
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/external-onboarding.md`.
+
+- **2026-08-26 — The attempt record is the credential gate on all four actions.** *Chose:* every state-changing action opens with a `record_action` attempt event whose Actor Identity attestation, made inside the substrate's declared surface, is the credential check; an attempt refused at the gate lands no event. *Over:* a dry-run mode the substrate does not declare, or reaching Actor Identity directly, which is a transitive constituent. *Because:* the check must live on a surface the composition actually consumes, and the attempt is then auditable for free.
+- **2026-08-26 — Invariant 4 is safety plus detectability, not totality.** *Chose:* the arc's completeness is claimed over named gap signatures that checks 5 and 6 enumerate. *Over:* the unconditional statement over paths that admit invisible terminal transitions. *Because:* the composition is stateless by design and carries no marker discipline, so detectability through records is the recovery posture it can honestly offer.
 
 ---
 

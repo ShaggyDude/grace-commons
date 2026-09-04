@@ -2,7 +2,7 @@
 
 > Do not cut corners unless you have VERY good reasons and in that case ask.
 
-> Standing instructions for any AI agent session working on Grace Commons, regardless of vendor or tool. (`CLAUDE.md` is a one-line shim pointing here, so Claude tooling and AGENTS.md-reading tools share this single source.) **This file is an agent-operational index and nothing more**: it points at the canonical documents and records environment quirks. It deliberately carries no canonical content — no vocabulary mirrors, no convention restatements, no library-state snapshots. Every rule it once mirrored now lives in exactly one canonical home, linked below. (The lesson that shaped this: every mirrored sentence in this file's CLAUDE.md-era predecessor eventually drifted from its source — stale counts, stale open-question lists, stale convention text. On 2026-06-11 the file was cut to pointers; the sections below that look like content are one-line redirects kept so historical "per CLAUDE.md §…" references in Lineage notes still resolve — via the shim, they land here.)
+> Standing instructions for any AI agent session working on Grace Commons, regardless of vendor or tool. (`CLAUDE.md` is a one-line shim pointing here, so Claude tooling and AGENTS.md-reading tools share this single source.) **This file is an agent-operational index and nothing more**: it points at the canonical documents and records environment quirks. It deliberately carries no canonical content — no vocabulary mirrors, no convention restatements, no library-state snapshots. Every rule it once mirrored now lives in exactly one canonical home, linked below. (The lesson that shaped this: every mirrored sentence in this file's CLAUDE.md-era predecessor eventually drifted from its source — stale counts, stale open-question lists, stale convention text. On 2026-06-11 the file was cut to pointers; the sections below that look like content are one-line redirects kept so historical "per CLAUDE.md §…" references in commit history still resolve — via the shim, they land here.)
 
 ---
 
@@ -49,7 +49,7 @@ When drafting a new pattern, additionally read the most structurally adjacent ex
 
 ## Vocabulary — load-bearing terms
 
-Moved — no mirror kept. Atom (atomic concept), composition, freestanding, and emergent invariant are defined in [`why.md`](./why.md); GRID, the three passes, `grounded`, and Lineage notes in [`pressure-testing.md`](./pressure-testing.md); the three shapes and regulated overlay in [`spec-format.md`](./spec-format.md); strict spec-language terms in [`glossary.md`](./glossary.md).
+Moved — no mirror kept. Atom (atomic concept), composition, freestanding, and emergent invariant are defined in [`why.md`](./why.md); GRID, the three passes, `grounded`, and the Ledger in [`pressure-testing.md`](./pressure-testing.md); the three shapes and regulated overlay in [`spec-format.md`](./spec-format.md); strict spec-language terms in [`glossary.md`](./glossary.md).
 
 ## Authoring conventions
 
@@ -89,9 +89,9 @@ Moved — the verbosity-preserves-meaning and bridges-over-walls principles are 
 
 **Never commit!** When work is ready to commit, write the proposed commit message inline in the chat and stop. Do not run `git commit`. This rule has no exceptions — not for trivial fixes, not for "obvious" changes, not ever.
 
-**Prompts go in chat, not files.** When asked for a prompt — for an AI adversarial review pass, a kickoff, a handoff, a sub-agent brief, anything — write it inline in the chat reply, as short as the task permits. Do **not** create prompt files in the repo. Prompts are ephemeral scaffolding; they carry no review pass, no Lineage notes, no authoring discipline, and they clutter the repo as content structurally indistinguishable from canonical patterns to any future reader (human or AI). Past sessions have written Round 3 / Final Critique review prompts as standalone files at the repo root; that was a mistake. The review's findings land in the pattern's Lineage notes under the appropriate round's Pass 1 / Pass 2 / Pass 3 entries; the prompt that drove the review stays in the chat where it was issued and is not committed.
+**Prompts go in chat, not files.** When asked for a prompt — for an AI adversarial review pass, a kickoff, a handoff, a sub-agent brief, anything — write it inline in the chat reply, as short as the task permits. Do **not** create prompt files in the repo. Prompts are ephemeral scaffolding; they carry no review pass, no Ledger, no authoring discipline, and they clutter the repo as content structurally indistinguishable from canonical patterns to any future reader (human or AI). Past sessions have written Round 3 / Final Critique review prompts as standalone files at the repo root; that was a mistake. The review's findings land in the pattern's Ledger as open lines, and the fixes in a commit whose message carries the reasoning; the prompt that drove the review stays in the chat where it was issued and is not committed.
 
-The same rule applies to review *outputs*: a Round 3 review's findings are folded into Lineage notes, not written as a standalone review file alongside the pattern.
+The same rule applies to review *outputs*: a review's findings go into the pattern's Ledger as open lines (or are fixed, with the reasoning in the commit message), not into a standalone review file alongside the pattern.
 
 The only prompt-shaped content that belongs in the repo is methodology — the three-pass question sets and authoring rubric in [`pressure-testing.md`](./pressure-testing.md). That content is canonical, reviewed, and edited like any other library document. Everything else is chat.
 

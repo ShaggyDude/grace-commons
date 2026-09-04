@@ -37,6 +37,7 @@ from lint import (  # noqa: E402
     Pattern,
     check_atomicity_over_audit,
     check_rebuild_bound,
+    check_ledger,
     load_patterns,
 )
 
@@ -318,6 +319,92 @@ def check_motivating_sites(patterns, findings) -> list[str]:
     return problems
 
 
+# --------------------------------------------------------------------------- #
+# R-ledger synthetic fixtures — the grammar and the contradictions it refuses.
+# One well-formed page must be silent; each malformed page must fire with the
+# named code. None depends on any corpus file.
+# --------------------------------------------------------------------------- #
+
+def _ledger_page(status: str, ledger_status: str, open_lines: str,
+                 decisions: str = "- **2026-08-26 — Title.** *Chose:* a. *Over:* b. *Because:* c.") -> str:
+    return f"""# Synthetic
+
+## Status
+
+`{status}` — derived.
+
+## Ledger
+
+```
+status: {ledger_status}
+formal: verified — synthetic.tla + 1 twin, 2026-06-03
+last gate: 2026-08-26 — fresh reader — clean
+
+open:{open_lines}
+```
+
+## Decisions
+
+{decisions}
+"""
+
+
+R_FIXTURES = [
+    # name, page text, code expected (None = must be silent)
+    ("R_CLEAN", _ledger_page(
+        "partially resolved", "partially resolved",
+        "\n- 2026-08-27-a · foundational · step 4 · x is unset → set it"), None),
+    ("R_CLEAN_NONE", _ledger_page(
+        "grounded on Final Critique 4 — 2026-06-04",
+        "grounded on Final Critique 4 — 2026-06-04", " none"), None),
+    ("R_GROUNDED_OPEN", _ledger_page(
+        "grounded on Final Critique 4 — 2026-06-04",
+        "grounded on Final Critique 4 — 2026-06-04",
+        "\n- 2026-08-27-a · foundational · step 4 · x is unset → set it"),
+     "R-ledger-grounded-open"),
+    ("R_STATUS_MISMATCH", _ledger_page(
+        "partially resolved", "grounded on Final Critique 4 — 2026-06-04", " none"),
+     "R-ledger-status"),
+    ("R_FOUR_FIELDS", _ledger_page(
+        "partially resolved", "partially resolved",
+        "\n- 2026-08-27-a · foundational · x is unset → set it"), "R-ledger-grammar"),
+    ("R_NO_ARROW", _ledger_page(
+        "partially resolved", "partially resolved",
+        "\n- 2026-08-27-a · foundational · step 4 · x is unset, set it"), "R-ledger-grammar"),
+    ("R_BAD_CLASS", _ledger_page(
+        "partially resolved", "partially resolved",
+        "\n- 2026-08-27-a · blocking · step 4 · x is unset → set it"), "R-ledger-grammar"),
+    ("R_DUP_ID", _ledger_page(
+        "partially resolved", "partially resolved",
+        "\n- 2026-08-27-a · refining · step 4 · x → y\n- 2026-08-27-a · refining · step 5 · x → y"),
+     "R-ledger-grammar"),
+    ("R_GATE_ID", _ledger_page(
+        "partially resolved", "partially resolved",
+        "\n- FC7-F2 · foundational · step 4 · x is unset → set it"), "R-ledger-grammar"),
+    ("R_EMPTY_OPEN", _ledger_page(
+        "partially resolved", "partially resolved", ""), "R-ledger-grammar"),
+    ("R_DECISION_FORM", _ledger_page(
+        "partially resolved", "partially resolved", " none",
+        decisions="- **2026-08-26 — Title.** We chose a because c."), "R-decisions-grammar"),
+    ("R_DECISIONS_MISSING", _ledger_page(
+        "partially resolved", "partially resolved", " none").split("## Decisions")[0],
+     "R-decisions-missing"),
+    ("R_LEDGER_MISSING", "# Synthetic\n\n## Status\n\n`partially resolved` — see the Ledger.\n",
+     "R-ledger-missing"),
+]
+
+
+def check_r_synthetic(problems: list[str]) -> None:
+    for name, text, want in R_FIXTURES:
+        pat = Pattern(path=Path(f"synthetic/{name}.md"), text=text,
+                      invariant_count=1, grounded=False)
+        codes = {f.code for f in check_ledger({pat.path: pat})}
+        if want is None and codes:
+            problems.append(f"R-ledger: {name} should be silent; fired {sorted(codes)}")
+        elif want is not None and want not in codes:
+            problems.append(f"R-ledger: {name} should fire {want}; got {sorted(codes) or 'nothing'}")
+
+
 def main(argv: list[str]) -> int:
     root = Path(argv[1]).resolve() if len(argv) > 1 else Path(__file__).resolve().parents[2]
     patterns = load_patterns(root)
@@ -375,6 +462,13 @@ def main(argv: list[str]) -> int:
             if not problems:
                 for stem, marker in P_MOTIVATING_SITES:
                     print(f"{code}: motivating site pinned — {stem} / {marker!r} ✓")
+
+    r_problems: list[str] = []
+    check_r_synthetic(r_problems)
+    failures.extend(r_problems)
+    if not r_problems:
+        print(f"R-ledger: {len(R_FIXTURES)} synthetic fixtures hold "
+              f"(two clean pages silent, eleven malformed pages fire their code) \u2713")
 
     for f in failures:
         print(f"FAIL  {f}", file=sys.stderr)

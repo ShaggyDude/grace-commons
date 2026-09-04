@@ -513,13 +513,27 @@ Any implementation derived from this atom must produce records and a runtime sur
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-05-20` (passed all required review passes and is stable enough to generate from) — foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Consent) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concepts conceptually independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. Scheduled rescan 2026-05-20: Regulated adversarial scenarios section added (foundational finding). Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Refinement round 2 (Opus single-atom, Torvalds X2 posture) is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+`grounded on Final Critique 4 — 2026-05-20` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-05-20
+formal: not applicable — vote no 2026-06-03
+last gate: 2026-05-20 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/soft-delete.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Non-regulated atom in `resource-lifecycle`, with regulated obligations. *Regulated adversarial scenarios* are not required; however, given the atom's direct role in GDPR erasure, HIPAA disposal, and e-discovery spoliation, a *Generation acceptance* section is required and has been added above. Provisional Commitment is the reference shape for resource-lifecycle atoms; Legal Hold is the reference for the attribution and terminal-state patterns carried here.

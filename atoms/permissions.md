@@ -451,13 +451,27 @@ This is the generator's contract: any code generated from this atom must produce
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed one foundational logic-confinement finding: the clock and `grant_id` are now host-injected at the I/O seam rather than generated inside the `grant`/`revoke` transitions; caller signatures unchanged; see Lineage. Formal layer landed 2026-06-03 — Alloy structural model `permissions.als` + buggy twin verified, see Lineage §Formal model. The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; grant and revoke action signatures with fully-named rejection taxonomies including `storage-failure`; `permitted` query with two first-class outcomes; ten invariants including grant store durability (Invariant 10); five cross-domain examples; regulated adversarial scenarios with disputed access query in timestamp-based temporal form; fifteen edge cases including revoke persistence failure. Fourth entry in `compliance`.
+`grounded on Final Critique 4 — 2026-06-18` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-18
+formal: verified — permissions.als + 1 twin, 2026-06-03
+last gate: 2026-06-18 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/permissions.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This atom is the first entry in the library whose primary concern is *prospective authorization* — what an actor is permitted to do — rather than *retrospective attribution* (Actor Identity) or *structural audit guarantees* (Retention Window, Tamper Evidence). It is drafted as a direct prerequisite for the Shared Todo composition (Personal Todo + Permissions + Assignment).

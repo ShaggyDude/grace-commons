@@ -604,15 +604,27 @@ A derived implementation of Capability is *acceptable* — in the regulator-acce
 
 ## Status
 
-`grounded on Final Critique 5 — 2026-06-23` — the **execution/render-time refactor** is complete and the closing fresh-reader Final Critique (Final Critique 5) returned clean. The stored `Expired` state, the "Clock advance past `expires_at` → Expired" transition, and all lazy-expiry writes were removed; `Expired` is now a derived `effective_status` projection computed at read time from the injected clock and the immutable `expires_at` (Invariant 13). The two stored terminals are `Redeemed` (exhaustion) and `Revoked`; exhaustion and revocation remain stored writes. The clock `now` is **pipeline-injected at the I/O seam** (not an action parameter — the 2026-06-21 now-explicit-signatures experiment was reverted) and consumed only by pure derivations (guards, `read`) and timestamp stamps (writes). The formal model (`capability.als` + buggy twin) was re-derived and re-verified green in the harness and the coverage matrix regenerated clean (see Lineage). Prior grounding: `grounded on Final Critique 4 — 2026-06-10` (scheduled rescan, council-run — three rounds to clean, findings folded, buggy twin `capability-buggy.als` landed, first coverage matrix emitted; see Lineage §Scheduled rescan 2026-06-10). See Lineage §Execution/render-time refactor and §Final Critique 5.
+`grounded on Final Critique 5 — 2026-06-23` — see the Ledger.
 
-*Classification (post-flatten): stored flat as `atoms/capability.md` — no category folder. Capability is an authorization primitive with significant non-regulated uses (bearer-token authorization wherever it is needed), so its **regulated** and **security** classifications are overlays derived from its composers, not a folder it is filed under. This resolves the atom's former provisional `compliance/` placement and the question of relocating it to a security folder: under the [usage-derived taxonomy](./TAXONOMY.md), `security` is an overlay it carries (derived from its identity/access standards), not a domain or a directory.*
+## Ledger
+
+```
+status: grounded on Final Critique 5 — 2026-06-23
+formal: verified — capability.als + 1 twin, 2026-06-23
+last gate: 2026-06-23 — Final Critique 5, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/capability.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 **Conventions inherited.** This atom carries the **regulated** and **security** overlays (both derived from its composers) and includes *Regulated adversarial scenarios* and *Generation acceptance* from the first draft, per the methodology inherited from [`pressure-testing.md`](../pressure-testing.md). These conventions are inherited from the methodology directly, not re-derived from any predecessor atom.

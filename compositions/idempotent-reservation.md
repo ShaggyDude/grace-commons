@@ -312,13 +312,27 @@ This is the generator's contract: any code generated from this composition must 
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed two foundational findings — an unclassified composition store and an in-core digest; caller signatures unchanged; see Lineage. Formal-layer vote stands YES (model present and verifying); `parameters_digest`/`token-collision` and `token_results` are out of model scope, so the fixes do not reopen it. The composition was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — composition logic specified; emergent state (`token_results`) named with explicit `parameters_digest` specification requirements; action wiring covers all four state-changing surfaces with fully-named rejection taxonomies and explicit `action_type` check for all three transition actions; eight composition-level invariants with Invariant 7 extended to address eviction ordering; walkthrough plus four cross-domain examples and four adversarial scenarios (token-collision added); edge cases enumerate what is handled at the deployment layer. Second entry in `compositions/`.
+`grounded on Final Critique 4 — 2026-06-18` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-18
+formal: verified — idempotent-reservation.tla + 1 twin, 2026-06-03
+last gate: 2026-06-18 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/idempotent-reservation.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This application survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first iteration.

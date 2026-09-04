@@ -377,13 +377,27 @@ Authenticated Actor inherits the broader standards compliance of its constituent
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-10` (drafted 2026-06-10; **three-round baseline + author Final Critique complete** — three foundational + four refining findings closed in-pattern, foundational to zero; **formal-layer vote YES** and the derived TLA+ — Temporal Logic of Actions — model + buggy twin **verified** in `tools/harness/`, so the formal prerequisite is discharged; **Phase 4 Opus Happy-Torvalds-X2 fresh-reader clearance gate cleared in a fresh session 2026-06-10 (Final Critique 4)** — foundational findings at zero, five refining findings folded, the correct TLA+ model re-verified at 16 states and the buggy twin re-rejected on `Inv1_NoSignAfterRevoke`). Drafted against this composition's approved architectural cut — Credential (the authentication/gating surface) + Actor Identity (the attestation surface) — answering the three CORNERS §Cross-atom identity surface aliasing questions as three emergent invariants: the revocation cascade (forward closure of the attest gate, the load-bearing claim), secret-surface separation, and namespace binding. Regulated-pattern conventions (Regulated adversarial scenarios; Generation acceptance, with the records-clearable / externally-clearable split adapted to a composition whose record-of-record is the attestation store rather than an Audit Trail) baked in from the first draft, inherited from the methodology directly per [`pressure-testing.md`](../pressure-testing.md) §Regulated-pattern conventions. With the author gating review, the verified formal model and its buggy twin, and the fresh-reader Phase 4 clearance gate all cleared at zero foundational findings, the pattern is `grounded on Final Critique 4`.
+`grounded on Final Critique 4 — 2026-06-10` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-10
+formal: verified — authenticated-actor.tla + 1 twin, 2026-06-10
+last gate: 2026-06-10 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/authenticated-actor.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Regulated composition (composes two regulated atoms — Credential and Actor Identity — both carrying the security overlay). The two regulated-overlay conventions — *Regulated adversarial scenarios* and *Generation acceptance* (with the records-clearable / externally-clearable split) — are **inherited from the methodology directly** ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft, not re-derived from predecessor patterns. The primary structural references are [Login](./login.md) for the revocation-cascade shape (Authenticated Actor is Login's outbound-attestation counterpart — Login revokes the derived *session* set; this composition forward-closes the *attest* surface) and the TLA+ TOCTOU buggy-twin discipline, [Attributed Permissions Admin](./attributed-permissions-admin.md) for the two-atom compliance-pairing shape and the attestation-attribution surface, and [Immutable Transaction Ledger](./immutable-transaction-ledger.md) for the compact single-load-bearing-invariant TLA+ model + buggy-twin structure. The motivating gap is `demos/attributed-permissions-admin/CORNERS.md` §Cross-atom identity surface aliasing, whose three questions (revocation cascade, secret interchangeability, audit identity unification) become this composition's three emergent invariants.

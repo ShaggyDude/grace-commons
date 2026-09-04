@@ -477,13 +477,29 @@ It inherits from: **[Subscription](../atoms/subscription.md)** (Observer, pub-su
 
 ## Status
 
-`grounded on Final Critique 12 — 2026-06-12` — authored 2026-06-11 against the adjudicated kickoff plan; foundation round plus nine fresh-reader Final Critique rounds (Final Critique 4: 22 findings, 6 foundational; Final Critique 5: 14, 2; Final Critique 6: 13, 3; Final Critique 7: 14, 3; Final Critique 8: 10, 2; Final Critique 9: 13, 0 foundational — the first grounding gate). A **post-grounding fresh-reader rescan reopened the gate**: Final Critique 10 (6 findings, 1 foundational — a gate fail-closed/precedence ordering defect); Final Critique 11 (10 findings, a foundational reconciliation-surface provenance cluster — resolved by introducing the composition-introduced `reconcile_gaps` / `reconcile_overshoots` surface, taking the action surface to three); Final Critique 12 (5 findings, **0 foundational** — the re-grounding gate). All findings closed in-pattern every round, Pass 2 clean from Final Critique 8 on; formal-layer vote YES and discharged (TLA+ cap-TOCTOU model + overshoot buggy twin verified in `tools/harness/`, bound saturation recorded; the Final Critique 10–12 changes do not touch the modeled race — see the §Formal model coverage note); regulated overlay carried in full. The eighteenth and final C-numbered composition.
+`grounded on Final Critique 12 — 2026-06-12` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 12 — 2026-06-12
+formal: verified — preference-aware-notification-fanout.tla + 1 twin, 2026-06-12
+last gate: 2026-06-12 — Final Critique 12, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/preference-aware-notification-fanout.md`.
+
+- **2026-06-11 — Delivery frequency accounting is a rule inside the shaping disposition, not an extracted concept.** *Chose:* the frequency-cap verdict is a pure function over Event Log's delivery history and the injected clock, evaluated inside `shaping_disposition`. *Over:* a Delivery Frequency Accounting atom. *Because:* it has no state machine of its own, no freestanding surface to compose, and another pattern would reinvent one Event Log read, not a concept.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 

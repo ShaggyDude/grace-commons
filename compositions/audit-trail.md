@@ -614,13 +614,29 @@ It inherits from:
 
 ## Status
 
-`grounded on Final Critique 11 — 2026-08-25` — grounded by the closure campaign's eighth fresh-reader gate, the first to return **zero foundational findings** (seven refining + three rhetorical, folded same-pass — the 92%-good threshold: foundational at zero grounds the pattern). The 2026-08-24/25 campaign ran seven implementation rounds and eight fresh-reader gates (Final Critiques 5–11, fresh-reader discipline throughout, Happy-Torvalds-X2 on Pass 3), driving the foundational count 13 → 12 → 8 → 9 → 4 → 4 → 2 → **0**; the two Final Critique 10 residues — the `erasure_outcomes` classification and the `reconciliation_operator` discriminator — closed 2026-08-25 alongside that round's eight actionable refining findings (see Lineage). Formal-layer vote stands **YES** (model present): `audit-trail.tla` + buggy twin re-verified green through `tools/harness/` on the grounding day. What the campaign settled: the delegated-destruction design (shredding-class only; both constituents' immutability and durability invariants hold verbatim), the Seal Lifecycle and Erasure Tombstone extractions (routed, not absorbed), the seven-element classified Composition state with rebuild procedures and three extraction-pending facts, the three declared structural relations, twelve knobs in canonical format, the `unverifiable` / `failed-verification` / `(compensation-window)` outcome discipline, four concurrency obligations each naming its contended resource, and a constituent reference graph verified exhaustively clean by four independent fresh readers. — Composition logic specified across all four constituent atoms; emergent state classified per the Contract (`event_to_attestation`, `event_to_retention`, `event_to_sequence`, `seal_coverage`, `erasure_outcomes`, `sealed_through`, `compensated_attestations`); action wiring covers record, seal, read, verify, and the cascading purge with fully-named rejection taxonomies; eight composition-level invariants with *Rests on:* provenance lines; walkthrough, two rejection-path walkthroughs, three selected outcome runs, five cross-domain examples (banking SOX, healthcare HIPAA, payments PCI DSS, pharmaceutical 21 CFR Part 11, broker-dealer SEC Rule 17a-4) and three adversarial scenarios; eighteen edge cases; Generation acceptance split into eight traversal-clearable and six externally-clearable checks. Third entry in `compositions/`. Prior grounding: Final Critique 4 (2026-06-18, the composition's first AI-conducted fresh-reader round); before that, the legacy `grounded — 2026-05-20` token under the early process.
+`grounded on Final Critique 11 — 2026-08-25` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 11 — 2026-08-25
+formal: verified — audit-trail.tla + 1 twin, 2026-06-03
+last gate: 2026-08-25 — Final Critique 11, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/audit-trail.md`.
+
+- **2026-08-24 — Seal supersession is extracted to a forthcoming Seal Lifecycle composing pattern, not absorbed.** *Chose:* remove the Reseal action, `superseded_by`, `reseal_on_purge` and every current-seal qualification from the canonical composition; name Seal Lifecycle as owner of re-sealing partly purged seals, mechanism rotation, and supersession bookkeeping. *Over:* keeping the mechanism added at Final Critique 6. *Because:* which seal is current over a range two seals cover is new truth no constituent store carries and no rebuild replays — it clears the extraction gates, and it had spread through three invariants, three checks and four cards.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This application survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first iteration. The two regulated-pattern conventions canonicalized in [`contributing.md`](../contributing.md) and [`pressure-testing.md`](../pressure-testing.md) — *Regulated adversarial scenarios* and *Generation acceptance* — were baked in from the first draft. The composition pattern (wrap each constituent's action behind one application-level action, name emergent state, preserve each constituent's invariants, surface cross-atom invariants explicitly) follows the structural template Idempotent Reservation established and extends it to four constituents.

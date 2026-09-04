@@ -302,13 +302,27 @@ The two atoms it composes carry their own standards inheritance — Personal Tod
 
 ## Status
 
-`grounded on Final Critique 6 — 2026-08-26` — re-grounded: the Final Critique 5 routed findings (two foundational + six refining + three rhetorical) were closed 2026-08-26 and the closure gated by a fresh fresh-reader round (Final Critique 6 — 2026-08-26) that returned **zero foundational** findings — seven refining and two rhetorical remain routed open and non-blocking under the 92%-good threshold (see Lineage §Final Critique 6). Downgrade history: 2026-08-26, the batched pre-convention tail's closing gate (Final Critique 5) over the same-day convention fold returned two foundational (the no-op [Edit] hole; Invariant 7's falsifiable reachability claim — both since closed) plus six refining and three rhetorical; the fold itself (derived-index-by-construction classification) was confirmed by both gates. Prior grounding: `grounded on Final Critique 4 — 2026-06-18`. (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed two foundational findings — a propagated unreachable `not-pending` and the composition minting a unit id inside its own `add` logic; caller signatures unchanged; see Lineage. Formal-layer vote stands YES (Tier A+B TLA+ model with three buggy twins); the id-allocation site and rejection arms are out of model scope, so the fixes do not reopen it. The composition was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — composition logic specified, seven composition-level invariants stated and justified, walkthrough example exercises the full action surface including delete/undo identity preservation, edge cases identify deferred candidate concepts and the substrate's natural breakdown points. First entry in `compositions/`. Demonstrates that two existing atoms compose into a useful composition without modifying either constituent.
+`grounded on Final Critique 6 — 2026-08-26` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 6 — 2026-08-26
+formal: verified — undo-history.tla + 3 twins, 2026-06-14
+last gate: 2026-08-26 — Final Critique 6, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/undo-history.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This application survived all three pressure-testing passes (see [`pressure-testing.md`](../pressure-testing.md)) on its first revision.

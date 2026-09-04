@@ -713,13 +713,27 @@ Guard evaluation, non-repudiable attribution, tamper-evidence, and retention are
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-04` (formal layer complete 2026-06-04 — Alloy model [`state-machine.als`](./state-machine.als) + buggy twin verified in `tools/harness/`; see Lineage §Formal model). Sonnet-drafted against an Opus plan, then Opus-gated through Pass 1 (GRID), Pass 2 (EOS — the boundaries against Approval Step and Event Log hold; guard *evaluation* and the Definition Registry are extracted), Pass 3 (Linus), and a Final Critique round: one foundational finding and one refining finding, closed in-pattern (see Lineage notes). Regulated-pattern conventions baked in from the first draft. This atom **resolves the `workflow` one-atom open question** (it is the second workflow atom). The formal-layer vote was YES; the derived Alloy model (only-declared-transitions, terminal absorption, replay determinism over a declared transition relation + linear history chain, mirroring `clinical-observation.als` / `provenance.als`) verifies green — ten checks hold, four non-vacuity runs satisfiable — with a buggy twin the checker rejects on three checks. The English cleared the 92%-good threshold (foundational findings at zero) and the formal layer is discharged, so the atom is unqualified `grounded`. Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Opus-led gating review (Pass 1/2/3 + Final Critique round) is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+`grounded on Final Critique 4 — 2026-06-04` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-04
+formal: verified — state-machine.als + 1 twin, 2026-06-04
+last gate: 2026-06-04 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/state-machine.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Regulated atom. Conventions — *Regulated adversarial scenarios* and *Generation acceptance* — inherited from the methodology directly ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft. [Approval Step](./approval-step.md) is the primary structural reference for this draft; its store-instance model, identity-model conventions, action-signature discipline (explicit rejection reasons, explicit rejection priority, explicit rejection-return-token collision resolution), invariant format, regulated adversarial scenarios structure, and Generation acceptance structure are all mirrored here. [Event Log](./event-log.md) is the clock-independent ordering reference: `sequence_number` as the total-order source, `fired_at` as best-effort wall time, and `next_sequence_number` as a durable counter that must survive restarts are all inherited from Event Log's discipline.

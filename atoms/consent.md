@@ -579,15 +579,29 @@ Consent is the data subject's authorization primitive — the complement to Perm
 
 ## Status
 
-`grounded on Final Critique 5 — 2026-06-23` — the **execution/render-time refactor** is complete and the closing fresh-reader Final Critique (Final Critique 5) returned clean. The authoritative expiry path already conformed — *"Expiry is not an action; it is a condition,"* and `check(subject_ref, purpose, at_time?)` derives expiry at read with the evaluating clock as an explicit input — so this was a LIGHT marking, not a rewrite. Two residuals were addressed per the two confirmed decisions: (1) the clock-gated checks on `grant`/`revoke` (`expires_at > now`; `revoked_at` not-future and ≥ `granted_at`; the `already-revoked`/`already-expired` semantic-state guards) are framed against `now` as the **pipeline-injected clock reading at the I/O seam** (the pipeline's `clock_t`) — *not* a signature parameter (the 2026-06-21 first pass briefly threaded `now` into the `grant`/`revoke` signatures; that was reverted — the execution contract injects `clock_t`/`id_t` at the seam, so the clock is not a caller-facing parameter), and these checks are marked **pure** guards over the stored record + injected `now` that reject without writing; (2) the **stored `state` Expired write** (eager/lazy) is the residual against the strict render-time target (which would carry no stored Expired write) — it is now **clearly marked** in the State section as a materialized cache of the derived semantic state (constrained by Invariant 6 to equal the derived value at read time, so it never lags the clock), with collapsing it to a pure projection recorded as an open design point rather than done here. A Logic-confinement note was added to Decision points. Prior grounding: `grounded on Final Critique 4 — 2026-05-20` (formal-layer vote stands NO — English-only). See Lineage §Execution/render-time refactor — 2026-06-21 and §Final Critique 5.
+`grounded on Final Critique 5 — 2026-06-23` — see the Ledger.
 
-Prior status detail (retained for the audit trail): formal-layer vote **reconsidered 2026-06-03 to NO — formal-not-warranted**; the aggressive-bar YES was downgraded on a second pass — earlier-terminal-event-wins (revoke vs expiry) is precedence fixed by insertion order in the append-only record, resolvable from the records alone, with terminal absorption already structural. See Lineage §Formal-layer vote. Cleared `grounded (English) — formal layer pending`. Foundation round (Pass 1 + 2 + 3 author-led), and two AI-conducted adversarial rounds complete: Refinement round 1 (Sonnet, batched with Legal Hold and Soft Delete) and Refinement round 2 (Opus single-atom, Torvalds X2 posture). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concepts independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Refinement round 2 (Opus single-atom, Torvalds X2 posture) is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+## Ledger
+
+```
+status: grounded on Final Critique 5 — 2026-06-23
+formal: not applicable — vote no 2026-06-03
+last gate: 2026-06-23 — Final Critique 5, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/consent.md`.
+
+- **2026-06-23 — Expiry is derived at `check`, with the stored `Expired` cache marked as a residual; `now` is not a signature parameter.** *Chose:* `check` evaluates expiry against the injected clock (or a caller-supplied `at_time?`, a query parameter, not the clock); the stored-Expired transition an implementation may write is a cache and is marked so. *Over:* threading `now` into `grant` / `revoke`, or treating stored `Expired` as the truth. *Because:* the execution contract injects the clock at the seam, and a stored flag that lags the clock is a cache, not a fact.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Regulated atom. Conventions — *Regulated adversarial scenarios* and *Generation acceptance* — inherited from the methodology directly ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft. Legal Hold and Retention Window are the reference shapes for regulated compliance atoms; Permissions is the reference for the authorization-surface contrast in Intent.

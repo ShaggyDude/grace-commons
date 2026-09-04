@@ -537,13 +537,27 @@ Clinical Observation composes naturally with the existing library:
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-05-20` (formal layer landed 2026-06-03 — Alloy structural model `clinical-observation.als` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`; full prose round was `grounded — 2026-05-20`.) — foundation passes complete (Pass 1, Pass 2, Pass 3), two human refinement rounds complete (Refinement rounds 1 and 2), and one AI-conducted adversarial round complete (Refinement round 3, Torvalds X2 posture, Claude Opus 4.7). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved, all concepts independent, all known adversarial gaps closed or named as explicit out-of-scope. Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Refinement round 3 (AI-conducted adversarial round, Torvalds X2 posture, Claude Opus 4.7) is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+`grounded on Final Critique 4 — 2026-05-20` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-05-20
+formal: verified — clinical-observation.als + 1 twin, 2026-06-03
+last gate: 2026-05-20 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/clinical-observation.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 **Pass 1 — Structural completeness (GRID).** Two findings, both closed in-pattern.

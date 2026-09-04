@@ -555,13 +555,62 @@ Projects:  credential-invalid
 
 ## Status
 
-`partially resolved` — **all routed foundational findings are now closed (2026-08-27); what remains is a fresh-reader gate returning zero foundational, which is a separate bar.** **Final Critique 7's F4 closed 2026-08-27**: [Approve Step] step 5 wrote `denial_reason` / `reason` from the `read_chain` result, but the substrate's chain record carries no reason field — the terminal reason lives only in the `chain_resolved` / `chain_withdrawn` event data. The fetch is now named at both arms (resolve the chain's terminal event id from the result's event-id list, read its `data.reason`) with its own failure landing: `denial_reason = null` and `audit_pending` open, so a fetch failure cannot stall a transition the chain has already decided. Invariant 7 states the null arm. The read is payload-sourced and so also bounded by the substrate's retention horizon, which the invariant now names. Previously: downgraded 2026-08-24 by the Logic Confinement clock-injection touch (Final Critique 5 returned twenty-nine foundational findings; one closed by the touch). The 2026-08-25 closure pass folded **all forty-five** open Final Critique 5 findings (twenty-eight foundational + seventeen refining/rhetorical), rebuilt the composition's truth-model — every Composition-state element a derived index over the substrate audit log and the Capability instance's composed scope, no bearer material on any record surface, a named recovery discipline, exhaustive rejection mappings, the [Read Request] action, the four-part-defended wiring decision — absorbed Multi-Party Approval's `credential` signature change, and cleared this composition's two routed F-constituent-call linter findings (the corpus baseline now holds only Execute Gated Workflow's five). The closing fresh-reader gate (Final Critique 6) returned five new foundational findings, and the 2026-08-26 closure pass folded **all fourteen** of those (five foundational + seven refining + two rhetorical; one deliberate surface reduction — the `requests:withdraw` scope and its structurally-empty third-party withdrawal path dropped, the substrate's initiator-only discipline stated instead). But that closure's own gate (Final Critique 7, claude-fable-5, Happy-Torvalds-X2) returned **four new foundational findings** — the single-marker overlap with [Exercise Access] outside the serialization, the committed-redemption/no-marker crash window, the orphan-chain window in [Request Access] with no detector, and the chain-terminal-reason miscite against `read_chain`'s declared return — plus nine refining and five rhetorical, recorded as open routed findings in Lineage §Final Critique 7 per the stop rule. **Final Critique 7's F1, F2, and F3 closed 2026-08-26** in the triage's crash-seam round (the multi-entry payload-carrying marker under the per-request serialization; marker-before-act intent entries on the exercise and intake paths; the four-leg completion-and-reconciliation sweep; the durable pre-write making orphan chains unreachable; gate deferred to the full-residue closing round), leaving **one foundational open** (the terminal-reason miscite). The pattern holds at `partially resolved` until it closes and a round returns zero foundational. Prior grounding: `grounded on Final Critique 4 — 2026-05-23` — three-pass baseline (Rounds 1–3) plus Final Critique (Round 4) complete. Thirteen findings across Rounds 1–4, all resolved. Round 5 (touch-triggered re-pass, 2026-05-23): one foundational finding (`request_to_chain` declared in `vars` but not initialized in `Init`, TLA+ model unrunnable via CLI), **resolved 2026-06-03** by removing the dead variable; the model now runs clean under the `tools/harness/` WASM checker (1682 states, all seven invariants hold). Round 5 closes clean. See Lineage notes for the full finding-and-resolution record.
+`partially resolved` — see the Ledger.
+
+## Ledger
+
+```
+status: partially resolved
+formal: verified — privileged-access-provisioning.tla, no twin, 2026-06-03
+last gate: 2026-08-27 — fresh reader — 4 foundational, 12 refining, 4 rhetorical
+
+open:
+- 2026-08-27-a · foundational · Composition state (`request_store`, `session_access_log`); Invariants 1, 5, 7, 9; Generation acceptance checks 1, 4, 5, 6 · two of six indexes share the horizon-bounded rebuild and carry no horizon qualifier; the invariants and checks quantify over every request with no retention bound, and check 5 condemns as a conformance failure what Composition state declares lawful, so every lawfully retained historical token reports as a provisioning bypass → qualify the four invariants and four checks to the horizon; extend the split classification and durability obligation to both indexes, or declare derecognition at the horizon
+- 2026-08-27-b · foundational · [Request Access] steps 4–6; Composition state field list; recovery discipline, initiation leg; [Approve Step] step 1; [Withdraw Request] step 4 · `chain_id` is minted at step 5, after the step-4 pre-write that must carry it, is in no `request_store` field, and enters `request_to_chain` only on step-6 success, so between step 5 and step 6 the binding is durable nowhere and a live approver's step-1 lookup misses → persist `chain_id` on the request record and in the index on step 5's return; amend the initiation entry's payload then; resolve the chain from the record
+- 2026-08-27-c · foundational · Recovery discipline, redemption-reconciliation leg; [Exercise Access] steps 2–3; Concurrency · the leg decides per entry on an aggregate counter and count, so with more open entries than committed redemptions it attributes a redemption to the wrong principal and drops the real one → serialize `redeem` with its intent entry under the per-request lock, or record pre-redemption `remaining_redemptions` in each entry; state the comparand as `access_exercised` only
+- 2026-08-27-d · foundational · Provisioning cascade step 1; standing rules; recovery discipline; Invariant 7; check 6 · the `ProvisioningFailed` path transitions state before its record, opens no marker, names no recording-failure landing, and neither sweep leg covers it → record before the transition, name the landing, open an `audit_pending` entry carrying `denial_reason`
+- 2026-08-27-e · refining · [Approve Step] step 5 · attributes a `recording-failure` arm to `read_record`, whose contract has no rejection arm; its `not-known` arm is never named → map the real arm
+- 2026-08-27-f · refining · [Approve Step] step 5; Invariant 7 · no rule for identifying the chain's terminal event id in `chain_to_events`; the last id can be a `step_approved` → state the selection rule
+- 2026-08-27-g · refining · [Read Request] step 3 · names no constituent rejection landings for `read_chain` or `Capability.read` → enumerate them
+- 2026-08-27-h · refining · [Request Access] step 1 · validates primitives but not chain shape, so malformed submissions are discovered after the durable pre-write and mint permanent `Withdrawn` records → validate chain shape at intake
+- 2026-08-27-i · refining · [Exercise Access] step 2 · a `capability_to_request` miss is conflated with `invalid(not-known)` and recorded as never-issued; whether `redeem` is called on the miss is unstated → separate the cases and state the call
+- 2026-08-27-j · refining · Provisioning cascade; Examples, happy path · `ttl = expires_at − now` is evaluated at Capability's seam, so the token does not end where the request does; the example asserts it does → restate, or pass an absolute expiry
+- 2026-08-27-k · refining · Summary; Edge cases · the Summary counts expiry among six stages "with no gaps"; expiry writes no event → correct the count
+- 2026-08-27-l · refining · Edge cases, delivering the token · cites "the cascade's step 5"; the cascade has three steps → fix the reference
+- 2026-08-27-m · refining · Action signatures · optional `reason?` precedes required `credential`; `credential` sits second in one action and last in four, against every constituent → make the position uniform
+- 2026-08-27-n · refining · Composes, Permissions bullet · enumerates two `permitted` call sites; [Read Request] step 1's `requests:read` is a third → add it
+- 2026-08-27-o · refining · Composes (Session); Behavior · state the cascading-revocation invariant unconditionally where Invariant 4 conditions it on a wired cascading issuance surface → carry the qualifier
+- 2026-08-27-p · refining · Recovery discipline, initiation leg · no rule for a chain found present when step 5's own closure already moved the request to `Withdrawn` but crashed before closing the entry → add the case
+- 2026-08-27-q · rhetorical · Edge cases, multi-use tokens · "transitions to effectively-exhausted" names a transition the spec does not have, in the same sentence as "state remains `Provisioned`" → drop the transition
+- 2026-08-27-r · rhetorical · Terms · [Permission Denied] and [Credential Invalid] filed under "the request rejection" though returned by other actions → widen the membership
+- 2026-08-27-s · rhetorical · Composition state, opening · one ~500-word sentence-chain carries four separately cited rules → split into citable paragraphs
+- 2026-08-27-t · rhetorical · Composes (Audit Trail) · "five stages" against the Summary's six → reconcile
+- 2026-08-26-a · refining · [Approve Step] steps 5–6 · a `read_chain` `permission-denied` at step 5 contradicts step 6's unconditional `approved`; `invalid-query` and empty-result arms unmapped → pin the step-6 reading and map the arms
+- 2026-08-26-b · refining · Action wiring standing rules; [Approve Step] step 3 · a substrate `invalid-credential` / `recording-failure` over a committed decision rejects the caller and skips the evaluation — a third path to approval-without-token → route it to the sweep's second leg
+- 2026-08-26-c · refining · Examples · `quorum_rule: all-of-2` is not in the substrate's declared vocabulary (`all-of-N`) → use the declared form
+- 2026-08-26-d · refining · Summary · "the requestor's session is re-checked" overstates the bearer-shaped identity claim → narrow
+- 2026-08-26-e · refining · Generation acceptance check 3 · lacks the operating-skew qualifier check 2 carries for the same cross-seam comparison → add it
+- 2026-08-26-f · refining · Composition state, `request_store` · "`Provisioned` is terminal for the store" contradicts [Revoke Access]'s Provisioned → Revoked → restate
+- 2026-08-26-g · refining · Recovery discipline · no leg for a crash before the `access_denied` / `access_request_withdrawn` record, leaving a Pending request against a terminal chain → add the leg
+- 2026-08-26-h · refining · Examples, happy path · credits "Assignment in-tray notifications" no constituent supplies → remove or attribute
+- 2026-08-26-i · rhetorical · Examples · `cred_e42` doubles as presented material and credential id → separate them
+- 2026-08-26-j · rhetorical · Examples, example 3 · "deadline lapses it" glosses derived expiry as a transition → restate
+- 2026-08-26-k · rhetorical · Examples · "Three scenarios" precedes four → fix the count
+- 2026-08-26-l · rhetorical · Terms, progression diagram · reads all terminals off `Approved` → redraw
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/privileged-access-provisioning.md`.
+
+- **2026-08-25 — Every Composition-state element is a derived index over the substrate audit log and the Capability instance's composed scope.** *Chose:* no bearer material on any record surface, every index rebuildable from the trail and the token's scope, a named recovery discipline. *Over:* composition-owned stores carrying request and access truth of their own. *Because:* the records-alone control claim — every privileged token traces to an approved request — is only as strong as the evidence that outlives the composition's own state.
+- **2026-08-26 — The `requests:withdraw` scope and third-party withdrawal are dropped.** *Chose:* remove the scope, its Terms card and registry entry, and name the administrative alternatives. *Over:* keeping a promise the wiring could not honor. *Because:* the substrate's chain withdrawal is initiator-only and the composition actor is not the initiator, so no honest wiring existed for the path.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 **Final Critique (Round 4) — Super Torvalds adversarial.** Four findings, all resolved. Two foundational:

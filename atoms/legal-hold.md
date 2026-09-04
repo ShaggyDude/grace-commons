@@ -485,13 +485,27 @@ Legal Hold is the preservation primitive the library has held open since Retenti
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-05-20` (formal layer complete 2026-06-04 — TLA+ model `legal-hold.tla` + buggy twin verified; see Lineage §Formal model. Cleared `grounded (English) — formal layer pending`. Invariant 6 (`released_at ≥ placed_at`) GAP closed 2026-06-04 — now covered by `Inv_TemporalOrdering` in the extended two-clock model. Coverage cross-check 2026-06-04 — see `tools/harness/coverage/legal-hold.md`.) — foundation round (Pass 1 + 2 + 3 author-led), Refinement round 1 (human), and two AI-conducted adversarial rounds complete: Refinement round 2 (Sonnet, batched with Consent and Soft Delete) and Refinement round 3 (Opus single-atom, Torvalds X2 posture). All nine GRID (the nine-node structural-completeness framework: Intent, System, Friction, Flow, Decision, Feedback, State, Behavior, Proof) nodes resolved; all concepts independent; all surfaced adversarial gaps closed in-pattern or named as explicit out-of-scope. Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Refinement round 3 (Opus single-atom, Torvalds X2 posture) is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+`grounded on Final Critique 4 — 2026-05-20` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-05-20
+formal: verified — legal-hold.tla + 2 twins, 2026-06-04
+last gate: 2026-05-20 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/legal-hold.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Regulated atom. Conventions — *Regulated adversarial scenarios* and *Generation acceptance* — inherited from the methodology directly ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft. Retention Window and Actor Identity are the reference shapes for regulated compliance atoms.

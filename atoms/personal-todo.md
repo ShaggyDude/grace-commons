@@ -443,13 +443,27 @@ A formal-methods version of a similar concept exists in [concept-catalog](https:
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-18` (Final Critique 4 — the first AI-conducted adversarial round, fresh-reader Opus, 2026-06-18 — closed 2 foundational finding(s): `id` and clock now host-injected at the I/O seam, and unreachable `not-pending` rejection removed from `edit`; caller signatures unchanged; see Lineage. Formal-layer vote stands NO (English-only, minimum-formalism). The pattern was grandfathered at the legacy `grounded — 2026-05-20` token until this round.) — all required structural elements resolved; identity model explicit; description policy explicit; rejection paths exercised in examples; deferred concepts (concurrency, atomicity, clock semantics) named as out-of-scope. The pattern is freestanding and composable. Extensions (recency guard, history, priority, dependencies, recurrence, reopening, concurrency resolution) are separate concepts, listed in Composition notes.
+`grounded on Final Critique 4 — 2026-06-18` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-18
+formal: not applicable — vote no 2026-06-03
+last gate: 2026-06-18 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/personal-todo.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 This pattern is the result of two iterations of pressure-testing.

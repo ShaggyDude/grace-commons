@@ -320,7 +320,21 @@ This composition introduces no per-call event log. The acceptance bar therefore 
 
 ## Status
 
-`grounded on Final Critique 8 — 2026-08-26` — re-grounded: the Final Critique 7 routed findings (two foundational + six refining + two rhetorical) were closed 2026-08-26 and the closure gated by a fresh fresh-reader round (Final Critique 8 — 2026-08-26) that returned **zero foundational** findings — four refining and three rhetorical remain routed open and non-blocking under the 92%-good threshold (see Lineage §Final Critique 8). Downgrade history: 2026-08-26, the batched pre-convention tail's closing gate (Final Critique 7) over the same-day convention fold returned two foundational (the undefined `invalid-request` predicate; the caching edge case sanctioning what Invariant 1 forbids — both since closed) plus six refining and two rhetorical; the fold itself (conforming — no stored composition state) was confirmed by both gates. Prior grounding: `grounded on Final Critique 6 — 2026-05-23`. Prior grounding record: four baseline-equivalent rounds (Pass 1/2/3 each in Rounds 1–3 plus Final Critique 4) plus Round 5 (touch-triggered re-pass — Alloy artifact verification) plus Round 6 (formal-model refinement closing both Round 5 findings) complete. Round 5 surfaced two refining findings in the formal model; Round 6 closed both. Spec prose unchanged across Rounds 5 and 6; the four named composition-level invariants and the three temporal claims (revocation terminal, expiry terminal, gate reflects current status) verified clean against the Alloy (a formal modeling language for checking structural and temporal properties of a design) static + dynamic-trace model — 13 commands, all matching expectation.
+`grounded on Final Critique 8 — 2026-08-26` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 8 — 2026-08-26
+formal: verified — session-gated-authorization.als, no twin, 2026-06-03
+last gate: 2026-08-26 — Final Critique 8, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/session-gated-authorization.md`.
 
 ---
 

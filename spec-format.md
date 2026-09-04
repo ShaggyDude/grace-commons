@@ -95,9 +95,11 @@ Reference examples: [`atoms/personal-todo.md`](./atoms/personal-todo.md) for the
 
 17. **Standards references.** The regulatory or industry standards the atom's invariants satisfy or contribute toward, with section anchors where applicable. Cite only standards that genuinely apply at this layer; frame standards that belong to a composing pattern as the composing pattern's obligation.
 
-18. **Status.** A status line carrying exactly one token of the canonical status grammar — [`pressure-testing.md`](./pressure-testing.md) §Status line format owns the token forms and their semantics; this document requires only the container (`## Status` section, token-first line).
+18. **Status.** One line: exactly one token of the canonical status grammar, then `— see the Ledger.` [`pressure-testing.md`](./pressure-testing.md) §Status line format owns the token forms and their semantics; this document requires only the container (`## Status` section, token-first line). The token is derived from the Ledger and the linter refuses disagreement.
 
-19. **Lineage notes.** The per-pattern record of what each pressure-testing pass surfaced and how it was resolved. Pass 1 GRID findings, Pass 2 EOS extractions, Pass 3 Linus fixes, and any Round 2 / Round 3 / scheduled-rescan entries — what was found, what was closed in-pattern, what was deferred as explicit out-of-scope. The Lineage notes section is the evidence the atom has been pressure-tested; an absence here is not necessarily a problem but a rich Lineage section is provably evidence-bearing.
+19. **Ledger.** The countable record of the pattern's health, in a fenced block with a fixed grammar the linter parses ([`pressure-testing.md`](./pressure-testing.md) §Where the journey gets recorded): `status:` (identical to the Status token), `formal:` (the model files and their verification date, or why none applies), `last gate:` (date, kind, result), and `open:` — one line per open finding, `id · class · where · defect → fix`, ids date-based, or `open: none`. A closed finding's line is deleted; that it existed is in git.
+
+20. **Decisions.** Directional changes only — the turns a future reader must know the pattern took, each `- **date — title.** *Chose:* … *Over:* … *Because:* …`. The test is whether the pattern would be a different pattern had it gone the other way. Everything smaller lives in the commit that made it; the section may have no entries. The narrative history these two sections replaced — the per-round Lineage notes — lives in `git log -- <file>`.
 
 ---
 
@@ -137,7 +139,7 @@ Reference examples: [`compositions/idempotent-reservation.md`](./compositions/id
 
 10. **Status.** Same form as atom shape.
 
-11. **Lineage notes.** Same form as atom shape, with one addition: a *Structural milestone* paragraph naming which forthcoming-link debts the composition retires. New compositions typically resolve one or more `*(forthcoming)*` references that previous patterns left behind; making this explicit closes the loop on the library's accumulating cross-reference surface.
+11. **Ledger** and **12. Decisions.** Same form as atom shape. The forthcoming-link debts a new composition retires — which previous patterns' `*(forthcoming)*` references it resolves — are named in the commit that lands it, not in the spec.
 
 ### Compositions of compositions
 
@@ -160,7 +162,7 @@ Applies to any atom carrying the regulated overlay, any atom in another category
 
 The split convention was established in Multi-Party Approval's Round 3 and applied retroactively to regulated compositions; the bar an external auditor can clear from the records alone is structurally distinct from the bar the composing organization must clear with its own governance evidence.
 
-Both regulated-overlay conventions are *inherited from the methodology directly* (see [`pressure-testing.md`](./pressure-testing.md)'s *Regulated-pattern conventions*), not re-derived from predecessor patterns. Lineage notes for new regulated patterns cite the methodology, not earlier worked examples.
+Both regulated-overlay conventions are *inherited from the methodology directly* (see [`pressure-testing.md`](./pressure-testing.md)'s *Regulated-pattern conventions*), not re-derived from predecessor patterns. A new regulated pattern's commit message cites the methodology, not earlier worked examples.
 
 ---
 
@@ -218,7 +220,7 @@ A pattern in `draft` or `partially resolved` status may carry a section labeled 
 
 | Shape | Canonical example | Why it's the reference |
 |-------|-------------------|-----------------------|
-| Atom — simplest | [`Personal Todo`](./atoms/personal-todo.md) | Smallest atom with a two-iteration Lineage record |
+| Atom — simplest | [`Personal Todo`](./atoms/personal-todo.md) | Smallest atom |
 | Atom — regulated | [`Actor Identity`](./atoms/actor-identity.md) | Carries both regulated-overlay conventions |
 | Composition — simplest | [`Idempotent Reservation`](./compositions/idempotent-reservation.md) | Two-atom composition with all required sections |
 | Composition — substrate use | [`Audit Trail`](./compositions/audit-trail.md) | Composes four atoms; the canonical regulated-audit substrate other compositions name |

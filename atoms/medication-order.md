@@ -1054,13 +1054,27 @@ Medication Order composes naturally with the existing library:
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-05-20` (formal layer complete 2026-06-04 — TLA+ model `medication-order.tla` + buggy twin verified (Invariants 5, 9); Alloy model `medication-order.als` + buggy twin verified (Invariants 3, 4, 2); all GAPs from coverage cross-check 2026-06-04 closed; see Lineage §Formal model.) — foundation round, two human refinement rounds, and AI adversarial round (Torvalds X2) complete. Last full rescan: 2026-05-20. Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's AI adversarial round (Torvalds X2) is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+`grounded on Final Critique 4 — 2026-05-20` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-05-20
+formal: verified — medication-order.als + medication-order.tla + 2 twins, 2026-06-04
+last gate: 2026-05-20 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- atoms/medication-order.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Regulated atom. Conventions — *Regulated adversarial scenarios* and *Generation acceptance* — inherited from the methodology directly ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft. Conventions are not re-derived from Clinical Observation or Actor Identity.

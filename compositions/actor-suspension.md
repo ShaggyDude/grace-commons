@@ -370,13 +370,27 @@ this composition inherits the broader standards compliance of its constituents:
 
 ## Status
 
-`grounded on Final Critique 4 — 2026-06-10` (2026-06-10) — **three-round baseline + author Final Critique + the fresh-reader Phase 4 Opus Happy-Torvalds-X2 clearance gate all complete**; foundational findings at zero (the gate folded five refining findings — see Lineage). **Formal-layer vote YES** and the derived TLA+ — Temporal Logic of Actions — model + buggy twin **verified** in `tools/harness/` (the CORRECT model holds at 2 states; the buggy twin is rejected on Invariant 1), so the formal prerequisite is discharged. Drafted against the approved this composition architectural cut — Actor Identity (the suspended actor's composition-introduced Active/Suspended lifecycle) + Permissions (grant-revocation target) + Session (session-revocation target) + Audit Trail (substrate → Event Log + Actor Identity + Tamper Evidence + Retention Window) + optional Credential — as Login's outbound-side counterpart, with multi-surface atomic revocation, audit completeness, and cascade ordering as the load-bearing claims. Regulated-pattern conventions (Regulated adversarial scenarios; Generation acceptance with the Audit-Trail-traversal-clearable / externally-clearable split) baked in from the first draft, inherited from the methodology directly per [`pressure-testing.md`](../pressure-testing.md) §Regulated-pattern conventions. This is the status Resolve a Person's Data Rights and Authenticated Actor sat at before their own Phase 4 gates; the fresh-reader gate (Opus, `claude-opus-4-8`, 2026-06-10) cleared with zero foundational findings, flipping this status to `grounded on Final Critique 4`, bumping the catalog counts, and promoting the roadmap entry.
+`grounded on Final Critique 4 — 2026-06-10` — see the Ledger.
+
+## Ledger
+
+```
+status: grounded on Final Critique 4 — 2026-06-10
+formal: verified — actor-suspension.tla + 1 twin, 2026-06-10
+last gate: 2026-06-10 — Final Critique 4, fresh reader — clean
+
+open: none
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/actor-suspension.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Regulated composition (composes regulated atoms and records regulated events on the Audit Trail substrate). The two regulated-overlay conventions — *Regulated adversarial scenarios* and *Generation acceptance* (with the Audit-Trail-traversal-clearable / externally-clearable split) — are **inherited from the methodology directly** ([`pressure-testing.md`](../pressure-testing.md)), baked in from the first draft, not re-derived from predecessor patterns. The primary structural reference is [Login](./login.md): this composition is Login's outbound-side counterpart, and it mirrors Login's cascade structure (snapshot-scoped revocation), atomic-commit discipline (the cascade + audit write in one transaction), and TOCTOU handling (a concurrent terminal transition during the cascade is benign, the same already-terminal case Login's Final Critique 4 (finding Final Critique 1) resolved) — inverting only Login's best-effort posture to all-or-nothing because suspension's failure mode is more dangerous. The substrate-composition shape (recording on the Audit Trail the substrate carries) follows [Audit Trail](./audit-trail.md), [Multi-Party Approval](./multi-party-approval.md), and [Resolve a Person's Data Rights](./resolve-a-persons-data-rights.md); the TLA+ atomic-cascade + buggy-twin structure mirrors [`audit-trail.tla`](./audit-trail.tla) and [`login.tla`](./login.tla). The motivating gap is the deprovisioning cascade Permissions' *Mass revocation on subject deprovisioning* edge case and Actor Identity's *Actor lifecycle* / Actor Registry note both anticipate.

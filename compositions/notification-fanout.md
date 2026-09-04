@@ -303,13 +303,52 @@ It inherits from:
 
 ## Status
 
-`partially resolved` — **all routed foundational findings are now closed (2026-08-27); what remains is a fresh-reader gate returning zero foundational, which is a separate bar.** **Final Critique 6's F1 closed 2026-08-27 in form (a)**: the query-moment `fired_at` pin was unimplementable, since [Fanout] returned no such value and the caller cannot observe the instant the subscriber set was fixed. The action's result shape gains an additive `fired_at` carrying the seam-injected reading, so the caller logs what the composition observed. Form (b) — relaxing the pin to caller-observable invocation time — was available and not taken: it preserves the entry shape by weakening the claim, and the claim *is* the audit binding. Previously: the Final Critique 5 routed findings (one foundational + six refining + two rhetorical) were closed 2026-08-26 (the foundational in its composition-owned form: the boundary now classifies any non-`notification_id` outcome at the write step as the subscriber's fanout failure, and the undeclared `storage-failure` token is gone from the wiring), but the closure gate (Final Critique 6 — 2026-08-26) returned **one new foundational finding** — the closure's own query-moment `fired_at` pin is unimplementable from the declared contract — plus nine refining and three rhetorical, recorded as open routed findings per the campaign stop rule (see Lineage §Final Critique 6); the composition holds at `partially resolved` until they close and a round returns zero foundational. Downgrade history: 2026-08-26, the batched pre-convention tail's gate (Final Critique 5) over the same-day convention fold returned one foundational (the `storage-failure` mis-attribution, since closed) plus six refining and two rhetorical; the fold itself (conforming — no stored composition state; the record-coordination routing) was confirmed by both gates. Prior grounding: `grounded on Final Critique 4 — 2026-05-20`. Prior grounding record: three foundation passes complete; Opus adversarial pass (26 findings, all resolved); architectural decisions applied (Event Log optional, fanout_id ephemeral correlation handle with Event Log as durable identity when composed, subscribers-unavailable treated as explicit error). Under the unified methodology (3×3 baseline rounds with per-round Pass 1/2/3 numbering + Final Critique starting at Round 4), this pattern's Opus adversarial pass is retro-labeled Final Critique 4; the original round-naming in the Lineage notes below is preserved as historical record.
+`partially resolved` — see the Ledger.
+
+## Ledger
+
+```
+status: partially resolved
+formal: not applicable — vote no 2026-06-03: single-invocation structural coverage properties, no ordering or concurrency claim
+last gate: 2026-08-27 — fresh reader — 6 foundational, 9 refining, 4 rhetorical
+
+open:
+- 2026-08-27-a · foundational · Action wiring step 4; Retry semantics; Terms [Failed]; Edge cases, caller disposition · [Failed] is defined as "no record exists" but the timeout arm can leave a committed record, so the prescribed direct retry duplicates it, breaking Invariant 4 → name an indeterminate class ("no record was observed"), make its retry conditional on Duplicate Prevention or a recipient-scan reconciliation, and weaken the no-record sentence
+- 2026-08-27-b · foundational · Action wiring contract and steps 3–5; Examples; Edge cases, empty set; Terms; Generation acceptance check 1 · `fired_at` is in the contract and load-bearing for check 1, and no wiring step produces it, no example returns it, no clock provenance is declared, no Terms card owns it → take a seam-injected `fired_at` at step 3 before `subscribers_for`, declare its provenance, return it at steps 3 and 5, in every example, with a card
+- 2026-08-27-c · foundational · Edge cases, fan-out at scale; Intent; Invariant 1; check 1 · authorizes cursor-pagination of `subscribers_for`, a surface Subscription does not expose, and paging destroys the single-instant subscriber set Invariant 1 and `fired_at` range over → remove pagination from the permitted strategies, or declare the dependency and restate Invariant 1 against snapshot-read semantics
+- 2026-08-27-d · foundational · Action wiring step 4; Edge cases, structural inconsistencies; Primitive policies · `create`'s `invalid-request` is diagnosed only as a `subscriber_ref` mismatch, but Notification also raises it on oversized payload, which fanout's step 1 does not check → name both causes and the all-subscribers-failed signature, or move Notification's payload preconditions into step 1
+- 2026-08-27-e · foundational · Invariant 8 · grounds id uniqueness on "the same floor each constituent atom declares"; Notification declares no entropy floor → state the floor as the composition's own requirement on its host id source
+- 2026-08-27-f · foundational · Generation acceptance, record-clearable check 4; Invariant 3 · cannot be cleared from records (no decision procedure for independence) and tests delivery terminal states where Invariant 3 constrains create-time isolation, whose failing side is unobservable → replace with a records-decidable statement and move the isolation claim out of the record-clearable list
+- 2026-08-27-g · refining · The load-bearing wiring decision, *Result* · "No subscriber is silently missed" is unconditional; the crash-mid-fanout state produces no result and nothing to log → carry the bound the Summary and Invariant 1 carry
+- 2026-08-27-h · refining · Generation acceptance preamble; checks 1–2 · opens universally while checks 1 and 2 are unclearable without Event Log, which is not composed → frame conditionally
+- 2026-08-27-i · refining · Generation acceptance, record-clearable check 3 and externally-clearable list · Notification's fifth check is classified both ways in one section → classify once
+- 2026-08-27-j · refining · Generation acceptance check 1, Event Log entry shape · embeds the full `created` and `failed` lists, unbounded in N, against Event Log's payload cap → bound, chunk, or digest
+- 2026-08-27-k · refining · Action wiring step 1; Terms preamble · `invalid-request` provenance stated two ways ("nothing is inherited" / "the one inherited rejection") → state once
+- 2026-08-27-l · refining · Action wiring step 4; Edge cases · the two constituents' "non-empty" definitions diverge enumerably (whitespace-only, max length) and the spec routes the case to out-of-band diagnosis → name the two divergences
+- 2026-08-27-m · refining · Action wiring; Edge cases, [Failed] bullet · retry disposition is deferred without naming *Retry semantics*; the cross-reference runs one way → add the reference
+- 2026-08-27-n · refining · Invariant 6 · "all nine Notification invariants hold over each created record" — Notification's Invariants 7 and 9 are store-level → rephrase
+- 2026-08-27-o · refining · Generation acceptance, externally-clearable check · names Tamper Evidence, which appears nowhere else in the spec → enumerate only what the reader can find, or introduce it
+- 2026-08-27-p · rhetorical · Standards references · W3C unglossed twice while the other initialisms are spelled out → gloss
+- 2026-08-27-q · rhetorical · The load-bearing wiring decision, *Likely objection*; Edge cases, [Failed] disposition · the all-or-nothing argument restated nearly verbatim, "pressure valve" included → say it once
+- 2026-08-27-r · rhetorical · Retry semantics; Edge cases, retry targeting · the two-option retry guidance given twice → say it once
+- 2026-08-27-s · rhetorical · Summary · forward-references "the duplicate-risk case the idempotency edge case names" → make the Summary self-standing
+- 2026-08-26-a · refining · Standards references · "standards inheritance in full" omits Subscription's XMPP PubSub (XEP-0060) → add it
+- 2026-08-26-b · refining · Summary · "idempotency" unglossed at Tier 1 → gloss
+- 2026-08-26-c · refining · Action wiring step 2 · [Fanout Id]'s inline `entropy.generate()` diverges from the constituents' seam-injection discipline with no stated rationale → inject at the seam, or defend the divergence
+- 2026-08-26-d · refining · Generation acceptance, externally-clearable list · omits Permissions and Audit Trail, both named in Edge cases → add them
+- 2026-08-26-e · rhetorical · Summary · "fixed at the moment the event fires" against the normative query-execution instant → align with the wiring
+- 2026-08-26-f · rhetorical · Examples, compliance walkthrough · glosses `expired` as "no delivery attempt", narrowing the constituent's window-lapse semantics → widen the gloss
+```
+
+## Decisions
+
+Directional changes only — the turns a future reader must know the pattern took, and why. Everything smaller lives in the commit that made it: `git log -- compositions/notification-fanout.md`.
 
 ---
 
 <details markdown="block">
 <summary>
-    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes</h2>
+    <h2 style="display: inline-block; margin-left: 1.5rem;">Lineage notes — SUPERSEDED by the Ledger and Decisions above; deleted with every other Lineage in the migration's closing commit</h2>
 </summary>
 
 Drafted as the fifth entry in `compositions/`, following Undo History, Idempotent Reservation, Audit Trail, and Shared Todo. First composition in the library with variable fan-out semantics — N effects from one trigger, where N is determined at runtime by the Active subscriber count.
