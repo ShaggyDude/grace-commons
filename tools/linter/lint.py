@@ -596,23 +596,53 @@ ATOMICITY_ACKNOWLEDGED = re.compile(
 )
 
 
+# A line that starts a new TOP-LEVEL list item, at column 0. Sibling bullets sit
+# on adjacent lines with no blank line between them, so a purely blank-line-
+# delimited block runs across all of them.
+_TOP_ITEM = re.compile(r"^(?:[-*+] |\d+\. )", re.M)
+
+
 def _enclosing_block(text: str, idx: int) -> str:
-    """The blank-line-delimited block containing idx, plus any immediately
-    following indented continuation lines (an invariant's sub-bullets)."""
+    """The block containing idx: blank-line-delimited, plus any immediately
+    following indented continuation lines (an invariant's sub-bullets), but
+    NEVER crossing into a sibling top-level list item.
+
+    The sibling clamp was added 2026-08-27 after it was caught suppressing a real
+    finding: multi-party-approval's `chain_store` went silent not because its own
+    entry stated a retention bound but because the NEXT BULLET did, two entries
+    down in the same blank-line-delimited run. The corpus count fell and looked
+    like progress, which is the failure mode these checks keep producing and the
+    reason each one is pinned.
+
+    Tightening a suppressor is safe in a way widening a trigger is not, and the
+    asymmetry is worth stating: a narrower suppressor can only REVEAL findings,
+    and a false positive is visible and cheap to fix, where a false negative is
+    neither. Trigger changes move the set the other way and are held to a higher
+    bar (see the REBUILD_CLAUSE comment)."""
     start = text.rfind("\n\n", 0, idx)
     start = 0 if start == -1 else start + 2
     end = idx
     while True:
         nxt = text.find("\n\n", end)
         if nxt == -1:
-            return text[start:]
+            nxt = len(text)
+            break
         # keep going while the paragraph after the break is an indented
         # continuation of the same item
         after = text[nxt + 2: nxt + 6]
         if after.startswith("  ") or after.startswith("\t"):
             end = nxt + 2
             continue
-        return text[start:nxt]
+        break
+    block_start, block_end = start, nxt
+    # clamp to the sibling list item containing idx, where there is one
+    for m in _TOP_ITEM.finditer(text, block_start, block_end):
+        if m.start() <= idx:
+            block_start = max(block_start, m.start())
+        else:
+            block_end = min(block_end, m.start())
+            break
+    return text[block_start:block_end]
 
 
 def _sentence_at(text: str, idx: int) -> tuple[int, int]:
@@ -693,6 +723,20 @@ def check_atomicity_over_audit(patterns: dict[Path, Pattern]) -> list[Finding]:
 # linter's rule is that recall grows by adding checks, not by loosening one
 # until it matches the answer you expected.
 
+# LINE-SCOPED, and this is a recorded recall gap rather than an oversight: a spec
+# that wraps its rebuild procedure across lines is invisible to this check. Corpus
+# state bullets are single long lines, so the gap is latent today.
+#
+# It is left open on evidence, not on caution. Widening the clause to run to the
+# end of its paragraph was tried 2026-08-27 and is wrong: markdown list items sit
+# on adjacent lines with no blank line between them, so a paragraph-scoped clause
+# swallows the following bullets — and doing so silently DROPPED a real finding
+# (multi-party-approval's `chain_to_events`), because an over-captured clause
+# picked up a negation from a later bullet and the polarity guard suppressed it.
+# A recall fix that costs precision on live findings is not a fix. The correct
+# form stops at the next list item; it is not attempted while this class is
+# mid-flight, because retuning a trigger over careful prose is what produced both
+# of this file's earlier regressions.
 REBUILD_CLAUSE = re.compile(r"\*Rebuild procedure:\*[^\n]*")
 PAYLOAD_READ = re.compile(
     r"from each payload|from the payload|payload alone|each event's payload"
@@ -722,7 +766,21 @@ REBUILD_BOUNDED = re.compile(
     r"|(?:horizon|retention|purge)[^.]{0,90}totality"
     r"|still live in the log|still readable|purged subset"
     r"|past the (?:retention )?horizon"
-    r"|until its retention",
+    r"|until its retention"
+    # Added 2026-08-27, as the retention-horizon class landed its treatments and
+    # patterns began stating the bound in the treatment's own vocabulary rather
+    # than in the phrasing the exemplar happened to use.
+    #
+    # THE RULE THESE FOLLOW, learned the expensive way from P-atomic-audit's
+    # `modulo` regression: a suppressor marker must be a STATEMENT OF THE BOUND,
+    # never a signal that the author was being careful. `modulo` was the latter —
+    # a hedge word that clusters around a pattern's most careful claims, so
+    # suppressing on it silenced exactly the findings that mattered most. These
+    # are the former: each asserts the specific fact the check asks for, and a
+    # spec cannot contain one while leaving the totality unbounded.
+    r"|not rebuildable"                      # the tier-2 statement outright
+    r"|bounded by the audit"                 # names the bounding authority
+    r"|split[s]? by retention state",        # the Contract-classification split
     re.I,
 )
 

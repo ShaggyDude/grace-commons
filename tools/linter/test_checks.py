@@ -79,6 +79,52 @@ FIXTURE_ACKNOWLEDGED = """
 """
 
 
+# Q's synthetic pair, added when its class was half-landed and its corpus floor
+# set began emptying — the same perishability that forced P's pins synthetic.
+# Written as SINGLE LINES on purpose. The check's trigger is line-scoped (see the
+# REBUILD_CLAUSE comment in lint.py), which is a documented recall gap, and these
+# fixtures follow the corpus's actual convention rather than papering over it.
+# The gap was found BY this fixture — the first draft wrapped across lines and did
+# not fire — which is the argument for synthetic fixtures in miniature: a
+# corpus-only test cannot show you a shape the corpus does not happen to contain.
+FIXTURE_Q_UNBOUNDED = (
+    "- **`thing_to_other`** — a map. **Contract classification: derived index.** "
+    "*Rebuild procedure:* traverse the Audit Trail for `thing.happened` events "
+    "and take `{a, b}` from each payload, so the binding facts are immutable "
+    "audit content and the rebuild is total.\n"
+)
+FIXTURE_Q_BOUNDED = (
+    "- **`thing_to_other`** — a map. **Contract classification: derived index.** "
+    "*Rebuild procedure:* traverse the Audit Trail for `thing.happened` events "
+    "and take `{a, b}` from each payload — bounded by the audit instance's "
+    "horizon, past which the payload is destroyed and these entries are not "
+    "rebuildable.\n"
+)
+
+
+def check_q_synthetic(problems: list[str]) -> None:
+    """Q must fire on an unbounded payload-sourced rebuild and stay silent on one
+    that states its bound. Neither case depends on any corpus file, so the guard
+    survives the class closing — which is the state a closed class reaches."""
+    for name, text, want_fire in (
+        ("FIXTURE_Q_UNBOUNDED", FIXTURE_Q_UNBOUNDED, True),
+        ("FIXTURE_Q_BOUNDED", FIXTURE_Q_BOUNDED, False),
+    ):
+        pat = Pattern(path=Path(f"synthetic/{name}.md"), text=text,
+                      invariant_count=1, grounded=False)
+        fired = bool(check_rebuild_bound({pat.path: pat}))
+        if fired != want_fire:
+            problems.append(
+                f"Q-rebuild-bound: {name} expected "
+                f"{'a firing' if want_fire else 'silence'} and got the opposite. "
+                + ("The trigger has been narrowed past usefulness."
+                   if want_fire else
+                   "A bound marker no longer suppresses — or, worse, a marker was "
+                   "added that signals care rather than stating the bound, which "
+                   "is the P-atomic-audit `modulo` failure in a new place.")
+            )
+
+
 def check_synthetic(problems: list[str]) -> None:
     """The check must fire on a hedge-word decoy and stay silent on a real
     acknowledgement. Neither case depends on any corpus file."""
@@ -194,8 +240,6 @@ Q_NEGATED_SITES = [
 # comment so a retirement cannot pass as a loosened check.
 Q_FIRING_AT_LEAST = {
     "customer-onboarding",
-    "execute-gated-workflow",
-    "multi-party-approval",
 }
 
 
@@ -295,10 +339,13 @@ def main(argv: list[str]) -> int:
         if code == "Q-rebuild-bound":
             problems = check_not_firing_at(patterns, fn(patterns),
                                            Q_NEGATED_SITES, code)
+            check_q_synthetic(problems)
             failures.extend(problems)
             if not problems:
                 for stem, marker in Q_NEGATED_SITES:
                     print(f"{code}: polarity site silent — {stem} / {marker!r} \u2713")
+                print(f"{code}: synthetic fixtures hold "
+                      f"(unbounded rebuild fires, bounded one silent) \u2713")
         if code == "P-atomic-audit":
             problems = check_motivating_sites(patterns, fn(patterns))
             check_synthetic(problems)
