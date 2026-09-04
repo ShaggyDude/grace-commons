@@ -349,6 +349,47 @@ Detection is **Pass 3 (adversarial)** in practice — the question *"what is the
 
 ---
 
+## Derived state has a validity duration — say what it is, and what reads it
+
+> **Open, not frozen.** Stated 2026-08-27 when methodology debt #19's *retention horizon* class closed on all sixteen known sites across ten patterns. It freezes with the rest of #19, together with §*Durability boundaries* and the enumeration-anchoring rule.
+
+**The rule.** *A derived element's recovery procedure is valid for a bounded interval; a claim that reads it has a lifetime; the spec is sound only where the first exceeds the second — so both belong on the page.* A Contract classification of *derived index, rebuild-on-miss* says **how** a fact is recovered and never **for how long**, and a spec can be perfectly conformant to that vocabulary while asserting a derivability that lapses on a schedule it does not control.
+
+**What a purge actually leaves, because the class turns on it.** Event Log's contract is `append(data) → event_id`: an entry is an opaque payload and its id. There is no separate `action_ref` field and no separate `actor_ref` field — Audit Trail packs all of it, plus the caller's own `data`, into that one payload. **So the surviving-field set after a purge is `event_id` and `sequence_number`, and nothing else.** A purge does not *thin* a rebuild's fields. It **erases the event's identity as this composition's event**, so the standard move — *enumerate the substrate and filter to events whose `action_ref` is one of this composition's own* — cannot find its own events at all. It returns nothing and cannot tell that it should have returned something.
+
+### The four treatments, cheapest first
+
+Ask them in order; the first that applies is the answer.
+
+| | Ask | If yes | Cost |
+|---|---|---|---|
+| **0** | Does the claim's lifetime already sit inside the recovery's validity? | **State the comparison and stop.** | a sentence |
+| **1** | Is the recovered fact needed *at all* past the horizon? If not — | **State the bound** and why it suffices for the element's one job. | a clause |
+| **2** | Is there a *second declared source*, and is using it *permitted*? | **Name it as the past-horizon fallback**, and say **which claim degrades**. | a paragraph |
+| **3** | Otherwise the fact is needed and nothing else holds it — | **Split the classification by retention state** (*derived index* while the payload survives, *extraction-pending* beyond) and carry the durability obligation that follows. Where the index does not already hold the fact, **capture it at destruction time**, before the delegation runs, and name the forthcoming atom that will own it. | a mechanism |
+
+**Tier 0 is not a formality, and it is the most common answer.** [Login](compositions/login.md)'s session map looks like every other instance until you ask who reads it: the cascade skips every non-Active session, so the only pairs whose recovery can change an outcome belong to sessions still inside their own TTL. The rebuild must stay valid for **one session lifetime**, not for the life of the credential or the trail — hours against years. Nothing further is owed, and the comparison is what proves it rather than what excuses it.
+
+**Tier 2's two questions are genuinely two.** *Is there a second source* is not *may I use it*. [Defensible Retention](compositions/defensible-retention.md) falls back to Retention Window's own records and gains a fallback that **over-includes**, which on a destruction gate can only refuse a purge — the loss direction is safe, so Invariant 9 survives and only Invariant 2's scope claim degrades. [Propagate Consent Revocation Downstream](compositions/propagate-consent-revocation-downstream.md) has the identical fallback available and **forbids it**: a store-sourced rebuild would resolve the bypassed identifier that audit-first resolvability must leave unresolvable, and the traversal/enumeration disagreement *is* the bypass detector. Taking it would delete a security property rather than degrade a scope claim. **Where the traversal's exclusivity is itself the guarantee, the fallback shape is unavailable.**
+
+**And check that a second source is a source.** [Privileged Access Provisioning](compositions/privileged-access-provisioning.md)'s binding is recoverable from the approval substrate's chain store — but that store is *itself* a derived index over audit events, so where the two compositions share one Audit Trail instance they share one horizon and both sides are erased by the same purge. **A constituent whose state is a derived index over the same substrate is not an independent source**, and it is the more dangerous mistake because it reads as coverage.
+
+**Tier 3 is not the default.** [Audit Trail](compositions/audit-trail.md) reaches it because nothing else holds its purged entries' pair, so the pair is captured into the destruction record before the delegation runs. [Forensic Recovery](compositions/forensic-recovery.md) needs only the durability half, because the `event_id` is already written into its list at commit time — **where the index already holds the fact before the destruction, the treatment is a durability obligation rather than a capture mechanism.**
+
+### The deployment obligation none of the tiers supplies
+
+Tiers 0–3 govern what the spec says. **None of them makes the horizon long enough.** A composition whose claims read a payload must declare the ordering its deployment has to satisfy, name the invariant that spends it, and route the half it cannot read to the externally-clearable set. The recurring tell: **a horizon recommendation stated for one reason while a load-bearing claim silently depends on it for another.** Defensible Retention advised keeping the trail as long as the record *for litigation defensibility*; Invariant 9 depended on it because the trail is that invariant's **rebuild source**. Propagate Consent Revocation Downstream advised the same thing for the same stated reason; three of its maps depend on it because the traversal is their **only permitted** source. When converting, give both reasons and say which one is load-bearing.
+
+**Ask what stops working, not only what evidence is lost.** The sharpest consequence this class produced is not an audit gap. Past its horizon, Propagate Consent Revocation Downstream cannot resolve a `consent_id` whose grant event has aged out, so [Withdraw Consent] answers `not-known` for a consent that is still Granted: **a live consent becomes un-withdrawable because the record of its grant aged out before the consent did** — a GDPR Article 7(3) failure reached with no partial failure, no bypass, and no bug. Defensible Retention's is a destruction gate reading a sibling set it can no longer rebuild. Availability and safety are both on this list, not just evidence.
+
+**The interval has two edges.** *Expiry* is the common one. [Multi-Party Approval](compositions/multi-party-approval.md) is the mirror: its store is truth-bearing **before** its event exists, so a rebuild running too early destroys the only record. The general form is a validity **interval**, and both ends have produced real defects — a gate reading a set it could no longer rebuild, and a repair mechanism deleting the record it was repairing.
+
+### Which pass owns it
+
+Detection is **Pass 1 (GRID)** in its mechanical form — a rebuild procedure that reads a payload is a reference into a store whose contract bounds it, and the reference graph is where a dangling one is caught. The classification is **Pass 2 (EOS)**: whether a fact is *derived* or *extraction-pending* is a question about where it lives, and the answer changes at the horizon. The mechanical slice is [`tools/linter/lint.py`](tools/linter/lint.py)'s **`Q-rebuild-bound`**, gating since 2026-08-27, with a recorded recall gap (it is line-scoped and keys on the literal `*Rebuild procedure:*` marker) that is the reason a **classification sweep still runs before the check's count is trusted**: this class's sweep found sixteen sites where the check saw fourteen, and two of the four treatment shapes came from instances the check cannot see.
+
+---
+
 ## Authentication precedence — no authority-bearing transition may rely on an unauthenticated principal
 
 > **FROZEN — 2026-08-27.** This rule and everything below it are closed to amendment. It was stated 2026-08-26, carried into **eleven patterns** over the two days that followed, gated by a fresh reader on every one, and revised eight times over those rounds. It is now fixed: a round that finds this rule inconvenient applies it as written or records a finding against the pattern, and does not edit this section. The freeze is not a claim that the rule is complete — it is the condition under which the next campaign's findings can be attributed, since a rule still in flight cannot be told apart from the corpus archaeology running beside it (roadmap methodology debt #18's operating rule, and #19's sequencing note).

@@ -238,9 +238,23 @@ Q_NEGATED_SITES = [
 # corpus pins untrustworthy, and Q will need the same synthetic treatment when
 # its class closes and this set empties. Until then, keep the reason in the
 # comment so a retirement cannot pass as a loosened check.
-Q_FIRING_AT_LEAST = {
-    "customer-onboarding",
-}
+# EMPTY as of 2026-08-27: every site Q can see has been treated.
+#
+# THIS IS NOT THE CLASS CLOSING, and the distinction is the reason this comment
+# exists rather than a promotion. Q's trigger keys on the literal
+# `*Rebuild procedure:*` marker and is line-scoped (see lint.py), so it has a
+# recorded recall gap — two known instances of this class are invisible to it:
+# Preference-Aware Notification Fanout, found by the pre-campaign survey by
+# reading, and Forensic Recovery's AP-F1, routed by a gate. **A check going
+# silent measures the check's reach, not the corpus's health**, which is the same
+# lesson the 2026-06-08 capability-provenance rescan taught when it found zero
+# undeclared dependencies by sweeping the one surface the rule then named.
+#
+# So this set stays a floor rather than becoming `exact`, and Q stays advisory,
+# until those two land. Promotion and the switch to `exact` happen together, as
+# they did for P — at which point the synthetic fixtures above are what carries
+# the regression coverage, since there will be no corpus positive left to pin.
+Q_FIRING_AT_LEAST: set[str] = set()
 
 
 def stems(findings) -> set[str]:
@@ -311,7 +325,12 @@ def main(argv: list[str]) -> int:
     failures: list[str] = []
     for code, fn, silent, firing, exact in (
         ("P-atomic-audit", check_atomicity_over_audit, P_SILENT, P_FIRING, True),
-        ("Q-rebuild-bound", check_rebuild_bound, Q_SILENT, Q_FIRING_AT_LEAST, False),
+        # `exact` since 2026-08-27, when the class closed and Q was promoted to
+        # gating: with an empty pin set, exactness is what makes the emptiness an
+        # assertion — any firing is reported as an unpinned pattern rather than
+        # quietly joining a backlog. The regression coverage lives in
+        # check_q_synthetic(), which needs no corpus positive to exist.
+        ("Q-rebuild-bound", check_rebuild_bound, Q_SILENT, Q_FIRING_AT_LEAST, True),
     ):
         got = stems(fn(patterns))
         for s in sorted(silent):

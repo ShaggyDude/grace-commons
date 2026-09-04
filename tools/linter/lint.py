@@ -152,9 +152,12 @@ TRAILING_PAREN = re.compile(r"\s*\([^)]*\)\s*$")
 # P-atomic-audit and Q-rebuild-bound landed 2026-08-27 with a recorded baseline
 # (roadmap.md methodology debt #19): 3 patterns and 8 patterns respectively.
 # Their propagation is debt #19 step (iii); they become gating when it closes.
-# Q remains advisory: its eight instances are open (methodology debt #19, the
-# retention-horizon class), and turning the gate red before findings are worked is
-# how a check gets muted rather than fixed.
+# EMPTY as of 2026-08-27: both checks are gating. Q-rebuild-bound was promoted
+# when the retention-horizon class closed on every known instance — including the
+# two its own trigger cannot see (Preference-Aware Notification Fanout and
+# Forensic Recovery's AP-F1), which is the distinction the promotion waited on.
+# A check going silent measures the check's reach, not the corpus's health, so
+# silence alone was never the bar; the bar was the class.
 #
 # P-atomic-audit was promoted to GATING on 2026-08-27, when the last of its three
 # instances closed and it fired zero times corpus-wide. That is the condition
@@ -163,7 +166,7 @@ TRAILING_PAREN = re.compile(r"\s*\([^)]*\)\s*$")
 # NEW instance has been introduced, which is exactly the event that should stop a
 # build — the class took three rounds and one protocol repair to clear, and
 # re-acquiring it silently is the failure mode worth spending a red build on.
-ADVISORY_CODES = frozenset({"Q-rebuild-bound"})
+ADVISORY_CODES: frozenset[str] = frozenset()
 
 
 @dataclass
