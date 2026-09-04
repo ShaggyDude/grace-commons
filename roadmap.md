@@ -416,9 +416,9 @@ A vote-yes pattern's formal layer is discharged when (a) the sibling artifact(s)
 | [Login](compositions/login.md) | 2 | Final Critique 7's F2 closed 2026-08-27, and **that fix carries two defects found by inspection** (uninitialized `failures`; check-3 join key absent from the per-session events). **Not yet gated.** |
 | [Privileged Access Provisioning](compositions/privileged-access-provisioning.md) | 4 | Final Critique 7's F4 closed 2026-08-27; **gated the same day — the one gate that ran — returning 4 new foundational** |
 | [Notification Fanout](compositions/notification-fanout.md) | 1 | Final Critique 6's F1 closed 2026-08-27, and **that fix carries one defect found by inspection** (`fired_at` in the contract and check, in no wiring step). **Not yet gated.** |
-| [Propagate Consent Revocation Downstream](compositions/propagate-consent-revocation-downstream.md) | 1 | |
+| [Propagate Consent Revocation Downstream](compositions/propagate-consent-revocation-downstream.md) | 0 | F4 closed 2026-08-27 composition-side; refining bundle still open, so the pattern holds at `partially resolved` |
 | [Defensible Retention](compositions/defensible-retention.md) | 0 | AP-F1 closed 2026-08-27; **not yet gated** |
-| **Total** | **50** | ~47 distinct. Was 43; +4 from the one gate that ran, +3 self-inflicted found by inspection |
+| **Total** | **49** | ~46 distinct. Was 43; +4 from the one gate that ran, +3 self-inflicted found by inspection, −1 (Propagate Consent Revocation Downstream F4) |
 
 **What the census found that matters more than the number: five patterns' Status lines disagreed with their own Lineage**, and **two of those disagreements were introduced the same day by the rounds that closed the findings**. Forensic Recovery's AP-F1 was marked closed inline while two earlier sentences still said *"AP-F1 stays open"*; Defensible Retention's lead said *"Closed two ways"* while its trailer still said the composition holds *"until the routed finding closes"*. Capability-Backed Sharing's F2 and F3 had been rewired by that morning's protocol repair and never marked closed at all. All corrected with this census.
 
