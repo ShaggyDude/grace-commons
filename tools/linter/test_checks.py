@@ -185,11 +185,17 @@ Q_NEGATED_SITES = [
 ]
 # Firing: at least these. Not an exhaustive census — the check has a recorded
 # recall gap (see the docblock in lint.py), so this set is a floor.
+# Retired as their instances close (methodology debt #19, the retention-horizon
+# class): Defensible Retention and Propagate Consent Revocation Downstream, both
+# 2026-08-27. This is a FLOOR rather than an `exact` set, so a retirement is a
+# deletion here — which is exactly the perishability that made P-atomic-audit's
+# corpus pins untrustworthy, and Q will need the same synthetic treatment when
+# its class closes and this set empties. Until then, keep the reason in the
+# comment so a retirement cannot pass as a loosened check.
 Q_FIRING_AT_LEAST = {
     "customer-onboarding",
     "execute-gated-workflow",
     "multi-party-approval",
-    "propagate-consent-revocation-downstream",
 }
 
 
