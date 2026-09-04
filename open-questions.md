@@ -14,6 +14,61 @@ When a session has a strong case for resolving one, the move is: (a) write the c
 
 ## Authored architectural questions
 
+### Replace the prose Lineage with a ledger and a decision log
+
+**Status: agreed 2026-08-27, with the bar tightened by the author the same day — *change history is for huge directional changes; everything else goes into the detailed commits.* Pilot landed on Login. The pass follows.**
+
+**The case.** The corpus carries 2.1M characters of per-pattern history — 33% of everything, 49% of the size of the specifications themselves, and on two patterns *more* than the specification. Measured by shape, 37% of it is finding bullets carrying prescribed fixes, which a future round genuinely needs; 63% is round-by-round narrative, which decays fast and is duplicated by the commit messages that landed the same rounds. That history is also, silently, the corpus's **health ledger** — the place you count open findings from — and prose is the wrong medium for a ledger. On 2026-08-27 that broke three ways in one day: the roadmap's aggregate was stale (it said seven patterns; there were fifteen), five patterns' Status lines contradicted their own Lineage (two of them created *by the rounds that closed the findings*), and a census by machine returned 15 or 112 depending on the regex, because closures are recorded inline in some patterns and in later entries in others and the word *open* appears inside closed findings' text. It took a full read of fifteen patterns to produce a number, and the number was 46.
+
+**The history is doing three jobs in one register, and only one of them justifies the cost.**
+
+| Job | Needed? | Right medium | Today |
+|---|---|---|---|
+| **Ledger** — what is open now, per pattern | yes, and it must be countable | a structured block with one place to update | prose, scattered, contradictory |
+| **Decisions** — why a load-bearing choice was made, what was ruled out | yes — this is the history that checks decisions | a short dated list, one screen per pattern | interleaved with narrative, unfindable |
+| **Narrative** — what happened in round N | no | `git log`, which already has it, with the commit message | 63% of the volume, in the spec file |
+
+**The proposal.** `## Status` and the prose Lineage are replaced by two sections, and the narrative dies.
+
+**1. `## Ledger`** — the countable SSOT for a pattern's health. A fixed line grammar the linter parses, not free prose:
+
+```
+## Ledger
+
+status: partially resolved
+formal: verified — login.tla + 1 twin, 2026-06-03
+last gate: 2026-08-26 — fresh reader — 5 foundational, all since closed
+
+open:
+- 2026-08-27-a · foundational · Action wiring, cascade step 4 · `failures` is consumed by the completion event and by check 3 and initialized nowhere → initialize at step 4; increment on 5b's failure arm
+- 2026-08-27-b · foundational · Generation acceptance check 3 · joins per-session events on `initiation_event_id`, which none of the three per-session cascade events carries → add it to their payloads
+```
+
+Five fields per line — id, class, where, defect, fix — with `→` separating defect from fix. Ids are date-based, not gate-based, so a finding does not need to know which *Final Critique* it came from. **When a finding closes, its line is deleted.** If the closure carried a decision, the decision goes in section 2; the fact that it was found and closed is in git. Closed findings do not accumulate, which is the single largest volume win and the thing that makes the block stay one screen. The linter derives what it can and refuses contradictions by construction: `status: grounded` requires zero open foundational; every open line has five fields; and the corpus census becomes `python3 lint.py --census` instead of a day's reading.
+
+**2. `## Decisions`** — **directional changes only.** Not every load-bearing choice: the turns a future reader must know the pattern *took* — a change to what it promises, to how it attributes, to what it composes. Three fields, no narrative:
+
+```
+- **2026-08-26 — Every Login event is composition-attributed.** *Chose:* attest under `application_actor_ref`, human parties in `data`. *Over:* attesting under the principal's own credential. *Because:* Login's callers are end principals whose material is the thing under test, not registry actors — and a failed login has no valid credential to attest with.
+```
+
+The bar is *directional*, and it is high on purpose. An implementation choice — a sandwich read, a completion event, a bound stated — is not a direction; it is in the commit. A classification detail is not a direction. A gate's roster is not a direction. **The test is whether the pattern would be a different pattern had it gone the other way.** A mature pattern has two or three entries, not nine.
+
+**Which makes the commit message load-bearing, and that should be said out loud.** Every rationale that used to sit in the Lineage now sits in the commit that made the change, and `git log -- <file>` is the per-pattern index of it. The corpus's rule stays — *never commit; propose the message in chat* — but the message is no longer a courtesy summary. **A commit that changes a spec carries the why in its message; the spec carries only the what, and for directional changes, the why.** A round whose commit message would not let a future reader reconstruct its reasoning has not finished.
+
+**3. Everything else is deleted**, with a one-line pointer: *History before 2026-08-28 is in `git log -- <file>`.* Round narratives that carry a methodology lesson already go to `discoveries.md`; that practice continues. Gate provenance — who cleared what, when — collapses to the `last gate:` line, since a pattern's health is its *current* state, not its record of past states.
+
+**Pilot: Login, landed.** Its 51K characters of history reduce to a ledger of two open lines and **two** decisions. A first draft had nine; against the directional bar seven of them were implementation choices whose reasoning belongs in their commits — the formal model's presence (provenance, now the Ledger's `formal:` line), the sandwich read, the union-defined cascade set, derived expiry (the constituent's choice, not this pattern's), the truth-bearing window classification, the completion event, the tier-0 bound. The two that survive change what the pattern *is*:
+
+- **2026-08-26 — Every Login event is composition-attributed.** *Chose:* attest under `application_actor_ref`, human parties in `data`. *Over:* attesting under the principal's own credential. *Because:* Login's callers are end principals whose material is the thing under test, not registry actors — and a failed login has no valid credential to attest with.
+- **2026-08-26 — Invariant 2 promises less than it did.** *Chose:* cascade completeness only for verifies that committed after the revocation, with the in-flight window named and a second cascade prescribed. *Over:* single-cascade sufficiency. *Because:* a login whose verify committed before the revocation can land its session after the snapshot, and no single cascade can see it.
+
+Two decisions, under 1K characters. The other 50K were narrative or implementation rationale, and every one of those rounds has a commit message saying the same thing — which is where it now lives.
+
+**What the pass touches beyond the patterns.** [`spec-format.md`](spec-format.md) and [`pressure-testing.md`](pressure-testing.md) §*Where the journey gets recorded* mandate the current Lineage and change with it; the linter's Status-grammar checks (G, H, I) are replaced by the Ledger grammar; [`roadmap.md`](roadmap.md)'s hand-maintained tallies are replaced by the census command's output. The operating rule from 2026-08-27 — *a round that closes a finding must close it in every place the pattern claims it is open* — becomes unnecessary, because there is one place.
+
+**Sequencing, so nothing is lost.** Pilot on Login and one `grounded` pattern to prove both shapes. Land the linter grammar and `--census`. Then a mechanical pass: the fifteen `partially resolved` patterns' ledgers are already written, in the census; the thirty-seven `grounded` patterns' ledgers are trivial (no open lines); the decision logs are the judgment work, roughly one pattern per short round or batched with review. Delete the Lineages last, in one commit, so `git log` has a single line to point at.
+
 ### Taxonomy axes
 
 Current pattern categories (`productivity`, `temporal`, `resource-lifecycle`, `compliance`, `messaging`, `workflow`, `healthcare`) mix conceptual axes — `healthcare` is domain-scoped while the others are concept-scoped; `compliance` mixes pure-compliance-infrastructure atoms with atoms that happen to be regulated. The right axial split will be forced by content as the catalog grows past the size where preemptive cuts are reasonable; restructuring earlier would relocate the same confusion under different labels. The `workflow/` sub-question — whether one atom justifies the category — is **resolved** (2026-06-04): the category now holds two grounded atoms, Approval Step (the fixed-state pole — states fixed by the atom) and Workflow / State Machine (atom #9, the general-declared pole — states declared by the deployment), so it stands on present catalog evidence rather than on a planned atom. The broader axial split question across all categories is independently open. See the *Open question on the current axes* paragraph in the Taxonomy section of [`the-spec-layer.md`](./the-spec-layer.md), and [`roadmap.md`](./roadmap.md) §"Open taxonomy question" for the parallel ROADMAP framing.
