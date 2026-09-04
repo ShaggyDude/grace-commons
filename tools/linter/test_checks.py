@@ -169,6 +169,20 @@ P_FIRING: set[str] = set()
 # stated rather than assumed" and then states the bound and why it suffices —
 # which is the right thing to do in the pattern that performs the destruction.
 Q_SILENT = {"audit-trail"}
+# The polarity false positive, pinned by SITE. Privileged Access Provisioning's
+# `request_to_capability` rebuild reads the Capability store's own immutable
+# records, not an event payload — it is outside this class. Q fired on it because
+# the clause contains the phrase "audit event data" inside a sentence saying the
+# raw token appears in NO audit event data: the check read a negation as an
+# assertion. Fixed 2026-08-27 by the retention-horizon classification sweep.
+#
+# Pinned at the site rather than the file, and that distinction is the same one
+# P-atomic-audit paid for: Privileged Access Provisioning has two OTHER genuine
+# firings, so a file-level pin would pass whether or not this one is fixed, and
+# the run would look healthy either way.
+Q_NEGATED_SITES = [
+    ("privileged-access-provisioning", "request_to_capability"),
+]
 # Firing: at least these. Not an exhaustive census — the check has a recorded
 # recall gap (see the docblock in lint.py), so this set is a floor.
 Q_FIRING_AT_LEAST = {
@@ -194,6 +208,29 @@ def _block_at(text: str, line: int) -> str:
     while end + 1 < len(lines) and lines[end + 1].strip():
         end += 1
     return "\n".join(lines[start:end + 1])
+
+
+def check_not_firing_at(patterns, findings, sites, code) -> list[str]:
+    """A check must stay silent at these specific sites. Pinned by site, not by
+    file, because a file with other genuine firings hides a site-level regression
+    completely."""
+    problems: list[str] = []
+    for stem, marker in sites:
+        pat = next((p for p in patterns.values() if p.path.stem == stem), None)
+        if pat is None:
+            continue
+        for f in findings:
+            if f.path.stem != stem:
+                continue
+            if marker in _block_at(pat.text, f.line):
+                problems.append(
+                    f"{code}: fires on the {stem} block containing {marker!r}, "
+                    f"which is NOT an instance of this class — its rebuild reads a "
+                    f"constituent's own records, and the phrase that matched sits "
+                    f"inside a clause DENYING a payload read. The polarity guard "
+                    f"has regressed; check what the match is being read as."
+                )
+    return problems
 
 
 def check_motivating_sites(patterns, findings) -> list[str]:
@@ -249,6 +286,13 @@ def main(argv: list[str]) -> int:
                     f"false positive (tighten the check)"
                 )
         print(f"{code}: {len(got)} pattern(s) firing — {', '.join(sorted(got)) or 'none'}")
+        if code == "Q-rebuild-bound":
+            problems = check_not_firing_at(patterns, fn(patterns),
+                                           Q_NEGATED_SITES, code)
+            failures.extend(problems)
+            if not problems:
+                for stem, marker in Q_NEGATED_SITES:
+                    print(f"{code}: polarity site silent — {stem} / {marker!r} \u2713")
         if code == "P-atomic-audit":
             problems = check_motivating_sites(patterns, fn(patterns))
             check_synthetic(problems)

@@ -700,6 +700,22 @@ PAYLOAD_READ = re.compile(
     r"|each data's",
     re.I,
 )
+# A payload read that is being DENIED rather than performed. Privileged Access
+# Provisioning's `request_to_capability` says the raw token appears in "**no**
+# audit event data" — a clause asserting the ABSENCE of a payload read, inside a
+# rebuild that sources from the Capability store's own immutable records and is
+# genuinely outside this class. Matching it was a polarity error, not a loose
+# trigger: the check read a negation as an assertion. Found by the class's
+# 2026-08-27 classification sweep and pinned in test_checks.py, because this is
+# the second time a regex over careful prose has gone wrong in a way a corpus
+# count would not show (the first was P-atomic-audit's `modulo` suppressor).
+PAYLOAD_READ_NEGATED = re.compile(
+    r"(?:\bno\b|\bnot\b|never|\bnone\b)[^.]{0,60}"
+    r"(?:audit )?event'?s? `?data`?"
+    r"|appears? (?:on|in) \*?\*?no\*?\*?",
+    re.I,
+)
+
 REBUILD_BOUNDED = re.compile(
     r"bound on the rebuild"
     r"|totality[^.]{0,90}(?:horizon|retention|purge)"
@@ -720,7 +736,18 @@ def check_rebuild_bound(patterns: dict[Path, Pattern]) -> list[Finding]:
         body = p.text if cut == -1 else p.text[:cut]
         for m in REBUILD_CLAUSE.finditer(body):
             clause = m.group(0)
-            if not PAYLOAD_READ.search(clause):
+            hit = PAYLOAD_READ.search(clause)
+            if not hit:
+                continue
+            # polarity: a clause that DENIES a payload read is not a payload read.
+            # Test the sentence the match sits in, not the whole clause, so an
+            # unrelated negation elsewhere in a long rebuild does not suppress a
+            # real finding — the failure mode the `modulo` regression taught.
+            s0 = clause.rfind(". ", 0, hit.start())
+            s0 = 0 if s0 == -1 else s0 + 2
+            s1 = clause.find(".", hit.end())
+            s1 = len(clause) if s1 == -1 else s1
+            if PAYLOAD_READ_NEGATED.search(clause[s0:s1]):
                 continue
             if REBUILD_BOUNDED.search(_enclosing_block(body, m.start())):
                 continue
