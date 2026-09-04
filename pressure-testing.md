@@ -290,6 +290,65 @@ An invariant resting on anything else — *"the substrate can produce…"*, *"th
 
 ---
 
+## Durability boundaries — an atomic set may not contain a write the host cannot take back
+
+> **Open, not frozen.** This rule was stated after the *transactional atomicity over an append-only substrate* class closed on 2026-08-27 (three instances, three rounds, one protocol repair). It is written now because the evidence is complete *for this class* and because a finding that lives only in a roadmap debt entry is a finding on its way to being lost. It is **not** frozen: methodology debt #19 has two classes still to run, and either may return a case this rule does not cover. It freezes with the rest of #19.
+
+**The rule.** *Never place an independently durable write inside a host transaction's atomic set.* A write is **independently durable** when the store that accepts it declares it cannot be withdrawn and offers no synchronous rollback — an append-only audit log is the canonical case, and in this corpus every `AuditTrail.record_action` is one. A host transaction cannot enlist such a write, so it cannot roll it back, so a set containing it does not commit together or not at all. Where the append cannot participate, specify three things instead and specify them explicitly: the **ordering** across the durability boundary, the **reachable partial states** that ordering admits, and the **recovery** for each.
+
+This is the fourth *use* surface of §Capability provenance stated at full strength. *"These writes commit together or not at all"* claims a withdrawal capability over every member of the set. Where a member is an append the substrate declares un-withdrawable, the claim is an undeclared dependency — and unlike most undeclared dependencies it is not merely unproven. It is **false**, and the composition's own text usually contains the refutation.
+
+### Why this is not "state the guarantee more carefully"
+
+**An all-or-nothing claim over a durability boundary fails in one of two ways, and they need different treatments.** The distinction is the campaign's main result, because the two look identical on the page.
+
+| | The claim | The wiring | The treatment |
+|---|---|---|---|
+| **Manifestation A** | impossible to prove | the execution order already preserves safety; the reachable partial is the recoverable one | **restatement** — safety plus liveness, plus the mechanism that makes liveness dischargeable |
+| **Manifestation B** | false | rollback makes a *forbidden* state reachable, and it is a state nothing can repair | **protocol repair** — move the durable write out of the atomic set, then restate |
+
+**The discriminator: does anything durable end up asserting a fact the canonical state denies?** A *missing* record is recoverable — append the seal, write the propagation event, retry. A *false* one is not: the append cannot be withdrawn, and manufacturing the missing canonical record afterwards fabricates the very evidence the record exists to protect. **A composition cannot honestly restate its way out of a reachable state it has no way to leave.** Where the reachable partial is a missing record, restate. Where it is a false one, rewire first.
+
+Practically the question reduces to **write order**: if the durable append is last, the partial is a missing record; if the append can land while an earlier write is still revocable — including inside a transaction that may yet abort — the partial is a false record. That is why manifestation B is the one that hides: the wiring *looks* stronger, because it wrapped more in the transaction.
+
+### The three tells
+
+**1. An argument that reasons about the wrong member of the set.** The most convincing instance in the corpus did not assert its atomicity, it *argued* for it: it observed correctly that one member was a recoverable store write the transaction could undo, and concluded the whole set was atomic. Sound about that member, silent about the append. Showing its work made it *more* persuasive, not less. When a spec defends an atomicity claim, check that the defence covers **every** member, especially the one it does not mention.
+
+**2. An escape hatch dressed as a caveat.** *"Where the stores cannot co-transact…"*, *"in the conforming case…"*, *"where the host cannot provide that atomicity…"* — each reads as a deployment-specific edge and each names the universal case, because an append-only substrate **never** co-transacts. Qualifying a false claim makes it read as defended. In one instance a gate finding had actively pushed a spec deeper in, adding a conforming-case qualifier for symmetry with a sibling invariant, hardening a claim that was wrong on both sides.
+
+**3. The refutation already present elsewhere in the spec.** In all three instances the pattern stated the fact that falsifies its own claim — in an edge case, a constituent's contract, or the treatment of its *intent* record — a section or two away from where the claim was made. **The principle is rarely missing; it is applied to one durable write and dropped for another.** Before concluding a composition lacks the insight, search it for the sentence that already has it.
+
+### What the restatement costs, and the two ways to pay
+
+Stating liveness raises the question the atomic claim suppressed: **compensate with what.** The material the failed write carried — a disposition set, a scope enumeration, a disclosure descriptor — commonly exists nowhere else, since it lived in the write that did not land and in the process that died. A restatement that stops at the sentence produces a liveness claim no deployment can discharge and no auditor can test, which is a **worse** artifact than the overstatement it replaces: the overstatement was at least falsifiable.
+
+> **Carry the material if it is a computed verdict; carry the boundary if it is derivable from an append-only log.** A verdict — a per-record disposition, a determination — is not in any log, so the intent record must carry it (or its digest with the universe cardinality). A set that is *derivable* — an enumeration over recorded events — needs only a fixed point to be derived at, and a durable write that already exists can serve as that point. The boundary form is strictly better where available: it costs no new field and no second copy, and a boundary cannot drift out of agreement with the thing it bounds.
+
+Either way the liveness arm needs a **declared window**. "Eventually" is not an auditable guarantee, and a retry with no terminus is indistinguishable, from the records, from an orphan nobody is working on. A `compensation_window` configuration entry is what makes *at quiescence* checkable and gives the retry somewhere to escalate to; a `reconciliation_cadence` bounds detection, and a cadence longer than the window makes the window unmeetable by construction. Both are capability-provenance obligations of the composition's own — the declaring source for what its liveness arm spends.
+
+**And the partial must be findable.** The failure that *returns* surfaces itself; the failure that **cannot** return — a crash between the two writes — surfaces nothing, and that is the case the *no unsurfaced partial* arm is actually about. It requires a reconciliation scan that is **mandated** rather than implied, with a restart trigger and a declared cadence, and a **join key** it can run on. Check that the key exists before claiming the scan: in one instance the disclosure record carried no identifier tying it to its request, so the invariant named a scan that could not run.
+
+### What this does to the formal layer
+
+**A model that encodes the claim cannot falsify the claim.** In all three instances the model committed every sub-write in one action, so the state that made the wiring unsafe was not merely unverified — it was **unrepresentable**. That is how the sharpest of the three passed a formal-layer vote, an author gate, a fresh-reader council and a clearance gate without anyone seeing it. When a model's central action sets several variables at once, ask what interleaving that action forbids and whether the deployment can actually forbid it.
+
+Two consequences for twins. **A twin should be the composition's own previous wiring where one exists** — a repair whose necessity cannot be demonstrated is indistinguishable from a preference, and such a twin is also a permanent regression guard against the wiring being folded back. And **a twin must be a plausible mis-implementation of *this* composition**: where a safety arm is earned by a *constituent's* guarantee (an earlier write that is terminal by the atom's own invariant) no wiring of this composition can violate it, so it is a frame property here and correctly has no twin. **The same claim is a frame property in one pattern and a reachable defect in another, and which it is depends entirely on whether the earlier write can be taken back** — the discriminator again, arriving from the formal layer instead of the prose.
+
+### The mechanical slice
+
+[`tools/linter/lint.py`](tools/linter/lint.py) check **`P-atomic-audit`**: an all-or-nothing sentence whose member set names an audit write, with no acknowledgement in the enclosing block that an appended event cannot be withdrawn. The phrase alone is not the signal — nine patterns use it benignly over constituent-store writes only. It landed advisory, measured the class, and was **promoted to gating on 2026-08-27** when the last instance closed and it fired zero times corpus-wide: a check becomes gating at the moment it stops measuring a backlog and starts defending a property.
+
+Its regression guard is worth copying. The check's first draft treated a hedge word as an acknowledgement marker, which silenced it on the two sites that motivated it — both their pattern's declared formal-model subject, because **a hedge word clusters around a pattern's most careful claims, so a hedge-word suppressor is biased toward silencing the findings that matter most**. That regression was pinned to those corpus sites, and the pins had to be retired as the sites were repaired — a corpus-derived pin is perishable by construction, dying exactly when the finding is fixed, and it creates a bad incentive besides, since the cheapest way to make it pass is to delete it. It is now pinned to **synthetic fixtures** instead: a decoy block that must fire and an honestly-restated block that must stay silent, neither tied to any corpus file, verified by reintroducing the original bug. Where a check's regression can be stated without a victim, state it without a victim.
+
+### Which pass owns it
+
+Detection is **Pass 3 (adversarial)** in practice — the question *"what is the sequence in which this fails?"* is what surfaces it — but the classification is **Pass 2 (EOS)**: whether the reachable partial is a missing record or a false one is a question about where a capability lives, and the answer decides whether the round edits a sentence or moves a boundary. The mechanical form is the linter check above.
+
+**Worked origins (all 2026-08-27).** [Resolve a Person's Data Rights](compositions/resolve-a-persons-data-rights.md) Invariant 1 — manifestation A; order already correct; restated, with the disposition set carried in both intent records because a verdict is in no log. [Capability-Backed Sharing](compositions/capability-backed-sharing.md) Invariants 2 and 3 — manifestation B; the append sat inside the transaction, so an abort after it left a sealed disclosure event for a disclosure that never committed; rewired to durable intent → transactional domain mutation → durable outcome. [Propagate Consent Revocation Downstream](compositions/propagate-consent-revocation-downstream.md) Invariant 3 — manifestation A, and the purest instance: *both* members irreversible, so there was never a transaction to enlist anything in; restated, with the propagation set's boundary moved onto the existing intent event at no new field. Per-round detail lives in each pattern's Lineage entry and the class record in [`roadmap.md`](roadmap.md) methodology debt #19.
+
+---
+
 ## Authentication precedence — no authority-bearing transition may rely on an unauthenticated principal
 
 > **FROZEN — 2026-08-27.** This rule and everything below it are closed to amendment. It was stated 2026-08-26, carried into **eleven patterns** over the two days that followed, gated by a fresh reader on every one, and revised eight times over those rounds. It is now fixed: a round that finds this rule inconvenient applies it as written or records a finding against the pattern, and does not edit this section. The freeze is not a claim that the rule is complete — it is the condition under which the next campaign's findings can be attributed, since a rule still in flight cannot be told apart from the corpus archaeology running beside it (roadmap methodology debt #18's operating rule, and #19's sequencing note).
