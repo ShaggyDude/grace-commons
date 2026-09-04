@@ -134,6 +134,8 @@ P_RETIRED_SITES = [
     ("resolve-a-persons-data-rights", "Invariant 1 — Request", "restated 2026-08-27"),
     ("capability-backed-sharing", "Invariant 2 — Disclosure-accountability",
      "protocol repair 2026-08-27 — the append moved out of the host transaction"),
+    ("propagate-consent-revocation-downstream", "Invariant 3 — Revocation propagation",
+     "restated 2026-08-27 — class closed; P promoted to gating"),
 ]
 
 # ── P-atomic-audit ─────────────────────────────────────────────────────────── #
@@ -148,15 +150,19 @@ P_SILENT = {"chain-of-custody"}
 # now stay OUT of this set — the `exact` comparison below turns that into a real
 # assertion rather than a deletion, so a regression that reopened it would be
 # reported as an unpinned firing.
-# Capability-Backed Sharing was here until 2026-08-27; its three sites closed
-# when the durable-append protocol repair landed (methodology debt #19 step (iii),
-# atomicity class), leaving Propagate Consent Revocation Downstream as the class's
-# last open instance. The `exact` comparison below turns each absence into a real
-# assertion rather than a deletion: a regression that reopened one would be
-# reported as an unpinned firing.
-P_FIRING = {
-    "propagate-consent-revocation-downstream",
-}
+# EMPTY, AND THAT IS THE ASSERTION. All three instances of the class closed on
+# 2026-08-27 — Resolve a Person's Data Rights and Propagate Consent Revocation
+# Downstream by restatement, Capability-Backed Sharing by protocol repair — and P
+# now fires zero times corpus-wide, which is why it was promoted from advisory to
+# gating in lint.py.
+#
+# The `exact` comparison below is what makes an empty set do work: ANY firing is
+# now reported as an unpinned pattern, so a newly introduced instance fails this
+# test rather than quietly joining a backlog. An empty pin set is not an absence
+# of coverage here; the coverage moved to check_synthetic(), which does not depend
+# on the corpus containing a broken pattern and therefore survives the class being
+# clean — which is the state a closed class is supposed to reach.
+P_FIRING: set[str] = set()
 
 # ── Q-rebuild-bound ───────────────────────────────────────────────────────── #
 # Silent: the exemplar. Audit Trail carries "Bound on the rebuild's totality,

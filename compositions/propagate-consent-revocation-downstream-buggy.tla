@@ -1,66 +1,99 @@
 ---- MODULE propagate-consent-revocation-downstream-buggy ----
-\* BUGGY TWIN (vacuity guard) for propagate-consent-revocation-downstream.tla.
+\* BUGGY TWIN (silence hazard; vacuity guard) for
+\* propagate-consent-revocation-downstream.tla.
+\* Grace Commons — derived validator. The English spec is the source of truth.
 \*
-\* The withdraw_consent commit is split into three separate, interleavable
-\* sub-steps with NO compensation — the naive non-atomic implementation the
-\* *Cross-store consistency under partial failure* edge case and Invariant 3
-\* warn against:
-\*   Revoke        -> Consent.revoke commits
-\*   Propagate     -> consent.revoked event recorded
-\*   CompleteScopes -> affected_scopes enumeration recorded
-\* Because they are distinct actions, TLC stops after Revoke(c) alone:
-\* revoked[c] = TRUE, propagated[c] = FALSE, scopesComplete[c] = FALSE — a
-\* revoked consent whose withdrawal was never propagated (a downstream processor
-\* that should stop has no record telling it to). Inv3_BindingBijection and
-\* Inv_NoDanglingRevoke both fail. The checker rejects the twin.
-\* If the checker reports all invariants hold here, the harness is vacuous.
+\* Rewritten 2026-08-27 alongside the correct model, when Invariant 3 was restated
+\* from one atomic commit to safety plus liveness (methodology debt #19, the
+\* atomicity class). A twin has to break the invariant as it is NOW stated, or it
+\* guards a claim the corpus no longer makes. The previous version of this twin
+\* split the withdrawal into separate interleavable sub-steps; that split is no
+\* longer a bug, because the repaired composition does exactly that on purpose —
+\* it has to, since neither write is reversible. What IS a bug is doing it silently.
+\*
+\* BUG: the revoke commits and the propagation event does not, with NO surfacing
+\* and NO compensation. The orphan is reachable here, but so it is in the CORRECT
+\* model, deliberately; the difference is that here it is SILENT and terminal.
+\* Nothing sets surfaced, nothing retries the append, and the state is a dead end.
+\* That is what the restatement turns on — not whether a partial exists, but
+\* whether anyone is looking at it and whether it resolves. This matters
+\* particularly here: during the gap the SUPPRESSION is already correct, because
+\* [Processing Permitted] reads the Consent store, so the only thing at risk is
+\* the record of which downstream scopes should stop — which nothing but the
+\* surfacing will ever reveal.
+\*
+\* Breaks Inv3_NoUnsurfacedOrphan and, with it, the umbrella Inv3_BindingBijection.
+\* It leaves Inv3_NoOrphanPropagation intact — no propagation event ever precedes
+\* its revoke — which is what keeps this twin dedicated to the silence claim.
+\* There is deliberately no twin for the ordering claim here, and that absence is
+\* itself a finding rather than an omission: see the correct model's comment on
+\* Inv3_NoOrphanPropagation, and the analogous twin
+\* capability-backed-sharing-buggy-old-wiring.tla, which is what a violation of
+\* that claim looks like in a pattern whose wiring could actually produce one.
 
 CONSTANT Consents
 
-VARIABLES revoked, propagated, scopesComplete
-vars == <<revoked, propagated, scopesComplete>>
+VARIABLES intentState, revoked, propagated, surfaced
+vars == <<intentState, revoked, propagated, surfaced>>
 
 TypeOK ==
-    /\ revoked        \in [Consents -> BOOLEAN]
-    /\ propagated     \in [Consents -> BOOLEAN]
-    /\ scopesComplete \in [Consents -> BOOLEAN]
+    /\ intentState \in [Consents -> {"absent", "present"}]
+    /\ revoked     \in [Consents -> BOOLEAN]
+    /\ propagated  \in [Consents -> {"absent", "clean", "recovered"}]
+    /\ surfaced    \in [Consents -> BOOLEAN]
 
 Init ==
-    /\ revoked        = [c \in Consents |-> FALSE]
-    /\ propagated     = [c \in Consents |-> FALSE]
-    /\ scopesComplete = [c \in Consents |-> FALSE]
+    /\ intentState = [c \in Consents |-> "absent"]
+    /\ revoked     = [c \in Consents |-> FALSE]
+    /\ propagated  = [c \in Consents |-> "absent"]
+    /\ surfaced    = [c \in Consents |-> FALSE]
 
-\* BUG: three separate sub-steps, interleavable, no compensation.
+WriteIntent(c) ==
+    /\ intentState[c] = "absent"
+    /\ intentState' = [intentState EXCEPT ![c] = "present"]
+    /\ UNCHANGED <<revoked, propagated, surfaced>>
+
+\* The revoke commits, and nothing surfaces the missing propagation event.
 Revoke(c) ==
-    /\ revoked[c] = FALSE
+    /\ intentState[c] = "present"
+    /\ ~revoked[c]
     /\ revoked' = [revoked EXCEPT ![c] = TRUE]
-    /\ UNCHANGED <<propagated, scopesComplete>>
+    /\ UNCHANGED <<intentState, propagated, surfaced>>
 
 Propagate(c) ==
-    /\ revoked[c] = TRUE
-    /\ propagated[c] = FALSE
-    /\ propagated' = [propagated EXCEPT ![c] = TRUE]
-    /\ UNCHANGED <<revoked, scopesComplete>>
+    /\ revoked[c]
+    /\ propagated[c] = "absent"
+    /\ propagated' = [propagated EXCEPT ![c] = "clean"]
+    /\ UNCHANGED <<intentState, revoked, surfaced>>
 
-CompleteScopes(c) ==
-    /\ propagated[c] = TRUE
-    /\ ~scopesComplete[c]
-    /\ scopesComplete' = [scopesComplete EXCEPT ![c] = TRUE]
-    /\ UNCHANGED <<revoked, propagated>>
-
-Next == \E c \in Consents : Revoke(c) \/ Propagate(c) \/ CompleteScopes(c)
+Next == \E c \in Consents : WriteIntent(c) \/ Revoke(c) \/ Propagate(c)
 Spec == Init /\ [][Next]_vars
 
+Inv3_NoOrphanPropagation ==
+    \A c \in Consents :
+        (propagated[c] \in {"clean", "recovered"}) => revoked[c]
+Inv3_NoUnsurfacedOrphan ==
+    \A c \in Consents :
+        (revoked[c] /\ propagated[c] = "absent") => surfaced[c]
+Inv3_IntentPrecedesRevoke ==
+    \A c \in Consents : revoked[c] => (intentState[c] = "present")
+Inv3_RecoveryDistinguishable ==
+    \A c \in Consents :
+        /\ (propagated[c] = "clean")     => ~surfaced[c]
+        /\ (propagated[c] = "recovered") => surfaced[c]
 Coherent(c) ==
-    \/ (revoked[c] = FALSE /\ propagated[c] = FALSE /\ scopesComplete[c] = FALSE)
-    \/ (revoked[c] = TRUE  /\ propagated[c] = TRUE  /\ scopesComplete[c] = TRUE)
+    \/ (~revoked[c] /\ propagated[c] = "absent")
+    \/ (revoked[c]  /\ propagated[c] \in {"clean", "recovered"})
+Orphan(c) == revoked[c] /\ propagated[c] = "absent"
+Inv3_BindingBijection ==
+    \A c \in Consents : Coherent(c) \/ (Orphan(c) /\ surfaced[c])
 
-Inv3_BindingBijection == \A c \in Consents : Coherent(c)
-Inv_NoDanglingRevoke ==
-    \A c \in Consents : (revoked[c] = TRUE) => (propagated[c] = TRUE /\ scopesComplete[c] = TRUE)
-Inv_NoOrphanPropagation ==
-    \A c \in Consents : (propagated[c] = TRUE) => (revoked[c] = TRUE)
-
-Safety == TypeOK /\ Inv3_BindingBijection /\ Inv_NoDanglingRevoke /\ Inv_NoOrphanPropagation
+Safety ==
+    /\ TypeOK
+    /\ Inv3_NoOrphanPropagation
+    /\ Inv3_NoUnsurfacedOrphan
+    /\ Inv3_IntentPrecedesRevoke
+    /\ Inv3_RecoveryDistinguishable
+    /\ Inv3_BindingBijection
 
 ====
