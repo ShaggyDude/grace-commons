@@ -413,12 +413,12 @@ A vote-yes pattern's formal layer is discharged when (a) the sibling artifact(s)
 | [Forensic Recovery](compositions/forensic-recovery.md) | 3 | AP-F1 closed 2026-08-27; two stale "stays open" sentences corrected with this census |
 | [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) | 3 | |
 | [External Onboarding](compositions/external-onboarding.md) | 2 | |
-| [Login](compositions/login.md) | 1 | |
-| [Privileged Access Provisioning](compositions/privileged-access-provisioning.md) | 1 | |
-| [Notification Fanout](compositions/notification-fanout.md) | 1 | |
+| [Login](compositions/login.md) | 0 | FC7-F2 closed 2026-08-27; **awaiting a clean gate, not a fix** |
+| [Privileged Access Provisioning](compositions/privileged-access-provisioning.md) | 0 | FC7-F4 closed 2026-08-27; **awaiting a clean gate** |
+| [Notification Fanout](compositions/notification-fanout.md) | 0 | FC6-F1 closed 2026-08-27; **awaiting a clean gate** |
 | [Propagate Consent Revocation Downstream](compositions/propagate-consent-revocation-downstream.md) | 1 | |
 | [Defensible Retention](compositions/defensible-retention.md) | 0 | AP-F1 closed 2026-08-27; **awaiting a clean gate, not a fix** |
-| **Total** | **46** | ~43 distinct, after the restatements noted |
+| **Total** | **43** | ~40 distinct, after the restatements noted |
 
 **What the census found that matters more than the number: five patterns' Status lines disagreed with their own Lineage**, and **two of those disagreements were introduced the same day by the rounds that closed the findings**. Forensic Recovery's AP-F1 was marked closed inline while two earlier sentences still said *"AP-F1 stays open"*; Defensible Retention's lead said *"Closed two ways"* while its trailer still said the composition holds *"until the routed finding closes"*. Capability-Backed Sharing's F2 and F3 had been rewired by that morning's protocol repair and never marked closed at all. All corrected with this census.
 
@@ -426,7 +426,11 @@ A vote-yes pattern's formal layer is discharged when (a) the sibling artifact(s)
 
 **On estimating completion.** The bar for `grounded` is not *zero open findings*; it is **a fresh-reader gate returning zero foundational**, which is a separate and harder event — Defensible Retention is at zero open and still `partially resolved` for exactly that reason. Two facts govern any estimate. **(1) Gates find as they close.** Every authentication-precedence gate in the 2026-08-26/27 pass returned pre-existing foundational findings the pattern had carried for months, so the observed net rate is far below the gross closure rate, and a burn-down of 46 is the wrong model. **(2) The remaining findings are not class-clustered.** Methodology debt #19's three classes closed sixteen-plus sites in a day *because they shared a treatment*; what is left is per-pattern gate residue — a substrate query surface here, a taxonomy arm there — with no shared fix to propagate. Those need per-pattern rounds at roughly one pattern per round, plus a gate each.
 
-**So the honest estimate is a range with its assumptions on the page:** fifteen patterns × (one to two closure rounds + one gate) each, at the observed rate of one to two patterns per working session, is **eight to fifteen sessions** — *if* gates return clean. They have not been returning clean; the 2026-08-27 gates opened four new foundational findings on one pattern alone. A more defensible statement is that **the corpus is one campaign away from being able to estimate**: run gates on the four patterns with the fewest open findings (Login, Privileged Access Provisioning, Notification Fanout, Propagate Consent Revocation Downstream), and the gross-versus-net rate becomes a measured quantity instead of a guess. Until then any date is a wish.
+**Measurement in progress — 2026-08-27.** The four patterns at one open finding each were taken first, precisely to turn the gross-versus-net rate into a measured quantity. **Three are now at zero open** — Login (FC7-F2), Privileged Access Provisioning (FC7-F4), Notification Fanout (FC6-F1) — joining Defensible Retention, which reached zero earlier the same day. The fourth, Propagate Consent Revocation Downstream's F4, is **not a closure but a decision**: it needs a choice between an archival-not-destruction posture and a constituent touch scoping Consent's Invariant 8 to the atom's own surface, and a constituent touch ripples to every pattern composing Consent. It is held for that decision rather than closed by preference.
+
+**The measurement is now one step from existing: four patterns sit at zero open, awaiting gates.** What those four gates return — zero, or N new pre-existing findings each — is the net rate, and it is the only number from which a schedule can honestly be built. Until they run, the estimate below stands as arithmetic rather than evidence.
+
+**So the arithmetic, with its assumptions on the page:** fifteen patterns × (one to two closure rounds + one gate) each, at the observed rate of one to two patterns per working session, is **eight to fifteen sessions** — *if* gates return clean. They have not been returning clean; the 2026-08-27 gates opened four new foundational findings on one pattern alone. A more defensible statement is that **the corpus is one campaign away from being able to estimate**: run gates on the four patterns with the fewest open findings (Login, Privileged Access Provisioning, Notification Fanout, Propagate Consent Revocation Downstream), and the gross-versus-net rate becomes a measured quantity instead of a guess. Until then any date is a wish.
 
 ## Methodology debts — open
 
