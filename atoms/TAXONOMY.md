@@ -74,7 +74,7 @@ The conceptual *shape* (sequence / state-machine / registry) is derivable from t
 own `## State` / `## Behavior`, so it already has an authoritative source and needs no
 `shape:` frontmatter. Declare a `shape`/`kind` only if a real consumer needs it before
 that deriver exists; default is none. (Unchanged from the proposal; the corpus confirmed
-it — e.g. Clinical Observation's own Lineage settles that its state model "can be specified
+it — e.g. Clinical Observation's own commit history settles that its state model "can be specified
 as a Workflow instance" but is inlined for definitional reasons.)
 
 ### 2. Overlay — derived from the graph (and security proves it generalizes)
@@ -180,7 +180,7 @@ the fix.
 
 - **Domain is a judgment, gated but not mechanical.** The EOS test removes taste but still
   requires a careful per-atom read (the corpus already does this — Clinical Observation's
-  Lineage records a four-round steelman of extracting a generic "Supersession Chain,"
+  commit history records a four-round steelman of extracting a generic "Supersession Chain,"
   settled as host-specific). This is the one axis a generator cannot close; we are choosing
   to keep a small human-curated field rather than fake-derive it. Is that the right trade,
   or should domain be deferred entirely until a second domain (banking) gives comparative

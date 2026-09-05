@@ -655,7 +655,7 @@ The cadence is deployment-shaped. The working default is weekly with weekends as
 
 ## Where the journey gets recorded
 
-Each pattern carries two sections after its Status, and nothing else about its history: a **Ledger** and a **Decisions** list. The narrative of every round — what a pass surfaced, what was fixed, what was argued — lives in the commit that made the change, and `git log -- <file>` is the per-pattern index of it. This replaced the prose Lineage notes on 2026-08-27, when fifty-two Lineages totalling more than seven megabytes had become the corpus's largest reading cost and its least reliable record: closures were recorded in some patterns inline and in others in later entries, aggregate counts went stale within a day, and a health census took a day's reading and was wrong when done.
+Each pattern carries two sections after its Status, and nothing else about its history: a **Ledger** and a **Decisions** list. The narrative of every round — what a pass surfaced, what was fixed, what was argued — lives in the commit that made the change, and `git log -- <file>` is the per-pattern index of it. This replaced the prose Lineage notes on 2026-08-27, when fifty-two Lineages totalling close to two million characters had become the corpus's largest reading cost and its least reliable record: closures were recorded in some patterns inline and in others in later entries, aggregate counts went stale within a day, and a health census took a day's reading and was wrong when done.
 
 **The Ledger** is the countable single source of truth for a pattern's health, in a fenced block with a fixed grammar the linter parses (`R-ledger-*` checks; `python3 tools/linter/lint.py --census` derives the corpus tally from it):
 
