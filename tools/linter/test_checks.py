@@ -502,9 +502,10 @@ S_SILENT = {"login", "chain-of-custody"}
 # a retirement cannot pass as a loosened check): external-onboarding 2026-08-29;
 # propagate-consent-revocation-downstream 2026-08-29; immutable-transaction-
 # ledger 2026-08-29; privileged-access-provisioning 2026-08-29 (a false
-# positive — the peer-arm case above — not a fix).
+# positive — the peer-arm case above — not a fix); capability-backed-sharing
+# 2026-08-29.
 S_FIRING_AT_LEAST = {
-    "actor-suspension", "capability-backed-sharing",
+    "actor-suspension",
 }
 T_SILENT = {"chain-of-custody", "forensic-recovery"}
 # EMPTY as of 2026-08-29, when Immutable Transaction Ledger's [Verify Ledger]
