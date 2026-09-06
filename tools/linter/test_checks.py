@@ -37,6 +37,8 @@ from lint import (  # noqa: E402
     Pattern,
     check_atomicity_over_audit,
     check_rebuild_bound,
+    check_recording_step,
+    check_seal_key,
     check_ledger,
     load_patterns,
 )
@@ -394,6 +396,107 @@ R_FIXTURES = [
 ]
 
 
+# ── S-recording-step / T-seal-key ─────────────────────────────────────────── #
+# Landed 2026-08-29 ADVISORY, the day the rules they police were frozen in
+# pressure-testing.md, so that every site the sweep closes is attributable to a
+# rule that already covered it. Synthetic from the start — the lesson P paid for
+# is that a corpus pin dies when the finding is fixed, and both of these are
+# expected to be fixed within days. The corpus sets below are FLOORS recorded at
+# landing; they shrink as the sweep runs and are switched to `exact` (and the
+# codes removed from lint.py's ADVISORY_CODES) in the change that closes the last
+# site.
+
+_S_HEAD = "# Synthetic\n\n## Composes\n\n- [Audit Trail](../compositions/audit-trail.md)\n\n"
+
+# fires: the substrate's arm transcribed bare, on the left of the arrow.
+FIXTURE_S_BARE = _S_HEAD + (
+    "3. `AuditTrail.record_action(...)` → `event_id`. Rejection mapping: "
+    "`invalid-credential` → `rejected(invalid-credential)`; "
+    "`recording-failure` → `rejected(recording-failure)`, the one retryable arm.\n"
+)
+# silent: the same mapping carrying the step.
+FIXTURE_S_STEPPED = _S_HEAD + (
+    "3. `AuditTrail.record_action(...)` → `event_id`. Rejection mapping: "
+    "`invalid-credential` → `rejected(invalid-credential)`; "
+    "`recording-failure(step)` → `rejected(recording-failure(step))` — on "
+    "step-4 the event is appended; read the id back.\n"
+)
+# silent: a bare token that is NOT a transcription — the composition's own
+# signature block naming its own code over a non-substrate write.
+FIXTURE_S_SIGNATURE = _S_HEAD + (
+    "- **[Confirm]** — (Projected contract: `confirm(token) → ok | "
+    "rejected(not-known | recording-failure)`) — the journal refused.\n"
+)
+# silent: a composition that does not compose Audit Trail at all — nothing
+# it maps can be the substrate's arm.
+FIXTURE_S_NO_AUDIT = (
+    "# Synthetic\n\n## Composes\n\n- [Journal](../atoms/journal.md)\n\n"
+    "3. Map `recording-failure` → `rejected(recording-failure)`.\n"
+)
+
+
+def check_s_synthetic(problems: list[str]) -> None:
+    for name, text, want_fire in (
+        ("FIXTURE_S_BARE", FIXTURE_S_BARE, True),
+        ("FIXTURE_S_STEPPED", FIXTURE_S_STEPPED, False),
+        ("FIXTURE_S_SIGNATURE", FIXTURE_S_SIGNATURE, False),
+        ("FIXTURE_S_NO_AUDIT", FIXTURE_S_NO_AUDIT, False),
+    ):
+        pat = Pattern(path=Path(f"synthetic/compositions/{name}.md"), text=text,
+                      invariant_count=1, grounded=False)
+        fired = bool(check_recording_step({pat.path: pat}))
+        if fired != want_fire:
+            problems.append(
+                f"S-recording-step: {name} expected "
+                f"{'a firing' if want_fire else 'silence'} and got the opposite."
+            )
+
+
+# fires: the map subscripted by an id; and the phrase form.
+FIXTURE_T_SUBSCRIPT = (
+    "5. `AuditTrail.verify_record(event_id, original_event_payloads[event_id])` "
+    "→ record the outcome.\n"
+)
+FIXTURE_T_PHRASE = (
+    "`original_event_payloads` is a map keyed by `entry_id` to the payload.\n"
+)
+# silent: the exemplar shape — keyed by sequence number, read over a range.
+FIXTURE_T_POSITION = (
+    "`original_event_payloads` is a map keyed by the audit log's "
+    "**`sequence_number`** to the byte-exact payload; step 3c assembles "
+    "`original_event_payloads[lo]` .. `original_event_payloads[hi]` and "
+    "compares against `original_event_payloads[n]`.\n"
+)
+
+
+def check_t_synthetic(problems: list[str]) -> None:
+    for name, text, want_fire in (
+        ("FIXTURE_T_SUBSCRIPT", FIXTURE_T_SUBSCRIPT, True),
+        ("FIXTURE_T_PHRASE", FIXTURE_T_PHRASE, True),
+        ("FIXTURE_T_POSITION", FIXTURE_T_POSITION, False),
+    ):
+        pat = Pattern(path=Path(f"synthetic/compositions/{name}.md"), text=text,
+                      invariant_count=1, grounded=False)
+        fired = bool(check_seal_key({pat.path: pat}))
+        if fired != want_fire:
+            problems.append(
+                f"T-seal-key: {name} expected "
+                f"{'a firing' if want_fire else 'silence'} and got the opposite."
+            )
+
+
+# Corpus floors at landing (2026-08-29). Silent: the two exemplars the rules
+# point authors at. Firing: the baseline the sweep is expected to empty.
+S_SILENT = {"login", "chain-of-custody"}
+S_FIRING_AT_LEAST = {
+    "actor-suspension", "capability-backed-sharing", "external-onboarding",
+    "immutable-transaction-ledger", "privileged-access-provisioning",
+    "propagate-consent-revocation-downstream",
+}
+T_SILENT = {"chain-of-custody", "forensic-recovery"}
+T_FIRING_AT_LEAST = {"immutable-transaction-ledger"}
+
+
 def check_r_synthetic(problems: list[str]) -> None:
     for name, text, want in R_FIXTURES:
         pat = Pattern(path=Path(f"synthetic/{name}.md"), text=text,
@@ -418,6 +521,9 @@ def main(argv: list[str]) -> int:
         # quietly joining a backlog. The regression coverage lives in
         # check_q_synthetic(), which needs no corpus positive to exist.
         ("Q-rebuild-bound", check_rebuild_bound, Q_SILENT, Q_FIRING_AT_LEAST, True),
+        # Floors, not exact, while the 2026-08-29 sweep runs (see the S/T block).
+        ("S-recording-step", check_recording_step, S_SILENT, S_FIRING_AT_LEAST, False),
+        ("T-seal-key", check_seal_key, T_SILENT, T_FIRING_AT_LEAST, False),
     ):
         got = stems(fn(patterns))
         for s in sorted(silent):
@@ -462,6 +568,15 @@ def main(argv: list[str]) -> int:
             if not problems:
                 for stem, marker in P_MOTIVATING_SITES:
                     print(f"{code}: motivating site pinned — {stem} / {marker!r} ✓")
+
+    st_problems: list[str] = []
+    check_s_synthetic(st_problems)
+    check_t_synthetic(st_problems)
+    failures.extend(st_problems)
+    if not st_problems:
+        print("S-recording-step / T-seal-key: synthetic fixtures hold "
+              "(bare mapping fires, stepped mapping and own-code signature "
+              "silent; id-keyed map fires, position-keyed map silent) \u2713")
 
     r_problems: list[str] = []
     check_r_synthetic(r_problems)

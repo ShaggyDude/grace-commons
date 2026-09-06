@@ -56,6 +56,14 @@ Then check accessibility completeness — two structural checks that are mechani
 
 For compositions that define a named semantics subsection (Replay semantics, Evaluation rules, Provisioning cascade, or similar): every action wiring step that defers execution to that subsection — by saying "recompute", "evaluate", "apply", "cascade", or equivalent — must name the subsection explicitly. An action wiring step that says "recompute the derived state" without citing the Replay semantics section is an intra-document orphaned reference and is a Pass 1 finding.
 
+Then run the reference-graph checks the frozen rules of 2026-08-29 add, each mechanical and each a resolved-or-orphaned question:
+
+- **Every reconciliation leg names both edges.** Its lower edge resolves to a Configuration entry (a completion bound) and its upper edge to the retention policy of the audit instance it reads — §*A reconciliation is bounded at both ends*.
+- **Every pairing names its field, and every payload carries it.** A check or sweep that says *pair*, *match*, *join*, or *the corresponding* names `invocation_id`, and every outcome payload the action can write — success, refusal, void — carries it — §*Intents pair with outcomes*.
+- **Every transcribed rejection arm keeps its declared payload, and every landed code is in the signature.** `recording-failure(step)`, never bare, on the left of a mapping arrow; a code the prose lands appears in the action's signature block — §*A transcribed rejection arm keeps its payload* (linter check `S-recording-step`).
+- **Every seal presentation is keyed by `sequence_number`.** An `original_event_payloads` map keyed by an identifier is an orphaned reference to a covering range it cannot present — §*A seal presentation is keyed by log position* (linter check `T-seal-key`).
+- **Every derived-index element states its past-horizon classification, and a truth-bearing half names its atom.** The named atom resolves to a file or a `*(forthcoming)*` marker — §*A derived index splits at the horizon*.
+
 **Time:** 15–30 minutes for an atom; longer for a composition with multiple constituents.
 
 **Personal Todo example.** First pass surfaced five gaps: actor (Behavior was incomplete — *who* acts?), description mutability (State + Decision were silent on edit), temporal metadata (State omitted timestamps), observability (Feedback didn't say what's queryable), identity policy (Decision punted on duplicate handling). Four were closed in-pattern; the fifth was extracted to Duplicate Prevention by Pass 2.
@@ -74,6 +82,11 @@ For compositions that define a named semantics subsection (Replay semantics, Eva
 - Does it have its own state machine, distinct from the host concept's? (If so, almost certainly its own concept.)
 - Could the host concept be specified without it, with the functionality composed in? (If yes, extract.)
 - Would another concept that needs this functionality reinvent it? (If yes, extract.)
+
+Two classification questions the frozen rules of 2026-08-29 add, both about where a fact lives:
+
+- **Of the records a recovery path writes, which are re-derivable and which are not?** A re-derivable record is derived state, rebuilt from the constituent stores or the sealed trail; a record that is not re-derivable is not re-emitted by the recovery — the act is re-run or abandoned. A recovery that "remembers" is holding state no classification admits — §*Recovery commits under a declared service identity*.
+- **What is each derived element past its horizon?** Still derived from an independent failure domain, not needed, or truth-bearing — and a truth-bearing half is an unnamed atom to extract: a purge's destroyed key (Erasure Tombstone), a record owed for a committed act (Outbox), a composition's own log (Event Log). A composition-owned middle is the tell — §*A derived index splits at the horizon*.
 
 **The composition-layer extraction gate — one level up.** The four questions above are written against *atoms*: they catch a responsibility that should be its own freestanding atom. As the composition catalog grows, the dominant over-absorption risk moves up a level. It is no longer a responsibility absorbed into one spec, but the *same emergent invariant or wiring decision recurring across many compositions* — binding bijections, cascade gates, attribution-coverage variants — with no canonical rule for when that recurrence should be retired into a shared **substrate** composition or atom. The rule below is that trigger, and it is deliberately *not* a recurrence count: no fixed N is defensible, because two forced recurrences of a real concept warrant extraction while a dozen co-occurrences of the same atoms do not. The trigger is a **conjunction of gates** — extraction fires only when Gates 1 through 3 all hold; the tie-breaker that follows orders borderline candidates but never opens or closes the decision by itself. Without the rule the choice gets made ad hoc, one round at a time, and the corpus accumulates parallel re-derivations of the same emergent rule.
 
@@ -112,6 +125,13 @@ A sibling boundary error EOS also owns is **capability mis-attribution**: an inv
 - **Cross-references.** Does every step, invariant, or claim that depends on content defined elsewhere name that section explicitly? Does every section that defines a mechanism used by another section get named by those users? Implicit "you know where to look" is a finding — all references must be explicit in both directions.
 - **Logic confinement.** Does any action embed async work, IO, crypto, or clock reads inside the core transition? Time, identity, and cryptographic material must be injected inputs, not internal calls. A transition that generates `now` or a random id inside itself is non-deterministic — flag it. See *Logic Confinement Principle* in `execution-contract.md`.
 - **Relations.** Does every relation a composition introduces across its constituents (containment, ownership, membership, hierarchy) *declare* its cardinality — one-to-one, one-to-many, or many-to-many — and the modality of each side (mandatory / optional)? Modality is asserted *at quiescence*, modulo declared compensation and the retention horizon: a binding's orphan may be reachable-but-surfaced under partial failure (state it as safety + liveness, not a static "always both sides"), and may degrade to bound-or-honest-destruction past the horizon. Is the relation's state classified per `execution-contract.md` §Composition state — a *derived index* (the default; the inverse is rebuilt from the forward references) or *extraction-pending* (state carrying truth no constituent replays — an unnamed atom to extract; there is no composition-owned middle)? An undeclared cross-constituent relation is where orphans, dangling references, and drifting inverses hide. A relation may also be **self-referential** — a constituent related to its own kind (a containment hierarchy, a bill-of-materials, a grouping) — which additionally requires **acyclicity / well-foundedness**: no record is its own ancestor under the transitive closure (the cycle a cross-constituent relation cannot even form). The required-invariant *forms* this pass checks for — referential integrity, orphan-freedom, inverse consistency, and acyclicity — are the canonical templates in [`spec-format.md`](./spec-format.md) §Structural-relation invariant templates: this pass owns the *check* (declare the relation's shape; carry the templates that shape requires), spec-format owns the *forms*.
+
+- **Sweeps.** For every reconciliation leg: what does it do to an invocation that committed its first write one second ago, and to one whose events have aged past the audit horizon? Is the correction it fires reversible by the constituent it fires against? — §*A reconciliation is bounded at both ends*.
+- **Pairing.** Given two invocations of this action against one subject, which intent record answers for which outcome? What does the sweep do when it cannot tell? — §*Intents pair with outcomes*.
+- **Recovery.** Who writes each recovery record, under what identity, from what source — and what happens when the source is gone? Does re-invocation reach the step that failed, or die on an `already-*` arm before it? — §*Recovery commits under a declared service identity*.
+- **Arms.** For each mapped rejection arm, which constituent step failed and what is on disk when it did? Is the retry safe on every step the arm covers? Is any arm declared unreachable by an argument that names fewer steps than the constituent has? — §*A transcribed rejection arm keeps its payload*.
+- **Cadence.** Which seal cadence does the example assume, and what does the verification return under the other one? — §*A seal presentation is keyed by log position*.
+- **Horizon.** For each derived element, what reads it after the purge, and does that reader know the element is no longer derived? — §*A derived index splits at the horizon*.
 
 **Adversarial postures (run all three).** The questions above check *topics*; these check the spec from a hostile *stance*, and catch what a topic-checklist misses:
 
@@ -292,7 +312,7 @@ An invariant resting on anything else — *"the substrate can produce…"*, *"th
 
 ## Durability boundaries — an atomic set may not contain a write the host cannot take back
 
-> **Open, not frozen.** This rule was stated after the *transactional atomicity over an append-only substrate* class closed on 2026-08-27 (three instances, three rounds, one protocol repair). It is written now because the evidence is complete *for this class* and because a finding that lives only in a roadmap debt entry is a finding on its way to being lost. It is **not** frozen: methodology debt #19 has two classes still to run, and either may return a case this rule does not cover. It freezes with the rest of #19.
+> **FROZEN — 2026-08-29.** Stated 2026-08-27 after the *transactional atomicity over an append-only substrate* class closed (three instances, three rounds, one protocol repair), and held open while methodology debt #19's two remaining classes ran, in case either returned a case it did not cover. Neither did; both closed the same day. It is frozen with the other two #19 rules and the six rules stated 2026-08-29 from the second fresh-reader gates, under §*Authentication precedence*'s discipline: a round that finds it inconvenient applies it as written or records a finding against the pattern, and reopening requires a case none of its arms covers, recorded first.
 
 **The rule.** *Never place an independently durable write inside a host transaction's atomic set.* A write is **independently durable** when the store that accepts it declares it cannot be withdrawn and offers no synchronous rollback — an append-only audit log is the canonical case, and in this corpus every `AuditTrail.record_action` is one. A host transaction cannot enlist such a write, so it cannot roll it back, so a set containing it does not commit together or not at all. Where the append cannot participate, specify three things instead and specify them explicitly: the **ordering** across the durability boundary, the **reachable partial states** that ordering admits, and the **recovery** for each.
 
@@ -351,7 +371,7 @@ Detection is **Pass 3 (adversarial)** in practice — the question *"what is the
 
 ## A derived index is trustworthy only where a miss is observable
 
-> **Open, not frozen.** Stated 2026-08-27 when methodology debt #19's *enumeration anchoring* class closed on all five known instances. It freezes with the rest of #19, alongside §*Durability boundaries* and §*Derived state has a validity duration*. Written here after those two rather than with its own class, which was an oversight worth naming: a rule that lives only in a roadmap debt entry is a rule on its way to being lost, and this one had been left there for two classes' worth of rounds.
+> **FROZEN — 2026-08-29.** Stated 2026-08-27 when methodology debt #19's *enumeration anchoring* class closed on all five known instances, and frozen with the rest of #19 on 2026-08-29. Written after §*Durability boundaries* rather than with its own class, which was an oversight worth keeping on the page: a rule that lives only in a roadmap debt entry is a rule on its way to being lost, and this one had been left there for two classes' worth of rounds.
 
 **The rule.** *`rebuild-on-miss` is a **keyed-lookup** contract. It repairs a gap because a lookup that finds nothing is an observable signal — and every other read shape steps outside that contract, silently.* A Contract classification of *derived index, rebuild-on-miss* invites a reader to conclude that losses are self-healing. They are, **at the shape the contract names, and only there.**
 
@@ -391,7 +411,7 @@ Detection is **Pass 3 (adversarial)** — *what does a lost entry do here?* — 
 
 ## Derived state has a validity duration — say what it is, and what reads it
 
-> **Open, not frozen.** Stated 2026-08-27 when methodology debt #19's *retention horizon* class closed on all sixteen known sites across ten patterns. It freezes with the rest of #19, together with §*Durability boundaries* and §*A derived index is trustworthy only where a miss is observable*.
+> **FROZEN — 2026-08-29.** Stated 2026-08-27 when methodology debt #19's *retention horizon* class closed on all sixteen known sites across ten patterns, and frozen with the rest of #19 on 2026-08-29. Its Tier 3 is restated as a rule of its own below (§*A derived index splits at the horizon*), because the second fresh-reader gates kept finding elements that had been given Tier 0 or Tier 1 and needed Tier 3.
 
 **The rule.** *A derived element's recovery procedure is valid for a bounded interval; a claim that reads it has a lifetime; the spec is sound only where the first exceeds the second — so both belong on the page.* A Contract classification of *derived index, rebuild-on-miss* says **how** a fact is recovered and never **for how long**, and a spec can be perfectly conformant to that vocabulary while asserting a derivability that lapses on a schedule it does not control.
 
@@ -431,6 +451,192 @@ Tiers 0–3 govern what the spec says, and **whichever one applies, this is owed
 ### Which pass owns it
 
 Detection is **Pass 1 (GRID)** in its mechanical form — a rebuild procedure that reads a payload is a reference into a store whose contract bounds it, and the reference graph is where a dangling one is caught. The classification is **Pass 2 (EOS)**: whether a fact is *derived* or *extraction-pending* is a question about where it lives, and the answer changes at the horizon. The mechanical slice is [`tools/linter/lint.py`](tools/linter/lint.py)'s **`Q-rebuild-bound`**, gating since 2026-08-27, with a recorded recall gap (it is line-scoped and keys on the literal `*Rebuild procedure:*` marker) that is the reason a **classification sweep still runs before the check's count is trusted**: this class's sweep found sixteen sites where the check saw fourteen, and two of the four treatment shapes came from instances the check cannot see.
+
+---
+
+## A reconciliation is bounded at both ends — an age bound below, the audit horizon above
+
+> **FROZEN — 2026-08-29.** Stated when the second fresh-reader gates — gates run *after* a pattern's open foundational findings had all been closed — returned the same defect shape in three of the first eight patterns sampled, each gated independently and each carrying a reconciliation the previous round had accepted. It is frozen on the day it is stated rather than left open, because the evidence it rests on is not one pattern's archaeology but recurrence across independently gated patterns, and because a rule stated open is a rule the next round edits instead of applying. Unfreezing follows the same discipline as §*Authentication precedence*: a case none of its arms covers, recorded first.
+
+**The rule.** *Every reconciliation leg — a sweep, a scan, a comparison of one record class against another — declares the interval it runs over, and the interval has two edges the leg must name: an **age bound** below, excluding invocations that may still be in flight, and the **audit horizon** above, past which the record class it is looking for has been lawfully destroyed.* A leg with neither edge does two wrong things at once, in opposite directions: it reads work that has not finished yet as an orphan and corrects it, and it reads history whose events have aged out as a crash and re-runs it.
+
+The two edges have different sources and are declared differently. The age bound is a deployment obligation of the composition's own — a Configuration entry naming the longest an invocation of the action may take between its first committed write and its last, read against the seam clock the invocation began under — and a leg examines nothing younger than it. The horizon is inherited: it is the retention policy of the audit instance the leg reads, and above it the leg's *missing* half is not missing, it is purged, so the survivors on the other side are the truth-bearing class §*A derived index splits at the horizon* governs, not candidates for repair.
+
+### The tells
+
+**1. A correction fired from a comparison.** *"For every issuance with no completion, revoke."* *"For every chain with no initiation event, treat as a crashed initiation and quarantine."* A leg that does something to the records it finds is the leg whose window matters, because a wrong window is not a wrong report, it is a wrong act — and the act is usually irreversible by the constituent's own invariant. Read the comparison and ask what happens to an invocation that committed its first write one second ago.
+
+**2. "At quiescence" doing the work of a window.** The phrase is correct and it is not a bound: an auditor cannot tell quiescence from a slow invocation without a declared duration. Where an invariant's liveness arm says *at quiescence* and no Configuration entry says how long quiescence takes to reach, the arm is asserted, not checkable — the same defect §*Durability boundaries* names for `compensation_window`, arriving at the reconciliation instead of the compensation.
+
+**3. A check quantified over "all" of a purgeable class.** *"For every `X` event, confirm a `Y` event exists"* is false on a schedule the composition does not control, because `X` and `Y` are purged on the same policy and not necessarily on the same day. The check needs the horizon in its own text, and a stated answer for the pair whose members straddle it.
+
+### What it costs
+
+One Configuration entry per bounded action (a completion bound), a stated relation between the leg and the audit instance's retention policy, and each leg restated in three arms: below the bound, examine nothing; between the bound and the horizon, the leg as written; above the horizon, the survivors are truth-bearing and the leg reports rather than repairs. A check that reads the leg widens its window by whatever read latency the deployment discloses — a subscriber read that lags the dispatch by a bounded interval is not a coverage failure, and the check that says so needs the interval on the page.
+
+### Which pass owns it
+
+Detection is **Pass 3 (adversarial)** — *what does this sweep do to an invocation that has not finished, and to one whose events have aged out?* — and the mechanical form is a **Pass 1 reference-graph** check: every leg's lower edge resolves to a Configuration entry and its upper edge to the retention policy it reads under. No linter check; the leg's shape is prose.
+
+**Worked origins.** [Login](compositions/login.md) (second gate, 2026-08-28) — the issuance-reconciliation sweep revoked in-flight logins, because nothing told it how long a login takes; fixed with a declared `login_completion_bound` below which the sweep examines nothing. [Multi-Party Approval](compositions/multi-party-approval.md) (second gate, 2026-08-29) — the initiation leg had no horizon, so every lawfully purged chain read as a crashed initiation and was quarantined; fixed by bounding the leg and the additive rebuild's quarantine to chains whose `initiated_at` lies inside the horizon. [Notification Fanout](compositions/notification-fanout.md) (second gate, 2026-08-28) — `fired_at` was claimed as the instant the subscriber set was fixed, which nothing takes or observes; restated as a lower bound, with check 1's window widened by a disclosed `max_read_latency` on the subscriber read.
+
+---
+
+## Intents pair with outcomes by an invocation identity the seam injects
+
+> **FROZEN — 2026-08-29.** Same evidence, same freeze discipline as the section above: four of the eight second-gate patterns returned a pairing defect, in four different disguises.
+
+**The rule.** *Where a composition writes an intent record and later an outcome, both carry one `invocation_id` — minted nowhere inside the composition, injected at the same seam as `now` (the Logic Confinement Principle), fresh per state-changing invocation — and every sweep join, every acceptance check, and every audit question that pairs an intent with its outcome pairs on that field.* Where the pairing is nonetheless undecidable from the records — older records written before the field existed, a marker the deployment lost — the sweep **names the candidate set** rather than choosing a member, and closes the others as abandoned.
+
+This is the generalization of a rule §*Authentication precedence* already states for bindings: *whenever a check is claimed to verify an ordering or a binding, name the field on the record that makes it recomputable.* What the second gates showed is that naming a field per check is not enough, because the field named is usually the wrong one — a per-*case* key on an action that is repeatable against the case, a per-*subject* serialization on a scan that can see a concurrent sibling's records, an intent event id carried on some outcome kinds and not others. One key, injected, on everything, is what makes the join the same question everywhere.
+
+### The tells
+
+**1. The definite article.** *"The intent record"* in a sweep, where the action can run twice against one subject. One stale intent then satisfies the check for an unbounded number of later acts.
+
+**2. A key that is narrower than the act.** A join on `case_id`, `record_ref`, `subject_ref`, or `(subject, initiator, scope)` where two invocations can share it. The tell is a serialization argument — *serialized per `chain_id`* — offered as the reason the join is exact, when the scan the join feeds runs under a different key than the serialization does.
+
+**3. A recovery emission that matches on the subject.** A sweep that re-emits an outcome with `recovery = true` because *a* record for that subject is missing pairs an intent with whatever outcome it finds, and under retry or concurrency it emits records that are false as written.
+
+**4. An outcome kind without the key.** Where an action has several outcome payloads — the success, the refusal, the void — and the acceptance check's join names a field, read every payload and confirm each carries it. One origin pattern had the field on its main path and on none of three branch payloads its own check joined over.
+
+### What it costs
+
+One field on every intent and outcome payload, injected at the seam, and a join clause in each check that names it. No Configuration entry. Where the composition's serialization is keyed by something the scan can distinguish — a chain's own id carried as the constituent call's `reason` — the same key serves both.
+
+### Which pass owns it
+
+Detection is **Pass 1 (GRID)** in its mechanical form — a check that says *pair*, *match*, *join*, or *for the corresponding* names the field, and every outcome payload the action can write carries it — and **Pass 3 (adversarial)** for the two-identical-acts question: *given two invocations of this action against one subject, which record answers for which?* No linter check yet; the mechanical form is a payload-field presence test the linter could carry once payloads are written in one shape.
+
+**Worked origins.** [Defensible Retention](compositions/defensible-retention.md) (second gate, 2026-08-28) — intent/outcome pairing undefined, so the sweep re-emitted false `recovery = true` records under retry and under concurrency; fixed with a seam-injected `invocation_id` on every audit record and a sweep that lists `attributed_to` candidates where the pairing is undecidable. [Customer Onboarding](compositions/customer-onboarding.md) (second gate, 2026-08-29) — check 6's join key `intent_event_id` was absent from three of the outcome payloads it joined over. [Multi-Party Approval](compositions/multi-party-approval.md) (second gate, 2026-08-29) — the sibling-safe scan withdrew a concurrently initiating sibling's step, because the scan's key and the serialization's key differed; fixed by carrying the invocation's `chain_id` as the submit's reason. [Capability-Backed Sharing](compositions/capability-backed-sharing.md) (second gate, 2026-08-29) — the intent carried no `disclosure_id` and the disclosure record no token, so an unmatched intent could not be joined to its disclosure at all; the honest answer there was not a key but a downgrade — *escalated, never sealed*.
+
+---
+
+## Recovery commits under a declared service identity behind its own intent record, and what cannot be re-derived is re-run
+
+> **FROZEN — 2026-08-29.** Stated from the second gates and from two first-round findings the same week that reached the same shape from the other side. The rule is the conjunction of three things the corpus already says separately — §*Authentication precedence*'s binding half, §*Durability boundaries*' carry-the-material rule, and the Execution Contract's classification of derived state — applied to the one action every regulated composition has and few had written down: the one that runs when the original invocation is dead.
+
+**The rule.** *Any constituent commit made outside the original invocation — a retry after restart, a sweep's compensation, a cascade's recall, a re-invocation on an `already-*` arm — runs under the composition's **declared service identity** (a registered `application_actor_ref` and `application_credential` in the substrate's Actor Identity registry), is preceded by its own **recovery-intended record** naming the invocation it repairs (the key of the section above) and what it is about to do, and writes only what it can **re-derive** from the constituent stores or the sealed trail. What it cannot re-derive it does not re-emit: the act is re-run through the action's own idempotent re-entry arm, or escalated.*
+
+The three clauses each close a hole the others leave. Without the identity, the recovery record is attested under a human who was not present (the binding defect). Without the recovery-intended record, the composition's own trail cannot show that the recovery was occasioned by a repair rather than by a direct call (the provenance defect). Without the re-derivability test, the recovery *remembers* — from process memory, from a presumed value, from the intent alone — and what it writes is evidence of an act whose content nobody can check (the fabrication defect, which the sealed record then protects forever).
+
+### The tells
+
+**1. "Re-emit the owed record" with no source named.** Ask where the payload comes from. If the answer is the intent record, ask whether the outcome owns a datum the intent must not carry (§*Authentication precedence*, *when the intent record should carry its plan*) — a minted id, a verdict computed after the intent. If it does, the recovery cannot write the outcome; it can only re-run the act or say the act was abandoned.
+
+**2. Recovery attributed to the human.** A sweep step that calls `record_action(actor_ref = <the requester>, …)` on a path where the requester's credential is not in hand. The substrate will refuse it or, worse, a cached credential will let it through.
+
+**3. A re-invocation that dies on `already-*` before it reaches the step that failed.** The action's step list commits at step 5 and fails at step 6; the retry re-enters at step 1, hits `already-closed` at step 5, and stops. Every action whose later steps can fail after an earlier irreversible commit needs a re-entry arm that recognizes its own prior commit and continues.
+
+**4. A guard that rests on a transient.** A provisioning step gated on an in-memory `Approved` that no rebuild reproduces means the recovery either cannot fire the step or fires it twice. The guard must be readable from a store the recovery can reach.
+
+### What it costs
+
+Two Configuration entries (the service identity), one `action_ref` per composition for the recovery-intended record, an idempotent re-entry arm on every action with a post-commit failure step, and — the expensive part — an honest sentence per recovery leg saying whether its record is derived or re-run. Where a re-run is impossible and the record is not re-derivable, the leg emits an *abandoned* record under the service identity and the pattern's liveness arm degrades to *surfaced*, which is what the records can actually support.
+
+### What this does to the formal layer
+
+The recovery is its own action in the model, with its own actor, or the model cannot distinguish a recovery that repairs from a recovery that fabricates. A model in which the sweep sets the outcome variable directly encodes the fabrication as correct behavior.
+
+### Which pass owns it
+
+Detection is **Pass 3 (adversarial)** — *who writes this record, under what identity, from what source, and what if the source is gone?* — and classification is **Pass 2 (EOS)**: which of the recovery's records are derived (re-derivable, rebuild-on-miss) and which are not is a question about where the fact lives, and the not-derivable ones are the ones that must be re-run.
+
+**Worked origins.** [Customer Onboarding](compositions/customer-onboarding.md) (second gate, 2026-08-29) — the post-closure floor had no compliant recovery when the retention placement failed after the party was closed: cross-invocation constituent commits were the thing the action's own text forbade, and re-invocation died at `already-closed`; fixed with the declared service identity, a `customer-onboarding.recovery-intended` record, and a re-entry arm. [Login](compositions/login.md) (second gate, 2026-08-28) — the recovery claimed to re-derive *every owed record* and could not re-derive the cascade's own; fixed by writing the cascade's join key into the Session record it revokes and, where a cascade died before completing, emitting `credential_revocation_cascade_abandoned` and re-running rather than re-emitting. [Resolve a Person's Data Rights](compositions/resolve-a-persons-data-rights.md) (second gate, 2026-08-29) — the scan compensated intents that had no disclosure behind them, writing a sealed event for a disclosure that did not exist; fixed by conditioning the compensation on the disclosure's existence. [Execute Gated Workflow](compositions/execute-gated-workflow.md) (2026-08-27) reached the same rule from a first-round finding: *committed-but-unrecorded work is re-derived from the constituent stores, never remembered by the process*.
+
+---
+
+## A transcribed rejection arm keeps its payload and its reachability
+
+> **FROZEN — 2026-08-29.** Stated from four second-gate findings in three patterns, and from refining lines two other patterns already carried for the bare token (*every substrate-arm transcription*, *five rejection sites*). The refining lines were right and were being closed one at a time; the second gates showed the defect is foundational when the dropped payload decides whether a retry is safe.
+
+**The rule.** *When a composition maps a constituent's rejection into its own, the mapping carries the arm's **declared payload** — `recording-failure(step)`, `cascade-failure(step)`, `mechanism-failure(reason)` — and lands **every arm the constituent's contract can reach**, including the ones the composition believes it has made unreachable.* A bare `recording-failure` is not an abbreviation; it discards the one fact the caller needs to decide what is on disk.
+
+The substrate makes the point concrete, and it is the substrate every regulated composition here writes to. [Audit Trail](compositions/audit-trail.md)'s `record_action` fails at step 2 (attestation) with nothing committed, at step 3 (append) with an orphan attestation, and at step 4 (retention placement) with **the event already appended** — so `recording-failure(step-4)` means *your record exists; read its id back and clear whatever pending marker you hold*, and a retry re-appends. Only the step-2 and step-3 arms are retry-safe. A composition that maps all three to one bare token has written a retry loop that duplicates outcome events under the failure it was written for. The same step is why `invalid-request` is **never unreachable** from `record_action`: step 4's `invalid-policy` and `policy-not-found` arrive as `invalid-request`, and they come from the substrate's own retention Configuration, not from the caller's payload — a deployment fault, reached with the event appended. A composition that argues *`invalid-request` cannot occur here because the payload is composition-built* has reasoned about step 1 and step 3 and forgotten step 4.
+
+### The tells
+
+**1. A bare token on the left of a mapping arrow.** `` `recording-failure` → `rejected(recording-failure)` `` transcribes the substrate's arm and drops its payload in the same stroke. The linter finds this one.
+
+**2. "Unreachable here because …".** Every such sentence names the steps it reasoned about. Check the ones it did not.
+
+**3. A retry that does not ask which step failed.** *"On `recording-failure`, retry until the write lands"* — correct for two of the three steps and a duplicate-event generator for the third.
+
+**4. A code in the prose and not in the signature.** The signature block is the surface a caller switches on (§*Authentication precedence*, *the signature block is where attention does not land*). A landing described in an edge case for an arm the signature does not declare is a landing the implementer never sees.
+
+**5. Validation after the intent.** An intent record written before the composition's own commit-free checks means every rejection path the spec describes as *leaving no trace* leaves an open marker. Checks that need no commit run first; the intent record is the first write, not the first step.
+
+### What it costs
+
+`(step)` on every transcription; one landing per arm, usually two sentences — *step-4: the event is appended; read the id back through the declared read and continue; alert on the retention configuration* — and the code added to the signature. The limit-shaped arms need one more thing: where the substrate caps a field (`reference_length_cap` on `actor_ref` and `action_ref`), the composition validates every reference it will pass — including ones it reads from its own store, such as an approver's — before the intent, or one over-long reference makes every decision on the chain refuse.
+
+### The mechanical slice
+
+[`tools/linter/lint.py`](tools/linter/lint.py) check **`S-recording-step`**: in a composition that composes Audit Trail, a bare `` `recording-failure` `` on the left of a mapping arrow (`→`) above the Status section. Only Audit Trail emits `recording-failure`, so a bare token in that position is a transcription of the substrate's arm with its payload dropped; the same token elsewhere — in a signature block naming the composition's own code, in an example, in prose — is not flagged, because a composition may lawfully declare a `recording-failure` of its own over a non-substrate write (Reserve from Pool's `recording-failure(post-commit)` is one). It landed advisory on 2026-08-29 measuring twenty-three sites across six patterns, and is promoted to gating when the sweep under this rule empties it — the same promotion discipline `P-atomic-audit` followed. Its regression guard is synthetic: a mapping that drops the step must fire; the same mapping carrying `(step)` must stay silent; a bare token in a signature block must stay silent.
+
+### Which pass owns it
+
+**Pass 1 (GRID)** — the reference graph: every mapped arm resolves to the constituent's declared shape, and every code the prose lands appears in the signature — with the reachability argument left to **Pass 3 (adversarial)**: *for each arm, which step failed, and what is on disk when it did?*
+
+**Worked origins.** [Capability-Backed Sharing](compositions/capability-backed-sharing.md) (second gate, 2026-08-29) — dropping `(step)` made the retry duplicate outcome events, and `invalid-credential` / `invalid-request` were unlanded at two redemption steps; fixed with a uniform `(step)` rule, a step-4 read-back, and both codes in the signature. [Login](compositions/login.md) (second gate, 2026-08-28) — `invalid-request` declared unreachable at four steps that the substrate reaches by deployment fault. [Multi-Party Approval](compositions/multi-party-approval.md) (second gate, 2026-08-29) — `reference_length_cap` on an approver's reference made every decision on the chain refuse; fixed by validating each reference before the intent. [Defensible Retention](compositions/defensible-retention.md) (second gate, 2026-08-28) — the intent record preceded the commit-free checks, so rejection paths said to leave no trace left an open marker.
+
+---
+
+## A seal presentation is keyed by log position over the covering range
+
+> **FROZEN — 2026-08-29.** Stated from two first-round findings of 2026-08-27 that closed the same way in two patterns, and from a third pattern the linter check below finds still carrying the shape. It is the narrowest rule on this page and the one with the cleanest mechanical form.
+
+**The rule.** *The payload set presented to `AuditTrail.verify_record` is the **covering range** `read_record` names for the event — every payload in the seal's coverage, in ascending `sequence_number` order — and a composition that passes the caller's presentation through keeps it as a map keyed by **`sequence_number`**, never by its own identifier.* The record set a seal commits to is a sequence range (Audit Trail Invariant 7), and under any cadence but per-event that range spans events the composition did not write and has no id for. A map keyed by `event_id`, `entry_id`, or `disclosure_id` can hold at most one payload per event, so under the interval cadence the substrate recommends **every** verification returns a seal-record-set mismatch — and an acceptance check built on it reports tampering on an intact log.
+
+Two corollaries the same rounds produced. An entry whose covering range is not wholly present in the map is reported `unverifiable(payload-not-supplied(missing))`, naming the absent sequence numbers, rather than failed — partial verification of the entries whose ranges *are* supplied is still worth having. And a replay that must be ordered is ordered by the log position of the record that fixes the order — the **intent** event's `sequence_number`, where the intent precedes the act — not by the outcome's, and not by a per-record list whose order is the order of writes that landed.
+
+### The tells
+
+**1. `original_event_payloads[event_id]`.** The subscript says what the author thinks a seal covers.
+
+**2. The singular.** *"The payload"*, *"its original payload"*, one `verify_record(event_id, payload)` per event in a walkthrough. The substrate's own parameter name is singular and its Invariant 7 is not; the composition inherits the invariant.
+
+**3. A per-event cadence assumed where the Configuration recommends interval.** The walkthrough's arithmetic — one seal, one event, one payload — is the healthy special case, and the rule is the range.
+
+### The mechanical slice
+
+[`tools/linter/lint.py`](tools/linter/lint.py) check **`T-seal-key`**: an `original_event_payloads` map subscripted or described as keyed by an identifier (`[event_id]`, `[entry_id]`, "keyed by `disclosure_id`") in a composition body. Advisory on 2026-08-29 at one site; promoted to gating when the sweep closes it. Bare-payload `verify_record` calls are **not** flagged — the substrate's own contract uses the singular name, so a match on it would fire on the exemplar — and that recall gap is recorded here rather than closed by loosening.
+
+### Which pass owns it
+
+**Pass 1 (GRID)** — mechanical, above — with the cadence question left to **Pass 3 (adversarial)**: *which seal cadence does this example assume, and what does the verification return under the other one?*
+
+**Worked origins.** [Chain of Custody](compositions/chain-of-custody.md) (2026-08-27) — `original_event_payloads` re-keyed by `sequence_number`, [Verify Custody] assembling each entry's presentation from the range `read_record` names, and `unverifiable(payload-not-supplied(missing))` for an entry whose range is incomplete. [Forensic Recovery](compositions/forensic-recovery.md) (2026-08-27) — the same re-keying, and the replay ordered by the intent event's position, carried in the index as `intent_position`. [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) — still keyed by `event_id` at [Verify Disclosure] when this rule was stated; the check above finds it, and the sweep under the frozen rules closes it.
+
+---
+
+## A derived index splits at the horizon, and the truth-bearing half names its atom or is declared unrebuildable
+
+> **FROZEN — 2026-08-29.** This is §*Derived state has a validity duration*'s Tier 3, promoted from the last row of a table to a rule of its own, because the second gates kept finding patterns that had taken Tier 0 or Tier 1 for an element that needed Tier 3 — and one that had written *"all six elements are derived indexes"* over a store it elsewhere called truth-bearing three times.
+
+**The rule.** *Every Composition-state element classified as a derived index says what it is **past the horizon** of the store it derives from, and the answer is one of three: still derived, from a second source that is an independent failure domain; not needed, with the claim that reads it bounded to say so; or **truth-bearing under a durability obligation** — in which case the element is extraction-pending against a **named** forthcoming atom, and until that atom lands the durability is a declared deployment obligation with a Configuration entry that spends it.* A fourth answer is honest and rare: the element is unrebuildable past the horizon and every claim reading it degrades explicitly. There is no fifth. A blanket sentence — *all elements are derived* — is not an answer, it is the tell.
+
+The truth-bearing half has three recurring shapes and each has a home. **What a purge destroyed and how it was keyed** — the binding key that lived in a payload the cascade destroys and survives only where the composition wrote it while the event was live — is the *Erasure Tombstone* atom the substrate itself names. **A record owed for a committed act** — a marker written transactionally beside a domain write, standing until the sealed outcome lands, from which a seal may be built and without which it must never be — is the *Outbox* atom. **A composition's own log** — an element that is a list of events no constituent replays, written by the composition, read by its checks — is Event Log, absorbed and mis-classified, and the fix is to say so rather than to keep the middle.
+
+### The tells
+
+**1. A durability obligation referenced and not declared.** *"Under the durability obligation stated in Composition state"* three times, and Composition state says *derived*. Grep for the phrase; count declarations.
+
+**2. "Rebuild from the trail" for a fact the trail's payload destroyed.** The rebuild procedure reads `data.<key>`; the horizon destroys `data`. Past it the element is not derived from anything, and calling it derived is the blindness §*A derived index is trustworthy only where a miss is observable* describes — a lost entry indistinguishable from a purged one.
+
+**3. A marker sealed from the intent alone.** Where the outcome's authoritative datum (a `disclosure_id`, a minted token) exists only in the marker, a recovery that seals from the intent when the marker is lost fabricates the datum. The marker is the truth-bearing half; the seal is built from it or not at all.
+
+**4. A composition-owned middle.** An element that is neither rebuildable from a constituent nor named as an atom to extract — a `<pattern>_event_log`, a `history` list the composition appends to — is the *no composition-owned middle* rule of the Execution Contract, violated by omission.
+
+### What it costs
+
+A sentence per element stating its past-horizon classification; a Configuration entry where the answer is truth-bearing (the durability the deployment owes, stated as an ordering against the store the element keys — *as durable as the Selective Disclosure store*, *at least the audit instance's retention*); and a named forthcoming atom with its `*(forthcoming)*` marker, which the linter's stale-forthcoming check will retire when it lands.
+
+### Which pass owns it
+
+Classification is **Pass 2 (EOS)** — the truth-bearing half is an unnamed atom, and naming it is extraction — with the mechanical form in **Pass 1 (GRID)**: every derived element's past-horizon sentence exists, and every named atom resolves to a forthcoming marker or a file. The collision check §*A derived index is trustworthy only where a miss is observable* names — an element classified derived that is also declared truth-bearing in some window — is the linter check this rule would carry, and it is still not built; the sweep under this rule is what will say whether it is worth building.
+
+**Worked origins.** [Multi-Party Approval](compositions/multi-party-approval.md) (second gate, 2026-08-29) — the chain store's past-horizon durability was referenced three times and declared nowhere; fixed with a `chain_store_durability` Configuration entry and the blanket sentence amended. [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) (2026-08-27) — `disclosure_to_event`'s purged half is truth-bearing, extraction-pending against the Erasure Tombstone atom. [Capability-Backed Sharing](compositions/capability-backed-sharing.md) (second gate, 2026-08-29) — the `pending` marker is truth-bearing under a durability obligation, extraction-pending against an Outbox atom, and the seal is built only from it. [Login](compositions/login.md) (second gate, 2026-08-28) — `login_event_log` was a composition-owned middle; reclassified extraction-pending against Event Log. [Execute Gated Workflow](compositions/execute-gated-workflow.md) (2026-08-27) — the consumed flag is durable past the horizon and the consumption test fails closed without it.
 
 ---
 

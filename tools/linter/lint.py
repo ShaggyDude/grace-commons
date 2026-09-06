@@ -84,6 +84,32 @@ the three-pass review otherwise has to catch by eye —
                               being true on a schedule the composition does not
                               control. Exemplar: Audit Trail's "Bound on the
                               rebuild's totality, stated rather than assumed".
+  S. Recording-failure step — in a composition that composes Audit Trail, a bare
+                              `recording-failure` on the left of a mapping arrow
+                              (→) above the Status section. Only Audit Trail emits
+                              `recording-failure`, and its contract carries the
+                              step that refused — step-4 means the event is
+                              already appended, so a retry that cannot see the
+                              step duplicates outcome events. A bare token in
+                              that position is a transcription of the substrate
+                              arm with its payload dropped (pressure-testing.md
+                              §A transcribed rejection arm keeps its payload,
+                              frozen 2026-08-29). Signature blocks, examples and
+                              prose are not flagged: a composition may declare a
+                              `recording-failure` of its own over a non-substrate
+                              write.
+  T. Seal presentation key  — an `original_event_payloads` map subscripted or
+                              described as keyed by an identifier (`[event_id]`,
+                              `[entry_id]`, "keyed by `disclosure_id`"). The
+                              record set a seal commits to is a sequence range
+                              (Audit Trail Invariant 7), so a map keyed by an id
+                              can present at most one payload per event and
+                              every verification under interval cadence returns
+                              a seal-record-set mismatch (pressure-testing.md
+                              §A seal presentation is keyed by log position,
+                              frozen 2026-08-29). Bare-payload `verify_record`
+                              calls are NOT flagged — the substrate's own
+                              contract uses the singular parameter name.
   O. Term registry resolver — on any page carrying an annotation.md `## Terms`
                               registry, every `[Term]` shortcut-reference marker
                               resolves to a `[Term]: …` definition (no dangling)
@@ -166,7 +192,16 @@ TRAILING_PAREN = re.compile(r"\s*\([^)]*\)\s*$")
 # NEW instance has been introduced, which is exactly the event that should stop a
 # build — the class took three rounds and one protocol repair to clear, and
 # re-acquiring it silently is the failure mode worth spending a red build on.
-ADVISORY_CODES: frozenset[str] = frozenset()
+#
+# S-recording-step and T-seal-key landed 2026-08-29 ADVISORY with a recorded
+# baseline (23 sites across 6 patterns; 1 site) — the same discipline P and Q
+# followed: a check measuring a backlog is advisory, and becomes gating at the
+# moment the sweep under its rule empties it. The rules they police were frozen
+# on the day the checks landed (pressure-testing.md, the six sections stated
+# 2026-08-29), so the sweep's findings are attributable to a rule that already
+# covered them. Promotion is the removal of the code from this set, in the same
+# change as the last site's fix, with test_checks.py's pin set switched to exact.
+ADVISORY_CODES: frozenset[str] = frozenset({"S-recording-step", "T-seal-key"})
 
 
 @dataclass
@@ -820,6 +855,84 @@ def check_rebuild_bound(patterns: dict[Path, Pattern]) -> list[Finding]:
                 "totality, stated rather than assumed\")",
             ))
     return findings
+
+# --------------------------------------------------------------------------- #
+# S-recording-step — the substrate's arm transcribed without its payload
+# --------------------------------------------------------------------------- #
+# Only Audit Trail (compositions/audit-trail.md) emits `recording-failure`, and
+# its projected contract is `recording-failure(step)`: step-2 committed nothing,
+# step-3 left an orphan attestation, step-4 left THE EVENT APPENDED. A composition
+# that maps the arm to a bare token cannot tell a caller whether a retry will
+# duplicate the record — which is exactly what one second gate found the retry
+# doing. Precision: the trigger is a bare backticked token immediately followed
+# by a mapping arrow, in the body of a composition that links audit-trail.md. A
+# bare token anywhere else (a signature block declaring the composition's own
+# code, an example, a Ledger line quoting the defect) is not flagged.
+RECORDING_BARE_MAPPED = re.compile(r"`recording-failure`\s*→")
+AUDIT_TRAIL_LINK = re.compile(r"\(\.{0,2}/?(?:compositions/)?audit-trail\.md")
+
+
+def check_recording_step(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """S. A bare `recording-failure` on the left of a mapping arrow, in a
+    composition that composes Audit Trail, above the Status section."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        if "/compositions/" not in p.path.as_posix() or p.path.stem == "audit-trail":
+            continue
+        cut = p.text.find("\n## Status")
+        body = p.text if cut == -1 else p.text[:cut]
+        if not AUDIT_TRAIL_LINK.search(body):
+            continue
+        for m in RECORDING_BARE_MAPPED.finditer(body):
+            findings.append(Finding(
+                p.path, line_of(body, m.start()), "S-recording-step",
+                "substrate arm transcribed without its payload — the contract "
+                "is `recording-failure(step)`, and step-4 means the event is "
+                "already appended (retry duplicates it); carry the step and "
+                "land each arm",
+            ))
+    return findings
+
+
+# --------------------------------------------------------------------------- #
+# T-seal-key — a seal presentation keyed by an identifier, not by log position
+# --------------------------------------------------------------------------- #
+# `verify_record` takes the payloads of every event in the covering seal range,
+# in ascending sequence_number order (Audit Trail Invariant 7). A map keyed by
+# the composition's own identifier holds at most one payload per event, so under
+# interval cadence every verification fails with a seal-record-set mismatch and
+# the acceptance check reports tampering on an intact log. Two shapes: a
+# subscript `original_event_payloads[<x>_id]`, and the phrase "keyed by
+# `<x>_id`" within a short distance after the map's name. Keying by `n`, `lo`,
+# `hi`, or `sequence_number` is the exemplar (Chain of Custody, Forensic
+# Recovery) and is silent.
+SEAL_MAP_ID_SUBSCRIPT = re.compile(r"original_event_payloads\[\s*`?\w*_id`?\s*\]")
+SEAL_MAP_KEYED_BY_ID = re.compile(
+    r"original_event_payloads`?[^.\n]{0,80}?keyed by (?:the )?`\w*_id`", re.I)
+
+
+def check_seal_key(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """T. An `original_event_payloads` map keyed by an identifier."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        cut = p.text.find("\n## Status")
+        body = p.text if cut == -1 else p.text[:cut]
+        seen: set[int] = set()
+        for rx in (SEAL_MAP_ID_SUBSCRIPT, SEAL_MAP_KEYED_BY_ID):
+            for m in rx.finditer(body):
+                ln = line_of(body, m.start())
+                if ln in seen:
+                    continue
+                seen.add(ln)
+                findings.append(Finding(
+                    p.path, ln, "T-seal-key",
+                    "seal presentation keyed by an identifier — a seal commits "
+                    "to a sequence range, so the map is keyed by "
+                    "`sequence_number` over the covering range `read_record` "
+                    "names (exemplar: Chain of Custody [Verify Custody])",
+                ))
+    return findings
+
 
 # --------------------------------------------------------------------------- #
 # Status grammar / mirror (G, H, I)
@@ -1529,6 +1642,8 @@ def main(argv: list[str]) -> int:
     findings += check_constituent_calls(patterns)
     findings += check_atomicity_over_audit(patterns)
     findings += check_rebuild_bound(patterns)
+    findings += check_recording_step(patterns)
+    findings += check_seal_key(patterns)
     findings += check_status_grammar(patterns)
     findings += check_status_mirror(root, patterns)
     findings += check_duplicate_rows(root)
