@@ -490,13 +490,19 @@ def check_t_synthetic(problems: list[str]) -> None:
 S_SILENT = {"login", "chain-of-custody"}
 # Retired as the sweep closes them (one line per retirement, with the date, so
 # a retirement cannot pass as a loosened check): external-onboarding 2026-08-29;
-# propagate-consent-revocation-downstream 2026-08-29.
+# propagate-consent-revocation-downstream 2026-08-29; immutable-transaction-
+# ledger 2026-08-29.
 S_FIRING_AT_LEAST = {
     "actor-suspension", "capability-backed-sharing",
-    "immutable-transaction-ledger", "privileged-access-provisioning",
+    "privileged-access-provisioning",
 }
 T_SILENT = {"chain-of-custody", "forensic-recovery"}
-T_FIRING_AT_LEAST = {"immutable-transaction-ledger"}
+# EMPTY as of 2026-08-29, when Immutable Transaction Ledger's [Verify Ledger]
+# was re-keyed by sequence_number — the one site the check ever saw. T was
+# promoted to GATING in the same change and this set switched to `exact`, so
+# any firing is reported as an unpinned pattern; the regression coverage lives
+# in check_t_synthetic(), which needs no corpus positive to exist.
+T_FIRING: set[str] = set()
 
 
 def check_r_synthetic(problems: list[str]) -> None:
@@ -525,7 +531,7 @@ def main(argv: list[str]) -> int:
         ("Q-rebuild-bound", check_rebuild_bound, Q_SILENT, Q_FIRING_AT_LEAST, True),
         # Floors, not exact, while the 2026-08-29 sweep runs (see the S/T block).
         ("S-recording-step", check_recording_step, S_SILENT, S_FIRING_AT_LEAST, False),
-        ("T-seal-key", check_seal_key, T_SILENT, T_FIRING_AT_LEAST, False),
+        ("T-seal-key", check_seal_key, T_SILENT, T_FIRING, True),
     ):
         got = stems(fn(patterns))
         for s in sorted(silent):

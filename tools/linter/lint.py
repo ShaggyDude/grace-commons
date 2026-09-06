@@ -201,7 +201,12 @@ TRAILING_PAREN = re.compile(r"\s*\([^)]*\)\s*$")
 # 2026-08-29), so the sweep's findings are attributable to a rule that already
 # covered them. Promotion is the removal of the code from this set, in the same
 # change as the last site's fix, with test_checks.py's pin set switched to exact.
-ADVISORY_CODES: frozenset[str] = frozenset({"S-recording-step", "T-seal-key"})
+#
+# T-seal-key was promoted to GATING on 2026-08-29, the same day it landed: its
+# one site (Immutable Transaction Ledger's [Verify Ledger]) closed under the
+# sweep and it fires zero times corpus-wide. S-recording-step stays advisory
+# until its last site closes.
+ADVISORY_CODES: frozenset[str] = frozenset({"S-recording-step"})
 
 
 @dataclass

@@ -600,13 +600,13 @@ Two corollaries the same rounds produced. An entry whose covering range is not w
 
 ### The mechanical slice
 
-[`tools/linter/lint.py`](tools/linter/lint.py) check **`T-seal-key`**: an `original_event_payloads` map subscripted or described as keyed by an identifier (`[event_id]`, `[entry_id]`, "keyed by `disclosure_id`") in a composition body. Advisory on 2026-08-29 at one site; promoted to gating when the sweep closes it. Bare-payload `verify_record` calls are **not** flagged — the substrate's own contract uses the singular name, so a match on it would fire on the exemplar — and that recall gap is recorded here rather than closed by loosening.
+[`tools/linter/lint.py`](tools/linter/lint.py) check **`T-seal-key`**: an `original_event_payloads` map subscripted or described as keyed by an identifier (`[event_id]`, `[entry_id]`, "keyed by `disclosure_id`") in a composition body. It landed advisory on 2026-08-29 at one site and was promoted to gating the same day, when the sweep under this rule closed that site and it fired zero times corpus-wide. Bare-payload `verify_record` calls are **not** flagged — the substrate's own contract uses the singular name, so a match on it would fire on the exemplar — and that recall gap is recorded here rather than closed by loosening.
 
 ### Which pass owns it
 
 **Pass 1 (GRID)** — mechanical, above — with the cadence question left to **Pass 3 (adversarial)**: *which seal cadence does this example assume, and what does the verification return under the other one?*
 
-**Worked origins.** [Chain of Custody](compositions/chain-of-custody.md) (2026-08-27) — `original_event_payloads` re-keyed by `sequence_number`, [Verify Custody] assembling each entry's presentation from the range `read_record` names, and `unverifiable(payload-not-supplied(missing))` for an entry whose range is incomplete. [Forensic Recovery](compositions/forensic-recovery.md) (2026-08-27) — the same re-keying, and the replay ordered by the intent event's position, carried in the index as `intent_position`. [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) — still keyed by `event_id` at [Verify Disclosure] when this rule was stated; the check above finds it, and the sweep under the frozen rules closes it.
+**Worked origins.** [Chain of Custody](compositions/chain-of-custody.md) (2026-08-27) — `original_event_payloads` re-keyed by `sequence_number`, [Verify Custody] assembling each entry's presentation from the range `read_record` names, and `unverifiable(payload-not-supplied(missing))` for an entry whose range is incomplete. [Forensic Recovery](compositions/forensic-recovery.md) (2026-08-27) — the same re-keying, and the replay ordered by the intent event's position, carried in the index as `intent_position`. [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) — still keyed by `event_id` at [Verify Ledger] when this rule was stated; the check above found it, and the sweep under the frozen rules closed it the same day.
 
 ---
 
