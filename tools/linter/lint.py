@@ -86,18 +86,19 @@ the three-pass review otherwise has to catch by eye —
                               rebuild's totality, stated rather than assumed".
   S. Recording-failure step — in a composition that composes Audit Trail, a bare
                               `recording-failure` on the left of a mapping arrow
-                              (→) above the Status section. Only Audit Trail emits
-                              `recording-failure`, and its contract carries the
-                              step that refused — step-4 means the event is
-                              already appended, so a retry that cannot see the
-                              step duplicates outcome events. A bare token in
-                              that position is a transcription of the substrate
-                              arm with its payload dropped (pressure-testing.md
-                              §A transcribed rejection arm keeps its payload,
-                              frozen 2026-08-29). Signature blocks, examples and
-                              prose are not flagged: a composition may declare a
-                              `recording-failure` of its own over a non-substrate
-                              write.
+                              (→), on a line that also names `record_action`,
+                              above the Status section. The substrate's contract
+                              carries the step that refused — step-4 means the
+                              event is already appended, so a retry that cannot
+                              see the step duplicates outcome events. A bare
+                              token in that position is a transcription of the
+                              substrate arm with its payload dropped
+                              (pressure-testing.md §A transcribed rejection arm
+                              keeps its payload, frozen 2026-08-29). Signature
+                              blocks, examples, prose, and a peer composition's
+                              own bare arm mapped on a line with no substrate
+                              call are not flagged: compositions re-export
+                              `recording-failure` bare at their own boundary.
   T. Seal presentation key  — an `original_event_payloads` map subscripted or
                               described as keyed by an identifier (`[event_id]`,
                               `[entry_id]`, "keyed by `disclosure_id`"). The
@@ -870,10 +871,20 @@ def check_rebuild_bound(patterns: dict[Path, Pattern]) -> list[Finding]:
 # that maps the arm to a bare token cannot tell a caller whether a retry will
 # duplicate the record — which is exactly what one second gate found the retry
 # doing. Precision: the trigger is a bare backticked token immediately followed
-# by a mapping arrow, in the body of a composition that links audit-trail.md. A
-# bare token anywhere else (a signature block declaring the composition's own
-# code, an example, a Ledger line quoting the defect) is not flagged.
+# by a mapping arrow, ON A LINE THAT ALSO NAMES `record_action`, in the body of
+# a composition that links audit-trail.md. A bare token anywhere else (a
+# signature block declaring the composition's own code, an example, a Ledger
+# line quoting the defect) is not flagged — and neither is a bare token mapped
+# from a PEER composition's call: Multi-Party Approval, Immutable Transaction
+# Ledger and their kin re-export `recording-failure` bare at their own caller
+# boundary, so a composer transcribing that arm is transcribing it correctly.
+# The first draft assumed only Audit Trail emits the token and fired on
+# Privileged Access Provisioning's transcription of Multi-Party Approval's
+# arm (2026-08-29); the same-line `record_action` condition is what isolates
+# the substrate's arm from its composers' — the step lists put the call and
+# its mapping on one line, which is the corpus convention this leans on.
 RECORDING_BARE_MAPPED = re.compile(r"`recording-failure`\s*→")
+SUBSTRATE_CALL = re.compile(r"record_action")
 AUDIT_TRAIL_LINK = re.compile(r"\(\.{0,2}/?(?:compositions/)?audit-trail\.md")
 
 
@@ -889,6 +900,11 @@ def check_recording_step(patterns: dict[Path, Pattern]) -> list[Finding]:
         if not AUDIT_TRAIL_LINK.search(body):
             continue
         for m in RECORDING_BARE_MAPPED.finditer(body):
+            ls = body.rfind("\n", 0, m.start()) + 1
+            le = body.find("\n", m.start())
+            le = len(body) if le == -1 else le
+            if not SUBSTRATE_CALL.search(body[ls:le]):
+                continue
             findings.append(Finding(
                 p.path, line_of(body, m.start()), "S-recording-step",
                 "substrate arm transcribed without its payload — the contract "

@@ -429,6 +429,15 @@ FIXTURE_S_SIGNATURE = _S_HEAD + (
 )
 # silent: a composition that does not compose Audit Trail at all — nothing
 # it maps can be the substrate's arm.
+# silent: a bare token that is a PEER composition's own arm — Multi-Party
+# Approval declares `recording-failure` bare at its boundary, so a composer
+# mapping it is correct. The substrate call is absent from the line; that is
+# the discriminator (found 2026-08-29 on Privileged Access Provisioning).
+FIXTURE_S_PEER = _S_HEAD + (
+    "3. `MultiPartyApproval.approve_step(actor_ref, credential, chain_id, step_id)` "
+    "→ propagates `not-pending` unchanged; its `recording-failure` → "
+    "`recording-failure` (the substrate's own recovery owns that partial).\n"
+)
 FIXTURE_S_NO_AUDIT = (
     "# Synthetic\n\n## Composes\n\n- [Journal](../atoms/journal.md)\n\n"
     "3. Map `recording-failure` → `rejected(recording-failure)`.\n"
@@ -441,6 +450,7 @@ def check_s_synthetic(problems: list[str]) -> None:
         ("FIXTURE_S_STEPPED", FIXTURE_S_STEPPED, False),
         ("FIXTURE_S_SIGNATURE", FIXTURE_S_SIGNATURE, False),
         ("FIXTURE_S_NO_AUDIT", FIXTURE_S_NO_AUDIT, False),
+        ("FIXTURE_S_PEER", FIXTURE_S_PEER, False),
     ):
         pat = Pattern(path=Path(f"synthetic/compositions/{name}.md"), text=text,
                       invariant_count=1, grounded=False)
@@ -491,10 +501,10 @@ S_SILENT = {"login", "chain-of-custody"}
 # Retired as the sweep closes them (one line per retirement, with the date, so
 # a retirement cannot pass as a loosened check): external-onboarding 2026-08-29;
 # propagate-consent-revocation-downstream 2026-08-29; immutable-transaction-
-# ledger 2026-08-29.
+# ledger 2026-08-29; privileged-access-provisioning 2026-08-29 (a false
+# positive — the peer-arm case above — not a fix).
 S_FIRING_AT_LEAST = {
     "actor-suspension", "capability-backed-sharing",
-    "privileged-access-provisioning",
 }
 T_SILENT = {"chain-of-custody", "forensic-recovery"}
 # EMPTY as of 2026-08-29, when Immutable Transaction Ledger's [Verify Ledger]
@@ -583,8 +593,9 @@ def main(argv: list[str]) -> int:
     failures.extend(st_problems)
     if not st_problems:
         print("S-recording-step / T-seal-key: synthetic fixtures hold "
-              "(bare mapping fires, stepped mapping and own-code signature "
-              "silent; id-keyed map fires, position-keyed map silent) \u2713")
+              "(bare substrate mapping fires; stepped mapping, own-code "
+              "signature and peer arm silent; id-keyed map fires, "
+              "position-keyed map silent) \u2713")
 
     r_problems: list[str] = []
     check_r_synthetic(r_problems)
