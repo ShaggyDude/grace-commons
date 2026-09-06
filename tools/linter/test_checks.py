@@ -503,10 +503,11 @@ S_SILENT = {"login", "chain-of-custody"}
 # propagate-consent-revocation-downstream 2026-08-29; immutable-transaction-
 # ledger 2026-08-29; privileged-access-provisioning 2026-08-29 (a false
 # positive — the peer-arm case above — not a fix); capability-backed-sharing
-# 2026-08-29.
-S_FIRING_AT_LEAST = {
-    "actor-suspension",
-}
+# 2026-08-29; actor-suspension 2026-08-29.
+# EMPTY as of 2026-08-29, when the last site closed. S was promoted to GATING
+# in the same change and this set switched to `exact`; the regression coverage
+# lives in check_s_synthetic(), which needs no corpus positive to exist.
+S_FIRING: set[str] = set()
 T_SILENT = {"chain-of-custody", "forensic-recovery"}
 # EMPTY as of 2026-08-29, when Immutable Transaction Ledger's [Verify Ledger]
 # was re-keyed by sequence_number — the one site the check ever saw. T was
@@ -540,8 +541,8 @@ def main(argv: list[str]) -> int:
         # quietly joining a backlog. The regression coverage lives in
         # check_q_synthetic(), which needs no corpus positive to exist.
         ("Q-rebuild-bound", check_rebuild_bound, Q_SILENT, Q_FIRING_AT_LEAST, True),
-        # Floors, not exact, while the 2026-08-29 sweep runs (see the S/T block).
-        ("S-recording-step", check_recording_step, S_SILENT, S_FIRING_AT_LEAST, False),
+        # Both exact since 2026-08-29, when the sweep emptied them (see the S/T block).
+        ("S-recording-step", check_recording_step, S_SILENT, S_FIRING, True),
         ("T-seal-key", check_seal_key, T_SILENT, T_FIRING, True),
     ):
         got = stems(fn(patterns))

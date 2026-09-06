@@ -205,9 +205,13 @@ TRAILING_PAREN = re.compile(r"\s*\([^)]*\)\s*$")
 #
 # T-seal-key was promoted to GATING on 2026-08-29, the same day it landed: its
 # one site (Immutable Transaction Ledger's [Verify Ledger]) closed under the
-# sweep and it fires zero times corpus-wide. S-recording-step stays advisory
-# until its last site closes.
-ADVISORY_CODES: frozenset[str] = frozenset({"S-recording-step"})
+# sweep and it fires zero times corpus-wide. S-recording-step followed the same
+# day: its baseline of 22 sites across five patterns (23 before the peer-arm
+# correction) closed under the sweep — External Onboarding, Propagate Consent
+# Revocation Downstream, Immutable Transaction Ledger, Capability-Backed
+# Sharing, Actor Suspension — and it fires zero times corpus-wide.
+# EMPTY as of 2026-08-29: every check is gating.
+ADVISORY_CODES: frozenset[str] = frozenset()
 
 
 @dataclass
