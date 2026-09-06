@@ -489,11 +489,11 @@ def check_t_synthetic(problems: list[str]) -> None:
 # point authors at. Firing: the baseline the sweep is expected to empty.
 S_SILENT = {"login", "chain-of-custody"}
 # Retired as the sweep closes them (one line per retirement, with the date, so
-# a retirement cannot pass as a loosened check): external-onboarding 2026-08-29.
+# a retirement cannot pass as a loosened check): external-onboarding 2026-08-29;
+# propagate-consent-revocation-downstream 2026-08-29.
 S_FIRING_AT_LEAST = {
     "actor-suspension", "capability-backed-sharing",
     "immutable-transaction-ledger", "privileged-access-provisioning",
-    "propagate-consent-revocation-downstream",
 }
 T_SILENT = {"chain-of-custody", "forensic-recovery"}
 T_FIRING_AT_LEAST = {"immutable-transaction-ledger"}
