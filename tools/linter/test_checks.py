@@ -573,8 +573,10 @@ def check_u_synthetic(problems: list[str]) -> None:
 # the survey measured. Silent: Login and Defensible Retention, whose actions
 # already carry the position at their boundary.
 U_SILENT = {"login", "defensible-retention"}
-U_FIRING_AT_LEAST = {"capability-backed-sharing", "chain-of-custody", "customer-onboarding",
-                     "forensic-recovery", "immutable-transaction-ledger"}
+# Retired as the sweep closes them (one line per retirement, with the date):
+# chain-of-custody 2026-08-30; forensic-recovery 2026-08-30;
+# immutable-transaction-ledger 2026-08-30.
+U_FIRING_AT_LEAST = {"capability-backed-sharing", "customer-onboarding"}
 
 
 def check_r_synthetic(problems: list[str]) -> None:

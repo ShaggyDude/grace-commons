@@ -991,7 +991,7 @@ def check_seal_key(patterns: dict[Path, Pattern]) -> list[Finding]:
 # the first step carrying a qualified constituent call that is neither a read
 # (`read`, `read_record`, `check`, `verify_*`, `history_for`, `active_for`,
 # `get`, `query`, `list`, `enumerate`, `lookup`, `is_*`, `has_*`, `status`,
-# `current`, `resolve`, `evaluate`) nor `AuditTrail.record_action` (the intent
+# `current`, `resolve`, `evaluate`, `permitted`, `find`, `peek`) nor `AuditTrail.record_action` (the intent
 # record precedes the act by design and its own arm is retry-safe) is the
 # commit; a bare landing strictly before it and one strictly after it fire.
 # The step-2/step-3 rejection at the commit step itself is on neither side —
@@ -1001,7 +1001,7 @@ STEP_LINE = re.compile(r"(?m)^(\d+)\.[^\n]*")
 QUALIFIED_CALL = re.compile(r"\b([A-Z][A-Za-z]+)\.([a-z_]+)\(")
 READ_METHOD = re.compile(
     r"^(read|verify|check|history|active|get|query|list|enumerate|lookup|is_|"
-    r"has_|status|current|resolve|evaluate)")
+    r"has_|status|current|resolve|evaluate|permitted|find|peek)")
 BARE_BOUNDARY_TOKEN = re.compile(r"`rejected\(recording-failure\)`")
 
 
