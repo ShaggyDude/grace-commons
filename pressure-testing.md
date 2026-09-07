@@ -64,6 +64,16 @@ Then run the reference-graph checks the frozen rules of 2026-08-29 add, each mec
 - **Every seal presentation is keyed by `sequence_number`.** An `original_event_payloads` map keyed by an identifier is an orphaned reference to a covering range it cannot present — §*A seal presentation is keyed by log position* (linter check `T-seal-key`).
 - **Every derived-index element states its past-horizon classification, and a truth-bearing half names its atom.** The named atom resolves to a file or a `*(forthcoming)*` marker — §*A derived index splits at the horizon*.
 
+And the ones the frozen rules of 2026-08-30 add:
+
+- **Every retry loop names its terminus, and every leg names its serialization key.** *Retry until it lands* resolves to a completion bound at which the invocation yields; two legs over one act resolve to one key they serialize on — §*A compensator is exclusive*.
+- **Every verdict class in a verdict table resolves to a producing step.** A `failed-verification(purged)` the table promises has a step that reaches it before any composition-side membership check — §*Lawful destruction is answered before absence*.
+- **Every set-valued outcome field resolves to a cardinality cap.** *Non-empty* is not a cap — §*An outcome is sized before the intent*.
+- **Every liveness window resolves to its inequality.** Bound, cadence, and latency are three Configuration entries and the strict inequality is on the page — §*Liveness is arithmetic*.
+- **Every cross-seam comparison names its skew allowance.** A composition stamp compared to a constituent stamp resolves to a `clock_skew_allowance` entry or to a pass-through — §*A stamp from another seam never decides a write alone*.
+- **Every exported rejection code carries the payload the prose distinguishes.** A token landed on both sides of the commit carries the position in the signature — §*A composition's own rejection arm carries the retry bit* (linter check `U-retry-bit`).
+- **Every exercised constituent capability resolves to a declared source.** The six tells for uses under §*Capability provenance* — a read keyed by an un-indexed field, an enumeration the store does not offer, durability the constituent disclaims, a multi-call critical section, a clock the constituent has none of, a uniqueness scope wider than the constituent's — are each an orphaned reference.
+
 **Time:** 15–30 minutes for an atom; longer for a composition with multiple constituents.
 
 **Personal Todo example.** First pass surfaced five gaps: actor (Behavior was incomplete — *who* acts?), description mutability (State + Decision were silent on edit), temporal metadata (State omitted timestamps), observability (Feedback didn't say what's queryable), identity policy (Decision punted on duplicate handling). Four were closed in-pattern; the fifth was extracted to Duplicate Prevention by Pass 2.
@@ -132,6 +142,13 @@ A sibling boundary error EOS also owns is **capability mis-attribution**: an inv
 - **Arms.** For each mapped rejection arm, which constituent step failed and what is on disk when it did? Is the retry safe on every step the arm covers? Is any arm declared unreachable by an argument that names fewer steps than the constituent has? — §*A transcribed rejection arm keeps its payload*.
 - **Cadence.** Which seal cadence does the example assume, and what does the verification return under the other one? — §*A seal presentation is keyed by log position*.
 - **Horizon.** For each derived element, what reads it after the purge, and does that reader know the element is no longer derived? — §*A derived index splits at the horizon*.
+- **Writers.** What does this invocation do at `bound + 1`, when the leg has already read its act as an orphan? What do two runs of the leg do at once? — §*A compensator is exclusive*.
+- **Purged.** Present this action a record the substrate purged yesterday and read the step list: which step answers, and is it the constituent's? — §*Lawful destruction is answered before absence*.
+- **Envelope.** Which is larger, the intent or the outcome, and which was sized against the cap? What does the caller do when the outcome is refused after the commit? — §*An outcome is sized before the intent*.
+- **Arithmetic.** Pick a bound, a cadence, a latency and a window that pass the check as written; does an orphan created at `t` close inside the window? — §*Liveness is arithmetic*.
+- **Clocks.** For each comparison in a sweep or a resume arm, whose clock stamped each side, and what does a skew of one bound do to the decision? — §*A stamp from another seam never decides a write alone*.
+- **Caller.** For each code the signature exports, what does the caller do next, and is that safe at every step that lands the code? — §*A composition's own rejection arm carries the retry bit*.
+- **Provenance of uses.** For each read, enumeration, durability claim, critical section, clock, and uniqueness scope the steps exercise, which line of the constituent's contract grants it? — §*Capability provenance*.
 
 **Adversarial postures (run all three).** The questions above check *topics*; these check the spec from a hostile *stance*, and catch what a topic-checklist misses:
 
@@ -276,6 +293,8 @@ Tracing the rubric through it:
 
 ## Capability provenance — a spec may claim, and use, only declared capabilities
 
+> **FROZEN — 2026-08-30.** The oldest rule on this page still open, stated 2026-06-08 and widened 2026-08-27 to reach uses. It is frozen from the third fresh-reader gates, which returned six foundational findings of this shape across five patterns — none a *Rests on:* line, every one a use — and mapped each to a surface the widening had already named. The rule's text is complete for the evidence in hand; what the corpus lacked was the discipline of applying it as written, which a frozen rule supplies and an open one does not. The six shapes are recorded below as *the tells for uses*, added with the freeze; after it, a round that finds the rule inconvenient applies it or records a finding against the pattern, and reopening requires a case none of its sources or tells covers, recorded first.
+
 An invariant is only as sound as the authority it quantifies over. The strongest form of the reference-graph discipline, applied to invariant dependencies: **every clause an invariant rests on must trace to an *explicitly declared* capability — never to an implicit assumption that a constituent or substrate "can" do something it does not declare.** This is *no ambient authority* — the core tenet of capability-based security — lifted to the invariant layer: an invariant may rely only on authority explicitly held somewhere in the spec graph.
 
 A legitimate invariant dependency traces to exactly one of four declared sources:
@@ -297,6 +316,15 @@ An invariant resting on anything else — *"the substrate can produce…"*, *"th
 - **Atomicity and presentation contracts** — *"these writes commit together or not at all"* claims a withdrawal capability over every member of the set, including members the constituent declares it cannot withdraw.
 
 **The test is unchanged; only its subject widens.** A *use* is legitimate when the capability it exercises traces to one of the same four declared sources above. A use that traces to none is an **undeclared dependency** exactly as a claim would be, and a foundational finding of the same kind — the difference is only that nothing on the page announces it, which is why it survives longer.
+
+**The tells for uses (2026-08-30).** Six shapes, each a foundational finding in the third gates, each an exercised capability the constituent's own text declines:
+
+- **A read keyed by a field the constituent does not index.** *"Enumerate the trail by `data.record_id`"*, *"select `action_ref = X` and this `invocation_id`"* — Audit Trail declares a sequence-range read and routes payload-field selection to a forthcoming Reverse Index. The composition may filter a range in its own code and must say so; it may not call the filter the substrate's read.
+- **An enumeration over a store keyed by one identifier.** Provenance is keyed by `chain_id` and declares no lookup by `artifact_ref`; a genesis orphan that must be found by artifact cannot be, and the leg that says it will is resting on a host index nobody declared.
+- **Durability the constituent disclaims.** Event Log: *"persistence across process restarts is handled at the deployment layer."* A journal the composition rebuilds from after a crash is durable only under a host obligation the Configuration names.
+- **A critical section spanning several constituent calls.** Capacity Constraint serializes each call; a composition that reads, allocates, and reads again "under the pool's serialization" has attributed a multi-call section the constituent's own edge case sends to a Transaction composition.
+- **A clock from a constituent that has none.** `now` *"injected by the Audit Trail substrate"* — the substrate exposes no clock output; the reading is the composition's own seam's, and saying otherwise mislocates every stamp the composition writes.
+- **A uniqueness scope wider than the constituent's.** Credential bounds effective-Active per `(principal_ref, credential_type)`; a step that revokes *"the actor's active credential"* has read per-pair as per-principal and leaves the second type authenticating.
 
 **A clean rescan is not evidence when the rule was pointed at the wrong surface.** The 2026-06-08 corpus rescan below found **zero** undeclared dependencies across eighteen compositions, and that result was honestly obtained: every *Rests on:* line did resolve. Two months later, eleven fresh-reader gates run for an unrelated reason returned undeclared-capability findings in most of the patterns that rescan had cleared — constituent invariant and check counts that do not match the contracts, acceptance checks quantifying over records the constituent cannot enumerate, atomicity asserted over un-withdrawable writes, rebuilds sourced from payloads the substrate destroys. **The rescan was not wrong; it was narrow.** Treat a clean sweep as evidence about the surface swept, and record which surface that was — a result whose scope is not stated cannot later be told apart from a result that was simply mistaken.
 
@@ -637,6 +665,174 @@ A sentence per element stating its past-horizon classification; a Configuration 
 Classification is **Pass 2 (EOS)** — the truth-bearing half is an unnamed atom, and naming it is extraction — with the mechanical form in **Pass 1 (GRID)**: every derived element's past-horizon sentence exists, and every named atom resolves to a forthcoming marker or a file. The collision check §*A derived index is trustworthy only where a miss is observable* names — an element classified derived that is also declared truth-bearing in some window — is the linter check this rule would carry, and it is still not built; the sweep under this rule is what will say whether it is worth building.
 
 **Worked origins.** [Multi-Party Approval](compositions/multi-party-approval.md) (second gate, 2026-08-29) — the chain store's past-horizon durability was referenced three times and declared nowhere; fixed with a `chain_store_durability` Configuration entry and the blanket sentence amended. [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) (2026-08-27) — `disclosure_to_event`'s purged half is truth-bearing, extraction-pending against the Erasure Tombstone atom. [Capability-Backed Sharing](compositions/capability-backed-sharing.md) (second gate, 2026-08-29) — the `pending` marker is truth-bearing under a durability obligation, extraction-pending against an Outbox atom, and the seal is built only from it. [Login](compositions/login.md) (second gate, 2026-08-28) — `login_event_log` was a composition-owned middle; reclassified extraction-pending against Event Log. [Execute Gated Workflow](compositions/execute-gated-workflow.md) (2026-08-27) — the consumed flag is durable past the horizon and the consumption test fails closed without it.
+
+---
+
+## A compensator is exclusive — one writer per act, and the invocation yields at its bound
+
+> **FROZEN — 2026-08-30.** Stated from the third fresh-reader gates — the eight patterns the 2026-08-29 freeze had not yet gated, plus one re-grounding — which returned forty-seven foundational findings, forty-five of them confirmed by a second reader given the full record. Three patterns returned this shape, each gated independently, each carrying a reconciliation the sweep under §*A reconciliation is bounded at both ends* had just extended. Frozen on the day it is stated, under the same discipline as that section: recurrence across independently gated patterns is the evidence, and a rule stated open is a rule the next round edits instead of applying.
+
+**The rule.** *For every act a composition can compensate, exactly one writer may land the outcome — the invocation or a reconciliation leg, never both — and the invocation's own retry has a terminus: at the completion bound it yields, and everything after the bound belongs to the leg. Two legs that can see the same act serialize on the act's key, and the look-then-write pre-check every compensator runs is re-read under that serialization, not before it.* An age bound alone guards one side: it keeps the leg off work younger than the bound. It does nothing about an invocation that is still retrying *past* the bound, and nothing about two legs — restart and cadence, two nodes — that run the same comparison at once. Each of those is a second writer, and a second writer lands a second outcome for one act, which the sealed trail then protects.
+
+The frozen §*A reconciliation is bounded at both ends* presumes an invocation stops at its bound; nothing in the corpus said so, and the three origin patterns each said the opposite — *retry until it lands* with no terminus, beside a leg that starts at the bound.
+
+### The tells
+
+**1. "Retry until it lands" with no terminus.** The phrase names a loop whose exit is success; it does not name the bound. Ask what the loop does at `bound + 1`, when the leg has already read the act as an orphan.
+
+**2. A pre-check that looks, then appends.** *"Traverse the log for an existing outcome carrying this key; if none, append."* Two compensators run it at once and both find none. The pre-check is correct only under a serialization that the spec names.
+
+**3. Two legs and no lock.** A scan "at restart and on `reconciliation_cadence`" with no per-act mutual exclusion is two legs; on two nodes it is four. The frozen substrate closes its own version of this with a closed-state marker on the act (*compensated_attestations*); a composition's leg needs the same or an equivalent.
+
+**4. A stalled invocation resuming after the leg.** A step that is a bare append — no pre-check of its own, no lease — will land its outcome beside the leg's when the process it belongs to wakes. Per-key locking that prevents *interleaving* does not prevent *sequencing*.
+
+### What it costs
+
+One sentence per action with a post-commit failure step: *the invocation attempts the outcome write until `<x>_completion_bound`, then yields; a later success is the leg's.* One serialization statement per leg naming the act's key (the same `invocation_id` §*Intents pair with outcomes* carries), under which the pre-check is re-read. Where the invocation cannot be made to yield — it holds no clock past its first read — the outcome step itself runs the pre-check under the act's key and adopts an existing outcome as its own (*proceed as landed*). And a check that reads the pair widens from *at most one outcome per intent* to *exactly one writer per outcome, named*: the outcome carries `recovery = true` or it does not, and the pair is exact.
+
+### What this does to the formal layer
+
+The model needs the invocation and the leg as two processes over one act, with the bound as the point at which one of them stops being able to write. A model in which the invocation is a single atomic step cannot exhibit the second writer, and passes.
+
+### Which pass owns it
+
+**Pass 3 (adversarial)** — *what does this invocation do at `bound + 1`, and what do two runs of this leg do at once?* — with the mechanical form in **Pass 1 (GRID)**: every retry loop names its terminus, and every leg names its serialization key. No linter check; the loop's shape is prose.
+
+**Worked origins.** [Chain of Custody](compositions/chain-of-custody.md) (third gate, 2026-08-30) — Invariant 4's liveness arm retried the outcome write with no terminus while the scan started at the bound; both ran the same look-then-append pre-check with nothing between them. [Forensic Recovery](compositions/forensic-recovery.md) (third gate) — the restart scan and the cadence scan, and an invocation past its bound, could each compensate the same intent; the scan's place in the replay was fixed, its multiplicity was not. [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) (third gate) — [Disclose Subset] step 4 was a bare append, so a stalled invocation resuming after the scan had compensated it landed a second `ledger.disclosed`; the Configuration entry admitted the direction and named no remedy.
+
+---
+
+## Lawful destruction is answered before absence — the constituent's purged verdict precedes any composition pre-check
+
+> **FROZEN — 2026-08-30.** Stated from two third-gate findings that closed the same way in two patterns whose verification actions had each been reworked under §*A seal presentation is keyed by log position* three days earlier. The rework added a composition-side membership check to the step list and put it ahead of the constituent call; the constituent's purged short-circuit, which the composition's verdict table promised to relay, became unreachable in both. Frozen with the other rules of this date.
+
+**The rule.** *Where a composition presents a record to a constituent that answers `purged` before it answers anything else — Audit Trail's `verify_record` reads retention state first and returns `failed-verification(purged)` before it looks at a payload — every composition-side check that could fail on the same record runs **after** the constituent's answer, or branches on the retention state the composition already read. A record the substrate has lawfully destroyed is not missing, not unsupplied, and not unverifiable; it is purged, and the verdict class the composition promises for that case is reachable only if the purged answer comes first.*
+
+This is §*Derived state has a validity duration*'s Tier 2 arriving at the step list: the composition knows the element's validity is bounded by retention, says so in its verdict table, and then writes a membership check that cannot tell a purged member from a lost one. The blindness §*A derived index is trustworthy only where a miss is observable* names is here in the ordering rather than the index.
+
+### The tells
+
+**1. A verdict class with no producer.** The Overall Verdict table lists `failed-verification(purged)` as consistent with *Complete*; walk the step list and find the step that produces it. If every path to it first passes a check that fails on a purged member — *"any entry whose payload is not in the presented map → `unverifiable(payload-not-supplied)`"* — the class is promised and unreachable.
+
+**2. "Payload not supplied" for a payload the substrate destroyed.** The caller cannot supply what the purge removed. A verdict that asks them to has mistaken destruction for omission.
+
+**3. A retention state read and not branched on.** A step that reads `retention_state` "for the record" and then proceeds identically for `Retained` and `Purged` has read it for nothing.
+
+### What it costs
+
+One reordering per verification action — retention state first, then the constituent's own verdict, then any composition-side membership or presentation check on the survivors — and one per-entry outcome for the purged case (`not-applicable(purged)`, or the constituent's own `failed-verification(purged)` relayed) that the completeness verdict counts as consistent. The check that quantifies over the entry set says which members it examined and which it reported purged.
+
+### Which pass owns it
+
+**Pass 1 (GRID)** — every verdict class in the table resolves to a producing step — with the reachability argument in **Pass 3 (adversarial)**: *present this action a record the substrate purged yesterday, and read the step list.*
+
+**Worked origins.** [Chain of Custody](compositions/chain-of-custody.md) (third gate, 2026-08-30) — [Verify Custody] step 3c's absence check ran before the purged short-circuit, so a lawfully purged entry landed `unverifiable(payload-not-supplied)` and the chain could never reach [Custody Proof Complete] after its first purge. [Forensic Recovery](compositions/forensic-recovery.md) (third gate) — [Recover History] step 5b reported a purged transition as `payload-not-supplied` and *history-complete* became unreachable with one purged event in the sequence.
+
+---
+
+## An outcome is sized before the intent — the cap is checked against the largest record the act can write
+
+> **FROZEN — 2026-08-30.** Stated from two third-gate findings and one refining line of the same round, in three patterns that each argued the substrate's `invalid-request` was *foreclosed by construction* at the outcome position because the payload was composition-built. The argument was about the intent; the outcome is a superset of it, and a compensation record is larger still.
+
+**The rule.** *A composition that writes an intent record before an irreversible commit sizes, at its commit-free validation step, the **largest record the act can write** — the outcome payload, and the compensation payload a reconciliation would write for it — against the substrate's `payload_cap`, and refuses `invalid-request` **before the intent** when either would exceed it. Every set-valued field an outcome carries — the entries disclosed, the scopes affected, the credentials revoked — has a declared cardinality cap, in Configuration or in the field's own policy, or the argument that the cap is unreachable is false.* Foreclosed by construction means the construction is bounded; an unbounded set is not a construction, it is an input.
+
+The consequence of getting this wrong is the one §*Durability boundaries* names: the constituent's record exists, the outcome that would bind it cannot be written, and the binding is un-writable for as long as the payload stays over the cap — which, for a set that only grows, is forever.
+
+### The tells
+
+**1. "Foreclosed by construction" / "the payload is composition-built".** Ask which payload. If the sentence was written about the intent, read the outcome's field list and find the one the intent does not carry.
+
+**2. A set-valued field with no cap.** `disclosed_entry_ids` — *non-empty*; `affected_scopes` — *the complete set*; `revoked_credentials` — *every effective-Active credential*. Non-empty is a lower bound. The cap is the upper one, and the caller can reach it.
+
+**3. A compensation larger than the outcome.** A recovery record that carries the outcome's fields plus `intent_event_candidates`, `recovery = true`, and the acting human. If the outcome fits the cap by one byte, the compensation does not.
+
+### What it costs
+
+One sizing step at validation — construct the maximal envelope, or bound it arithmetically from the declared caps — and one cardinality cap per set-valued field. Where the set is genuinely unbounded (a long-lived consent's registrations), the composition declares a chunked shape *with every consumer of the field restated against it*, or bounds the set by policy; a digest in place of the set is not a shape, because nothing that reads the set can read a digest.
+
+### Which pass owns it
+
+**Pass 3 (adversarial)** under the *Arms* question — *which step failed, and what is on disk?* — with the mechanical form in **Pass 1 (GRID)**: every set-valued outcome field resolves to a cap.
+
+**Worked origins.** [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) (third gate, 2026-08-30) — `disclosed_entry_ids` had no cardinality cap; the intent passed, the Selective Disclosure record committed, and the outcome could be refused by the cap with no exit. [Forensic Recovery](compositions/forensic-recovery.md) (third gate) — the uniform arm rule admitted an outcome-stage `invalid-request` orphan it then declared unclearable, against Invariant 4's claim that every orphan is bound. [Propagate Consent Revocation Downstream](compositions/propagate-consent-revocation-downstream.md) (third gate) — `affected_scopes` grows without bound, and the escape offered was a digest no processor can act on.
+
+---
+
+## Liveness is arithmetic — bound plus cadence plus latency, strictly less than the window
+
+> **FROZEN — 2026-08-30.** Stated from one third-gate foundational finding and three refining lines in the same round that each corrected the same inequality. The corpus had been writing *cadence no longer than the window* since §*Durability boundaries* introduced `compensation_window`; the sweep under §*A reconciliation is bounded at both ends* added a lower edge to every leg and did not re-derive the inequality the edge changes.
+
+**The rule.** *Where a liveness arm promises closure within a window, the Configuration states the inequality that makes the promise true — the completion bound the leg waits out, plus the cadence between runs, plus the write latency of the closure, **strictly** less than the window — and the check that confirms the deployment meets its window confirms that inequality, not a fragment of it.* An orphan created at `t` is invisible to the leg until `t + bound`; the next run is at most `cadence` later; the closure lands `latency` after that. `cadence ≤ window` is satisfied by a deployment that breaches the window on every orphan.
+
+### The tells
+
+**1. "Cadence no longer than the window."** Two of the three terms are missing.
+
+**2. Equality admitted.** *No longer than* is `≤`. At equality the closure lands exactly at the window's edge, after the latency the inequality did not count.
+
+**3. A check that reads Configuration for one knob.** *Confirm `reconciliation_cadence ≤ compensation_window`.* The check is true and the promise is not.
+
+### What it costs
+
+One inequality per liveness arm, written out in Configuration with its three terms, and the sentence *checked at instance start* — a deployment whose knobs do not satisfy it refuses to start rather than starting to breach. The check that confirms the window reads all three.
+
+### Which pass owns it
+
+**Pass 1 (GRID)** — mechanical: the inequality is on the page and its terms resolve to Configuration entries — with **Pass 3 (adversarial)** doing the arithmetic on a concrete triple.
+
+**Worked origins.** [Actor Suspension](compositions/actor-suspension.md) (third gate, 2026-08-30) — check 6 confirmed `cadence ≤ completion_window` while the sweep skipped entries younger than `suspension_completion_bound`; a fifteen-minute bound, a ten-minute cadence and a ten-minute window breach on every suspension with the check passing. [Propagate Consent Revocation Downstream](compositions/propagate-consent-revocation-downstream.md), [Forensic Recovery](compositions/forensic-recovery.md), [Chain of Custody](compositions/chain-of-custody.md) (third gate, refining) — the same fragment.
+
+---
+
+## A stamp from another seam never decides a write alone
+
+> **FROZEN — 2026-08-30.** Stated from two third-gate foundational findings and two refining lines, in patterns that had each stated the Logic Confinement Principle correctly for their own seam and then compared their own reading against a constituent's.
+
+**The rule.** *A timestamp the composition wrote from its seam and a timestamp a constituent wrote from its own are two readings of two clocks. They may be compared only under a **declared skew allowance** — a Configuration entry — and the comparison may **narrow** a decision, never make one: no pairing, bypass verdict, enrollment, compensation, or refusal rests on it alone. Where the composition needs equality, it passes its own reading **through** to the constituent (`disclosed_at = now`, `revoked_at = now`), so that the stamp on the constituent's record is the composition's and equality is by construction.* A constituent that calls its own range read *best-effort under skew* has told the composition the read is advisory; a composition that gates a write on it has overruled the constituent's own contract.
+
+### The tells
+
+**1. "Inside the bound before the record's `granted_at`."** The bound was declared against the composition's seam; `granted_at` was stamped by the constituent. The inequality has a sign that skew can flip.
+
+**2. A constituent's advisory read used as a gate.** Party Identity: *"an [Enrolled At] range … under clock skew its result set is best-effort."* A resume arm that decides *enroll again* on that read's emptiness has made the constituent's caveat load-bearing.
+
+**3. A pass-through on one side and not the other.** The withdrawal side passes `revoked_at = now` and pairs exactly; the grant side does not pass `granted_at` and pairs on *before*. The asymmetry is the finding.
+
+### What it costs
+
+One Configuration entry (`clock_skew_allowance`), symmetric windows widened by it wherever two seams meet, the pass-through wherever the constituent's contract accepts the stamp, and — where it does not — the decision downgraded from a verdict to candidates or an escalation. The Generation acceptance standing rule most patterns already carry for *checks* is the same allowance; this rule carries it to the writes.
+
+### Which pass owns it
+
+**Pass 3 (adversarial)** — the *Time* question: *whose clock stamped each side of this comparison?* — with the mechanical form in **Pass 1 (GRID)**: every cross-seam comparison names the allowance it runs under.
+
+**Worked origins.** [Propagate Consent Revocation Downstream](compositions/propagate-consent-revocation-downstream.md) (third gate, 2026-08-30) — the grant-side scan paired an intent to a Consent record by *intended_at before granted_at* and landed *bypass, write nothing* on the result; a three-second skew made a real orphan un-withdrawable forever. [External Onboarding](compositions/external-onboarding.md) (third gate) — the resume arm's duplicate-freedom rested on Party Identity's `enrolled_at` range read, which Party Identity declares best-effort, with no margin. [Forensic Recovery](compositions/forensic-recovery.md), [Propagate Consent Revocation Downstream](compositions/propagate-consent-revocation-downstream.md) (third gate, refining) — the composition's `now` handed to a constituent whose own future-bound guard runs on its own clock, an `invalid-request` reachable after the intent.
+
+---
+
+## A composition's own rejection arm carries the retry bit
+
+> **FROZEN — 2026-08-30.** Stated from two third-gate foundational findings that §*A transcribed rejection arm keeps its payload* does not cover and was written not to: that rule governs the transcription of a *constituent's* arm, and its linter check's own note records that a composition lawfully re-exports `recording-failure` bare at its own boundary. Two patterns showed the re-export is not lawful when the bare token covers two dispositions — the case that rule's arms do not name, recorded here first as its unfreezing discipline requires, and closed by a rule of its own rather than an amendment.
+
+**The rule.** *A rejection code a composition exports at its own signature carries whatever the caller needs to decide whether a retry is safe. Where one token would land at a position before the act's irreversible commit and at a position after it, the token carries the position — `recording-failure(intent | outcome)`, or two codes — and the signature block declares the payload.* The composition boundary is a transcription too: of the composition's own steps, to a caller who cannot see them. A caller who receives a bare token after an outcome-position failure and retries has been told, by the signature, that nothing was committed.
+
+### The tells
+
+**1. One token at two steps, one on each side of the commit.** The linter finds this one.
+
+**2. "The collapse happens only at the caller boundary."** Written as reassurance; it is the defect. The caller is the one who retries.
+
+**3. A retry rule the signature does not carry.** *"Retry only on the intent-position arm"* in an edge case, with `recording-failure` bare in the signature.
+
+### The mechanical slice
+
+[`tools/linter/lint.py`](tools/linter/lint.py) check **`U-retry-bit`**: within one action's step list in a composition that composes Audit Trail, a bare `` `rejected(recording-failure)` `` landed at a numbered step **before** the action's first qualified constituent commit call and at a numbered step **after** it. Read calls (`read`, `read_record`, `check`, `verify_*`, `history_for`, `active_for`, and the like) do not count as the commit; `AuditTrail.record_action` does not count as the commit, because the intent record precedes the act by design and its own arm is retry-safe. It landed advisory on 2026-08-30 measuring ten actions across five patterns, two of them patterns the second gates had already closed. Its regression guard is synthetic: two bare landings straddling a commit must fire; the same two with `(intent)` and `(outcome)` must stay silent; two bare landings both before the commit must stay silent.
+
+### Which pass owns it
+
+**Pass 1 (GRID)** — every code the prose lands appears in the signature with the payload the prose distinguishes — with **Pass 3 (adversarial)** asking, for each exported code, *what does the caller do next, and is it safe at every step that lands the code?*
+
+**Worked origins.** [Immutable Transaction Ledger](compositions/immutable-transaction-ledger.md) (third gate, 2026-08-30) — the spec stated the collapse in its own words: two dispositions, *retry the whole action* and *do not retry, a disclosure record exists*, shared one token at the caller boundary. [Forensic Recovery](compositions/forensic-recovery.md) (third gate) — three lifecycle actions exported the same bare code from a step that had committed nothing and from a step that had committed the transition and owed the audit record; the *hard alert* and *compliance finding* Invariant 4 said the outcome carried appeared in no signature.
 
 ---
 

@@ -38,6 +38,7 @@ from lint import (  # noqa: E402
     check_atomicity_over_audit,
     check_rebuild_bound,
     check_recording_step,
+    check_retry_bit,
     check_seal_key,
     check_ledger,
     load_patterns,
@@ -517,6 +518,65 @@ T_SILENT = {"chain-of-custody", "forensic-recovery"}
 T_FIRING: set[str] = set()
 
 
+# U-retry-bit — landed 2026-08-30 ADVISORY (pressure-testing.md §A composition's
+# own rejection arm carries the retry bit, frozen the same day). Synthetic from
+# the start, like S and T. The corpus set below is a FLOOR at landing and is
+# switched to `exact` in the change that closes the last site.
+_U_HEAD = ("# Synthetic\n\n## Composes\n\n- [Audit Trail](../compositions/audit-trail.md)"
+           "\n\n#### `do_thing`\n\n")
+# fires: one bare token before the commit (step 2) and one after it (step 4).
+FIXTURE_U_STRADDLE = _U_HEAD + (
+    "1. Validate. Failure → `rejected(invalid-request)`. Stop.\n"
+    "2. `AuditTrail.record_action(...)` → `event_id`; `recording-failure(step-2 | step-3)` "
+    "→ `rejected(recording-failure)`. Stop.\n"
+    "3. `Store.commit(record_id, now)` → `committed`.\n"
+    "4. `AuditTrail.record_action(...)` → `event_id`; `recording-failure(step-2 | step-3)` "
+    "→ `rejected(recording-failure)`; the orphan is the scan's.\n"
+)
+# silent: the same two landings carrying the position.
+FIXTURE_U_POSITIONED = _U_HEAD + (
+    "1. Validate. Failure → `rejected(invalid-request)`. Stop.\n"
+    "2. `AuditTrail.record_action(...)` → `event_id`; `recording-failure(step-2 | step-3)` "
+    "→ `rejected(recording-failure(intent))`. Stop.\n"
+    "3. `Store.commit(record_id, now)` → `committed`.\n"
+    "4. `AuditTrail.record_action(...)` → `event_id`; `recording-failure(step-2 | step-3)` "
+    "→ `rejected(recording-failure(outcome))`; the orphan is the scan's.\n"
+)
+# silent: two bare landings, both before the commit — one disposition.
+FIXTURE_U_BOTH_BEFORE = _U_HEAD + (
+    "1. `Store.read(record_id)` → record; absent → `rejected(not-known)`.\n"
+    "2. `AuditTrail.record_action(...)` → `event_id`; `recording-failure(step-2 | step-3)` "
+    "→ `rejected(recording-failure)`. Stop.\n"
+    "3. `AuditTrail.record_action(...)` → `event_id`; `recording-failure(step-2 | step-3)` "
+    "→ `rejected(recording-failure)`. Stop.\n"
+    "4. `Store.commit(record_id, now)` → `committed`.\n"
+)
+
+
+def check_u_synthetic(problems: list[str]) -> None:
+    for name, text, want_fire in (
+        ("FIXTURE_U_STRADDLE", FIXTURE_U_STRADDLE, True),
+        ("FIXTURE_U_POSITIONED", FIXTURE_U_POSITIONED, False),
+        ("FIXTURE_U_BOTH_BEFORE", FIXTURE_U_BOTH_BEFORE, False),
+    ):
+        pat = Pattern(path=Path(f"synthetic/compositions/{name}.md"), text=text,
+                      invariant_count=1, grounded=False)
+        fired = bool(check_retry_bit({pat.path: pat}))
+        if fired != want_fire:
+            problems.append(
+                f"U-retry-bit: {name} expected "
+                f"{'a firing' if want_fire else 'silence'} and got the opposite."
+            )
+
+
+# Corpus floor at landing (2026-08-30): the ten actions across five patterns
+# the survey measured. Silent: Login and Defensible Retention, whose actions
+# already carry the position at their boundary.
+U_SILENT = {"login", "defensible-retention"}
+U_FIRING_AT_LEAST = {"capability-backed-sharing", "chain-of-custody", "customer-onboarding",
+                     "forensic-recovery", "immutable-transaction-ledger"}
+
+
 def check_r_synthetic(problems: list[str]) -> None:
     for name, text, want in R_FIXTURES:
         pat = Pattern(path=Path(f"synthetic/{name}.md"), text=text,
@@ -544,6 +604,8 @@ def main(argv: list[str]) -> int:
         # Both exact since 2026-08-29, when the sweep emptied them (see the S/T block).
         ("S-recording-step", check_recording_step, S_SILENT, S_FIRING, True),
         ("T-seal-key", check_seal_key, T_SILENT, T_FIRING, True),
+        # A floor, not exact, while the sweep under its rule runs (landed 2026-08-30).
+        ("U-retry-bit", check_retry_bit, U_SILENT, U_FIRING_AT_LEAST, False),
     ):
         got = stems(fn(patterns))
         for s in sorted(silent):
@@ -592,12 +654,14 @@ def main(argv: list[str]) -> int:
     st_problems: list[str] = []
     check_s_synthetic(st_problems)
     check_t_synthetic(st_problems)
+    check_u_synthetic(st_problems)
     failures.extend(st_problems)
     if not st_problems:
-        print("S-recording-step / T-seal-key: synthetic fixtures hold "
+        print("S-recording-step / T-seal-key / U-retry-bit: synthetic fixtures hold "
               "(bare substrate mapping fires; stepped mapping, own-code "
               "signature and peer arm silent; id-keyed map fires, "
-              "position-keyed map silent) \u2713")
+              "position-keyed map silent; straddling bare landings fire, "
+              "positioned and same-side landings silent) \u2713")
 
     r_problems: list[str] = []
     check_r_synthetic(r_problems)
