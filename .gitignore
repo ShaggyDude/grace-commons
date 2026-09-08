@@ -24,6 +24,8 @@ demos/*/.deno/
 demos/*/data/
 demos/*/public/styles.css
 
+Claude outputs/
+
 # Python bytecode
 __pycache__/
 *.pyc
