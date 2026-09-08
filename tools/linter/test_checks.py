@@ -575,8 +575,12 @@ def check_u_synthetic(problems: list[str]) -> None:
 U_SILENT = {"login", "defensible-retention"}
 # Retired as the sweep closes them (one line per retirement, with the date):
 # chain-of-custody 2026-08-30; forensic-recovery 2026-08-30;
-# immutable-transaction-ledger 2026-08-30.
-U_FIRING_AT_LEAST = {"capability-backed-sharing", "customer-onboarding"}
+# immutable-transaction-ledger 2026-08-30; capability-backed-sharing
+# 2026-08-30; customer-onboarding 2026-08-30.
+# EMPTY as of 2026-08-30, when the last site closed. U was promoted to GATING
+# in the same change and this set switched to `exact`; the regression coverage
+# lives in check_u_synthetic(), which needs no corpus positive to exist.
+U_FIRING: set[str] = set()
 
 
 def check_r_synthetic(problems: list[str]) -> None:
@@ -606,8 +610,8 @@ def main(argv: list[str]) -> int:
         # Both exact since 2026-08-29, when the sweep emptied them (see the S/T block).
         ("S-recording-step", check_recording_step, S_SILENT, S_FIRING, True),
         ("T-seal-key", check_seal_key, T_SILENT, T_FIRING, True),
-        # A floor, not exact, while the sweep under its rule runs (landed 2026-08-30).
-        ("U-retry-bit", check_retry_bit, U_SILENT, U_FIRING_AT_LEAST, False),
+        # Exact since 2026-08-30, the day it landed, when the sweep emptied it.
+        ("U-retry-bit", check_retry_bit, U_SILENT, U_FIRING, True),
     ):
         got = stems(fn(patterns))
         for s in sorted(silent):

@@ -123,8 +123,9 @@ the three-pass review otherwise has to catch by eye —
                               of the commit tells the caller nothing about
                               whether a retry is safe (pressure-testing.md
                               §A composition's own rejection arm carries the
-                              retry bit, frozen 2026-08-30). ADVISORY since
-                              2026-08-30 (baseline: 10 actions, 5 patterns).
+                              retry bit, frozen 2026-08-30). Landed advisory
+                              2026-08-30 (baseline: 10 actions, 5 patterns) and
+                              promoted to gating the same day at zero sites.
   O. Term registry resolver — on any page carrying an annotation.md `## Terms`
                               registry, every `[Term]` shortcut-reference marker
                               resolves to a `[Term]: …` definition (no dangling)
@@ -231,7 +232,13 @@ TRAILING_PAREN = re.compile(r"\s*\([^)]*\)\s*$")
 # Onboarding, Forensic Recovery, Immutable Transaction Ledger) — two of them
 # patterns the second gates had already closed. Same promotion discipline: it
 # becomes gating in the change that closes the last site.
-ADVISORY_CODES: frozenset[str] = frozenset({"U-retry-bit"})
+#
+# U-retry-bit was promoted to GATING on 2026-08-30, the same day it landed: the
+# three third-gated sites closed under the sweep and the two second-gated ones
+# (Capability-Backed Sharing, Customer Onboarding) in the change after, and it
+# fires zero times corpus-wide.
+# EMPTY as of 2026-08-30: every check is gating.
+ADVISORY_CODES: frozenset[str] = frozenset()
 
 
 @dataclass
