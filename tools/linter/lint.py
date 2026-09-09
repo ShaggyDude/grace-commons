@@ -1175,6 +1175,48 @@ def check_signature_alternation(patterns: dict[Path, Pattern]) -> list[Finding]:
                         f"alternative before it — the alternation reads as one code"))
     return findings
 
+# W-step-reference landed 2026-08-30 GATING and is PREVENTIVE: unlike V, it has
+# never fired on this corpus, and it did not fix a defect on the way in. It is
+# here because it sits on the decidable side of the line the three prototypes of
+# that day drew — it asks only what a document CONTAINS (does that action have a
+# step 5?), never what a sentence CLAIMS. The two prototypes that asked the
+# second question were not promoted. If this stays silent for a long time it can
+# be retired; silence is its expected state, not evidence that it works.
+STEP_REF_A = re.compile(r"\[([A-Z][A-Za-z ]*)\]\s+step\s+(\d+)")
+STEP_REF_B = re.compile(r"step\s+(\d+)\s+of\s+\[([A-Z][A-Za-z ]*)\]")
+NUMBERED_STEP = re.compile(r"(?m)^(\d+)\. ")
+
+
+def _highest_steps(text: str) -> dict[str, int]:
+    out: dict[str, int] = {}
+    heads = list(ACTION_HEADING.finditer(text))
+    for i, h in enumerate(heads):
+        end = heads[i + 1].start() if i + 1 < len(heads) else len(text)
+        nums = [int(m.group(1)) for m in NUMBERED_STEP.finditer(text[h.end():end])]
+        out[h.group(1)] = max(nums) if nums else 0
+    return out
+
+
+def check_step_reference(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """W. A cross-reference to `[Action] step N` where that action declares
+    fewer than N numbered steps."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        highest = _highest_steps(p.text)
+        seen: list[tuple[str, int, int]] = []
+        for m in STEP_REF_A.finditer(p.text):
+            seen.append((m.group(1), int(m.group(2)), m.start()))
+        for m in STEP_REF_B.finditer(p.text):
+            seen.append((m.group(2), int(m.group(1)), m.start()))
+        for display, n, at in seen:
+            name = display.strip().lower().replace(" ", "_")
+            if name in highest and n > highest[name]:
+                findings.append(Finding(
+                    p.path, line_of(p.text, at), "W-step-reference",
+                    f"`[{display}] step {n}` — that action declares "
+                    f"{highest[name]} numbered step(s)"))
+    return findings
+
 def check_status_grammar(patterns: dict[Path, Pattern]) -> list[Finding]:
     """G. `## Status` present; first line starts with one conformant backticked token."""
     findings: list[Finding] = []
@@ -1854,6 +1896,7 @@ def main(argv: list[str]) -> int:
     findings += check_seal_key(patterns)
     findings += check_retry_bit(patterns)
     findings += check_signature_alternation(patterns)
+    findings += check_step_reference(patterns)
     findings += check_status_grammar(patterns)
     findings += check_status_mirror(root, patterns)
     findings += check_duplicate_rows(root)

@@ -40,6 +40,7 @@ from lint import (  # noqa: E402
     check_recording_step,
     check_retry_bit,
     check_signature_alternation,
+    check_step_reference,
     check_seal_key,
     check_ledger,
     load_patterns,
@@ -606,6 +607,39 @@ FIXTURE_V_NESTED_MULTILINE = _V_HEAD + (
 )
 
 
+# --- W-step-reference -------------------------------------------------------
+_W_BODY = (
+    "---\ntitle: T\n---\n\n## Composition logic\n\n"
+    "#### `reconcile`\n\n1. One.\n2. Two.\n3. Three.\n\n"
+    "#### `close`\n\n1. A.\n2. B.\n\n"
+)
+# silent: every reference resolves.
+FIXTURE_W_RESOLVES = _W_BODY + "See [Reconcile] step 3 and step 2 of [Close].\n"
+# fires: past the last step the action declares.
+FIXTURE_W_DANGLING = _W_BODY + "See [Reconcile] step 5.\n"
+# fires: the other reference form.
+FIXTURE_W_DANGLING_OF = _W_BODY + "See step 9 of [Close].\n"
+# silent: an action this page does not define is another page's business.
+FIXTURE_W_FOREIGN = _W_BODY + "See [Some Other Thing] step 7.\n"
+
+
+def check_w_synthetic(problems: list[str]) -> None:
+    for name, text, want_fire in (
+        ("FIXTURE_W_RESOLVES", FIXTURE_W_RESOLVES, False),
+        ("FIXTURE_W_DANGLING", FIXTURE_W_DANGLING, True),
+        ("FIXTURE_W_DANGLING_OF", FIXTURE_W_DANGLING_OF, True),
+        ("FIXTURE_W_FOREIGN", FIXTURE_W_FOREIGN, False),
+    ):
+        pat = Pattern(path=Path(f"synthetic/compositions/{name}.md"), text=text,
+                      invariant_count=1, grounded=False)
+        fired = bool(check_step_reference({pat.path: pat}))
+        if fired != want_fire:
+            problems.append(
+                f"W-step-reference: {name} expected "
+                f"{'a firing' if want_fire else 'silence'} and got the opposite."
+            )
+
+
 def check_v_synthetic(problems: list[str]) -> None:
     for name, text, want_fire in (
         ("FIXTURE_V_UNSEPARATED", FIXTURE_V_UNSEPARATED, True),
@@ -717,9 +751,12 @@ def main(argv: list[str]) -> int:
     check_t_synthetic(st_problems)
     check_u_synthetic(st_problems)
     check_v_synthetic(st_problems)
+    check_w_synthetic(st_problems)
     print("V-signature-alternation: 5 synthetic fixtures hold (an unseparated "
           "alternation fires; separated, inline, nested and multi-line-nested "
           "blocks silent) \u2713")
+    print("W-step-reference: 4 synthetic fixtures hold (both dangling forms "
+          "fire; resolving references and foreign actions silent) \u2713")
     failures.extend(st_problems)
     if not st_problems:
         print("S-recording-step / T-seal-key / U-retry-bit: synthetic fixtures hold "
