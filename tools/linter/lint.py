@@ -1093,6 +1093,88 @@ def status_token_of(text: str) -> tuple[str | None, int]:
     return None, line_of(text, m.start())
 
 
+# V-signature-alternation landed 2026-08-30 GATING, from gate 8's measurement that
+# repair rounds were seeding two thirds of the next gate's findings and that ten
+# of twelve such findings were mechanically decidable. It is pure syntax — no
+# semantics — which is why it could be promoted the day it landed: the corpus
+# swept to zero after one true defect was fixed (`customer-onboarding`'s
+# `initiate_onboarding`, where `invalid-request` and `invalid-credential` sat on
+# consecutive lines with no separator, so the alternation read as one malformed
+# code and a generator would have emitted one arm where two were meant).
+def _rejected_regions(sig: str) -> list[str]:
+    """Each `rejected( ... )` region of a signature block, parens matched."""
+    out: list[str] = []
+    i = 0
+    while True:
+        j = sig.find("rejected(", i)
+        if j < 0:
+            return out
+        depth = 0
+        for k in range(j + len("rejected"), len(sig)):
+            if sig[k] == "(":
+                depth += 1
+            elif sig[k] == ")":
+                depth -= 1
+                if depth == 0:
+                    out.append(sig[j:k + 1])
+                    i = k + 1
+                    break
+        else:
+            return out
+
+
+def _unseparated(region: str) -> list[str]:
+    """Alternatives on their own line that no `|` separates from the one before.
+
+    Depth is tracked so a nested group spanning lines — `enrollment-failed(a |
+    b)` — is never read as a missing separator; a line is a new alternative
+    only at depth 1, and only where the previous non-empty line ended in
+    neither `(` nor `|`.
+    """
+    bad: list[str] = []
+    lines = region.split("\n")
+    if len(lines) < 2:
+        return bad
+    depth = 0
+    prev: str | None = None
+    for ln in lines:
+        stripped = ln.strip()
+        at = depth
+        depth += ln.count("(") - ln.count(")")
+        if prev is not None and stripped and at == 1:
+            token = stripped.lstrip("|").strip()
+            if (token and not stripped.startswith("|") and not stripped.startswith(")")
+                    and not prev.endswith("(") and not prev.endswith("|")):
+                bad.append(token.split()[0].strip("`,"))
+        if stripped:
+            prev = stripped
+    return bad
+
+
+SIGNATURE_BLOCK = re.compile(r"```\n(.*?)\n```", re.S)
+
+
+def check_signature_alternation(patterns: dict[Path, Pattern]) -> list[Finding]:
+    """V. A rejection alternation in a signature block whose items are not
+    separated by `|`, so two intended alternatives read as one code."""
+    findings: list[Finding] = []
+    for p in patterns.values():
+        for h in ACTION_HEADING.finditer(p.text):
+            tail = p.text[h.end():]
+            nxt = ACTION_HEADING.search(tail)
+            sec = tail[:nxt.start()] if nxt else tail
+            m = SIGNATURE_BLOCK.search(sec)
+            if not m:
+                continue
+            for region in _rejected_regions(m.group(1)):
+                for item in _unseparated(region):
+                    findings.append(Finding(
+                        p.path, line_of(p.text, h.end() + m.start()),
+                        "V-signature-alternation",
+                        f"`{h.group(1)}`: `{item}` is not separated from the "
+                        f"alternative before it — the alternation reads as one code"))
+    return findings
+
 def check_status_grammar(patterns: dict[Path, Pattern]) -> list[Finding]:
     """G. `## Status` present; first line starts with one conformant backticked token."""
     findings: list[Finding] = []
@@ -1771,6 +1853,7 @@ def main(argv: list[str]) -> int:
     findings += check_recording_step(patterns)
     findings += check_seal_key(patterns)
     findings += check_retry_bit(patterns)
+    findings += check_signature_alternation(patterns)
     findings += check_status_grammar(patterns)
     findings += check_status_mirror(root, patterns)
     findings += check_duplicate_rows(root)

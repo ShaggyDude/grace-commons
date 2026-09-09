@@ -138,7 +138,7 @@ initiate_onboarding(
   case_id
  | rejected(
    invalid-request
-   invalid-credential
+  | invalid-credential
   | party-not-known
   | party-closed
   | already-onboarded

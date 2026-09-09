@@ -39,6 +39,7 @@ from lint import (  # noqa: E402
     check_rebuild_bound,
     check_recording_step,
     check_retry_bit,
+    check_signature_alternation,
     check_seal_key,
     check_ledger,
     load_patterns,
@@ -569,6 +570,60 @@ def check_u_synthetic(problems: list[str]) -> None:
             )
 
 
+# --- V-signature-alternation ------------------------------------------------
+# Both directions, because a checker that only ever sees its own defect proves
+# nothing: the wrapped and nested cases are the ones a naive rule breaks on.
+_V_HEAD = "---\ntitle: T\n---\n\n## Composition logic\n\n#### `op`\n\n"
+
+# fires: two alternatives on consecutive lines with no separator.
+FIXTURE_V_UNSEPARATED = _V_HEAD + (
+    "```\nop(a) →\n  v\n | rejected(\n   invalid-request\n"
+    "   invalid-credential\n  | party-not-known\n  )\n```\n"
+)
+# silent: the same block, separated.
+FIXTURE_V_SEPARATED = _V_HEAD + (
+    "```\nop(a) →\n  v\n | rejected(\n   invalid-request\n"
+    "  | invalid-credential\n  | party-not-known\n  )\n```\n"
+)
+# silent: one line, several alternatives.
+FIXTURE_V_INLINE = _V_HEAD + (
+    "```\nop(a) → v | rejected(not-open | recording-failure(outcome))\n```\n"
+)
+# silent: nested groups spanning lines — the case a depth-blind rule breaks on.
+FIXTURE_V_NESTED = _V_HEAD + (
+    "```\nop(a) →\n  v\n | rejected(\n      invalid-credential\n"
+    "    | enrollment-failed(invalid-request | storage-failure)\n"
+    "    | recording-failure(intent | outcome)\n    )\n```\n"
+)
+# silent, and this is the fixture that pins the depth logic: a nested group
+# SPANNING lines, whose continuation does not start with `|`. A depth-blind
+# rule flags `invalid-request` here; the earlier nested fixture does not catch
+# that, because its groups each sit on one line and are separated anyway.
+FIXTURE_V_NESTED_MULTILINE = _V_HEAD + (
+    "```\nop(a) \u2192\n  v\n | rejected(\n      invalid-credential\n"
+    "    | recording-failure(refusal,\n        constituent_code)\n"
+    "    | not-open\n    )\n```\n"
+)
+
+
+def check_v_synthetic(problems: list[str]) -> None:
+    for name, text, want_fire in (
+        ("FIXTURE_V_UNSEPARATED", FIXTURE_V_UNSEPARATED, True),
+        ("FIXTURE_V_SEPARATED", FIXTURE_V_SEPARATED, False),
+        ("FIXTURE_V_INLINE", FIXTURE_V_INLINE, False),
+        ("FIXTURE_V_NESTED", FIXTURE_V_NESTED, False),
+        ("FIXTURE_V_NESTED_MULTILINE", FIXTURE_V_NESTED_MULTILINE, False),
+    ):
+        pat = Pattern(path=Path(f"synthetic/compositions/{name}.md"), text=text,
+                      invariant_count=1, grounded=False)
+        fired = bool(check_signature_alternation({pat.path: pat}))
+        if fired != want_fire:
+            problems.append(
+                f"V-signature-alternation: {name} expected "
+                f"{'a firing' if want_fire else 'silence'} and got the opposite."
+            )
+
+
 # Corpus floor at landing (2026-08-30): the ten actions across five patterns
 # the survey measured. Silent: Login and Defensible Retention, whose actions
 # already carry the position at their boundary.
@@ -661,6 +716,10 @@ def main(argv: list[str]) -> int:
     check_s_synthetic(st_problems)
     check_t_synthetic(st_problems)
     check_u_synthetic(st_problems)
+    check_v_synthetic(st_problems)
+    print("V-signature-alternation: 5 synthetic fixtures hold (an unseparated "
+          "alternation fires; separated, inline, nested and multi-line-nested "
+          "blocks silent) \u2713")
     failures.extend(st_problems)
     if not st_problems:
         print("S-recording-step / T-seal-key / U-retry-bit: synthetic fixtures hold "
